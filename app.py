@@ -30,8 +30,27 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 .poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem}
 .poster-meta{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 .poster-title{font-size:1.18rem;font-weight:800;margin-top:.25rem;color:var(--ivory)}
-.match{font-weight:800;font-size:1.02rem;color:var(--ivory);margin-top:.6rem}
-.ratings{color:var(--muted);font-size:.87rem;margin-top:.1rem}
+.match{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-weight:650;
+    font-size:.98rem;
+    color:var(--ivory);
+    margin-top:.6rem;
+    letter-spacing:-.01em
+}
+.ratings{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--muted);
+    font-size:.87rem;
+    margin-top:.1rem
+}
+.movie-description{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--muted);
+    font-size:.92rem;
+    line-height:1.5;
+    font-weight:400
+}
 div.stButton>button{border-radius:999px;min-height:40px;font-weight:700}
 div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
 div.stButton>button[kind="primary"]:hover{background:var(--ai-hover);border-color:var(--ai-hover)}
@@ -41,10 +60,32 @@ div[data-testid="stSlider"] [data-testid="stThumbValue"],div[data-testid="stSlid
 .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
 .profile-block{border-top:1px solid var(--border);padding-top:.75rem}
 .profile-label{color:var(--muted2);font-size:.74rem;text-transform:uppercase;letter-spacing:.1em;font-weight:760;margin-bottom:.32rem}
-.profile-value{color:var(--ivory);font-size:1.12rem;line-height:1.5;font-weight:600}
-.profile-list{color:var(--ivory);font-size:.98rem;line-height:1.7}
-.profile-summary{margin-top:1.1rem;border-top:1px solid var(--border);padding-top:1rem;color:var(--ivory);font-size:1.08rem;line-height:1.55}
-.profile-summary strong{font-weight:780}
+.profile-value{
+    color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:1rem;
+    line-height:1.62;
+    font-weight:500;
+    letter-spacing:-.01em
+}
+.profile-list{
+    color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:1rem;
+    line-height:1.7;
+    font-weight:500
+}
+.profile-summary{
+    margin-top:1.1rem;
+    border-top:1px solid var(--border);
+    padding-top:1rem;
+    color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:1.02rem;
+    line-height:1.55;
+    font-weight:500
+}
+.profile-summary strong{font-weight:650}
 @media (max-width:800px){.profile-grid{grid-template-columns:1fr}.hero-title{font-size:2.8rem}}
 </style>
 """, unsafe_allow_html=True)
@@ -84,19 +125,19 @@ screen=st.session_state.screen
 if screen=="welcome":
     logo()
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences</div>',unsafe_allow_html=True)
 
     c1,c2,c3=st.columns(3)
     steps=[
-        ("01","Rate the Shelf","Choose titles you already enjoy, or search for one if the shelf does not fit you."),
-        ("02","Tailor Your Preferences","Tell iCinema what matters most when you choose something to watch."),
-        ("03","Shape Your Showroom","Choose the kinds of recommendations you want iCinema to surface more often."),
+        ("01","Rate the Shelf","Choose titles you already enjoy, or search for one you like"),
+        ("02","Tailor Your Preferences","Tell iCinema what matters most when choosing what to watch"),
+        ("03","Shape Your Showroom","Choose what iCinema should surface more often"),
     ]
     for col,(n,title,body) in zip((c1,c2,c3),steps):
         with col:
             st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
 
-    st.markdown('<div class="adapt-note"><strong>iCinema keeps learning.</strong> Saving, skipping, and marking titles as seen updates what appears next.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="adapt-note"><strong>iCinema responds to your choices</strong><br><span>Every save, skip, and seen title continuously influences what appears next</span></div>',unsafe_allow_html=True)
     if st.button("Start Personalizing →",type="primary"):go("shelf")
 
 elif screen=="shelf":
@@ -124,14 +165,46 @@ elif screen=="shelf":
                     st.rerun()
 
     st.markdown("#### Don’t see one you like?")
-    choice=st.selectbox("Search the iCinema catalog",["Choose a movie…"]+searchable_titles(),label_visibility="collapsed")
+    st.caption("Search for a movie you already enjoy")
+
+    search_query = st.text_input(
+        "Search movies",
+        placeholder="Search by title",
+        label_visibility="collapsed",
+        key="movie_search_query"
+    )
+
+    titles = searchable_titles()
+    matches = []
+    if search_query.strip():
+        q = search_query.strip().lower()
+        matches = [title for title in titles if q in title.lower()][:8]
+
+    choice = None
+    if search_query.strip():
+        if matches:
+            choice = st.radio(
+                "Search results",
+                matches,
+                label_visibility="collapsed",
+                key="movie_search_result"
+            )
+        else:
+            st.caption("No matches found in the current iCinema catalog")
+
     a,b=st.columns([1,1])
     with a:
-        if st.button("Add as Like",use_container_width=True,disabled=choice=="Choose a movie…"):
-            st.session_state.likes.add(choice);st.session_state.favorites.discard(choice);st.rerun()
+        if st.button("Add as Like",use_container_width=True,disabled=not choice):
+            st.session_state.likes.add(choice)
+            st.session_state.favorites.discard(choice)
+            st.session_state.movie_search_query = ""
+            st.rerun()
     with b:
-        if st.button("Add as Favorite",use_container_width=True,disabled=choice=="Choose a movie…"):
-            st.session_state.likes.add(choice);st.session_state.favorites.add(choice);st.rerun()
+        if st.button("Add as Favorite",use_container_width=True,disabled=not choice):
+            st.session_state.likes.add(choice)
+            st.session_state.favorites.add(choice)
+            st.session_state.movie_search_query = ""
+            st.rerun()
 
     chosen_count=len(st.session_state.likes|st.session_state.favorites)
     st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected.")
@@ -184,7 +257,7 @@ elif screen=="profile":
     logo()
     p=current_profile()
     st.markdown('<div class="profile-wrap">',unsafe_allow_html=True)
-    st.markdown("## Your Cinema Profile")
+    st.markdown('<h2 style="font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif;font-weight:760;letter-spacing:-.03em;margin-bottom:.4rem">Your Cinema Profile</h2>',unsafe_allow_html=True)
     st.markdown('<div class="profile-intro">Built from your tailored preferences.</div>',unsafe_allow_html=True)
 
     st.markdown('<div class="profile-grid">',unsafe_allow_html=True)
@@ -245,7 +318,7 @@ elif screen=="showroom":
                     movie_thumb(movie)
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     st.markdown(f'<div class="ratings">IMDb {movie["imdb"]} · RT {movie["rt"]}%</div>',unsafe_allow_html=True)
-                    st.caption(movie["why"])
+                    st.markdown(f'<div class="movie-description">{movie["why"]}</div>',unsafe_allow_html=True)
                     a,b,c=st.columns(3)
                     with a:
                         if st.button("Save",key=f"save_{row_name}_{movie['title']}",use_container_width=True):
