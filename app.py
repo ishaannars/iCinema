@@ -197,13 +197,11 @@ elif screen=="shelf":
         if st.button("Add as Like",use_container_width=True,disabled=not choice):
             st.session_state.likes.add(choice)
             st.session_state.favorites.discard(choice)
-            st.session_state.movie_search_query = ""
             st.rerun()
     with b:
         if st.button("Add as Favorite",use_container_width=True,disabled=not choice):
             st.session_state.likes.add(choice)
             st.session_state.favorites.add(choice)
-            st.session_state.movie_search_query = ""
             st.rerun()
 
     chosen_count=len(st.session_state.likes|st.session_state.favorites)
