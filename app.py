@@ -54,7 +54,16 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 div.stButton>button{border-radius:999px;min-height:40px;font-weight:700}
 div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
 div.stButton>button[kind="primary"]:hover{background:var(--ai-hover);border-color:var(--ai-hover)}
-div[data-testid="stSlider"] [data-testid="stThumbValue"],div[data-testid="stSlider"] div[role="tooltip"],div[data-baseweb="slider"] div[role="tooltip"]{display:none!important;visibility:hidden!important}
+div[data-testid="stSlider"] [data-testid="stThumbValue"],
+div[data-testid="stSlider"] [data-testid="stSliderThumbValue"],
+div[data-testid="stSlider"] div[role="tooltip"],
+div[data-baseweb="slider"] div[role="tooltip"],
+div[data-baseweb="slider"] [class*="ThumbValue"],
+div[data-baseweb="slider"] [class*="thumbValue"]{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+}
 .profile-wrap{max-width:970px}
 .profile-intro{color:var(--muted);margin-top:-.4rem;margin-bottom:1.2rem}
 .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
@@ -239,15 +248,28 @@ elif screen=="taste":
 elif screen=="more":
     logo()
     st.markdown("### Step 3 of 3 — Shape Your Showroom")
-    st.caption("Choose what you want iCinema to prioritize. You can select more than one.")
+    st.caption("Choose what iCinema should surface more often")
 
-    st.session_state.more_of=st.multiselect(
-        "Recommendation priorities",
-        MORE_OF_OPTIONS,
-        default=st.session_state.more_of,
-        placeholder="Choose what you want more of",
-        label_visibility="collapsed"
-    )
+    selected=set(st.session_state.more_of)
+    cols=st.columns(3)
+
+    for i,option in enumerate(MORE_OF_OPTIONS):
+        with cols[i%3]:
+            active=option in selected
+            if st.button(
+                option,
+                key=f"priority_{option}",
+                type="primary" if active else "secondary",
+                use_container_width=True
+            ):
+                if active:
+                    selected.discard(option)
+                else:
+                    selected.add(option)
+                st.session_state.more_of=list(selected)
+                st.rerun()
+
+    st.caption("Select any that match what you want to see more often")
 
     if st.button("Build My Cinema Profile →",type="primary"):go("profile")
 
