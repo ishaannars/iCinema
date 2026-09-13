@@ -43,49 +43,81 @@ SHOWROOM_ROWS = {
     ],
 }
 
-def build_profile(likes, favorites, moods, review_priority, more_of):
-    chosen = [m for m in STARTER_MOVIES if m["title"] in likes or m["title"] in favorites]
+def build_profile(likes, favorites, selected_genres, review_priority, more_of):
+    chosen = [
+        movie for movie in STARTER_MOVIES
+        if movie["title"] in likes or movie["title"] in favorites
+    ]
+
     tags = Counter()
     genres = Counter()
+
     for movie in chosen:
         weight = 2 if movie["title"] in favorites else 1
         genres[movie["genre"]] += weight
+
         for tag in movie["tags"]:
             tags[tag] += weight
 
-    for mood in moods:
-        tags[mood] += 2
+    for genre in selected_genres:
+        genres[genre] += 2
+        tags[genre] += 1
 
-    top_genres = [g for g,_ in genres.most_common(3)]
+    top_genres = [g for g, _ in genres.most_common(3)]
+
     if len(top_genres) < 3:
-        for g in ["Thriller","Sci-Fi","Drama"]:
-            if g not in top_genres:
-                top_genres.append(g)
+        for fallback in ["Thriller", "Sci-Fi", "Drama"]:
+            if fallback not in top_genres:
+                top_genres.append(fallback)
             if len(top_genres) == 3:
                 break
 
     style_candidates = [
-        x for x,_ in tags.most_common()
-        if x not in top_genres and x not in ["Critically Acclaimed","International","Hidden Gem","Classic","Documentary"]
+        tag for tag, _ in tags.most_common()
+        if tag not in top_genres
+        and tag not in {
+            "Critically Acclaimed",
+            "International",
+            "Hidden Gem",
+            "Classic",
+            "Documentary",
+            "Action",
+            "Adventure",
+            "Animation",
+            "Comedy",
+            "Crime",
+            "Drama",
+            "Fantasy",
+            "Horror",
+            "Mystery",
+            "Romance",
+            "Sci-Fi",
+            "Thriller",
+        }
     ]
+
     lean = style_candidates[:3]
-    for x in ["Intense","Atmospheric","Thought-provoking"]:
-        if len(lean) >= 3: break
-        if x not in lean: lean.append(x)
+
+    for fallback in ["Intense", "Atmospheric", "Thought-provoking"]:
+        if len(lean) >= 3:
+            break
+        if fallback not in lean:
+            lean.append(fallback)
 
     stands_out = ["Strong storytelling", "Distinctive filmmaking"]
+
     if review_priority < 55:
         stands_out.insert(1, "High critical reception")
     else:
-        stands_out.insert(1, "Immediate entertainment value")
+        stands_out.insert(1, "Entertainment value")
 
-    drawn_to = more_of[:3] if more_of else ["Hidden Gems","Critically Acclaimed","International Films"]
+    drawn_to = more_of[:3] if more_of else [
+        "Hidden Gems",
+        "Critically Acclaimed",
+        "International Films",
+    ]
 
     summary = "You favor well-crafted films with strong atmosphere and compelling stories."
-    if "Funny" in moods:
-        summary = "You favor polished films that balance strong storytelling with an entertaining tone."
-    elif "Relaxing" in moods:
-        summary = "You favor thoughtful, well-crafted films with an immersive and measured tone."
 
     return {
         "lean": lean,
@@ -97,15 +129,21 @@ def build_profile(likes, favorites, moods, review_priority, more_of):
 
 def score_movie(movie, profile, adventure, review_priority):
     score = 70
+
     profile_terms = set(profile["lean"] + profile["genres"])
     overlap = len(profile_terms.intersection(set(movie["tags"])))
     score += overlap * 5
+
     if movie["rt"] >= 90 and review_priority < 55:
         score += 5
+
     if "International" in movie["tags"] and "International Films" in profile["drawn_to"]:
         score += 3
+
     if "Hidden Gem" in movie["tags"] and "Hidden Gems" in profile["drawn_to"]:
         score += 3
+
     if adventure > 65 and movie["genre"] not in profile["genres"]:
         score += 4
+
     return max(72, min(98, score))
