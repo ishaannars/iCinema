@@ -465,38 +465,38 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     opacity:0!important;
 }
 .profile-wrap{
-    max-width:940px;
-    padding-bottom:.35rem
+    max-width:900px;
+    padding-bottom:.6rem
 }
 .profile-heading{
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:2.1rem;
+    font-size:2.05rem;
     line-height:1.08;
     font-weight:760;
     letter-spacing:-.035em;
-    margin:0 0 .5rem
+    margin:0 0 .55rem
 }
 .profile-intro{
     color:var(--muted);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    margin:0 0 2rem;
+    margin:0 0 2.35rem;
     font-size:.94rem;
     line-height:1.5;
     font-weight:450
 }
 .profile-grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
-    column-gap:2rem;
-    row-gap:1.65rem
+    grid-template-columns:1fr;
+    row-gap:1.75rem
 }
 .profile-block{
-    padding-top:.1rem
+    padding:0;
+    margin:0
 }
 .profile-block.full{
-    grid-column:1 / -1;
-    padding-top:.25rem
+    grid-column:1;
+    padding:0
 }
 .profile-label{
     color:var(--muted2);
@@ -505,25 +505,25 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     text-transform:uppercase;
     letter-spacing:.105em;
     font-weight:760;
-    margin-bottom:.62rem
+    margin:0 0 .72rem
 }
 .profile-chip-wrap{
     display:flex;
     flex-wrap:wrap;
-    gap:.42rem .48rem;
+    gap:.5rem;
     align-items:center
 }
 .profile-chip{
     display:inline-flex;
     align-items:center;
-    min-height:2.35rem;
-    padding:.42rem .72rem;
+    min-height:2.2rem;
+    padding:.38rem .68rem;
     border-radius:999px;
     border:1px solid rgba(169,173,183,.22);
-    background:rgba(243,240,234,.035);
+    background:rgba(243,240,234,.032);
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.9rem;
+    font-size:.88rem;
     line-height:1.2;
     font-weight:600;
     letter-spacing:-.008em
@@ -531,7 +531,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 .profile-analysis{
     display:grid;
     grid-template-columns:1fr;
-    gap:.36rem
+    gap:.62rem
 }
 .profile-analysis-row{
     color:var(--ivory);
@@ -539,12 +539,13 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-size:.94rem;
     line-height:1.5;
     font-weight:450;
-    padding:.16rem 0
+    padding:0
 }
 .profile-summary{
-    margin-top:2rem;
+    margin-top:2.4rem;
+    margin-bottom:1.85rem;
     border-top:1px solid var(--border);
-    padding-top:1.25rem;
+    padding-top:1.35rem;
     color:var(--ivory);
     font-family:Georgia,"Times New Roman",serif;
     font-size:1.06rem;
@@ -556,7 +557,28 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-weight:400;
     font-style:italic
 }
-@media (max-width:800px){.profile-grid{grid-template-columns:1fr;row-gap:1.35rem}.profile-heading{font-size:1.8rem}.hero-title{font-size:2.8rem}}
+.st-key-enter_showroom{
+    margin-top:.25rem;
+}
+.st-key-enter_showroom button{
+    min-height:3.35rem !important;
+    padding:.82rem 1.55rem !important;
+    border-radius:18px !important;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
+    font-size:.78rem !important;
+    font-weight:650 !important;
+    letter-spacing:-.004em !important;
+}
+.st-key-enter_showroom button p{
+    font-size:.78rem !important;
+    line-height:1.15 !important;
+    margin:0 !important;
+}
+@media (max-width:800px){
+    .profile-grid{row-gap:1.55rem}
+    .profile-heading{font-size:1.8rem}
+    .hero-title{font-size:2.8rem}
+}
 
 /* V5.27 unified iCinema typography */
 :root {
@@ -1083,7 +1105,7 @@ elif screen=="profile":
     )
     st.markdown('</div>',unsafe_allow_html=True)
 
-    if st.button("Enter My Showroom →",type="primary"):
+    if st.button("Enter My Showroom →",type="primary",key="enter_showroom"):
         go("showroom")
 
 elif screen=="showroom":
