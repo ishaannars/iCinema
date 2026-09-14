@@ -73,12 +73,12 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     }
 .adapt-note strong{
         display:inline-block;
-        color:var(--muted2);
+        color:var(--ivory);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.76rem;
+        font-size:.78rem;
         font-weight:760;
-        letter-spacing:.10em;
-        text-transform:uppercase;
+        letter-spacing:.075em;
+        text-transform:none;
         margin-bottom:.46rem
     }
 .adapt-note span{
@@ -196,8 +196,9 @@ div[data-testid="stToggle"] label{
 }
 
 .search-shell{
-    margin-top:1.55rem;
-    padding:1.05rem 1.08rem .98rem;
+    margin-top:1.7rem;
+    margin-bottom:.75rem;
+    padding:1.35rem 1.15rem 1.28rem;
     border:1px solid var(--border);
     border-radius:18px;
     background:rgba(255,255,255,.018);
@@ -208,15 +209,15 @@ div[data-testid="stToggle"] label{
     font-size:1.08rem;
     font-weight:400;
     letter-spacing:-.012em;
-    margin-bottom:.2rem
+    margin-bottom:.38rem
 }
 .search-shell-copy{
     color:var(--muted);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-size:.88rem;
-    line-height:1.45;
+    line-height:1.5;
     font-weight:450;
-    margin-bottom:.72rem
+    margin-bottom:.05rem
 }
 .search-results-label{
     color:var(--muted2);
@@ -304,9 +305,14 @@ div[data-testid="stToggle"] label{
     line-height:1.4;
 }
 
+div[data-testid="stTextInput"]{
+    margin-top:.35rem;
+    margin-bottom:.35rem;
+}
 div[data-testid="stTextInput"] input{
     border-radius:12px !important;
-    min-height:44px !important;
+    min-height:46px !important;
+    padding:.72rem .9rem !important;
 }
 [class*="st-key-search_result_"] button{
     justify-content:flex-start !important;
@@ -323,20 +329,21 @@ div[data-testid="stTextInput"] input{
 
 /* Front-page primary CTA refinement */
 .st-key-start_personalizing{
-    margin-top:1.15rem;
+    margin-top:2.05rem;
 }
 .st-key-start_personalizing button{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
-    font-size:.86rem !important;
+    font-size:.78rem !important;
     font-weight:650 !important;
-    line-height:1.2 !important;
-    letter-spacing:-.005em !important;
-    min-height:2.55rem !important;
-    padding:.58rem .92rem !important;
+    line-height:1.15 !important;
+    letter-spacing:-.004em !important;
+    min-height:3.05rem !important;
+    padding:.78rem 1.35rem !important;
+    border-radius:16px !important;
 }
 .st-key-start_personalizing button p{
-    font-size:.86rem !important;
-    line-height:1.2 !important;
+    font-size:.78rem !important;
+    line-height:1.15 !important;
     margin:0 !important;
 }
 
