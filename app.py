@@ -62,7 +62,7 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         border:1px solid var(--border);
         border-radius:18px;
         background:rgba(255,255,255,.018);
-        padding:1.15rem 1.25rem 1.18rem;
+        padding:1.28rem 1.3rem 1.24rem;
         margin:2rem 0 1.7rem;
         color:var(--muted);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -75,11 +75,12 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         display:inline-block;
         color:var(--ivory);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.88rem;
+        font-size:1.42rem;
+        line-height:1.2;
         font-weight:760;
-        letter-spacing:.055em;
+        letter-spacing:-.018em;
         text-transform:none;
-        margin-bottom:.46rem
+        margin-bottom:.55rem
     }
 .adapt-note span{
         display:block;
@@ -145,50 +146,34 @@ div[data-testid="stMarkdownContainer"] p{
 
 /* Step 2 preference block scales */
 .pref-scale-wrap{
-    margin:.35rem 0 1.65rem;
+    margin:.35rem 0 .8rem;
 }
 .pref-scale-ends{
     display:flex;
     justify-content:space-between;
     align-items:flex-end;
     gap:1rem;
-    margin-bottom:.5rem;
+    margin-bottom:.55rem;
     color:var(--muted);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-size:.82rem;
     line-height:1.35;
-    font-weight:500;
+    font-weight:600;
 }
 .pref-scale-ends span:last-child{
     text-align:right;
 }
-.pref-scale{
-    display:grid;
-    grid-template-columns:repeat(5,1fr);
-    gap:.42rem;
-}
-.pref-scale-segment{
-    height:.68rem;
-    border-radius:999px;
-    border:1px solid rgba(169,173,183,.30);
-    background:rgba(243,240,234,.04);
-}
-.pref-scale-segment.active{
-    border-color:rgba(92,111,168,.92);
-    background:rgba(92,111,168,.95);
-    box-shadow:0 0 0 1px rgba(92,111,168,.18);
-}
 .pref-scale-helper{
-    margin-top:.52rem;
+    margin-top:.42rem;
     color:var(--muted2);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.72rem;
+    font-size:.74rem;
     line-height:1.35;
     font-weight:650;
 }
 .pref-scale-clicks{
-    margin-top:1.05rem;
-    margin-bottom:1.85rem;
+    margin-top:.95rem;
+    margin-bottom:1.9rem;
 }
 .pref-scale-clicks div[data-testid="stHorizontalBlock"]{
     gap:.72rem !important;
@@ -213,33 +198,53 @@ div[data-testid="stMarkdownContainer"] p{
     margin:0 !important;
 }
 
-.step3-row{
+.step3-grid-gap{height:.15rem}
+.step3-card{
     border:1px solid var(--border);
-    background:var(--surface);
-    border-radius:16px;
-    padding:.9rem 1rem .65rem;
-    margin-bottom:.7rem;
+    background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.018));
+    border-radius:20px;
+    padding:1.05rem 1.05rem .95rem;
+    min-height:8.3rem;
+    margin-bottom:.62rem;
 }
-.step3-row-title{
+.step3-card-title{
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:1rem;
-    font-weight:650;
-    letter-spacing:-.01em;
-    margin-bottom:.18rem;
+    font-size:1.02rem;
+    font-weight:670;
+    letter-spacing:-.012em;
+    line-height:1.2;
+    margin-bottom:.35rem;
 }
-.step3-row-copy{
+.step3-card-copy{
     color:var(--muted);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.88rem;
+    font-size:.89rem;
     font-weight:450;
-    line-height:1.45;
+    line-height:1.46;
 }
-div[data-testid="stToggle"] label{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-weight:500;
+.step3-button-row{margin-bottom:1.2rem}
+.step3-button-row div.stButton>button{
+    min-height:3.1rem !important;
+    height:3.1rem !important;
+    border-radius:999px !important;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
+    font-size:1rem !important;
+    font-weight:620 !important;
+    letter-spacing:-.01em !important;
+    border:1px solid rgba(169,173,183,.28) !important;
+    background:rgba(255,255,255,.02) !important;
+    color:var(--ivory) !important;
 }
-
+.step3-button-row div.stButton>button:hover{
+    border-color:rgba(186,191,202,.48) !important;
+    background:rgba(255,255,255,.05) !important;
+}
+.step3-button-row.selected div.stButton>button{
+    border-color:rgba(92,111,168,.94) !important;
+    background:rgba(92,111,168,.95) !important;
+    color:#f8f5ef !important;
+}
 
 /* Step 1 — rating + search polish */
 .shelf-action-gap{height:.52rem}
@@ -561,7 +566,7 @@ div[data-testid="stTextInput"] input {
 /* Profile value chips use the shared UI font */
 .profile-chip {
     font-family:var(--ui-font) !important;
-    font-size:.92rem !important;
+    font-size:1.42rem !important;
     font-weight:560 !important;
     letter-spacing:-.008em !important;
 }
@@ -596,7 +601,7 @@ div[data-testid="stTextInput"] input {
     color:var(--ivory) !important;
     font-size:.92rem !important;
     font-weight:760 !important;
-    letter-spacing:.045em !important;
+    letter-spacing:-.018em !important;
     text-transform:none !important;
 }
 
@@ -825,14 +830,9 @@ elif screen=="taste":
         "Leaning strongly toward entertainment",
     ][review_idx]
 
-    review_segments = "".join(
-        f'<div class="pref-scale-segment {"active" if i == review_idx else ""}"></div>'
-        for i in range(5)
-    )
     st.markdown(
         '<div class="pref-scale-wrap">'
         '<div class="pref-scale-ends"><span>Great reviews</span><span>Easy to enjoy</span></div>'
-        f'<div class="pref-scale">{review_segments}</div>'
         f'<div class="pref-scale-helper">{review_label}</div>'
         '</div>',
         unsafe_allow_html=True
@@ -885,14 +885,9 @@ elif screen=="taste":
         "Show me something different",
     ][adventure_idx]
 
-    adventure_segments = "".join(
-        f'<div class="pref-scale-segment {"active" if i == adventure_idx else ""}"></div>'
-        for i in range(5)
-    )
     st.markdown(
         '<div class="pref-scale-wrap">'
         '<div class="pref-scale-ends"><span>Stay close to my taste</span><span>Show me something different</span></div>'
-        f'<div class="pref-scale">{adventure_segments}</div>'
         f'<div class="pref-scale-helper">{adventure_label}</div>'
         '</div>',
         unsafe_allow_html=True
@@ -935,24 +930,25 @@ elif screen=="more":
     for i, option in enumerate(MORE_OF_OPTIONS):
         with (left if i % 2 == 0 else right):
             st.markdown(
-                f'<div class="step3-row">'
-                f'<div class="step3-row-title">{option}</div>'
-                f'<div class="step3-row-copy">{descriptions[option]}</div>'
+                f'<div class="step3-card">'
+                f'<div class="step3-card-title">{option}</div>'
+                f'<div class="step3-card-copy">{descriptions[option]}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
 
             active = option in selected
-            toggled = st.toggle(
-                f"Prioritize {option}",
-                value=active,
-                key=f"priority_toggle_{option}"
-            )
-
-            if toggled:
-                selected.add(option)
-            else:
-                selected.discard(option)
+            state_class = " selected" if active else ""
+            button_text = "Selected" if active else "Select"
+            st.markdown(f'<div class="step3-button-row{state_class}">', unsafe_allow_html=True)
+            if st.button(button_text, key=f"priority_button_{option}", use_container_width=True):
+                if active:
+                    selected.discard(option)
+                else:
+                    selected.add(option)
+                st.session_state.more_of = list(selected)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.session_state.more_of = list(selected)
 
