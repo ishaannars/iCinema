@@ -223,27 +223,55 @@ div[data-testid="stMarkdownContainer"] p{
     font-weight:450;
     line-height:1.46;
 }
-.step3-button-row{margin-bottom:1.2rem}
-.step3-button-row div.stButton>button{
-    min-height:3.1rem !important;
-    height:3.1rem !important;
-    border-radius:999px !important;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
-    font-size:1rem !important;
-    font-weight:620 !important;
-    letter-spacing:-.01em !important;
-    border:1px solid rgba(169,173,183,.28) !important;
-    background:rgba(255,255,255,.02) !important;
-    color:var(--ivory) !important;
+.step3-toggle-wrap{
+    margin-top:-1.08rem;
+    margin-bottom:1.15rem;
+    padding:0 1rem .95rem 1rem;
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    border-radius:0 0 20px 20px;
+    background:linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.012));
 }
-.step3-button-row div.stButton>button:hover{
-    border-color:rgba(186,191,202,.48) !important;
-    background:rgba(255,255,255,.05) !important;
+.step3-toggle-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    padding-top:.75rem;
+    border-top:1px solid rgba(169,173,183,.14);
 }
-.step3-button-row.selected div.stButton>button{
-    border-color:rgba(92,111,168,.94) !important;
-    background:rgba(92,111,168,.95) !important;
-    color:#f8f5ef !important;
+.step3-toggle-label{
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.84rem;
+    line-height:1.35;
+    font-weight:560;
+    letter-spacing:-.006em;
+}
+.step3-active-card{
+    border-color:rgba(92,111,168,.48);
+    box-shadow:0 0 0 1px rgba(92,111,168,.20) inset;
+    background:linear-gradient(180deg, rgba(92,111,168,.11), rgba(255,255,255,.02));
+}
+[class*="st-key-priority_toggle_"]{
+    margin-top:-3.08rem !important;
+    margin-bottom:1.72rem !important;
+    padding-right:1.05rem !important;
+    display:flex !important;
+    justify-content:flex-end !important;
+    position:relative !important;
+    z-index:2 !important;
+}
+[class*="st-key-priority_toggle_"] [data-testid="stToggle"]{
+    margin:0 !important;
+}
+[class*="st-key-priority_toggle_"] label{
+    gap:.45rem !important;
+}
+[class*="st-key-priority_toggle_"] p{
+    font-size:0 !important;
+    line-height:0 !important;
 }
 
 /* Step 1 — rating + search polish */
@@ -436,70 +464,90 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     visibility:hidden!important;
     opacity:0!important;
 }
-.profile-wrap{max-width:940px}
+.profile-wrap{
+    max-width:940px;
+    padding-bottom:.35rem
+}
+.profile-heading{
+    color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:2.1rem;
+    line-height:1.08;
+    font-weight:760;
+    letter-spacing:-.035em;
+    margin:0 0 .5rem
+}
 .profile-intro{
     color:var(--muted);
-    margin-top:-.35rem;
-    margin-bottom:1.55rem;
-    font-size:.96rem
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    margin:0 0 2rem;
+    font-size:.94rem;
+    line-height:1.5;
+    font-weight:450
 }
 .profile-grid{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:1.35rem 1.5rem
+    column-gap:2rem;
+    row-gap:1.65rem
 }
 .profile-block{
-    border-top:1px solid var(--border);
-    padding-top:.82rem
+    padding-top:.1rem
 }
 .profile-block.full{
-    grid-column:1 / -1
+    grid-column:1 / -1;
+    padding-top:.25rem
 }
 .profile-label{
     color:var(--muted2);
-    font-size:.74rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.72rem;
     text-transform:uppercase;
-    letter-spacing:.11em;
+    letter-spacing:.105em;
     font-weight:760;
-    margin-bottom:.5rem
+    margin-bottom:.62rem
 }
 .profile-chip-wrap{
     display:flex;
     flex-wrap:wrap;
-    gap:.48rem
+    gap:.42rem .48rem;
+    align-items:center
 }
 .profile-chip{
-    display:inline-block;
-    padding:.46rem .68rem;
+    display:inline-flex;
+    align-items:center;
+    min-height:2.35rem;
+    padding:.42rem .72rem;
     border-radius:999px;
-    border:1px solid rgba(169,173,183,.24);
-    background:rgba(243,240,234,.045);
+    border:1px solid rgba(169,173,183,.22);
+    background:rgba(243,240,234,.035);
     color:var(--ivory);
-    font-family:Georgia,"Times New Roman",serif;
-    font-size:.97rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.9rem;
     line-height:1.2;
-    font-weight:400
+    font-weight:600;
+    letter-spacing:-.008em
 }
 .profile-analysis{
     display:grid;
     grid-template-columns:1fr;
-    gap:.48rem
+    gap:.36rem
 }
 .profile-analysis-row{
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.98rem;
-    line-height:1.52;
-    font-weight:500;
-    padding:.42rem .02rem
+    font-size:.94rem;
+    line-height:1.5;
+    font-weight:450;
+    padding:.16rem 0
 }
 .profile-summary{
-    margin-top:1.45rem;
+    margin-top:2rem;
     border-top:1px solid var(--border);
-    padding-top:1.15rem;
+    padding-top:1.25rem;
     color:var(--ivory);
     font-family:Georgia,"Times New Roman",serif;
-    font-size:1.08rem;
+    font-size:1.06rem;
     line-height:1.6;
     font-style:italic;
     font-weight:400
@@ -508,7 +556,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-weight:400;
     font-style:italic
 }
-@media (max-width:800px){.profile-grid{grid-template-columns:1fr}.hero-title{font-size:2.8rem}}
+@media (max-width:800px){.profile-grid{grid-template-columns:1fr;row-gap:1.35rem}.profile-heading{font-size:1.8rem}.hero-title{font-size:2.8rem}}
 
 /* V5.27 unified iCinema typography */
 :root {
@@ -563,11 +611,11 @@ div[data-testid="stTextInput"] input {
     font-family:var(--ui-font) !important;
 }
 
-/* Profile value chips use the shared UI font */
+/* Profile value chips use the same UI font system as Steps 1 and 2 */
 .profile-chip {
     font-family:var(--ui-font) !important;
-    font-size:1.42rem !important;
-    font-weight:560 !important;
+    font-size:.9rem !important;
+    font-weight:600 !important;
     letter-spacing:-.008em !important;
 }
 
@@ -929,26 +977,34 @@ elif screen=="more":
 
     for i, option in enumerate(MORE_OF_OPTIONS):
         with (left if i % 2 == 0 else right):
+            active = option in selected
+            active_class = ' step3-active-card' if active else ''
             st.markdown(
-                f'<div class="step3-card">'
+                f'<div class="step3-card{active_class}">'
                 f'<div class="step3-card-title">{option}</div>'
                 f'<div class="step3-card-copy">{descriptions[option]}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
 
-            active = option in selected
-            state_class = " selected" if active else ""
-            button_text = "Selected" if active else "Select"
-            st.markdown(f'<div class="step3-button-row{state_class}">', unsafe_allow_html=True)
-            if st.button(button_text, key=f"priority_button_{option}", use_container_width=True):
-                if active:
-                    selected.discard(option)
-                else:
-                    selected.add(option)
-                st.session_state.more_of = list(selected)
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="step3-toggle-wrap">'
+                '<div class="step3-toggle-line">'
+                '<div class="step3-toggle-label">Surface more often</div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            new_state = st.toggle(
+                f'Prioritize {option}',
+                value=active,
+                key=f'priority_toggle_{option}',
+                label_visibility='collapsed'
+            )
+            if new_state and option not in selected:
+                selected.add(option)
+            elif not new_state and option in selected:
+                selected.discard(option)
 
     st.session_state.more_of = list(selected)
 
@@ -966,11 +1022,7 @@ elif screen=="profile":
         return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
 
     st.markdown('<div class="profile-wrap">',unsafe_allow_html=True)
-    st.markdown(
-        '<h2 style="font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif;'
-        'font-weight:760;letter-spacing:-.03em;margin-bottom:.42rem">Your Cinema Profile</h2>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="profile-heading">Your Cinema Profile</div>', unsafe_allow_html=True)
     st.markdown('<div class="profile-intro">Built from your tailored preferences</div>',unsafe_allow_html=True)
 
     st.markdown('<div class="profile-grid">',unsafe_allow_html=True)
