@@ -73,18 +73,23 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     }
 .adapt-note strong{
         display:inline-block;
-        color:var(--ivory);
+        color:var(--muted2);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:1.06rem;
-        font-weight:680;
-        letter-spacing:-.018em;
-        margin-bottom:.34rem
+        font-size:.76rem;
+        font-weight:760;
+        letter-spacing:.10em;
+        text-transform:uppercase;
+        margin-bottom:.46rem
     }
 .adapt-note span{
         display:block;
         max-width:760px;
+        color:var(--muted);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-weight:450
+        font-size:.92rem;
+        font-weight:450;
+        line-height:1.5;
+        letter-spacing:-.005em
     }
 .movie-card{margin-bottom:.55rem}
 .poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem}
@@ -169,14 +174,25 @@ div[data-testid="stToggle"] label{
 .shelf-action-gap{height:.52rem}
 
 [class*="st-key-like_"] button,
-[class*="st-key-fav_"] button,
+[class*="st-key-fav_"] button{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
+    font-size:.68rem !important;
+    font-weight:700 !important;
+    letter-spacing:.01em !important;
+    text-transform:none !important;
+    min-height:2.05rem !important;
+    padding:.34rem .22rem !important;
+    white-space:nowrap !important;
+}
 .st-key-search_add_like button,
 .st-key-search_add_favorite button{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
-    font-size:.76rem !important;
-    font-weight:760 !important;
-    letter-spacing:.085em !important;
-    text-transform:uppercase !important;
+    font-size:.74rem !important;
+    font-weight:700 !important;
+    letter-spacing:.01em !important;
+    text-transform:none !important;
+    min-height:2.2rem !important;
+    padding:.4rem .55rem !important;
 }
 
 .search-shell{
@@ -188,11 +204,11 @@ div[data-testid="stToggle"] label{
 }
 .search-shell-title{
     color:var(--ivory);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:1rem;
-    font-weight:690;
-    letter-spacing:-.015em;
-    margin-bottom:.14rem
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:1.08rem;
+    font-weight:400;
+    letter-spacing:-.012em;
+    margin-bottom:.2rem
 }
 .search-shell-copy{
     color:var(--muted);
@@ -234,6 +250,60 @@ div[data-testid="stToggle"] label{
     line-height:1.35;
     font-weight:400
 }
+.selection-area{
+    margin-top:1.1rem;
+    margin-bottom:1.25rem;
+}
+.selection-heading{
+    color:var(--muted2);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.69rem;
+    font-weight:760;
+    text-transform:uppercase;
+    letter-spacing:.095em;
+    margin-bottom:.5rem
+}
+.selection-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+}
+.selection-chip{
+    display:inline-flex;
+    flex-direction:column;
+    gap:.08rem;
+    padding:.52rem .7rem;
+    border:1px solid rgba(169,173,183,.22);
+    background:rgba(243,240,234,.04);
+    border-radius:13px;
+    min-width:130px;
+}
+.selection-title{
+    color:var(--ivory);
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:.93rem;
+    line-height:1.3;
+}
+.selection-state{
+    color:var(--muted2);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.64rem;
+    font-weight:740;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+}
+.search-already-selected{
+    margin-top:.55rem;
+    padding:.65rem .78rem;
+    border:1px solid rgba(92,111,168,.34);
+    border-radius:12px;
+    background:rgba(92,111,168,.075);
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.84rem;
+    line-height:1.4;
+}
+
 div[data-testid="stTextInput"] input{
     border-radius:12px !important;
     min-height:44px !important;
@@ -248,6 +318,26 @@ div[data-testid="stTextInput"] input{
     font-size:.88rem !important;
     font-weight:560 !important;
     letter-spacing:-.005em !important;
+}
+
+
+/* Front-page primary CTA refinement */
+.st-key-start_personalizing{
+    margin-top:1.15rem;
+}
+.st-key-start_personalizing button{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
+    font-size:.86rem !important;
+    font-weight:650 !important;
+    line-height:1.2 !important;
+    letter-spacing:-.005em !important;
+    min-height:2.55rem !important;
+    padding:.58rem .92rem !important;
+}
+.st-key-start_personalizing button p{
+    font-size:.86rem !important;
+    line-height:1.2 !important;
+    margin:0 !important;
 }
 
 div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
@@ -402,7 +492,7 @@ if screen=="welcome":
             st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
 
     st.markdown('<div class="adapt-note"><strong>iCinema responds to your choices</strong><br><span>Every save, skip, and seen title continuously influences what appears next</span></div>',unsafe_allow_html=True)
-    if st.button("Start Personalizing →",type="primary"):go("shelf")
+    if st.button("Start Personalizing →",type="primary",key="start_personalizing"):go("shelf")
 
 elif screen=="shelf":
     logo()
@@ -446,17 +536,15 @@ elif screen=="shelf":
 
     titles = searchable_titles()
     matches = []
+    already_selected_matches = []
     if search_query.strip():
         q = search_query.strip().lower()
-        matches = [
-            title for title in titles
-            if q in title.lower()
-            and title not in st.session_state.likes
-            and title not in st.session_state.favorites
-        ][:6]
+        all_matches = [title for title in titles if q in title.lower()][:6]
+        selected_titles = st.session_state.likes | st.session_state.favorites
+        matches = [title for title in all_matches if title not in selected_titles]
+        already_selected_matches = [title for title in all_matches if title in selected_titles]
 
-    # If the query changes enough that the selected result is no longer visible,
-    # clear the selection so the search always feels coherent.
+    # Keep a pending search selection only while it is still a valid unselected result.
     if st.session_state.search_selected_title not in matches:
         st.session_state.search_selected_title = None
 
@@ -475,7 +563,18 @@ elif screen=="shelf":
                     ):
                         st.session_state.search_selected_title = title
                         st.rerun()
-        else:
+
+        if already_selected_matches:
+            selected_name = already_selected_matches[0]
+            state = "Favorite" if selected_name in st.session_state.favorites else "Liked"
+            st.markdown(
+                f'<div class="search-already-selected">'
+                f'<strong>{selected_name}</strong> is already in your selections as {state.lower()}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        if not matches and not already_selected_matches:
             st.caption("No matches found in the current iCinema catalog")
 
     choice = st.session_state.search_selected_title
@@ -510,7 +609,27 @@ elif screen=="shelf":
                 st.session_state.search_selected_title = None
                 st.rerun()
 
-    chosen_count=len(st.session_state.likes|st.session_state.favorites)
+    chosen_titles = sorted(st.session_state.likes | st.session_state.favorites)
+    chosen_count = len(chosen_titles)
+
+    if chosen_titles:
+        chips = []
+        for title in chosen_titles:
+            state = "Favorite" if title in st.session_state.favorites else "Liked"
+            chips.append(
+                f'<div class="selection-chip">'
+                f'<div class="selection-title">{title}</div>'
+                f'<div class="selection-state">{state}</div>'
+                f'</div>'
+            )
+        st.markdown(
+            '<div class="selection-area">'
+            '<div class="selection-heading">Your selections</div>'
+            '<div class="selection-grid">' + "".join(chips) + '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
     st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
     if st.button("Continue →",type="primary",disabled=chosen_count==0):go("taste")
 
