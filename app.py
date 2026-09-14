@@ -4,6 +4,7 @@ from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
     build_profile, score_movie, recommend
 )
+from src.watch_providers import get_watch_availability_batch, tmdb_configured
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
@@ -848,6 +849,24 @@ div[data-testid="stTextInput"] input {
     }
 }
 
+.watch-availability{
+    color:#C8CBD2;
+    font-family:var(--ui-font);
+    font-size:.73rem;
+    line-height:1.35;
+    margin:.34rem 0 .22rem;
+    min-height:1.02rem;
+}
+.watch-availability.muted{color:var(--muted2)}
+.watch-attribution{
+    color:var(--muted2);
+    font-family:var(--ui-font);
+    font-size:.66rem;
+    line-height:1.45;
+    margin-top:.65rem;
+    margin-bottom:.15rem;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1263,6 +1282,8 @@ elif screen=="showroom":
 
     excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed
     ranked=recommend(p,st.session_state.adventure,st.session_state.review_priority,excluded,32)
+    visible_movie_keys = tuple((movie["title"], int(movie["year"])) for _, movie in ranked[:16])
+    watch_by_title = get_watch_availability_batch(visible_movie_keys, "US")
 
     row_specs=[
         ("Top Matches for You",lambda m,s: True),
@@ -1301,6 +1322,9 @@ elif screen=="showroom":
                     movie_thumb(movie)
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     st.markdown(f'<div class="ratings">IMDb {movie["imdb"]} · RT {movie["rt"]}%</div>',unsafe_allow_html=True)
+                    availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
+                    availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
+                    st.markdown(f'<div class="{availability_class}">{availability["text"]}</div>', unsafe_allow_html=True)
                     short_desc = concise_description(movie["why"])
                     st.markdown(f'<div class="movie-description">{short_desc}</div>',unsafe_allow_html=True)
                     st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
@@ -1312,6 +1336,11 @@ elif screen=="showroom":
                         if st.button("Seen",key=f"seen_{row_name}_{movie['title']}",use_container_width=True):
                             st.session_state.seen.add(movie["title"]);st.session_state.saved.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.</div>',
+            unsafe_allow_html=True
+        )
 
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
