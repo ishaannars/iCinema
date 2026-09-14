@@ -201,35 +201,13 @@ div[data-testid="stMarkdownContainer"] p{
 
 .step3-grid-gap{height:.15rem}
 .step3-card{
-    position:relative;
     border:1px solid var(--border);
     background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.018));
     border-radius:20px;
-    padding:1.05rem 1.05rem 3.65rem;
-    min-height:10.2rem;
-    margin-bottom:1.35rem;
+    padding:1.15rem 1.15rem 1.2rem;
+    min-height:8.55rem;
+    margin-bottom:.62rem;
     overflow:hidden;
-}
-.step3-card::after{
-    content:"";
-    position:absolute;
-    left:1.05rem;
-    right:1.05rem;
-    bottom:3.05rem;
-    height:1px;
-    background:rgba(169,173,183,.14);
-}
-.step3-card::before{
-    content:"Surface more often";
-    position:absolute;
-    left:1.05rem;
-    bottom:1.08rem;
-    color:var(--muted);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.84rem;
-    line-height:1.35;
-    font-weight:560;
-    letter-spacing:-.006em;
 }
 .step3-card-title{
     color:var(--ivory);
@@ -238,7 +216,7 @@ div[data-testid="stMarkdownContainer"] p{
     font-weight:670;
     letter-spacing:-.012em;
     line-height:1.2;
-    margin-bottom:.35rem;
+    margin-bottom:.42rem;
 }
 .step3-card-copy{
     color:var(--muted);
@@ -253,20 +231,21 @@ div[data-testid="stMarkdownContainer"] p{
     background:linear-gradient(180deg, rgba(92,111,168,.11), rgba(255,255,255,.02));
 }
 [class*="st-key-priority_toggle_"]{
-    margin-top:-4.44rem !important;
-    margin-bottom:2.22rem !important;
-    padding-right:1.05rem !important;
-    display:flex !important;
-    justify-content:flex-end !important;
-    position:relative !important;
-    z-index:3 !important;
-    min-height:2.2rem !important;
+    margin-top:0 !important;
+    margin-bottom:2.0rem !important;
+    padding-left:.08rem !important;
+    min-height:2.15rem !important;
 }
 [class*="st-key-priority_toggle_"] [data-testid="stToggle"]{
     margin:0 !important;
 }
 [class*="st-key-priority_toggle_"] label{
-    gap:.45rem !important;
+    gap:.55rem !important;
+    color:var(--muted) !important;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
+    font-size:.86rem !important;
+    font-weight:560 !important;
+    line-height:1.35 !important;
 }
 [class*="st-key-priority_toggle_"] p{
     font-size:0 !important;
@@ -1234,10 +1213,9 @@ elif screen=="more":
             )
 
             new_state = st.toggle(
-                f'Prioritize {option}',
+                'Surface more often',
                 value=active,
-                key=f'priority_toggle_{option}',
-                label_visibility='collapsed'
+                key=f'priority_toggle_{option}'
             )
             if new_state and option not in selected:
                 selected.add(option)
