@@ -464,9 +464,71 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     visibility:hidden!important;
     opacity:0!important;
 }
+
+/* V5.41 Showroom polish */
+.showroom-header{
+    width:100%;
+    margin:0 0 1.2rem;
+    padding:0;
+    box-sizing:border-box;
+}
+.showroom-heading{
+    color:var(--ivory);
+    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif);
+    font-size:2rem;
+    line-height:1.08;
+    font-weight:760;
+    letter-spacing:-.03em;
+    margin:0 0 .48rem;
+}
+.showroom-intro{
+    color:var(--muted);
+    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif);
+    font-size:.93rem;
+    line-height:1.5;
+    font-weight:450;
+    margin:0;
+    max-width:760px;
+}
+[class*="st-key-save_"] button,
+[class*="st-key-seen_"] button,
+[class*="st-key-skip_"] button{
+    min-width:0 !important;
+    min-height:2.15rem !important;
+    padding:.32rem .16rem !important;
+    font-size:.68rem !important;
+    line-height:1 !important;
+    letter-spacing:0 !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+}
+[class*="st-key-save_"] button p,
+[class*="st-key-seen_"] button p,
+[class*="st-key-skip_"] button p{
+    font-size:.68rem !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+}
+.profile-tab-reset{margin-top:1.2rem}
 .profile-wrap{
-    max-width:900px;
-    padding-bottom:.6rem
+    width:100%;
+    max-width:780px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    box-sizing:border-box;
+    padding-bottom:.7rem;
+}
+.profile-heading,
+.profile-intro,
+.profile-grid,
+.profile-summary{
+    width:100%;
+    max-width:760px;
+    box-sizing:border-box;
 }
 .profile-heading{
     color:var(--ivory);
@@ -475,35 +537,31 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     line-height:1.08;
     font-weight:760;
     letter-spacing:-.032em;
-    margin:0 0 .58rem;
-    max-width:760px
+    margin:0 0 .62rem;
 }
 .profile-intro{
     color:var(--muted);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    margin:0 0 1.8rem;
+    margin:0 0 1.55rem;
     font-size:.94rem;
     line-height:1.5;
-    font-weight:450
+    font-weight:450;
 }
 .profile-grid{
     display:grid;
     grid-template-columns:1fr;
-    row-gap:1.15rem
+    row-gap:0;
 }
 .profile-block{
     padding:0;
-    margin:0 0 .3rem
+    margin:0;
 }
 .profile-block.full{
     grid-column:1;
-    padding:0
-}
-.profile-block:last-child{
-    margin-bottom:.15rem
+    padding:0;
 }
 .profile-block + .profile-block{
-    margin-top:.42rem
+    margin-top:.95rem;
 }
 .profile-label{
     color:var(--muted2);
@@ -512,73 +570,73 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     text-transform:uppercase;
     letter-spacing:.105em;
     font-weight:760;
-    margin:0 0 .5rem
+    margin:0 0 .62rem;
 }
 .profile-chip-wrap{
     display:flex;
     flex-wrap:wrap;
-    column-gap:.62rem;
-    row-gap:.55rem;
-    align-items:center
+    column-gap:.66rem;
+    row-gap:.62rem;
+    align-items:center;
 }
 .profile-chip{
     display:inline-flex;
     align-items:center;
     width:fit-content;
     max-width:100%;
-    min-height:2.25rem;
-    padding:.42rem .72rem;
+    min-height:2.12rem;
+    padding:.42rem .78rem;
     border-radius:14px;
     border:1px solid rgba(169,173,183,.22);
     background:rgba(243,240,234,.032);
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.9rem;
-    line-height:1.25;
+    font-size:.89rem;
+    line-height:1.24;
     font-weight:600;
-    letter-spacing:-.008em
+    letter-spacing:-.008em;
 }
 .profile-analysis{
     display:flex;
     flex-direction:column;
     align-items:flex-start;
-    gap:.42rem
+    gap:.56rem;
 }
 .profile-analysis-row{
     display:inline-flex;
     align-items:center;
     width:fit-content;
     max-width:min(100%, 760px);
-    min-height:2.25rem;
-    padding:.42rem .72rem;
+    min-height:2.12rem;
+    padding:.42rem .78rem;
     border-radius:14px;
     border:1px solid rgba(169,173,183,.22);
     background:rgba(243,240,234,.032);
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.88rem;
-    line-height:1.3;
+    font-size:.87rem;
+    line-height:1.28;
     font-weight:500;
-    letter-spacing:-.006em
+    letter-spacing:-.006em;
 }
 .profile-summary{
-    margin-top:2.25rem;
-    margin-bottom:1.5rem;
+    margin-top:2rem;
+    margin-bottom:1.25rem;
     border-top:1px solid var(--border);
-    padding-top:1.45rem;
+    padding-top:1.7rem;
     color:var(--ivory);
     font-family:Georgia,"Times New Roman",serif;
     font-size:1.06rem;
     line-height:1.6;
     font-style:italic;
-    font-weight:400
+    font-weight:400;
 }
 .profile-summary strong{
     font-weight:400;
     font-style:italic
 }
 .st-key-enter_showroom{
-    margin-top:.25rem;
+    margin-top:.55rem;
 }
 .st-key-enter_showroom button{
     min-height:3.35rem !important;
@@ -595,7 +653,8 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     margin:0 !important;
 }
 @media (max-width:800px){
-    .profile-grid{row-gap:1.15rem}
+    .profile-grid{row-gap:0}
+    .profile-block + .profile-block{margin-top:.85rem}
     .profile-heading{font-size:1.8rem}
     .hero-title{font-size:2.8rem}
 }
@@ -742,6 +801,40 @@ def concise_description(text, limit=118):
     if len(text) > limit:
         text = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
     return text.rstrip(".")
+
+def profile_chip_html(items):
+    return "".join(f'<span class="profile-chip">{item}</span>' for item in items)
+
+def profile_analysis_html(items):
+    return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
+
+def render_cinema_profile(p):
+    st.markdown('<div class="profile-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="profile-heading">Your Cinema Profile</div>', unsafe_allow_html=True)
+    st.markdown('<div class="profile-intro">Built from your tailored preferences</div>', unsafe_allow_html=True)
+    st.markdown('<div class="profile-grid">', unsafe_allow_html=True)
+
+    sections = [
+        ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
+        ("Top genres", profile_chip_html(p["genres"]), "profile-chip-wrap"),
+        ("What matters most", profile_chip_html(p["matters"]), "profile-chip-wrap"),
+        ("What iCinema should prioritize", profile_chip_html(p["priorities"]), "profile-chip-wrap"),
+        ("Viewing patterns", profile_analysis_html(p["patterns"]), "profile-analysis"),
+        ("Recommendation balance", profile_analysis_html(p["balance"]), "profile-analysis"),
+    ]
+
+    for label, content, wrapper_class in sections:
+        st.markdown(
+            f'<div class="profile-block full">'
+            f'<div class="profile-label">{label}</div>'
+            f'<div class="{wrapper_class}">{content}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="profile-summary">{p["summary"]}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 screen=st.session_state.screen
 
@@ -1056,74 +1149,7 @@ elif screen=="more":
 elif screen=="profile":
     logo()
     p=current_profile()
-
-    def chip_html(items):
-        return "".join(f'<span class="profile-chip">{item}</span>' for item in items)
-
-    def analysis_html(items):
-        return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
-
-    st.markdown('<div class="profile-wrap">',unsafe_allow_html=True)
-    st.markdown('<div class="profile-heading">Your Cinema Profile</div>', unsafe_allow_html=True)
-    st.markdown('<div class="profile-intro">Built from your tailored preferences</div>',unsafe_allow_html=True)
-
-    st.markdown('<div class="profile-grid">',unsafe_allow_html=True)
-
-    st.markdown(
-        f'<div class="profile-block">'
-        f'<div class="profile-label">You tend to enjoy</div>'
-        f'<div class="profile-chip-wrap">{chip_html(p["traits"])}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f'<div class="profile-block">'
-        f'<div class="profile-label">Top genres</div>'
-        f'<div class="profile-chip-wrap">{chip_html(p["genres"])}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f'<div class="profile-block">'
-        f'<div class="profile-label">What matters most</div>'
-        f'<div class="profile-chip-wrap">{chip_html(p["matters"])}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f'<div class="profile-block">'
-        f'<div class="profile-label">What iCinema should prioritize</div>'
-        f'<div class="profile-chip-wrap">{chip_html(p["priorities"])}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f'<div class="profile-block full">'
-        f'<div class="profile-label">Viewing patterns</div>'
-        f'<div class="profile-analysis">{analysis_html(p["patterns"])}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f'<div class="profile-block full">'
-        f'<div class="profile-label">Recommendation balance</div>'
-        f'<div class="profile-analysis">{analysis_html(p["balance"])}</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown('</div>',unsafe_allow_html=True)
-
-    st.markdown(
-        f'<div class="profile-summary">{p["summary"]}</div>',
-        unsafe_allow_html=True
-    )
-    st.markdown('</div>',unsafe_allow_html=True)
+    render_cinema_profile(p)
 
     if st.button("Enter My Showroom →",type="primary",key="enter_showroom"):
         go("showroom")
@@ -1131,8 +1157,13 @@ elif screen=="profile":
 elif screen=="showroom":
     logo()
     p=current_profile()
-    st.markdown("## Your Showroom")
-    st.caption("Recommendations tailored to your preferences and updated as you save, skip, and mark titles as seen.")
+    st.markdown(
+        '<div class="showroom-header">'
+        '<div class="showroom-heading">Your Showroom</div>'
+        '<div class="showroom-intro">Built around your taste and refined as you save, skip, and mark titles as seen.</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
     tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
 
@@ -1201,24 +1232,9 @@ elif screen=="showroom":
                 with cols[i%len(cols)]:movie_thumb(m)
 
     with tabs[3]:
-        st.markdown("### Cinema Profile")
-        st.markdown("**You tend to enjoy**")
-        st.write(", ".join(p["traits"]))
-        st.markdown("**Top genres**")
-        st.write(", ".join(p["genres"]))
-        st.markdown("**What matters most**")
-        st.write(", ".join(p["matters"]))
-        st.markdown("**What iCinema should prioritize**")
-        st.write(", ".join(p["priorities"]))
-        st.markdown("**Viewing patterns**")
-        for item in p["patterns"]:
-            st.write(item)
-        st.markdown("**Recommendation balance**")
-        for item in p["balance"]:
-            st.write(item)
-        st.markdown(f"*{p['summary']}*")
-
-    if st.button("Reset Profile"):
-        for k,v in defaults.items():
-            st.session_state[k]=v.copy() if isinstance(v,set) else (list(v) if isinstance(v,list) else v)
-        st.rerun()
+        render_cinema_profile(p)
+        st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
+        if st.button("Reset Profile", key="reset_profile_tab"):
+            for k,v in defaults.items():
+                st.session_state[k]=v.copy() if isinstance(v,set) else (list(v) if isinstance(v,list) else v)
+            st.rerun()
