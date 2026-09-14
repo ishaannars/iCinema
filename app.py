@@ -201,12 +201,35 @@ div[data-testid="stMarkdownContainer"] p{
 
 .step3-grid-gap{height:.15rem}
 .step3-card{
+    position:relative;
     border:1px solid var(--border);
     background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.018));
     border-radius:20px;
-    padding:1.05rem 1.05rem .95rem;
-    min-height:8.3rem;
-    margin-bottom:.62rem;
+    padding:1.05rem 1.05rem 3.65rem;
+    min-height:10.2rem;
+    margin-bottom:1.35rem;
+    overflow:hidden;
+}
+.step3-card::after{
+    content:"";
+    position:absolute;
+    left:1.05rem;
+    right:1.05rem;
+    bottom:3.05rem;
+    height:1px;
+    background:rgba(169,173,183,.14);
+}
+.step3-card::before{
+    content:"Surface more often";
+    position:absolute;
+    left:1.05rem;
+    bottom:1.08rem;
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.84rem;
+    line-height:1.35;
+    font-weight:560;
+    letter-spacing:-.006em;
 }
 .step3-card-title{
     color:var(--ivory);
@@ -224,45 +247,20 @@ div[data-testid="stMarkdownContainer"] p{
     font-weight:450;
     line-height:1.46;
 }
-.step3-toggle-wrap{
-    margin-top:-1.08rem;
-    margin-bottom:1.15rem;
-    padding:0 1rem .95rem 1rem;
-    border-left:1px solid var(--border);
-    border-right:1px solid var(--border);
-    border-bottom:1px solid var(--border);
-    border-radius:0 0 20px 20px;
-    background:linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.012));
-}
-.step3-toggle-line{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:1rem;
-    padding-top:.75rem;
-    border-top:1px solid rgba(169,173,183,.14);
-}
-.step3-toggle-label{
-    color:var(--muted);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.84rem;
-    line-height:1.35;
-    font-weight:560;
-    letter-spacing:-.006em;
-}
 .step3-active-card{
     border-color:rgba(92,111,168,.48);
     box-shadow:0 0 0 1px rgba(92,111,168,.20) inset;
     background:linear-gradient(180deg, rgba(92,111,168,.11), rgba(255,255,255,.02));
 }
 [class*="st-key-priority_toggle_"]{
-    margin-top:-3.08rem !important;
-    margin-bottom:1.72rem !important;
+    margin-top:-4.44rem !important;
+    margin-bottom:2.22rem !important;
     padding-right:1.05rem !important;
     display:flex !important;
     justify-content:flex-end !important;
     position:relative !important;
-    z-index:2 !important;
+    z-index:3 !important;
+    min-height:2.2rem !important;
 }
 [class*="st-key-priority_toggle_"] [data-testid="stToggle"]{
     margin:0 !important;
@@ -1235,14 +1233,6 @@ elif screen=="more":
                 unsafe_allow_html=True
             )
 
-            st.markdown(
-                '<div class="step3-toggle-wrap">'
-                '<div class="step3-toggle-line">'
-                '<div class="step3-toggle-label">Surface more often</div>'
-                '</div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
             new_state = st.toggle(
                 f'Prioritize {option}',
                 value=active,
