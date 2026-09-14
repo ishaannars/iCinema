@@ -93,7 +93,7 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     }
 .movie-card{margin-bottom:.55rem}
 .poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem}
-.poster-meta{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.poster-meta{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 .poster-title{font-size:1.18rem;font-weight:800;margin-top:.25rem;color:var(--ivory)}
 .match{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -187,21 +187,25 @@ div[data-testid="stMarkdownContainer"] p{
     font-weight:650;
 }
 .pref-scale-clicks{
-    margin-top:-1.16rem;
-    margin-bottom:1.52rem;
+    margin-top:1.05rem;
+    margin-bottom:1.85rem;
 }
 .pref-scale-clicks div[data-testid="stHorizontalBlock"]{
-    gap:.42rem !important;
+    gap:.72rem !important;
 }
 .pref-scale-clicks div.stButton>button{
-    min-height:1.55rem !important;
-    height:1.55rem !important;
+    min-height:4.05rem !important;
+    height:4.05rem !important;
     padding:0 !important;
     border-radius:999px !important;
     font-size:0 !important;
     line-height:0 !important;
-    border:1px solid transparent !important;
-    background:transparent !important;
+    border:1px solid rgba(169,173,183,.28) !important;
+    background:rgba(255,255,255,.02) !important;
+}
+.pref-scale-clicks div.stButton>button:hover{
+    border-color:rgba(186,191,202,.48) !important;
+    background:rgba(255,255,255,.05) !important;
 }
 .pref-scale-clicks div.stButton>button p{
     font-size:0 !important;
@@ -272,8 +276,8 @@ div[data-testid="stToggle"] label{
 }
 .search-shell-title{
     color:var(--ivory);
-    font-family:Georgia,"Times New Roman",serif;
-    font-size:1.08rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:1.02rem;
     font-weight:400;
     letter-spacing:-.012em;
     margin-bottom:.38rem
@@ -313,8 +317,8 @@ div[data-testid="stToggle"] label{
 }
 .search-selected-title{
     color:var(--ivory);
-    font-family:Georgia,"Times New Roman",serif;
-    font-size:1rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.96rem;
     line-height:1.35;
     font-weight:400
 }
@@ -348,8 +352,8 @@ div[data-testid="stToggle"] label{
 }
 .selection-title{
     color:var(--ivory);
-    font-family:Georgia,"Times New Roman",serif;
-    font-size:.93rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.91rem;
     line-height:1.3;
 }
 .selection-state{
@@ -500,6 +504,102 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-style:italic
 }
 @media (max-width:800px){.profile-grid{grid-template-columns:1fr}.hero-title{font-size:2.8rem}}
+
+/* V5.27 unified iCinema typography */
+:root {
+    --ui-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+
+/* Primary display headings */
+h1, h2, h3, h4,
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stMarkdownContainer"] h4 {
+    font-family:var(--ui-font) !important;
+    letter-spacing:-.03em;
+}
+
+/* UI controls / selections */
+div.stButton>button,
+div.stButton>button p,
+div[data-testid="stRadio"] label,
+div[data-testid="stCheckbox"] label,
+div[data-testid="stToggle"] label {
+    font-family:var(--ui-font) !important;
+}
+
+/* Supporting copy */
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p,
+[data-testid="stMarkdownContainer"] p,
+div[data-testid="stTextInput"] input {
+    font-family:var(--ui-font) !important;
+}
+
+/* Showroom section titles */
+.showroom-row h3 {
+    font-family:var(--ui-font) !important;
+    font-weight:700 !important;
+    letter-spacing:-.025em !important;
+}
+
+/* Movie descriptions now use the shared body font */
+.movie-description {
+    font-family:var(--ui-font) !important;
+    font-size:.88rem !important;
+    line-height:1.5 !important;
+    font-weight:400 !important;
+}
+
+/* Match + ratings stay within same UI system */
+.match,
+.ratings {
+    font-family:var(--ui-font) !important;
+}
+
+/* Profile value chips use the shared UI font */
+.profile-chip {
+    font-family:var(--ui-font) !important;
+    font-size:.92rem !important;
+    font-weight:560 !important;
+    letter-spacing:-.008em !important;
+}
+
+/* Analytical profile text uses shared body font */
+.profile-analysis-row {
+    font-family:var(--ui-font) !important;
+}
+
+/* Keep the final profile interpretation as the single editorial accent */
+.profile-summary {
+    font-family:Georgia,"Times New Roman",serif !important;
+    font-style:italic !important;
+    font-weight:400 !important;
+}
+
+/* Step 2 scale text follows the shared system */
+.pref-scale-ends,
+.pref-scale-helper {
+    font-family:var(--ui-font) !important;
+}
+
+/* Step 3 rows */
+.step3-row-title,
+.step3-row-copy {
+    font-family:var(--ui-font) !important;
+}
+
+/* Front page: only this adaptive heading gets the emphasized special treatment */
+.adapt-note strong {
+    font-family:var(--ui-font) !important;
+    color:var(--ivory) !important;
+    font-size:.92rem !important;
+    font-weight:760 !important;
+    letter-spacing:.045em !important;
+    text-transform:none !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -742,7 +842,12 @@ elif screen=="taste":
     review_cols = st.columns(5, gap="small")
     for i, value in enumerate(review_scale_map):
         with review_cols[i]:
-            if st.button(" ", key=f"review_scale_{i}", use_container_width=True):
+            if st.button(
+                " ",
+                key=f"review_scale_{i}",
+                type="primary" if i == review_idx else "secondary",
+                use_container_width=True
+            ):
                 st.session_state.review_priority = value
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -797,7 +902,12 @@ elif screen=="taste":
     adventure_cols = st.columns(5, gap="small")
     for i, value in enumerate(adventure_scale_map):
         with adventure_cols[i]:
-            if st.button(" ", key=f"adventure_scale_{i}", use_container_width=True):
+            if st.button(
+                " ",
+                key=f"adventure_scale_{i}",
+                type="primary" if i == adventure_idx else "secondary",
+                use_container_width=True
+            ):
                 st.session_state.adventure = value
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
