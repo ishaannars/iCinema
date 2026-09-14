@@ -471,11 +471,12 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 .profile-heading{
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:2.05rem;
+    font-size:2.12rem;
     line-height:1.08;
     font-weight:760;
-    letter-spacing:-.035em;
-    margin:0 0 .55rem
+    letter-spacing:-.032em;
+    margin:0 0 .58rem;
+    max-width:760px
 }
 .profile-intro{
     color:var(--muted);
@@ -488,7 +489,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 .profile-grid{
     display:grid;
     grid-template-columns:1fr;
-    row-gap:1.75rem
+    row-gap:1.9rem
 }
 .profile-block{
     padding:0;
@@ -505,41 +506,53 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     text-transform:uppercase;
     letter-spacing:.105em;
     font-weight:760;
-    margin:0 0 .72rem
+    margin:0 0 .78rem
 }
 .profile-chip-wrap{
     display:flex;
     flex-wrap:wrap;
-    gap:.5rem;
+    gap:.62rem;
     align-items:center
 }
 .profile-chip{
     display:inline-flex;
     align-items:center;
-    min-height:2.2rem;
-    padding:.38rem .68rem;
-    border-radius:999px;
+    width:fit-content;
+    max-width:100%;
+    min-height:2.55rem;
+    padding:.5rem .82rem;
+    border-radius:14px;
     border:1px solid rgba(169,173,183,.22);
     background:rgba(243,240,234,.032);
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.88rem;
-    line-height:1.2;
+    font-size:.9rem;
+    line-height:1.25;
     font-weight:600;
     letter-spacing:-.008em
 }
 .profile-analysis{
-    display:grid;
-    grid-template-columns:1fr;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
     gap:.62rem
 }
 .profile-analysis-row{
+    display:inline-flex;
+    align-items:center;
+    width:fit-content;
+    max-width:min(100%, 760px);
+    min-height:2.55rem;
+    padding:.5rem .82rem;
+    border-radius:14px;
+    border:1px solid rgba(169,173,183,.22);
+    background:rgba(243,240,234,.032);
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.94rem;
-    line-height:1.5;
-    font-weight:450;
-    padding:0
+    font-size:.9rem;
+    line-height:1.35;
+    font-weight:500;
+    letter-spacing:-.006em
 }
 .profile-summary{
     margin-top:2.4rem;
