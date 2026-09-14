@@ -65,52 +65,80 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 .poster-title{font-size:1.18rem;font-weight:800;margin-top:.25rem;color:var(--ivory)}
 .match{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-weight:650;
-    font-size:.98rem;
+    font-weight:600;
+    font-size:.91rem;
     color:var(--ivory);
-    margin-top:.6rem;
-    letter-spacing:-.01em
+    margin-top:.52rem;
+    letter-spacing:-.008em
 }
 .ratings{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color:var(--muted);
-    font-size:.87rem;
-    margin-top:.1rem
+    font-size:.82rem;
+    margin-top:.08rem;
+    margin-bottom:.42rem
 }
 .movie-description{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    color:var(--muted);
-    font-size:.92rem;
-    line-height:1.5;
-    font-weight:400
-}
-div.stButton>button{border-radius:999px;min-height:40px;font-weight:700}
-div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
-div.stButton>button[kind="primary"]:hover{background:var(--ai-hover);border-color:var(--ai-hover)}
-.preference-choice{
-    border:1px solid var(--border);
-    background:var(--surface);
-    border-radius:18px;
-    padding:1rem 1.05rem;
-    min-height:112px;
-    margin-bottom:.55rem;
-}
-.preference-choice-title{
-    color:var(--ivory);
-    font-size:1.02rem;
-    font-weight:760;
-    margin-bottom:.28rem;
-}
-.preference-choice-copy{
-    color:var(--muted);
-    font-size:.9rem;
-    line-height:1.45;
-}
-.preference-helper{
+    font-family:Georgia,"Times New Roman",serif;
     color:var(--muted);
     font-size:.88rem;
-    margin:.25rem 0 .65rem;
+    line-height:1.48;
+    font-weight:400;
+    margin-bottom:.6rem
 }
+.showroom-row{
+    margin-top:1.65rem;
+    margin-bottom:.45rem
+}
+.showroom-row h3{
+    margin-bottom:.55rem
+}
+div.stButton>button{
+    border-radius:999px;
+    min-height:40px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-weight:600;
+    letter-spacing:-.008em
+}
+div.stButton>button p{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-weight:600
+}
+div[data-testid="stCaptionContainer"],
+div[data-testid="stTextInput"] input,
+div[data-testid="stRadio"] label,
+div[data-testid="stMarkdownContainer"] p{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif
+}
+.step3-row{
+    border:1px solid var(--border);
+    background:var(--surface);
+    border-radius:16px;
+    padding:.9rem 1rem .65rem;
+    margin-bottom:.7rem;
+}
+.step3-row-title{
+    color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:1rem;
+    font-weight:650;
+    letter-spacing:-.01em;
+    margin-bottom:.18rem;
+}
+.step3-row-copy{
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.88rem;
+    font-weight:450;
+    line-height:1.45;
+}
+div[data-testid="stToggle"] label{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-weight:500;
+}
+
+div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
+div.stButton>button[kind="primary"]:hover{background:var(--ai-hover);border-color:var(--ai-hover)}
 
 div[data-testid="stSlider"] [data-testid="stThumbValue"],
 div[data-testid="stSlider"] [data-testid="stSliderThumbValue"],
@@ -122,37 +150,78 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     visibility:hidden!important;
     opacity:0!important;
 }
-.profile-wrap{max-width:970px}
-.profile-intro{color:var(--muted);margin-top:-.4rem;margin-bottom:1.2rem}
-.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
-.profile-block{border-top:1px solid var(--border);padding-top:.75rem}
-.profile-label{color:var(--muted2);font-size:.74rem;text-transform:uppercase;letter-spacing:.1em;font-weight:760;margin-bottom:.32rem}
-.profile-value{
-    color:var(--ivory);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:1rem;
-    line-height:1.62;
-    font-weight:500;
-    letter-spacing:-.01em
+.profile-wrap{max-width:940px}
+.profile-intro{
+    color:var(--muted);
+    margin-top:-.35rem;
+    margin-bottom:1.55rem;
+    font-size:.96rem
 }
-.profile-list{
+.profile-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1.35rem 1.5rem
+}
+.profile-block{
+    border-top:1px solid var(--border);
+    padding-top:.82rem
+}
+.profile-block.full{
+    grid-column:1 / -1
+}
+.profile-label{
+    color:var(--muted2);
+    font-size:.74rem;
+    text-transform:uppercase;
+    letter-spacing:.11em;
+    font-weight:760;
+    margin-bottom:.5rem
+}
+.profile-chip-wrap{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.48rem
+}
+.profile-chip{
+    display:inline-block;
+    padding:.46rem .68rem;
+    border-radius:999px;
+    border:1px solid rgba(169,173,183,.24);
+    background:rgba(243,240,234,.045);
+    color:var(--ivory);
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:.97rem;
+    line-height:1.2;
+    font-weight:400
+}
+.profile-analysis{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:.48rem
+}
+.profile-analysis-row{
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:1rem;
-    line-height:1.7;
-    font-weight:500
+    font-size:.98rem;
+    line-height:1.52;
+    font-weight:500;
+    padding:.42rem .02rem
 }
 .profile-summary{
-    margin-top:1.1rem;
+    margin-top:1.45rem;
     border-top:1px solid var(--border);
-    padding-top:1rem;
+    padding-top:1.15rem;
     color:var(--ivory);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:1.02rem;
-    line-height:1.55;
-    font-weight:500
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:1.08rem;
+    line-height:1.6;
+    font-style:italic;
+    font-weight:400
 }
-.profile-summary strong{font-weight:650}
+.profile-summary strong{
+    font-weight:400;
+    font-style:italic
+}
 @media (max-width:800px){.profile-grid{grid-template-columns:1fr}.hero-title{font-size:2.8rem}}
 </style>
 """, unsafe_allow_html=True)
@@ -186,6 +255,21 @@ def current_profile():
         st.session_state.review_priority, st.session_state.more_of,
         st.session_state.saved, st.session_state.dismissed, st.session_state.adventure
     )
+
+def concise_description(text, limit=118):
+    text = " ".join(str(text).split()).strip()
+    if not text:
+        return ""
+    # Prefer the first clause/sentence for a cleaner card.
+    for separator in ["; ", ". "]:
+        if separator in text:
+            first = text.split(separator, 1)[0].strip()
+            if len(first) >= 55:
+                text = first
+                break
+    if len(text) > limit:
+        text = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+    return text.rstrip(".")
 
 screen=st.session_state.screen
 
@@ -283,22 +367,17 @@ elif screen=="taste":
     st.markdown("#### Which matters more?")
 
     review_options = [
-        ("Highly rated", "Strong reviews and critical reception", 25),
-        ("Both matter equally", "Balance critical reception with entertainment value", 50),
-        ("Easy to enjoy", "Prioritize entertainment even when critics disagree", 75),
+        ("Highly rated", 25),
+        ("Both matter equally", 50),
+        ("Easy to enjoy", 75),
     ]
 
     rcols = st.columns(3)
-    for i,(title,copy,value) in enumerate(review_options):
+    for i,(label,value) in enumerate(review_options):
         with rcols[i]:
-            st.markdown(
-                f'<div class="preference-choice"><div class="preference-choice-title">{title}</div>'
-                f'<div class="preference-choice-copy">{copy}</div></div>',
-                unsafe_allow_html=True
-            )
             active = st.session_state.review_priority == value
             if st.button(
-                "Selected" if active else "Choose",
+                label,
                 key=f"review_choice_{value}",
                 type="primary" if active else "secondary",
                 use_container_width=True
@@ -313,30 +392,33 @@ elif screen=="taste":
     for i,genre in enumerate(GENRES):
         with genre_cols[i%5]:
             active=genre in selected
-            if st.button(genre,key=f"genre_{i}",type="primary" if active else "secondary",use_container_width=True):
-                if active:selected.discard(genre)
-                elif len(selected)<5:selected.add(genre)
-                st.session_state.genres=list(selected);st.rerun()
+            if st.button(
+                genre,
+                key=f"genre_{i}",
+                type="primary" if active else "secondary",
+                use_container_width=True
+            ):
+                if active:
+                    selected.discard(genre)
+                elif len(selected)<5:
+                    selected.add(genre)
+                st.session_state.genres=list(selected)
+                st.rerun()
 
     st.markdown("#### How open are you to something different?")
 
     adventure_options = [
-        ("Stay close to my taste", "More of what you already know you like", 25),
-        ("A mix of both", "Balance familiar picks with something new", 50),
-        ("Show me something different", "Stretch beyond your usual picks", 75),
+        ("Stay close to my taste", 25),
+        ("A mix of both", 50),
+        ("Show me something different", 75),
     ]
 
     acols = st.columns(3)
-    for i,(title,copy,value) in enumerate(adventure_options):
+    for i,(label,value) in enumerate(adventure_options):
         with acols[i]:
-            st.markdown(
-                f'<div class="preference-choice"><div class="preference-choice-title">{title}</div>'
-                f'<div class="preference-choice-copy">{copy}</div></div>',
-                unsafe_allow_html=True
-            )
             active = st.session_state.adventure == value
             if st.button(
-                "Selected" if active else "Choose",
+                label,
                 key=f"adventure_choice_{value}",
                 type="primary" if active else "secondary",
                 use_container_width=True
@@ -344,62 +426,131 @@ elif screen=="taste":
                 st.session_state.adventure = value
                 st.rerun()
 
-    if st.button("Continue →",type="primary"):go("more")
+    if st.button("Continue →",type="primary"):
+        go("more")
 
 elif screen=="more":
     logo()
     st.markdown("### Step 3 of 3 — Shape Your Showroom")
     st.caption("Choose what iCinema should surface more often")
 
-    selected=set(st.session_state.more_of)
-    cols=st.columns(3)
+    descriptions = {
+        "Hidden Gems": "Less obvious titles that still fit your taste",
+        "Critically Acclaimed": "Titles with especially strong critical reception",
+        "Recent Releases": "Newer films and recent additions",
+        "International Films": "Stories and filmmakers from around the world",
+        "Classics": "Established favorites across earlier eras",
+        "Documentaries": "Nonfiction stories matched to your interests",
+    }
 
-    for i,option in enumerate(MORE_OF_OPTIONS):
-        with cols[i%3]:
-            active=option in selected
-            if st.button(
-                option,
-                key=f"priority_{option}",
-                type="primary" if active else "secondary",
-                use_container_width=True
-            ):
-                if active:
-                    selected.discard(option)
-                else:
-                    selected.add(option)
-                st.session_state.more_of=list(selected)
-                st.rerun()
+    selected = set(st.session_state.more_of)
+    left, right = st.columns(2, gap="large")
 
-    st.caption("Select any that match what you want to see more often")
+    for i, option in enumerate(MORE_OF_OPTIONS):
+        with (left if i % 2 == 0 else right):
+            st.markdown(
+                f'<div class="step3-row">'
+                f'<div class="step3-row-title">{option}</div>'
+                f'<div class="step3-row-copy">{descriptions[option]}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
-    if st.button("Build My Cinema Profile →",type="primary"):go("profile")
+            active = option in selected
+            toggled = st.toggle(
+                f"Prioritize {option}",
+                value=active,
+                key=f"priority_toggle_{option}"
+            )
+
+            if toggled:
+                selected.add(option)
+            else:
+                selected.discard(option)
+
+    st.session_state.more_of = list(selected)
+
+    if st.button("Build My Cinema Profile →", type="primary"):
+        go("profile")
 
 elif screen=="profile":
     logo()
     p=current_profile()
+
+    def chip_html(items):
+        return "".join(f'<span class="profile-chip">{item}</span>' for item in items)
+
+    def analysis_html(items):
+        return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
+
     st.markdown('<div class="profile-wrap">',unsafe_allow_html=True)
-    st.markdown('<h2 style="font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif;font-weight:760;letter-spacing:-.03em;margin-bottom:.4rem">Your Cinema Profile</h2>',unsafe_allow_html=True)
-    st.markdown('<div class="profile-intro">Built from your tailored preferences.</div>',unsafe_allow_html=True)
+    st.markdown(
+        '<h2 style="font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif;'
+        'font-weight:760;letter-spacing:-.03em;margin-bottom:.42rem">Your Cinema Profile</h2>',
+        unsafe_allow_html=True
+    )
+    st.markdown('<div class="profile-intro">Built from your tailored preferences</div>',unsafe_allow_html=True)
 
     st.markdown('<div class="profile-grid">',unsafe_allow_html=True)
 
-    blocks=[
-        ("You tend to enjoy"," • ".join(p["traits"])),
-        ("Top genres"," • ".join(p["genres"])),
-        ("What matters most","<br>".join(p["matters"])),
-        ("What iCinema should prioritize"," • ".join(p["priorities"])),
-        ("Viewing patterns","<br>".join(p["patterns"])),
-        ("Recommendation balance","<br>".join(p["balance"])),
-    ]
+    st.markdown(
+        f'<div class="profile-block">'
+        f'<div class="profile-label">You tend to enjoy</div>'
+        f'<div class="profile-chip-wrap">{chip_html(p["traits"])}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
-    for label,value in blocks:
-        st.markdown(f'<div class="profile-block"><div class="profile-label">{label}</div><div class="profile-value">{value}</div></div>',unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="profile-block">'
+        f'<div class="profile-label">Top genres</div>'
+        f'<div class="profile-chip-wrap">{chip_html(p["genres"])}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f'<div class="profile-block">'
+        f'<div class="profile-label">What matters most</div>'
+        f'<div class="profile-chip-wrap">{chip_html(p["matters"])}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f'<div class="profile-block">'
+        f'<div class="profile-label">What iCinema should prioritize</div>'
+        f'<div class="profile-chip-wrap">{chip_html(p["priorities"])}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f'<div class="profile-block full">'
+        f'<div class="profile-label">Viewing patterns</div>'
+        f'<div class="profile-analysis">{analysis_html(p["patterns"])}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        f'<div class="profile-block full">'
+        f'<div class="profile-label">Recommendation balance</div>'
+        f'<div class="profile-analysis">{analysis_html(p["balance"])}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
     st.markdown('</div>',unsafe_allow_html=True)
-    st.markdown(f'<div class="profile-summary"><strong>{p["summary"]}</strong></div>',unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div class="profile-summary">{p["summary"]}</div>',
+        unsafe_allow_html=True
+    )
     st.markdown('</div>',unsafe_allow_html=True)
 
-    if st.button("Enter My Showroom →",type="primary"):go("showroom")
+    if st.button("Enter My Showroom →",type="primary"):
+        go("showroom")
 
 elif screen=="showroom":
     logo()
@@ -429,7 +580,7 @@ elif screen=="showroom":
                     choices.append((score,movie))
                 if len(choices)==4:break
             used.update(m["title"] for _,m in choices)
-            st.markdown(f"### {row_name}")
+            st.markdown(f'<div class="showroom-row"><h3>{row_name}</h3></div>', unsafe_allow_html=True)
             if not choices:
                 st.caption("No additional matches in this demo catalog.")
                 continue
@@ -439,7 +590,8 @@ elif screen=="showroom":
                     movie_thumb(movie)
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     st.markdown(f'<div class="ratings">IMDb {movie["imdb"]} · RT {movie["rt"]}%</div>',unsafe_allow_html=True)
-                    st.markdown(f'<div class="movie-description">{movie["why"]}</div>',unsafe_allow_html=True)
+                    short_desc = concise_description(movie["why"])
+                    st.markdown(f'<div class="movie-description">{short_desc}</div>',unsafe_allow_html=True)
                     a,b,c=st.columns(3)
                     with a:
                         if st.button("Save",key=f"save_{row_name}_{movie['title']}",use_container_width=True):
@@ -474,12 +626,20 @@ elif screen=="showroom":
 
     with tabs[3]:
         st.markdown("### Cinema Profile")
-        st.markdown(f"**You tend to enjoy**  \n{' • '.join(p['traits'])}")
-        st.markdown(f"**Top genres**  \n{' • '.join(p['genres'])}")
-        st.markdown(f"**What matters most**  \n{' • '.join(p['matters'])}")
-        st.markdown(f"**What iCinema should prioritize**  \n{' • '.join(p['priorities'])}")
-        st.markdown(f"**Viewing patterns**  \n{' • '.join(p['patterns'])}")
-        st.markdown(f"**Recommendation balance**  \n{' • '.join(p['balance'])}")
+        st.markdown("**You tend to enjoy**")
+        st.write(", ".join(p["traits"]))
+        st.markdown("**Top genres**")
+        st.write(", ".join(p["genres"]))
+        st.markdown("**What matters most**")
+        st.write(", ".join(p["matters"]))
+        st.markdown("**What iCinema should prioritize**")
+        st.write(", ".join(p["priorities"]))
+        st.markdown("**Viewing patterns**")
+        for item in p["patterns"]:
+            st.write(item)
+        st.markdown("**Recommendation balance**")
+        for item in p["balance"]:
+            st.write(item)
         st.markdown(f"*{p['summary']}*")
 
     if st.button("Reset Profile"):
