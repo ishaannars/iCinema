@@ -468,9 +468,19 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 /* V5.41 Showroom polish */
 .showroom-header{
     width:100%;
-    margin:0 0 1.2rem;
+    max-width:100%;
+    margin:0 0 1.25rem;
     padding:0;
     box-sizing:border-box;
+}
+.showroom-header,
+.showroom-row{
+    margin-left:0 !important;
+    padding-left:0 !important;
+}
+.showroom-row{
+    margin-top:1.85rem;
+    margin-bottom:.62rem;
 }
 .showroom-heading{
     color:var(--ivory);
@@ -491,26 +501,51 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     max-width:760px;
 }
 [class*="st-key-save_"] button,
-[class*="st-key-seen_"] button,
-[class*="st-key-skip_"] button{
+[class*="st-key-seen_"] button{
     min-width:0 !important;
     min-height:2.15rem !important;
-    padding:.32rem .16rem !important;
-    font-size:.68rem !important;
+    padding:.34rem .22rem !important;
+    font-size:.7rem !important;
     line-height:1 !important;
     letter-spacing:0 !important;
     white-space:nowrap !important;
     overflow:visible !important;
     text-overflow:clip !important;
+    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
 }
 [class*="st-key-save_"] button p,
-[class*="st-key-seen_"] button p,
-[class*="st-key-skip_"] button p{
-    font-size:.68rem !important;
+[class*="st-key-seen_"] button p{
+    font-size:.7rem !important;
     line-height:1 !important;
     white-space:nowrap !important;
     overflow:visible !important;
     text-overflow:clip !important;
+}
+.showroom-skip-row{
+    height:1.9rem;
+    margin-bottom:.38rem;
+}
+[class*="st-key-skip_"] button{
+    min-height:1.72rem !important;
+    height:1.72rem !important;
+    padding:.18rem .48rem !important;
+    border-radius:999px !important;
+    font-size:.62rem !important;
+    font-weight:650 !important;
+    line-height:1 !important;
+    letter-spacing:0 !important;
+    white-space:nowrap !important;
+    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
+}
+[class*="st-key-skip_"] button p{
+    font-size:.62rem !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    margin:0 !important;
+}
+.movie-card-actions{
+    margin-top:.5rem;
+    margin-bottom:.35rem;
 }
 .profile-tab-reset{margin-top:1.2rem}
 .profile-wrap{
@@ -537,7 +572,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     line-height:1.08;
     font-weight:760;
     letter-spacing:-.032em;
-    margin:0 0 .62rem;
+    margin:0 0 .58rem;
 }
 .profile-intro{
     color:var(--muted);
@@ -561,7 +596,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     padding:0;
 }
 .profile-block + .profile-block{
-    margin-top:.95rem;
+    margin-top:1.35rem;
 }
 .profile-label{
     color:var(--muted2);
@@ -654,7 +689,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 }
 @media (max-width:800px){
     .profile-grid{row-gap:0}
-    .profile-block + .profile-block{margin-top:.85rem}
+    .profile-block + .profile-block{margin-top:1.15rem}
     .profile-heading{font-size:1.8rem}
     .hero-title{font-size:2.8rem}
 }
@@ -799,8 +834,8 @@ def concise_description(text, limit=118):
                 text = first
                 break
     if len(text) > limit:
-        text = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
-    return text.rstrip(".")
+        text = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.…")
+    return text.rstrip(" ,;:.…") + "."
 
 def profile_chip_html(items):
     return "".join(f'<span class="profile-chip">{item}</span>' for item in items)
@@ -1160,7 +1195,7 @@ elif screen=="showroom":
     st.markdown(
         '<div class="showroom-header">'
         '<div class="showroom-heading">Your Showroom</div>'
-        '<div class="showroom-intro">Built around your taste and refined as you save, skip, and mark titles as seen.</div>'
+        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark as seen</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -1194,21 +1229,28 @@ elif screen=="showroom":
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
+                    skip_spacer, skip_col = st.columns([4.25,1], gap="small")
+                    with skip_col:
+                        st.markdown('<div class="showroom-skip-row">', unsafe_allow_html=True)
+                        if st.button("Skip",key=f"skip_{row_name}_{movie['title']}",use_container_width=True):
+                            st.session_state.dismissed.add(movie["title"])
+                            st.session_state.saved.discard(movie["title"])
+                            st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
                     movie_thumb(movie)
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     st.markdown(f'<div class="ratings">IMDb {movie["imdb"]} · RT {movie["rt"]}%</div>',unsafe_allow_html=True)
                     short_desc = concise_description(movie["why"])
                     st.markdown(f'<div class="movie-description">{short_desc}</div>',unsafe_allow_html=True)
-                    a,b,c=st.columns(3)
+                    st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
+                    a,b=st.columns(2, gap="small")
                     with a:
                         if st.button("Save",key=f"save_{row_name}_{movie['title']}",use_container_width=True):
                             st.session_state.saved.add(movie["title"]);st.session_state.seen.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);st.rerun()
                     with b:
                         if st.button("Seen",key=f"seen_{row_name}_{movie['title']}",use_container_width=True):
                             st.session_state.seen.add(movie["title"]);st.session_state.saved.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);st.rerun()
-                    with c:
-                        if st.button("Skip",key=f"skip_{row_name}_{movie['title']}",use_container_width=True):
-                            st.session_state.dismissed.add(movie["title"]);st.session_state.saved.discard(movie["title"]);st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
 
     with tabs[1]:
         st.markdown("### Saved")
@@ -1238,3 +1280,4 @@ elif screen=="showroom":
             for k,v in defaults.items():
                 st.session_state[k]=v.copy() if isinstance(v,set) else (list(v) if isinstance(v,list) else v)
             st.rerun()
+
