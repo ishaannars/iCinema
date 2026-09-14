@@ -75,9 +75,9 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         display:inline-block;
         color:var(--ivory);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.78rem;
+        font-size:.88rem;
         font-weight:760;
-        letter-spacing:.075em;
+        letter-spacing:.055em;
         text-transform:none;
         margin-bottom:.46rem
     }
@@ -142,6 +142,73 @@ div[data-testid="stRadio"] label,
 div[data-testid="stMarkdownContainer"] p{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif
 }
+
+/* Step 2 preference block scales */
+.pref-scale-wrap{
+    margin:.35rem 0 1.65rem;
+}
+.pref-scale-ends{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:1rem;
+    margin-bottom:.5rem;
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.82rem;
+    line-height:1.35;
+    font-weight:500;
+}
+.pref-scale-ends span:last-child{
+    text-align:right;
+}
+.pref-scale{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:.42rem;
+}
+.pref-scale-segment{
+    height:.68rem;
+    border-radius:999px;
+    border:1px solid rgba(169,173,183,.30);
+    background:rgba(243,240,234,.04);
+}
+.pref-scale-segment.active{
+    border-color:rgba(92,111,168,.92);
+    background:rgba(92,111,168,.95);
+    box-shadow:0 0 0 1px rgba(92,111,168,.18);
+}
+.pref-scale-helper{
+    margin-top:.52rem;
+    color:var(--muted2);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.72rem;
+    line-height:1.35;
+    font-weight:650;
+}
+.pref-scale-clicks{
+    margin-top:-1.16rem;
+    margin-bottom:1.52rem;
+}
+.pref-scale-clicks div[data-testid="stHorizontalBlock"]{
+    gap:.42rem !important;
+}
+.pref-scale-clicks div.stButton>button{
+    min-height:1.55rem !important;
+    height:1.55rem !important;
+    padding:0 !important;
+    border-radius:999px !important;
+    font-size:0 !important;
+    line-height:0 !important;
+    border:1px solid transparent !important;
+    background:transparent !important;
+}
+.pref-scale-clicks div.stButton>button p{
+    font-size:0 !important;
+    line-height:0 !important;
+    margin:0 !important;
+}
+
 .step3-row{
     border:1px solid var(--border);
     background:var(--surface);
@@ -438,7 +505,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 
 defaults={
     "screen":"welcome","likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":45,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),
+    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),
     "custom_like":None,"search_selected_title":None
 }
 for k,v in defaults.items():
@@ -645,26 +712,40 @@ elif screen=="taste":
     st.markdown("### Step 2 of 3 — Tailor Your Preferences")
     st.caption("Choose what matters most when deciding what to watch")
 
-    st.markdown("#### Which matters more?")
+    st.markdown("### Which matters more?")
 
-    review_options = [
-        ("Highly rated", 25),
-        ("Both matter equally", 50),
-        ("Easy to enjoy", 75),
-    ]
+    review_scale_map = [15, 32, 50, 68, 85]
+    review_idx = min(range(5), key=lambda i: abs(review_scale_map[i] - st.session_state.review_priority))
 
-    rcols = st.columns(3)
-    for i,(label,value) in enumerate(review_options):
-        with rcols[i]:
-            active = st.session_state.review_priority == value
-            if st.button(
-                label,
-                key=f"review_choice_{value}",
-                type="primary" if active else "secondary",
-                use_container_width=True
-            ):
+    review_label = [
+        "Leaning strongly toward reviews",
+        "Leaning toward reviews",
+        "Balanced",
+        "Leaning toward entertainment",
+        "Leaning strongly toward entertainment",
+    ][review_idx]
+
+    review_segments = "".join(
+        f'<div class="pref-scale-segment {"active" if i == review_idx else ""}"></div>'
+        for i in range(5)
+    )
+    st.markdown(
+        '<div class="pref-scale-wrap">'
+        '<div class="pref-scale-ends"><span>Great reviews</span><span>Easy to enjoy</span></div>'
+        f'<div class="pref-scale">{review_segments}</div>'
+        f'<div class="pref-scale-helper">{review_label}</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown('<div class="pref-scale-clicks">', unsafe_allow_html=True)
+    review_cols = st.columns(5, gap="small")
+    for i, value in enumerate(review_scale_map):
+        with review_cols[i]:
+            if st.button(" ", key=f"review_scale_{i}", use_container_width=True):
                 st.session_state.review_priority = value
                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### What do you like to watch?")
     st.caption("Select up to five genres")
@@ -686,26 +767,40 @@ elif screen=="taste":
                 st.session_state.genres=list(selected)
                 st.rerun()
 
-    st.markdown("#### How open are you to something different?")
+    st.markdown("### How open are you to something different?")
 
-    adventure_options = [
-        ("Stay close to my taste", 25),
-        ("A mix of both", 50),
-        ("Show me something different", 75),
-    ]
+    adventure_scale_map = [15, 32, 50, 68, 85]
+    adventure_idx = min(range(5), key=lambda i: abs(adventure_scale_map[i] - st.session_state.adventure))
 
-    acols = st.columns(3)
-    for i,(label,value) in enumerate(adventure_options):
-        with acols[i]:
-            active = st.session_state.adventure == value
-            if st.button(
-                label,
-                key=f"adventure_choice_{value}",
-                type="primary" if active else "secondary",
-                use_container_width=True
-            ):
+    adventure_label = [
+        "Stay very close to my taste",
+        "Stay mostly familiar",
+        "Balanced",
+        "Explore a little more",
+        "Show me something different",
+    ][adventure_idx]
+
+    adventure_segments = "".join(
+        f'<div class="pref-scale-segment {"active" if i == adventure_idx else ""}"></div>'
+        for i in range(5)
+    )
+    st.markdown(
+        '<div class="pref-scale-wrap">'
+        '<div class="pref-scale-ends"><span>Stay close to my taste</span><span>Show me something different</span></div>'
+        f'<div class="pref-scale">{adventure_segments}</div>'
+        f'<div class="pref-scale-helper">{adventure_label}</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown('<div class="pref-scale-clicks">', unsafe_allow_html=True)
+    adventure_cols = st.columns(5, gap="small")
+    for i, value in enumerate(adventure_scale_map):
+        with adventure_cols[i]:
+            if st.button(" ", key=f"adventure_scale_{i}", use_container_width=True):
                 st.session_state.adventure = value
                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button("Continue →",type="primary"):
         go("more")
