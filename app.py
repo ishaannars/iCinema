@@ -479,14 +479,17 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     padding-left:0 !important;
 }
 .showroom-row{
-    margin-top:1.05rem;
-    margin-bottom:.42rem;
+    margin-top:.78rem;
+    margin-bottom:.08rem;
 }
 .showroom-row.first{
     margin-top:0;
 }
+.showroom-row h3{
+    margin-bottom:.18rem !important;
+}
 .showroom-tab-start{
-    height:1.35rem;
+    height:1.05rem;
 }
 .tab-section-heading{
     color:var(--ivory);
@@ -537,8 +540,12 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     text-overflow:clip !important;
 }
 .showroom-skip-row{
-    height:1.62rem;
-    margin-bottom:.12rem;
+    height:.95rem;
+    margin-bottom:-.18rem;
+}
+[class*="st-key-skip_"]{
+    margin-top:-.12rem !important;
+    margin-bottom:-.38rem !important;
 }
 [class*="st-key-skip_"] button{
     min-height:1.5rem !important;
@@ -551,12 +558,18 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     letter-spacing:0 !important;
     white-space:nowrap !important;
     font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
 }
 [class*="st-key-skip_"] button p{
     font-size:.64rem !important;
     line-height:1 !important;
     white-space:nowrap !important;
     margin:0 !important;
+    width:100% !important;
+    text-align:center !important;
 }
 .movie-card-actions{
     margin-top:.35rem;
@@ -802,6 +815,18 @@ div[data-testid="stTextInput"] input {
     font-weight:760 !important;
     letter-spacing:-.018em !important;
     text-transform:none !important;
+}
+
+
+/* V5.48 tighter showroom row/card rhythm */
+[class*="st-key-skip_"] + div{
+    margin-top:0 !important;
+}
+@media (max-width:900px){
+    [class*="st-key-skip_"] button{
+        min-width:3.2rem !important;
+        padding:.14rem .36rem !important;
+    }
 }
 
 </style>
@@ -1246,7 +1271,7 @@ elif screen=="showroom":
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
-                    skip_spacer, skip_col = st.columns([3.2,1.35], gap="small")
+                    skip_spacer, skip_col = st.columns([4.0,1.1], gap="small")
                     with skip_col:
                         st.markdown('<div class="showroom-skip-row">', unsafe_allow_html=True)
                         if st.button("Skip",key=f"skip_{row_name}_{movie['title']}",use_container_width=True):
