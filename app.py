@@ -596,7 +596,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     padding:0;
 }
 .profile-block + .profile-block{
-    margin-top:1.8rem;
+    margin-top:2.15rem;
 }
 .profile-label{
     color:var(--muted2);
@@ -689,7 +689,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 }
 @media (max-width:800px){
     .profile-grid{row-gap:0}
-    .profile-block + .profile-block{margin-top:1.55rem}
+    .profile-block + .profile-block{margin-top:1.8rem}
     .profile-heading{font-size:1.8rem}
     .hero-title{font-size:2.8rem}
 }
@@ -844,11 +844,6 @@ def profile_analysis_html(items):
     return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
 
 def render_cinema_profile(p):
-    st.markdown('<div class="profile-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="profile-heading">Your Cinema Profile</div>', unsafe_allow_html=True)
-    st.markdown('<div class="profile-intro">Built from your tailored preferences</div>', unsafe_allow_html=True)
-    st.markdown('<div class="profile-grid">', unsafe_allow_html=True)
-
     sections = [
         ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
         ("Top genres", profile_chip_html(p["genres"]), "profile-chip-wrap"),
@@ -858,18 +853,23 @@ def render_cinema_profile(p):
         ("Recommendation balance", profile_analysis_html(p["balance"]), "profile-analysis"),
     ]
 
-    for label, content, wrapper_class in sections:
-        st.markdown(
-            f'<div class="profile-block full">'
-            f'<div class="profile-label">{label}</div>'
-            f'<div class="{wrapper_class}">{content}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+    section_html = "".join(
+        f'<div class="profile-block full">'
+        f'<div class="profile-label">{label}</div>'
+        f'<div class="{wrapper_class}">{content}</div>'
+        f'</div>'
+        for label, content, wrapper_class in sections
+    )
 
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="profile-summary">{p["summary"]}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="profile-wrap">'
+        f'<div class="profile-heading">Your Cinema Profile</div>'
+        f'<div class="profile-intro">Built from your tailored preferences</div>'
+        f'<div class="profile-grid">{section_html}</div>'
+        f'<div class="profile-summary">{p["summary"]}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 screen=st.session_state.screen
 
