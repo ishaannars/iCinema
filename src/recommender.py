@@ -80,7 +80,9 @@ ALL_MOVIES = STARTER_MOVIES + CATALOG
 MOVIE_INDEX = {m["title"]: m for m in ALL_MOVIES}
 
 
-def get_movie(title):
+def get_movie(title, extra_movies=None):
+    if extra_movies and title in extra_movies:
+        return extra_movies[title]
     return MOVIE_INDEX.get(title)
 
 
@@ -95,9 +97,13 @@ def _movie_signal(movie, weight, trait_counts, genre_counts):
             trait_counts[tag] += weight
 
 
-def build_profile(likes, favorites, selected_genres, review_priority, more_of, saved_titles=None, skipped_titles=None, adventure=45):
+def build_profile(likes, favorites, selected_genres, review_priority, more_of, saved_titles=None, skipped_titles=None, adventure=45, extra_movies=None):
     saved_titles = saved_titles or set()
     skipped_titles = skipped_titles or set()
+    extra_movies = extra_movies or {}
+
+    def lookup(title):
+        return extra_movies.get(title) or MOVIE_INDEX.get(title)
 
     traits = Counter()
     genres = Counter()
@@ -105,7 +111,7 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
 
     # Likes/favorites
     for title in likes:
-        movie = MOVIE_INDEX.get(title)
+        movie = lookup(title)
         if not movie:
             continue
         weight = 3 if title in favorites else 1
@@ -117,13 +123,13 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
 
     # Saved titles refine the profile.
     for title in saved_titles:
-        movie = MOVIE_INDEX.get(title)
+        movie = lookup(title)
         if movie:
             _movie_signal(movie, 2, traits, genres)
 
     # Skipped titles reduce matching traits.
     for title in skipped_titles:
-        movie = MOVIE_INDEX.get(title)
+        movie = lookup(title)
         if not movie:
             continue
         for tag in movie.get("tags", []):

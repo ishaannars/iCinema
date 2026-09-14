@@ -1,10 +1,12 @@
 
+import html
 import streamlit as st
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
     build_profile, score_movie, recommend
 )
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
+from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
@@ -94,7 +96,10 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         letter-spacing:-.005em
     }
 .movie-card{margin-bottom:.55rem}
-.poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem}
+.poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem;position:relative;overflow:hidden}
+.poster.has-image{padding:0;background:#171A1F}
+.poster.has-image img{width:100%;height:100%;object-fit:cover;display:block}
+.poster-fallback-overlay{position:absolute;left:0;right:0;bottom:0;padding:2.2rem 1rem 1rem;background:linear-gradient(180deg,transparent,rgba(8,10,12,.92));pointer-events:none}
 .poster-meta{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 .poster-title{font-size:1.18rem;font-weight:800;margin-top:.25rem;color:var(--ivory)}
 .match{
@@ -849,11 +854,11 @@ div[data-testid="stTextInput"] input {
 defaults={
     "screen":"welcome","likes":set(),"favorites":set(),"review_priority":50,
     "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),
-    "custom_like":None,"search_selected_title":None
+    "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{}
 }
 for k,v in defaults.items():
     if k not in st.session_state:
-        st.session_state[k]=v.copy() if isinstance(v,set) else (list(v) if isinstance(v,list) else v)
+        st.session_state[k]=v.copy() if isinstance(v,(set,dict)) else (list(v) if isinstance(v,list) else v)
 
 def go(screen):
     st.session_state.screen=screen
@@ -862,18 +867,30 @@ def go(screen):
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
 
-def movie_thumb(movie):
-    st.markdown(
-        f'<div class="poster"><div><div class="poster-meta">{movie["year"]} · {movie["genre"]}</div>'
-        f'<div class="poster-title">{movie["title"]}</div></div></div>',
-        unsafe_allow_html=True
-    )
+def movie_thumb(movie, poster_url=None):
+    title = html.escape(str(movie.get("title", "")))
+    year = html.escape(str(movie.get("year", "")))
+    genre = html.escape(str(movie.get("genre", "")))
+    poster_url = poster_url or movie.get("poster_url")
+    if poster_url:
+        safe_url = html.escape(str(poster_url), quote=True)
+        st.markdown(
+            f'<div class="poster has-image"><img src="{safe_url}" alt="Poster for {title}"></div>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f'<div class="poster"><div class="poster-fallback-overlay"><div class="poster-meta">{year} · {genre}</div>'
+            f'<div class="poster-title">{title}</div></div></div>',
+            unsafe_allow_html=True
+        )
 
 def current_profile():
     return build_profile(
         st.session_state.likes, st.session_state.favorites, st.session_state.genres,
         st.session_state.review_priority, st.session_state.more_of,
-        st.session_state.saved, st.session_state.dismissed, st.session_state.adventure
+        st.session_state.saved, st.session_state.dismissed, st.session_state.adventure,
+        st.session_state.external_movies
     )
 
 def concise_description(text, limit=118):
@@ -950,11 +967,12 @@ elif screen=="shelf":
     st.markdown("### Step 1 of 3 — Rate the Shelf")
     st.caption("Choose a few titles you already like. If none fit, search for one you know you enjoy.")
 
+    starter_poster_map = get_poster_batch(tuple((m["title"], int(m["year"])) for m in STARTER_MOVIES))
     cols=st.columns(4)
     for i,movie in enumerate(STARTER_MOVIES):
         title=movie["title"]
         with cols[i%4]:
-            movie_thumb(movie)
+            movie_thumb(movie, starter_poster_map.get(title))
             st.markdown('<div class="shelf-action-gap"></div>', unsafe_allow_html=True)
             b1,b2=st.columns(2)
             liked=title in st.session_state.likes and title not in st.session_state.favorites
@@ -985,80 +1003,106 @@ elif screen=="shelf":
         key="movie_search_query"
     )
 
-    titles = searchable_titles()
     matches = []
     already_selected_matches = []
     if search_query.strip():
-        q = search_query.strip().lower()
-        all_matches = [title for title in titles if q in title.lower()][:6]
-        selected_titles = st.session_state.likes | st.session_state.favorites
-        matches = [title for title in all_matches if title not in selected_titles]
-        already_selected_matches = [title for title in all_matches if title in selected_titles]
+        if tmdb_catalog_configured():
+            matches = search_movies(search_query.strip(), 8)
+        else:
+            q = search_query.strip().lower()
+            local_titles = [title for title in searchable_titles() if q in title.lower()][:8]
+            matches = [get_movie(title) for title in local_titles if get_movie(title)]
 
-    # Keep a pending search selection only while it is still a valid unselected result.
-    if st.session_state.search_selected_title not in matches:
-        st.session_state.search_selected_title = None
+        selected_titles = st.session_state.likes | st.session_state.favorites
+        already_selected_matches = [m for m in matches if m["title"] in selected_titles]
+        matches = [m for m in matches if m["title"] not in selected_titles]
+
+    selected_movie = st.session_state.search_selected_movie
+    valid_ids = {m.get("tmdb_id") for m in matches if m.get("tmdb_id") is not None}
+    valid_titles = {m["title"] for m in matches}
+    if selected_movie:
+        selected_valid = (selected_movie.get("tmdb_id") in valid_ids) if selected_movie.get("tmdb_id") is not None else (selected_movie.get("title") in valid_titles)
+        if not selected_valid:
+            st.session_state.search_selected_movie = None
+            st.session_state.search_selected_title = None
 
     if search_query.strip():
         if matches:
             st.markdown('<div class="search-results-label">Matching titles</div>', unsafe_allow_html=True)
             result_cols = st.columns(2)
-            for j, title in enumerate(matches):
-                selected = st.session_state.search_selected_title == title
+            for j, movie in enumerate(matches):
+                title = movie["title"]
+                year_label = f" ({movie['year']})" if movie.get("year") else ""
+                selected_movie = st.session_state.search_selected_movie
+                selected = bool(selected_movie and selected_movie.get("tmdb_id") == movie.get("tmdb_id") and movie.get("tmdb_id") is not None)
                 with result_cols[j % 2]:
                     if st.button(
-                        title,
-                        key=f"search_result_{j}",
+                        f"{title}{year_label}",
+                        key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
                         type="primary" if selected else "secondary",
                         use_container_width=True
                     ):
+                        st.session_state.search_selected_movie = movie
                         st.session_state.search_selected_title = title
                         st.rerun()
 
         if already_selected_matches:
-            selected_name = already_selected_matches[0]
+            selected_name = already_selected_matches[0]["title"]
             state = "Favorite" if selected_name in st.session_state.favorites else "Liked"
             st.markdown(
                 f'<div class="search-already-selected">'
-                f'<strong>{selected_name}</strong> is already in your selections as {state.lower()}'
+                f'<strong>{html.escape(selected_name)}</strong> is already in your selections as {state.lower()}'
                 f'</div>',
                 unsafe_allow_html=True
             )
 
         if not matches and not already_selected_matches:
-            st.caption("No matches found in the current iCinema catalog")
+            if tmdb_catalog_configured():
+                st.caption("No movie matches found")
+            else:
+                st.caption("TMDB search is unavailable, showing matches from the current iCinema catalog only")
 
-    choice = st.session_state.search_selected_title
-    if choice:
+    choice_movie = st.session_state.search_selected_movie
+    if choice_movie:
+        choice = choice_movie["title"]
         st.markdown(
             f'<div class="search-selected-card">'
             f'<div class="search-selected-kicker">Selected title</div>'
-            f'<div class="search-selected-title">{choice}</div>'
+            f'<div class="search-selected-title">{html.escape(choice)}{f" ({choice_movie.get("year")})" if choice_movie.get("year") else ""}</div>'
             f'</div>',
             unsafe_allow_html=True
         )
-
-        a,b=st.columns([1,1])
-        with a:
-            if st.button(
-                "Add as Like",
-                key="search_add_like",
-                use_container_width=True
-            ):
-                st.session_state.likes.add(choice)
-                st.session_state.favorites.discard(choice)
-                st.session_state.search_selected_title = None
-                st.rerun()
-        with b:
-            if st.button(
-                "Add as Favorite",
-                key="search_add_favorite",
-                use_container_width=True
-            ):
-                st.session_state.likes.add(choice)
-                st.session_state.favorites.add(choice)
-                st.session_state.search_selected_title = None
-                st.rerun()
+        preview_cols = st.columns([1, 3])
+        with preview_cols[0]:
+            movie_thumb(choice_movie)
+        with preview_cols[1]:
+            a,b=st.columns([1,1])
+            with a:
+                if st.button(
+                    "Add as Like",
+                    key="search_add_like",
+                    use_container_width=True
+                ):
+                    if choice_movie.get("external"):
+                        st.session_state.external_movies[choice] = choice_movie
+                    st.session_state.likes.add(choice)
+                    st.session_state.favorites.discard(choice)
+                    st.session_state.search_selected_movie = None
+                    st.session_state.search_selected_title = None
+                    st.rerun()
+            with b:
+                if st.button(
+                    "Add as Favorite",
+                    key="search_add_favorite",
+                    use_container_width=True
+                ):
+                    if choice_movie.get("external"):
+                        st.session_state.external_movies[choice] = choice_movie
+                    st.session_state.likes.add(choice)
+                    st.session_state.favorites.add(choice)
+                    st.session_state.search_selected_movie = None
+                    st.session_state.search_selected_title = None
+                    st.rerun()
 
     chosen_titles = sorted(st.session_state.likes | st.session_state.favorites)
     chosen_count = len(chosen_titles)
@@ -1250,6 +1294,7 @@ elif screen=="showroom":
     ranked=recommend(p,st.session_state.adventure,st.session_state.review_priority,excluded,32)
     visible_movie_keys = tuple((movie["title"], int(movie["year"])) for _, movie in ranked[:16])
     watch_by_title = get_watch_availability_batch(visible_movie_keys, "US")
+    showroom_poster_map = get_poster_batch(visible_movie_keys)
 
     row_specs=[
         ("Top Matches for You",lambda m,s: True),
@@ -1285,7 +1330,7 @@ elif screen=="showroom":
                             st.session_state.saved.discard(movie["title"])
                             st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
-                    movie_thumb(movie)
+                    movie_thumb(movie, showroom_poster_map.get(movie["title"]))
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     st.markdown(f'<div class="ratings">IMDb {movie["imdb"]} · RT {movie["rt"]}%</div>',unsafe_allow_html=True)
                     availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
@@ -1311,25 +1356,27 @@ elif screen=="showroom":
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-section-heading">Saved</div>', unsafe_allow_html=True)
-        movies=[get_movie(t) for t in st.session_state.saved if get_movie(t)]
+        movies=[get_movie(t, st.session_state.external_movies) for t in st.session_state.saved if get_movie(t, st.session_state.external_movies)]
+        saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing saved yet.")
         else:
             cols=st.columns(min(4,len(movies)))
             for i,m in enumerate(movies):
                 with cols[i%len(cols)]:
-                    movie_thumb(m)
+                    movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]))
                     if st.button("Mark Seen",key=f"savedseen_{m['title']}",use_container_width=True):
                         st.session_state.seen.add(m["title"]);st.session_state.saved.discard(m["title"]);st.rerun()
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-section-heading">Seen</div>', unsafe_allow_html=True)
-        movies=[get_movie(t) for t in st.session_state.seen if get_movie(t)]
+        movies=[get_movie(t, st.session_state.external_movies) for t in st.session_state.seen if get_movie(t, st.session_state.external_movies)]
+        seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
             cols=st.columns(min(4,len(movies)))
             for i,m in enumerate(movies):
-                with cols[i%len(cols)]:movie_thumb(m)
+                with cols[i%len(cols)]:movie_thumb(m, m.get("poster_url") or seen_poster_map.get(m["title"]))
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -1337,6 +1384,6 @@ elif screen=="showroom":
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
         if st.button("Reset Profile", key="reset_profile_tab"):
             for k,v in defaults.items():
-                st.session_state[k]=v.copy() if isinstance(v,set) else (list(v) if isinstance(v,list) else v)
+                st.session_state[k]=v.copy() if isinstance(v,(set,dict)) else (list(v) if isinstance(v,list) else v)
             st.rerun()
 
