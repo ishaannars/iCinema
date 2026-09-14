@@ -3,10 +3,10 @@ import html
 import streamlit as st
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
-    build_profile, score_movie, recommend
+    build_profile, score_movie, recommend, rank_movies, CATALOG
 )
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
-from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured
+from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured, discover_movies
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
@@ -101,8 +101,8 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 .poster.has-image img{width:100%;height:100%;object-fit:contain;object-position:center center;display:block;border-radius:14px}
 .poster-placeholder-mark{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.86rem;font-weight:700;letter-spacing:.08em;color:rgba(243,240,234,.34)}
 .poster-caption{margin:.62rem 0 .28rem;padding:0 .08rem;min-height:3rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-.poster-caption-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1.02rem;line-height:1.2;font-weight:750;letter-spacing:-.018em;color:var(--ivory)}
-.poster-caption-year{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.79rem;line-height:1.35;font-weight:550;color:var(--muted);margin-top:.16rem}
+.poster-caption-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1.18rem;line-height:1.18;font-weight:800;letter-spacing:-.025em;color:var(--ivory)}
+.poster-caption-year{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.75rem;line-height:1.35;font-weight:700;letter-spacing:.055em;text-transform:uppercase;color:var(--muted);margin-top:.18rem}
 @media (max-width:900px){.poster{height:270px}}
 .match{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -344,8 +344,8 @@ div[data-testid="stMarkdownContainer"] p{
     color:var(--ivory);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-size:.96rem;
-    line-height:1.35;
-    font-weight:400
+    line-height:1.3;
+    font-weight:800
 }
 .selection-area{
     margin-top:1.1rem;
@@ -380,6 +380,8 @@ div[data-testid="stMarkdownContainer"] p{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-size:.91rem;
     line-height:1.3;
+    font-weight:800;
+    letter-spacing:-.018em;
 }
 .selection-state{
     color:var(--muted2);
@@ -822,6 +824,29 @@ div[data-testid="stTextInput"] input {
 }
 
 
+/* V5.58 targeted typography polish — only user-requested elements */
+/* Showroom metadata/details use the same strong system-font treatment. */
+.match{font-weight:800 !important;letter-spacing:-.018em !important}
+.ratings{font-weight:700 !important;letter-spacing:-.006em !important}
+.watch-availability{font-family:var(--ui-font) !important;font-weight:700 !important;letter-spacing:-.006em !important}
+.movie-description{font-family:var(--ui-font) !important;font-weight:600 !important;letter-spacing:-.006em !important}
+
+/* Step 2 genre buttons only. */
+[class*="st-key-genre_"] button,
+[class*="st-key-genre_"] button p{
+    font-family:var(--ui-font) !important;
+    font-weight:800 !important;
+    letter-spacing:-.018em !important;
+}
+
+/* All six Cinema Profile value groups: same stronger bubble text treatment. */
+.profile-chip,
+.profile-analysis-row{
+    font-family:var(--ui-font) !important;
+    font-weight:600 !important;
+    letter-spacing:-.008em !important;
+}
+
 /* V5.48 tighter showroom row/card rhythm */
 [class*="st-key-skip_"] + div{
     margin-top:0 !important;
@@ -858,6 +883,16 @@ div[data-testid="stTextInput"] input {
     margin-bottom:.15rem;
 }
 
+
+/* V5.59 showroom balance: tighter, more even vertical rhythm without changing card height */
+.poster-caption{margin:.52rem 0 .18rem !important;min-height:2.9rem !important}
+.match{margin-top:.28rem !important;margin-bottom:.04rem !important}
+.ratings{margin-top:.02rem !important;margin-bottom:.24rem !important}
+.watch-availability{margin:.24rem 0 .18rem !important;min-height:.96rem !important}
+.movie-description{margin-top:.12rem !important;margin-bottom:.34rem !important;line-height:1.45 !important}
+.movie-card-actions{margin-top:.28rem !important;margin-bottom:.18rem !important}
+.showroom-row{margin-top:.68rem !important;margin-bottom:.04rem !important}
+.showroom-row h3{margin-bottom:.14rem !important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1300,29 +1335,77 @@ elif screen=="showroom":
     tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
 
     excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed
-    ranked=recommend(p,st.session_state.adventure,st.session_state.review_priority,excluded,32)
-    visible_movie_keys = tuple((movie["title"], int(movie["year"])) for _, movie in ranked[:16])
-    watch_by_title = get_watch_availability_batch(visible_movie_keys, "US")
-    showroom_poster_map = get_poster_batch(visible_movie_keys)
 
-    row_specs=[
-        ("Top Matches for You",lambda m,s: True),
-        ("Critically Acclaimed",lambda m,s: "Critically Acclaimed" in m.get("tags",[]) or m.get("rt",0)>=90),
-        ("Hidden Gems",lambda m,s: "Hidden Gem" in m.get("tags",[])),
-        ("Something Different",lambda m,s: m["genre"] not in p["genres"]),
-    ]
+    # Build a deep candidate pool, then rank every candidate with the same iCinema
+    # personalization algorithm. TMDB discovery acts only as replenishment: it does not
+    # bypass the user's profile, and excluded Save/Seen/Skip titles stay excluded.
+    external_pool = discover_movies(140) if tmdb_catalog_configured() else []
+    candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
+    ranked = rank_movies(
+        candidate_pool,
+        p,
+        st.session_state.adventure,
+        st.session_state.review_priority,
+        excluded,
+        None,
+    )
+
+    def _row_candidates(row_name, already_used):
+        available=[item for item in ranked if item[1]["title"] not in already_used]
+        if row_name=="Hidden Gems":
+            # Strong hidden-gem signals first, then broader discovery-oriented fallbacks.
+            discovery_tags={"International","Offbeat","Slow-burn","Psychological","Documentary","Grounded","Cerebral"}
+            primary=[item for item in available if "Hidden Gem" in item[1].get("tags",[])]
+            fallback=[item for item in available if item not in primary and discovery_tags.intersection(set(item[1].get("tags",[])))]
+            rest=[item for item in available if item not in primary and item not in fallback]
+            return primary+fallback+rest
+        if row_name=="Critically Acclaimed":
+            primary=[item for item in available if ("Critically Acclaimed" in item[1].get("tags",[]) or item[1].get("rt",0)>=90) and "Hidden Gem" not in item[1].get("tags",[])]
+            primary.sort(key=lambda x:(x[1].get("rt",0),x[0],x[1].get("imdb",0)), reverse=True)
+            rest=[item for item in available if item not in primary]
+            return primary+rest
+        if row_name=="Something Different":
+            primary=[item for item in available if item[1].get("genre") not in p["genres"]]
+            primary.sort(key=lambda x:(x[0],x[1].get("rt",0)), reverse=True)
+            rest=[item for item in available if item not in primary]
+            return primary+rest
+        # Top Matches stays personalization-first.
+        return available
+
+    # Reserve distinct movies for each row before rendering. This prevents a title from
+    # migrating into another section during the same refresh and keeps every row populated.
+    row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
+    row_choices={name: [] for name in row_order}
+    reserved=set()
+
+    # Pass 1: category-specific ordering with strict cross-row de-duplication.
+    for row_name in row_order:
+        picks=_row_candidates(row_name,reserved)[:4]
+        row_choices[row_name].extend(picks)
+        reserved.update(movie["title"] for _,movie in picks)
+
+    # Pass 2: if any category pool is thin, fill it with the next-best personalized
+    # candidates that have not appeared elsewhere. This keeps every section alive.
+    for row_name in row_order:
+        need=4-len(row_choices[row_name])
+        if need<=0:
+            continue
+        fallback=[item for item in ranked if item[1]["title"] not in reserved]
+        extra=fallback[:need]
+        row_choices[row_name].extend(extra)
+        reserved.update(movie["title"] for _,movie in extra)
+
+    visible_movies=[movie for row_name in ["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"] for _,movie in row_choices.get(row_name,[])]
+    visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in visible_movies)
+    watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
+    showroom_poster_map=get_poster_batch(visible_movie_keys)
+
+    row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        used=set()
-        for row_index,(row_name,predicate) in enumerate(row_specs):
-            choices=[]
-            for score,movie in ranked:
-                if movie["title"] in used:continue
-                if predicate(movie,score):
-                    choices.append((score,movie))
-                if len(choices)==4:break
-            used.update(m["title"] for _,m in choices)
+        for row_index,row_name in enumerate(row_specs):
+            choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div>', unsafe_allow_html=True)
             if not choices:

@@ -229,6 +229,13 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
     }
 
 
+def _num(value, default=0.0):
+    try:
+        return float(value) if value is not None else float(default)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def score_movie(movie, profile, adventure, review_priority):
     score = 68.0
     tags = set(movie.get("tags", []))
@@ -240,7 +247,7 @@ def score_movie(movie, profile, adventure, review_priority):
         if trait in tags:
             score += 5
 
-    if review_priority <= 35 and movie.get("rt", 0) >= 90:
+    if review_priority <= 35 and _num(movie.get("rt")) >= 90:
         score += 5
 
     if "International Films" in profile["priorities"] and "International" in tags:
@@ -262,12 +269,25 @@ def score_movie(movie, profile, adventure, review_priority):
     return max(72, min(98, int(round(score))))
 
 
-def recommend(profile, adventure, review_priority, excluded=None, limit=16):
+def rank_movies(movies, profile, adventure, review_priority, excluded=None, limit=None):
+    """Rank any candidate pool with the same iCinema personalization algorithm."""
     excluded = set(excluded or [])
     scored = []
-    for movie in CATALOG:
-        if movie["title"] in excluded:
+    seen_keys = set()
+    for movie in movies:
+        if not movie or movie.get("title") in excluded:
             continue
+        key = (str(movie.get("title", "")).casefold(), int(movie.get("year") or 0))
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
         scored.append((score_movie(movie, profile, adventure, review_priority), movie))
-    scored.sort(key=lambda x: (x[0], x[1].get("rt", 0), x[1].get("imdb", 0)), reverse=True)
-    return [(score, movie) for score, movie in scored[:limit]]
+    scored.sort(
+        key=lambda x: (x[0], _num(x[1].get("rt")), _num(x[1].get("imdb")), _num(x[1].get("tmdb_vote"))),
+        reverse=True,
+    )
+    return scored if limit is None else scored[:limit]
+
+
+def recommend(profile, adventure, review_priority, excluded=None, limit=16):
+    return rank_movies(CATALOG, profile, adventure, review_priority, excluded, limit)

@@ -9,6 +9,7 @@ TMDB_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 CACHE_SECONDS = 60 * 60 * 24 * 14
 SEARCH_CACHE_SECONDS = 60 * 60 * 24
+DISCOVERY_CACHE_SECONDS = 60 * 60 * 24
 
 GENRE_MAP = {
     28: "Action",
@@ -114,6 +115,8 @@ def _to_icinema_movie(item):
         "poster_url": _poster_url(item.get("poster_path")),
         "tmdb_id": item.get("id"),
         "original_language": item.get("original_language"),
+        "tmdb_vote": item.get("vote_average"),
+        "tmdb_vote_count": item.get("vote_count"),
         "external": True,
     }
 
@@ -179,3 +182,43 @@ def get_poster_batch(movies: Tuple[Tuple[str, int], ...]) -> Dict[str, Optional[
             except Exception:
                 result[title] = None
     return result
+
+
+@st.cache_data(ttl=DISCOVERY_CACHE_SECONDS, show_spinner=False)
+def discover_movies(limit: int = 120):
+    """Return a broad TMDB candidate pool for resilient recommendation replenishment."""
+    if not tmdb_catalog_configured() or limit <= 0:
+        return []
+
+    results = []
+    seen = set()
+    page = 1
+    max_pages = min(8, max(1, (int(limit) + 19) // 20 + 1))
+    while page <= max_pages and len(results) < limit:
+        payload = _request(
+            "/discover/movie",
+            {
+                "include_adult": "false",
+                "include_video": "false",
+                "language": "en-US",
+                "page": page,
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 80,
+            },
+        )
+        if not payload:
+            break
+        items = payload.get("results", [])
+        if not items:
+            break
+        for item in items:
+            movie = _to_icinema_movie(item)
+            key = (movie["title"].casefold(), int(movie.get("year") or 0))
+            if key in seen:
+                continue
+            seen.add(key)
+            results.append(movie)
+            if len(results) >= limit:
+                break
+        page += 1
+    return results
