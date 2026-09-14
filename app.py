@@ -18,14 +18,47 @@ html,body,[class*="css"]{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI"
 .block-container{max-width:1240px;padding-top:2.1rem;padding-bottom:3rem}
 h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 .icinema-logo{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1.7rem;font-weight:800;letter-spacing:-.055em;color:var(--ivory);margin-bottom:.8rem}
-.hero-title{font-size:3.8rem;line-height:1.03;font-weight:820;max-width:900px;margin-top:1.9rem;color:var(--ivory);letter-spacing:-.045em}
-.hero-subtitle{color:var(--muted);font-size:1.08rem;max-width:790px;margin-top:.95rem;margin-bottom:1.7rem;line-height:1.55}
-.step-card{border:1px solid var(--border);background:var(--surface);border-radius:20px;padding:1.05rem 1.1rem;height:100%}
+.hero-title{font-size:3.8rem;line-height:1.03;font-weight:820;max-width:900px;margin-top:2.15rem;color:var(--ivory);letter-spacing:-.045em}
+.hero-subtitle{
+        color:var(--muted);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        font-size:1.04rem;
+        font-weight:450;
+        max-width:790px;
+        margin-top:1.05rem;
+        margin-bottom:1.95rem;
+        line-height:1.58;
+        letter-spacing:-.008em
+    }
+.step-card{border:1px solid var(--border);background:var(--surface);border-radius:20px;padding:1.12rem 1.15rem;height:100%}
 .step-num,.section-kicker{color:var(--muted2);font-size:.76rem;text-transform:uppercase;letter-spacing:.10em;font-weight:760}
 .step-card h3{font-size:1.08rem;margin:.35rem 0 .25rem}
-.step-card .muted{font-size:.9rem;line-height:1.45}
-.adapt-note{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:.8rem 0;margin:.9rem 0 1.25rem;color:var(--muted);font-size:.92rem}
-.adapt-note strong{color:var(--ivory)}
+.step-card .muted{
+        color:var(--muted);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        font-size:.92rem;
+        font-weight:450;
+        line-height:1.5;
+        letter-spacing:-.005em
+    }
+.adapt-note{
+        border-top:1px solid var(--border);
+        border-bottom:1px solid var(--border);
+        padding:.92rem 0;
+        margin:1.15rem 0 1.45rem;
+        color:var(--muted);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        font-size:.92rem;
+        font-weight:450;
+        line-height:1.5;
+        letter-spacing:-.005em
+    }
+.adapt-note strong{
+        color:var(--ivory);
+        font-size:.98rem;
+        font-weight:650;
+        letter-spacing:-.01em
+    }
 .movie-card{margin-bottom:.55rem}
 .poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem}
 .poster-meta{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
@@ -54,6 +87,31 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 div.stButton>button{border-radius:999px;min-height:40px;font-weight:700}
 div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
 div.stButton>button[kind="primary"]:hover{background:var(--ai-hover);border-color:var(--ai-hover)}
+.preference-choice{
+    border:1px solid var(--border);
+    background:var(--surface);
+    border-radius:18px;
+    padding:1rem 1.05rem;
+    min-height:112px;
+    margin-bottom:.55rem;
+}
+.preference-choice-title{
+    color:var(--ivory);
+    font-size:1.02rem;
+    font-weight:760;
+    margin-bottom:.28rem;
+}
+.preference-choice-copy{
+    color:var(--muted);
+    font-size:.9rem;
+    line-height:1.45;
+}
+.preference-helper{
+    color:var(--muted);
+    font-size:.88rem;
+    margin:.25rem 0 .65rem;
+}
+
 div[data-testid="stSlider"] [data-testid="stThumbValue"],
 div[data-testid="stSlider"] [data-testid="stSliderThumbValue"],
 div[data-testid="stSlider"] div[role="tooltip"],
@@ -139,7 +197,7 @@ if screen=="welcome":
     c1,c2,c3=st.columns(3)
     steps=[
         ("01","Rate the Shelf","Choose titles you already enjoy, or search for one you like"),
-        ("02","Tailor Your Preferences","Tell iCinema what matters most when choosing what to watch"),
+        ("02","Tailor Your Preferences","Choose what matters most when deciding what to watch"),
         ("03","Shape Your Showroom","Choose what iCinema should surface more often"),
     ]
     for col,(n,title,body) in zip((c1,c2,c3),steps):
@@ -220,15 +278,36 @@ elif screen=="shelf":
 elif screen=="taste":
     logo()
     st.markdown("### Step 2 of 3 — Tailor Your Preferences")
-    st.caption("Tell iCinema what matters most when deciding what to watch.")
+    st.caption("Choose what matters most when deciding what to watch")
 
     st.markdown("#### Which matters more?")
-    st.markdown('<div style="display:flex;justify-content:space-between;color:#F3F0EA;font-weight:650"><span>Great reviews</span><span>Pure entertainment</span></div>',unsafe_allow_html=True)
-    st.session_state.review_priority=st.slider("Review priority",0,100,st.session_state.review_priority,label_visibility="collapsed")
-    st.caption("Choose how much critical reception should influence your recommendations.")
+
+    review_options = [
+        ("Highly rated", "Strong reviews and critical reception", 25),
+        ("Both matter equally", "Balance critical reception with entertainment value", 50),
+        ("Easy to enjoy", "Prioritize entertainment even when critics disagree", 75),
+    ]
+
+    rcols = st.columns(3)
+    for i,(title,copy,value) in enumerate(review_options):
+        with rcols[i]:
+            st.markdown(
+                f'<div class="preference-choice"><div class="preference-choice-title">{title}</div>'
+                f'<div class="preference-choice-copy">{copy}</div></div>',
+                unsafe_allow_html=True
+            )
+            active = st.session_state.review_priority == value
+            if st.button(
+                "Selected" if active else "Choose",
+                key=f"review_choice_{value}",
+                type="primary" if active else "secondary",
+                use_container_width=True
+            ):
+                st.session_state.review_priority = value
+                st.rerun()
 
     st.markdown("#### What do you like to watch?")
-    st.caption("Select up to five genres.")
+    st.caption("Select up to five genres")
     selected=set(st.session_state.genres)
     genre_cols=st.columns(5)
     for i,genre in enumerate(GENRES):
@@ -240,8 +319,30 @@ elif screen=="taste":
                 st.session_state.genres=list(selected);st.rerun()
 
     st.markdown("#### How open are you to something different?")
-    st.markdown('<div style="display:flex;justify-content:space-between;color:#F3F0EA;font-weight:650"><span>Keep it familiar</span><span>Surprise me</span></div>',unsafe_allow_html=True)
-    st.session_state.adventure=st.slider("Adventure level",0,100,st.session_state.adventure,label_visibility="collapsed")
+
+    adventure_options = [
+        ("Stay close to my taste", "More of what you already know you like", 25),
+        ("A mix of both", "Balance familiar picks with something new", 50),
+        ("Show me something different", "Stretch beyond your usual picks", 75),
+    ]
+
+    acols = st.columns(3)
+    for i,(title,copy,value) in enumerate(adventure_options):
+        with acols[i]:
+            st.markdown(
+                f'<div class="preference-choice"><div class="preference-choice-title">{title}</div>'
+                f'<div class="preference-choice-copy">{copy}</div></div>',
+                unsafe_allow_html=True
+            )
+            active = st.session_state.adventure == value
+            if st.button(
+                "Selected" if active else "Choose",
+                key=f"adventure_choice_{value}",
+                type="primary" if active else "secondary",
+                use_container_width=True
+            ):
+                st.session_state.adventure = value
+                st.rerun()
 
     if st.button("Continue →",type="primary"):go("more")
 
