@@ -18,19 +18,29 @@ html,body,[class*="css"]{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI"
 .block-container{max-width:1240px;padding-top:2.1rem;padding-bottom:3rem}
 h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
 .icinema-logo{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1.7rem;font-weight:800;letter-spacing:-.055em;color:var(--ivory);margin-bottom:.8rem}
-.hero-title{font-size:3.8rem;line-height:1.03;font-weight:820;max-width:900px;margin-top:2.15rem;color:var(--ivory);letter-spacing:-.045em}
+.hero-title{
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        font-size:3.95rem;
+        line-height:.99;
+        font-weight:790;
+        max-width:760px;
+        margin-top:2.45rem;
+        color:var(--ivory);
+        letter-spacing:-.055em;
+        text-wrap:balance
+    }
 .hero-subtitle{
         color:var(--muted);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:1.04rem;
+        font-size:1.03rem;
         font-weight:450;
-        max-width:790px;
-        margin-top:1.05rem;
-        margin-bottom:1.95rem;
+        max-width:730px;
+        margin-top:1.18rem;
+        margin-bottom:2.25rem;
         line-height:1.58;
         letter-spacing:-.008em
     }
-.step-card{border:1px solid var(--border);background:var(--surface);border-radius:20px;padding:1.12rem 1.15rem;height:100%}
+.step-card{border:1px solid var(--border);background:var(--surface);border-radius:20px;padding:1.16rem 1.18rem;height:100%}
 .step-num,.section-kicker{color:var(--muted2);font-size:.76rem;text-transform:uppercase;letter-spacing:.10em;font-weight:760}
 .step-card h3{font-size:1.08rem;margin:.35rem 0 .25rem}
 .step-card .muted{
@@ -42,22 +52,29 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         letter-spacing:-.005em
     }
 .adapt-note{
-        border-top:1px solid var(--border);
-        border-bottom:1px solid var(--border);
-        padding:.92rem 0;
-        margin:1.15rem 0 1.45rem;
+        border:1px solid var(--border);
+        border-radius:18px;
+        background:rgba(255,255,255,.018);
+        padding:1.15rem 1.25rem 1.18rem;
+        margin:2rem 0 1.7rem;
         color:var(--muted);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
         font-size:.92rem;
         font-weight:450;
-        line-height:1.5;
+        line-height:1.55;
         letter-spacing:-.005em
     }
 .adapt-note strong{
+        display:inline-block;
         color:var(--ivory);
-        font-size:.98rem;
-        font-weight:650;
-        letter-spacing:-.01em
+        font-size:1.06rem;
+        font-weight:680;
+        letter-spacing:-.018em;
+        margin-bottom:.34rem
+    }
+.adapt-note span{
+        display:block;
+        max-width:760px
     }
 .movie-card{margin-bottom:.55rem}
 .poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem}
