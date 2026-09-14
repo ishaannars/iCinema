@@ -101,7 +101,7 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     font-weight:600;
     font-size:.91rem;
     color:var(--ivory);
-    margin-top:.52rem;
+    margin-top:.4rem;
     letter-spacing:-.008em
 }
 .ratings{
@@ -109,7 +109,7 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     color:var(--muted);
     font-size:.82rem;
     margin-top:.08rem;
-    margin-bottom:.42rem
+    margin-bottom:.32rem
 }
 .movie-description{
     font-family:Georgia,"Times New Roman",serif;
@@ -117,7 +117,7 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     font-size:.88rem;
     line-height:1.48;
     font-weight:400;
-    margin-bottom:.6rem
+    margin-bottom:.45rem
 }
 .showroom-row{
     margin-top:1.65rem;
@@ -479,8 +479,23 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     padding-left:0 !important;
 }
 .showroom-row{
-    margin-top:1.85rem;
-    margin-bottom:.62rem;
+    margin-top:1.05rem;
+    margin-bottom:.42rem;
+}
+.showroom-row.first{
+    margin-top:0;
+}
+.showroom-tab-start{
+    height:1.35rem;
+}
+.tab-section-heading{
+    color:var(--ivory);
+    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif);
+    font-size:1.65rem;
+    line-height:1.1;
+    font-weight:740;
+    letter-spacing:-.025em;
+    margin:0 0 .9rem;
 }
 .showroom-heading{
     color:var(--ivory);
@@ -522,15 +537,15 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     text-overflow:clip !important;
 }
 .showroom-skip-row{
-    height:1.9rem;
-    margin-bottom:.38rem;
+    height:1.62rem;
+    margin-bottom:.12rem;
 }
 [class*="st-key-skip_"] button{
-    min-height:1.72rem !important;
-    height:1.72rem !important;
-    padding:.18rem .48rem !important;
+    min-height:1.5rem !important;
+    height:1.5rem !important;
+    padding:.14rem .42rem !important;
     border-radius:999px !important;
-    font-size:.62rem !important;
+    font-size:.64rem !important;
     font-weight:650 !important;
     line-height:1 !important;
     letter-spacing:0 !important;
@@ -538,14 +553,14 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
 }
 [class*="st-key-skip_"] button p{
-    font-size:.62rem !important;
+    font-size:.64rem !important;
     line-height:1 !important;
     white-space:nowrap !important;
     margin:0 !important;
 }
 .movie-card-actions{
-    margin-top:.5rem;
-    margin-bottom:.35rem;
+    margin-top:.35rem;
+    margin-bottom:.22rem;
 }
 .profile-tab-reset{margin-top:1.2rem}
 .profile-wrap{
@@ -1213,8 +1228,9 @@ elif screen=="showroom":
     ]
 
     with tabs[0]:
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         used=set()
-        for row_name,predicate in row_specs:
+        for row_index,(row_name,predicate) in enumerate(row_specs):
             choices=[]
             for score,movie in ranked:
                 if movie["title"] in used:continue
@@ -1222,14 +1238,15 @@ elif screen=="showroom":
                     choices.append((score,movie))
                 if len(choices)==4:break
             used.update(m["title"] for _,m in choices)
-            st.markdown(f'<div class="showroom-row"><h3>{row_name}</h3></div>', unsafe_allow_html=True)
+            row_class = "showroom-row first" if row_index == 0 else "showroom-row"
+            st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div>', unsafe_allow_html=True)
             if not choices:
                 st.caption("No additional matches in this demo catalog.")
                 continue
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
-                    skip_spacer, skip_col = st.columns([4.25,1], gap="small")
+                    skip_spacer, skip_col = st.columns([3.2,1.35], gap="small")
                     with skip_col:
                         st.markdown('<div class="showroom-skip-row">', unsafe_allow_html=True)
                         if st.button("Skip",key=f"skip_{row_name}_{movie['title']}",use_container_width=True):
@@ -1253,7 +1270,8 @@ elif screen=="showroom":
                     st.markdown('</div>', unsafe_allow_html=True)
 
     with tabs[1]:
-        st.markdown("### Saved")
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="tab-section-heading">Saved</div>', unsafe_allow_html=True)
         movies=[get_movie(t) for t in st.session_state.saved if get_movie(t)]
         if not movies:st.caption("Nothing saved yet.")
         else:
@@ -1265,7 +1283,8 @@ elif screen=="showroom":
                         st.session_state.seen.add(m["title"]);st.session_state.saved.discard(m["title"]);st.rerun()
 
     with tabs[2]:
-        st.markdown("### Seen")
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="tab-section-heading">Seen</div>', unsafe_allow_html=True)
         movies=[get_movie(t) for t in st.session_state.seen if get_movie(t)]
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
@@ -1274,6 +1293,7 @@ elif screen=="showroom":
                 with cols[i%len(cols)]:movie_thumb(m)
 
     with tabs[3]:
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         render_cinema_profile(p)
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
         if st.button("Reset Profile", key="reset_profile_tab"):
