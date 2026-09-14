@@ -7,6 +7,7 @@ from src.recommender import (
 )
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured, discover_movies
+from src.live_ratings import get_live_ratings_batch, omdb_configured
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
@@ -1405,6 +1406,7 @@ elif screen=="showroom":
     visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in visible_movies)
     watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
     showroom_poster_map=get_poster_batch(visible_movie_keys)
+    live_ratings_by_title=get_live_ratings_batch(visible_movie_keys)
 
     row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
 
@@ -1430,7 +1432,13 @@ elif screen=="showroom":
                         st.markdown('</div>', unsafe_allow_html=True)
                     movie_thumb(movie, showroom_poster_map.get(movie["title"]))
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
-                    st.markdown(f'<div class="ratings">IMDb {movie["imdb"]} · RT {movie["rt"]}%</div>',unsafe_allow_html=True)
+                    live_rating = live_ratings_by_title.get(movie["title"], {})
+                    imdb_value = live_rating.get("imdb")
+                    rt_value = live_rating.get("rt")
+                    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "—"
+                    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "—"
+                    rating_class = "ratings" if live_rating else "ratings muted"
+                    st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
                     availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
                     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
                     st.markdown(f'<div class="{availability_class}">{availability["text"]}</div>', unsafe_allow_html=True)
@@ -1445,9 +1453,11 @@ elif screen=="showroom":
                         if st.button("Seen",key=f"seen_{row_name}_{movie['title']}",use_container_width=True):
                             st.session_state.seen.add(movie["title"]);st.session_state.saved.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
+        rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
-            'This product uses the TMDB API but is not endorsed or certified by TMDB.</div>',
+            'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
             unsafe_allow_html=True
         )
 
