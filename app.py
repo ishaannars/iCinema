@@ -530,6 +530,10 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     overflow:visible !important;
     text-overflow:clip !important;
     font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
 }
 [class*="st-key-save_"] button p,
 [class*="st-key-seen_"] button p{
@@ -538,6 +542,9 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     white-space:nowrap !important;
     overflow:visible !important;
     text-overflow:clip !important;
+    margin:0 !important;
+    width:100% !important;
+    text-align:center !important;
 }
 .showroom-skip-row{
     height:.95rem;
