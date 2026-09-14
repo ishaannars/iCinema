@@ -225,21 +225,20 @@ div[data-testid="stMarkdownContainer"] p{
     font-weight:450;
     line-height:1.46;
 }
-.step3-active-card{
-    border-color:rgba(92,111,168,.48);
-    box-shadow:0 0 0 1px rgba(92,111,168,.20) inset;
-    background:linear-gradient(180deg, rgba(92,111,168,.11), rgba(255,255,255,.02));
-}
 [class*="st-key-priority_toggle_"]{
     margin-top:0 !important;
     margin-bottom:2.0rem !important;
-    padding-left:.08rem !important;
+    padding-left:0 !important;
     min-height:2.15rem !important;
 }
 [class*="st-key-priority_toggle_"] [data-testid="stToggle"]{
     margin:0 !important;
+    padding-left:0 !important;
 }
+[class*="st-key-priority_toggle_"] [data-testid="stWidgetLabel"],
 [class*="st-key-priority_toggle_"] label{
+    margin-left:0 !important;
+    padding-left:0 !important;
     gap:.55rem !important;
     color:var(--muted) !important;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
@@ -1203,9 +1202,8 @@ elif screen=="more":
     for i, option in enumerate(MORE_OF_OPTIONS):
         with (left if i % 2 == 0 else right):
             active = option in selected
-            active_class = ' step3-active-card' if active else ''
             st.markdown(
-                f'<div class="step3-card{active_class}">'
+                f'<div class="step3-card">'
                 f'<div class="step3-card-title">{option}</div>'
                 f'<div class="step3-card-copy">{descriptions[option]}</div>'
                 f'</div>',
