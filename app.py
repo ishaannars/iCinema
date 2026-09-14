@@ -596,7 +596,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     padding:0;
 }
 .profile-block + .profile-block{
-    margin-top:1.35rem;
+    margin-top:1.8rem;
 }
 .profile-label{
     color:var(--muted2);
@@ -689,7 +689,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 }
 @media (max-width:800px){
     .profile-grid{row-gap:0}
-    .profile-block + .profile-block{margin-top:1.15rem}
+    .profile-block + .profile-block{margin-top:1.55rem}
     .profile-heading{font-size:1.8rem}
     .hero-title{font-size:2.8rem}
 }
