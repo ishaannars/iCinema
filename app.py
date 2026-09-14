@@ -96,12 +96,14 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         letter-spacing:-.005em
     }
 .movie-card{margin-bottom:.55rem}
-.poster{height:255px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:flex-end;padding:1rem;position:relative;overflow:hidden}
-.poster.has-image{padding:0;background:#171A1F}
-.poster.has-image img{width:100%;height:100%;object-fit:cover;display:block}
-.poster-fallback-overlay{position:absolute;left:0;right:0;bottom:0;padding:2.2rem 1rem 1rem;background:linear-gradient(180deg,transparent,rgba(8,10,12,.92));pointer-events:none}
-.poster-meta{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
-.poster-title{font-size:1.18rem;font-weight:800;margin-top:.25rem;color:var(--ivory)}
+.poster{height:300px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:1rem;position:relative;overflow:hidden}
+.poster.has-image{padding:.42rem;background:#0F1114}
+.poster.has-image img{width:100%;height:100%;object-fit:contain;object-position:center center;display:block;border-radius:14px}
+.poster-placeholder-mark{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.86rem;font-weight:700;letter-spacing:.08em;color:rgba(243,240,234,.34)}
+.poster-caption{margin:.62rem 0 .28rem;padding:0 .08rem;min-height:3rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.poster-caption-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1.02rem;line-height:1.2;font-weight:750;letter-spacing:-.018em;color:var(--ivory)}
+.poster-caption-year{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.79rem;line-height:1.35;font-weight:550;color:var(--muted);margin-top:.16rem}
+@media (max-width:900px){.poster{height:270px}}
 .match{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-weight:600;
@@ -162,20 +164,28 @@ div[data-testid="stMarkdownContainer"] p{
     margin-bottom:.55rem;
     color:var(--muted);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.82rem;
+    font-size:.94rem;
     line-height:1.35;
-    font-weight:600;
+    font-weight:650;
 }
 .pref-scale-ends span:last-child{
     text-align:right;
 }
 .pref-scale-helper{
-    margin-top:.42rem;
+    margin-top:.82rem;
     color:var(--muted2);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.74rem;
+    font-size:.86rem;
     line-height:1.35;
     font-weight:650;
+}
+.genre-helper{
+    margin:.15rem 0 .72rem;
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.92rem;
+    line-height:1.4;
+    font-weight:550;
 }
 .pref-scale-clicks{
     margin-top:.95rem;
@@ -870,20 +880,19 @@ def logo():
 def movie_thumb(movie, poster_url=None):
     title = html.escape(str(movie.get("title", "")))
     year = html.escape(str(movie.get("year", "")))
-    genre = html.escape(str(movie.get("genre", "")))
     poster_url = poster_url or movie.get("poster_url")
     if poster_url:
         safe_url = html.escape(str(poster_url), quote=True)
-        st.markdown(
-            f'<div class="poster has-image"><img src="{safe_url}" alt="Poster for {title}"></div>',
-            unsafe_allow_html=True
-        )
+        poster_html = f'<div class="poster has-image"><img src="{safe_url}" alt="Poster for {title}"></div>'
     else:
-        st.markdown(
-            f'<div class="poster"><div class="poster-fallback-overlay"><div class="poster-meta">{year} · {genre}</div>'
-            f'<div class="poster-title">{title}</div></div></div>',
-            unsafe_allow_html=True
-        )
+        poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
+
+    year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
+    st.markdown(
+        poster_html
+        + f'<div class="poster-caption"><div class="poster-caption-title">{title}</div>{year_html}</div>',
+        unsafe_allow_html=True
+    )
 
 def current_profile():
     return build_profile(
@@ -1169,7 +1178,7 @@ elif screen=="taste":
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### What do you like to watch?")
-    st.caption("Select up to five genres")
+    st.markdown('<div class="genre-helper">Select up to five genres</div>', unsafe_allow_html=True)
     selected=set(st.session_state.genres)
     genre_cols=st.columns(5)
     for i,genre in enumerate(GENRES):
