@@ -1350,6 +1350,12 @@ elif screen=="showroom":
         None,
     )
 
+    def _safe_num(value, default=0):
+        try:
+            return float(value) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
     def _row_candidates(row_name, already_used):
         available=[item for item in ranked if item[1]["title"] not in already_used]
         if row_name=="Hidden Gems":
@@ -1360,13 +1366,13 @@ elif screen=="showroom":
             rest=[item for item in available if item not in primary and item not in fallback]
             return primary+fallback+rest
         if row_name=="Critically Acclaimed":
-            primary=[item for item in available if ("Critically Acclaimed" in item[1].get("tags",[]) or item[1].get("rt",0)>=90) and "Hidden Gem" not in item[1].get("tags",[])]
-            primary.sort(key=lambda x:(x[1].get("rt",0),x[0],x[1].get("imdb",0)), reverse=True)
+            primary=[item for item in available if ("Critically Acclaimed" in item[1].get("tags",[]) or _safe_num(item[1].get("rt"))>=90) and "Hidden Gem" not in item[1].get("tags",[])]
+            primary.sort(key=lambda x:(_safe_num(x[1].get("rt")), x[0], _safe_num(x[1].get("imdb"))), reverse=True)
             rest=[item for item in available if item not in primary]
             return primary+rest
         if row_name=="Something Different":
             primary=[item for item in available if item[1].get("genre") not in p["genres"]]
-            primary.sort(key=lambda x:(x[0],x[1].get("rt",0)), reverse=True)
+            primary.sort(key=lambda x:(x[0], _safe_num(x[1].get("rt"))), reverse=True)
             rest=[item for item in available if item not in primary]
             return primary+rest
         # Top Matches stays personalization-first.
