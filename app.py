@@ -548,9 +548,11 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     margin-bottom:-.38rem !important;
 }
 [class*="st-key-skip_"] button{
+    min-width:3.6rem !important;
+    width:100% !important;
     min-height:1.5rem !important;
     height:1.5rem !important;
-    padding:.14rem .42rem !important;
+    padding:.14rem .38rem !important;
     border-radius:999px !important;
     font-size:.64rem !important;
     font-weight:650 !important;
@@ -567,8 +569,11 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-size:.64rem !important;
     line-height:1 !important;
     white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
     margin:0 !important;
     width:100% !important;
+    min-width:max-content !important;
     text-align:center !important;
 }
 .movie-card-actions{
@@ -823,9 +828,16 @@ div[data-testid="stTextInput"] input {
     margin-top:0 !important;
 }
 @media (max-width:900px){
+    [class*="st-key-skip_"]{
+        min-width:3.6rem !important;
+    }
     [class*="st-key-skip_"] button{
-        min-width:3.2rem !important;
-        padding:.14rem .36rem !important;
+        min-width:3.6rem !important;
+        padding:.14rem .32rem !important;
+        font-size:.62rem !important;
+    }
+    [class*="st-key-skip_"] button p{
+        font-size:.62rem !important;
     }
 }
 
@@ -1271,7 +1283,7 @@ elif screen=="showroom":
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
-                    skip_spacer, skip_col = st.columns([4.0,1.1], gap="small")
+                    skip_spacer, skip_col = st.columns([3.45,1.55], gap="small")
                     with skip_col:
                         st.markdown('<div class="showroom-skip-row">', unsafe_allow_html=True)
                         if st.button("Skip",key=f"skip_{row_name}_{movie['title']}",use_container_width=True):
