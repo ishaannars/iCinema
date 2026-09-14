@@ -1,5 +1,6 @@
 
 import html
+import json
 import streamlit as st
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
@@ -8,6 +9,7 @@ from src.recommender import (
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
+from src.browser_storage import browser_storage
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
@@ -200,8 +202,8 @@ div[data-testid="stMarkdownContainer"] p{
     height:4.05rem !important;
     padding:0 !important;
     border-radius:999px !important;
-    font-size:0 !important;
-    line-height:0 !important;
+    font-size:.74rem !important;
+    line-height:1.16 !important;
     border:1px solid rgba(169,173,183,.28) !important;
     background:rgba(255,255,255,.02) !important;
 }
@@ -210,61 +212,54 @@ div[data-testid="stMarkdownContainer"] p{
     background:rgba(255,255,255,.05) !important;
 }
 .pref-scale-clicks div.stButton>button p{
-    font-size:0 !important;
-    line-height:0 !important;
+    font-size:.74rem !important;
+    line-height:1.16 !important;
     margin:0 !important;
+    white-space:normal !important;
+    text-align:center !important;
+    font-weight:700 !important;
 }
 
 .step3-grid-gap{height:.15rem}
-.step3-card{
-    border:1px solid var(--border);
-    background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.018));
-    border-radius:20px;
-    padding:1.15rem 1.15rem 1.2rem;
-    min-height:8.55rem;
-    margin-bottom:.62rem;
-    overflow:hidden;
+[class*="st-key-priority_card_"]{
+    margin-bottom:1.15rem !important;
 }
-.step3-card-title{
-    color:var(--ivory);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:1.02rem;
-    font-weight:670;
-    letter-spacing:-.012em;
-    line-height:1.2;
-    margin-bottom:.42rem;
+[class*="st-key-priority_card_"] button{
+    width:100% !important;
+    min-height:8.55rem !important;
+    height:auto !important;
+    padding:1.15rem 1.15rem 1.2rem !important;
+    border:1px solid var(--border) !important;
+    border-radius:20px !important;
+    background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.018)) !important;
+    box-shadow:none !important;
+    justify-content:flex-start !important;
+    text-align:left !important;
 }
-.step3-card-copy{
-    color:var(--muted);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.89rem;
-    font-weight:450;
-    line-height:1.46;
+[class*="st-key-priority_card_"] button:hover{
+    border-color:rgba(169,173,183,.46) !important;
+    background:rgba(255,255,255,.035) !important;
+    box-shadow:none !important;
 }
-[class*="st-key-priority_toggle_"]{
-    margin-top:0 !important;
-    margin-bottom:2.0rem !important;
-    padding-left:0 !important;
-    min-height:2.15rem !important;
-}
-[class*="st-key-priority_toggle_"] [data-testid="stToggle"]{
+[class*="st-key-priority_card_"] button p{
+    width:100% !important;
     margin:0 !important;
-    padding-left:0 !important;
-}
-[class*="st-key-priority_toggle_"] [data-testid="stWidgetLabel"],
-[class*="st-key-priority_toggle_"] label{
-    margin-left:0 !important;
-    padding-left:0 !important;
-    gap:.55rem !important;
+    white-space:normal !important;
+    text-align:left !important;
     color:var(--muted) !important;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif !important;
-    font-size:.86rem !important;
-    font-weight:560 !important;
-    line-height:1.35 !important;
+    font-size:.89rem !important;
+    font-weight:450 !important;
+    line-height:1.46 !important;
 }
-[class*="st-key-priority_toggle_"] p{
-    font-size:0 !important;
-    line-height:0 !important;
+[class*="st-key-priority_card_"] button p strong{
+    display:block !important;
+    color:var(--ivory) !important;
+    font-size:1.02rem !important;
+    font-weight:700 !important;
+    letter-spacing:-.012em !important;
+    line-height:1.2 !important;
+    margin-bottom:.42rem !important;
 }
 
 /* Step 1 — rating + search polish */
@@ -898,7 +893,7 @@ div[data-testid="stTextInput"] input {
 """, unsafe_allow_html=True)
 
 defaults={
-    "screen":"welcome","likes":set(),"favorites":set(),"review_priority":50,
+    "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
     "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),
     "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{}
 }
@@ -906,9 +901,103 @@ for k,v in defaults.items():
     if k not in st.session_state:
         st.session_state[k]=v.copy() if isinstance(v,(set,dict)) else (list(v) if isinstance(v,list) else v)
 
+PROFILE_STORAGE_KEY = "icinema_profile_v1"
+
+def profile_snapshot():
+    return {
+        "version": 1,
+        "onboarding_complete": bool(st.session_state.onboarding_complete),
+        "likes": sorted(st.session_state.likes),
+        "favorites": sorted(st.session_state.favorites),
+        "review_priority": st.session_state.review_priority,
+        "genres": list(st.session_state.genres),
+        "adventure": st.session_state.adventure,
+        "more_of": list(st.session_state.more_of),
+        "saved": sorted(st.session_state.saved),
+        "seen": sorted(st.session_state.seen),
+        "dismissed": sorted(st.session_state.dismissed),
+        "external_movies": st.session_state.external_movies,
+    }
+
+def restore_profile(data):
+    if not isinstance(data, dict):
+        return False
+    try:
+        st.session_state.likes = set(data.get("likes") or [])
+        st.session_state.favorites = set(data.get("favorites") or [])
+        st.session_state.review_priority = int(data.get("review_priority", 50))
+        st.session_state.genres = list(data.get("genres") or [])
+        st.session_state.adventure = int(data.get("adventure", 50))
+        st.session_state.more_of = list(data.get("more_of") or [])
+        st.session_state.saved = set(data.get("saved") or [])
+        st.session_state.seen = set(data.get("seen") or [])
+        st.session_state.dismissed = set(data.get("dismissed") or [])
+        st.session_state.external_movies = dict(data.get("external_movies") or {})
+        st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
+        if st.session_state.onboarding_complete:
+            st.session_state.screen = "showroom"
+        return True
+    except (TypeError, ValueError):
+        return False
+
+# Hydrate once per browser session before rendering the product. The component stores
+# only recommendation/profile state in this browser's localStorage.
+if not st.session_state.get("_storage_hydrated", False):
+    _stored = browser_storage("get", PROFILE_STORAGE_KEY, key="icinema_profile_loader")
+    if not (isinstance(_stored, dict) and _stored.get("loaded") is True):
+        logo_placeholder = '<div class="icinema-logo">iCinema</div><div style="color:#858B96;font-size:.86rem">Loading your cinema profile…</div>'
+        st.markdown(logo_placeholder, unsafe_allow_html=True)
+        st.stop()
+    restored = restore_profile(_stored.get("value")) if _stored.get("value") else False
+    st.session_state._storage_hydrated = True
+    st.session_state._last_persisted_profile = json.dumps(profile_snapshot(), sort_keys=True, default=str) if restored else None
+
+# A profile-changing button may request an immediate rerun. Complete its
+# localStorage write first, then continue rendering. This makes refreshes, tab
+# closes/reopens, and Streamlit restarts reliably restore the latest profile.
+_pending_profile = st.session_state.get("_pending_profile_save")
+if _pending_profile is not None:
+    _pending_sig = json.dumps(_pending_profile, sort_keys=True, default=str)
+    _save_result = browser_storage(
+        "set", PROFILE_STORAGE_KEY, value=_pending_profile, key="icinema_profile_pending_saver"
+    )
+    if not (isinstance(_save_result, dict) and _save_result.get("saved") is True):
+        st.stop()
+    st.session_state._last_persisted_profile = _pending_sig
+    st.session_state._pending_profile_save = None
+
+def _snapshot_signature(snapshot):
+    return json.dumps(snapshot, sort_keys=True, default=str)
+
+def persist_profile_if_needed():
+    if not st.session_state.get("_storage_hydrated", False):
+        return
+    snapshot = profile_snapshot()
+    serialized = _snapshot_signature(snapshot)
+    if serialized != st.session_state.get("_last_persisted_profile"):
+        # Stable component key lets the browser acknowledge the write without
+        # creating a new component instance on every ordinary render.
+        result = browser_storage("set", PROFILE_STORAGE_KEY, value=snapshot, key="icinema_profile_saver")
+        if isinstance(result, dict) and result.get("saved") is True:
+            st.session_state._last_persisted_profile = serialized
+
+def commit_profile_and_rerun():
+    """Persist a profile-changing interaction before the UI reruns.
+
+    The snapshot is queued in session state. On the next server run, the app
+    waits for the browser localStorage component to acknowledge the write, so
+    button-triggered reruns cannot skip persistence.
+    """
+    st.session_state._pending_profile_save = profile_snapshot()
+    st.rerun()
+
 def go(screen):
     st.session_state.screen=screen
-    st.rerun()
+    if screen=="showroom":
+        st.session_state.onboarding_complete=True
+        commit_profile_and_rerun()
+    else:
+        st.rerun()
 
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
@@ -935,7 +1024,7 @@ def current_profile():
         st.session_state.likes, st.session_state.favorites, st.session_state.genres,
         st.session_state.review_priority, st.session_state.more_of,
         st.session_state.saved, st.session_state.dismissed, st.session_state.adventure,
-        st.session_state.external_movies
+        st.session_state.external_movies, st.session_state.seen
     )
 
 def concise_description(text, limit=118):
@@ -1026,12 +1115,12 @@ elif screen=="shelf":
                 if st.button("Like",key=f"like_{i}",type="primary" if liked else "secondary",use_container_width=True):
                     if liked:st.session_state.likes.discard(title)
                     else:st.session_state.likes.add(title);st.session_state.favorites.discard(title)
-                    st.rerun()
+                    commit_profile_and_rerun()
             with b2:
                 if st.button("Favorite",key=f"fav_{i}",type="primary" if fav else "secondary",use_container_width=True):
                     if fav:st.session_state.favorites.discard(title);st.session_state.likes.discard(title)
                     else:st.session_state.favorites.add(title);st.session_state.likes.add(title)
-                    st.rerun()
+                    commit_profile_and_rerun()
 
     st.markdown(
         '<div class="search-shell">'
@@ -1134,7 +1223,7 @@ elif screen=="shelf":
                     st.session_state.favorites.discard(choice)
                     st.session_state.search_selected_movie = None
                     st.session_state.search_selected_title = None
-                    st.rerun()
+                    commit_profile_and_rerun()
             with b:
                 if st.button(
                     "Add as Favorite",
@@ -1147,7 +1236,7 @@ elif screen=="shelf":
                     st.session_state.favorites.add(choice)
                     st.session_state.search_selected_movie = None
                     st.session_state.search_selected_title = None
-                    st.rerun()
+                    commit_profile_and_rerun()
 
     chosen_titles = sorted(st.session_state.likes | st.session_state.favorites)
     chosen_count = len(chosen_titles)
@@ -1199,18 +1288,19 @@ elif screen=="taste":
         unsafe_allow_html=True
     )
 
+    review_button_labels = ["Reviews first", "Lean reviews", "Balanced", "Lean enjoyment", "Enjoyment first"]
     st.markdown('<div class="pref-scale-clicks">', unsafe_allow_html=True)
     review_cols = st.columns(5, gap="small")
     for i, value in enumerate(review_scale_map):
         with review_cols[i]:
             if st.button(
-                " ",
+                review_button_labels[i],
                 key=f"review_scale_{i}",
                 type="primary" if i == review_idx else "secondary",
                 use_container_width=True
             ):
                 st.session_state.review_priority = value
-                st.rerun()
+                commit_profile_and_rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("#### What do you like to watch?")
@@ -1231,7 +1321,7 @@ elif screen=="taste":
                 elif len(selected)<5:
                     selected.add(genre)
                 st.session_state.genres=list(selected)
-                st.rerun()
+                commit_profile_and_rerun()
 
     st.markdown("### How open are you to something different?")
 
@@ -1254,18 +1344,19 @@ elif screen=="taste":
         unsafe_allow_html=True
     )
 
+    adventure_button_labels = ["Very familiar", "Mostly familiar", "Balanced", "More discovery", "Very different"]
     st.markdown('<div class="pref-scale-clicks">', unsafe_allow_html=True)
     adventure_cols = st.columns(5, gap="small")
     for i, value in enumerate(adventure_scale_map):
         with adventure_cols[i]:
             if st.button(
-                " ",
+                adventure_button_labels[i],
                 key=f"adventure_scale_{i}",
                 type="primary" if i == adventure_idx else "secondary",
                 use_container_width=True
             ):
                 st.session_state.adventure = value
-                st.rerun()
+                commit_profile_and_rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button("Continue →",type="primary"):
@@ -1291,23 +1382,19 @@ elif screen=="more":
     for i, option in enumerate(MORE_OF_OPTIONS):
         with (left if i % 2 == 0 else right):
             active = option in selected
-            st.markdown(
-                f'<div class="step3-card">'
-                f'<div class="step3-card-title">{option}</div>'
-                f'<div class="step3-card-copy">{descriptions[option]}</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-            new_state = st.toggle(
-                'Surface more often',
-                value=active,
-                key=f'priority_toggle_{option}'
-            )
-            if new_state and option not in selected:
-                selected.add(option)
-            elif not new_state and option in selected:
-                selected.discard(option)
+            title = f"✓ {option}" if active else option
+            if st.button(
+                f"**{title}**  \n{descriptions[option]}",
+                key=f"priority_card_{i}",
+                use_container_width=True,
+                type="secondary",
+            ):
+                if active:
+                    selected.discard(option)
+                else:
+                    selected.add(option)
+                st.session_state.more_of = list(selected)
+                commit_profile_and_rerun()
 
     st.session_state.more_of = list(selected)
 
@@ -1428,7 +1515,7 @@ elif screen=="showroom":
                         if st.button("Skip",key=f"skip_{row_name}_{movie['title']}",use_container_width=True):
                             st.session_state.dismissed.add(movie["title"])
                             st.session_state.saved.discard(movie["title"])
-                            st.rerun()
+                            commit_profile_and_rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
                     movie_thumb(movie, showroom_poster_map.get(movie["title"]))
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
@@ -1448,10 +1535,10 @@ elif screen=="showroom":
                     a,b=st.columns(2, gap="small")
                     with a:
                         if st.button("Save",key=f"save_{row_name}_{movie['title']}",use_container_width=True):
-                            st.session_state.saved.add(movie["title"]);st.session_state.seen.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);st.rerun()
+                            st.session_state.saved.add(movie["title"]);st.session_state.seen.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);commit_profile_and_rerun()
                     with b:
                         if st.button("Seen",key=f"seen_{row_name}_{movie['title']}",use_container_width=True):
-                            st.session_state.seen.add(movie["title"]);st.session_state.saved.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);st.rerun()
+                            st.session_state.seen.add(movie["title"]);st.session_state.saved.discard(movie["title"]);st.session_state.dismissed.discard(movie["title"]);commit_profile_and_rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
@@ -1473,7 +1560,7 @@ elif screen=="showroom":
                 with cols[i%len(cols)]:
                     movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]))
                     if st.button("Mark Seen",key=f"savedseen_{m['title']}",use_container_width=True):
-                        st.session_state.seen.add(m["title"]);st.session_state.saved.discard(m["title"]);st.rerun()
+                        st.session_state.seen.add(m["title"]);st.session_state.saved.discard(m["title"]);commit_profile_and_rerun()
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -1493,5 +1580,8 @@ elif screen=="showroom":
         if st.button("Reset Profile", key="reset_profile_tab"):
             for k,v in defaults.items():
                 st.session_state[k]=v.copy() if isinstance(v,(set,dict)) else (list(v) if isinstance(v,list) else v)
-            st.rerun()
+            st.session_state._last_persisted_profile = None
+            commit_profile_and_rerun()
 
+# Persist the latest profile/history after the page has processed this run.
+persist_profile_if_needed()

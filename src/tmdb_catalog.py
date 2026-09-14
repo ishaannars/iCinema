@@ -79,6 +79,42 @@ def _canonical_genre(item):
         return "Anime"
     return mapped[0] if mapped else "Drama"
 
+OVERVIEW_TRAIT_KEYWORDS = {
+    "Suspenseful": ("murder", "missing", "investigation", "danger", "threat", "crime", "hunt"),
+    "Thought-provoking": ("identity", "society", "humanity", "meaning", "memory", "future", "ethics"),
+    "Character-driven": ("family", "relationship", "friendship", "life", "journey", "struggles", "coming of age"),
+    "Fast-paced": ("race", "escape", "mission", "chase", "rescue", "battle"),
+    "Emotional": ("love", "loss", "grief", "family", "heart", "reunite"),
+    "Dark": ("murder", "death", "revenge", "violent", "crime", "nightmare"),
+    "Funny": ("comedy", "hilarious", "funny", "misadventure"),
+    "Cerebral": ("mystery", "scientist", "experiment", "reality", "mind", "conspiracy"),
+    "Unpredictable": ("secret", "twist", "mystery", "unexpected", "deception"),
+    "Heartfelt": ("friendship", "family", "love", "bond", "home"),
+    "Action-heavy": ("war", "battle", "assassin", "mission", "fight", "soldier"),
+    "Slow-burn": ("quiet", "gradually", "years later", "isolated"),
+    "Romantic": ("romance", "love", "couple", "relationship"),
+    "Intense": ("survival", "danger", "desperate", "battle", "hostage"),
+    "Lighthearted": ("fun", "adventure", "friendship", "holiday"),
+    "Epic": ("kingdom", "empire", "world", "war", "destiny"),
+    "Grounded": ("everyday", "ordinary", "family", "work", "community"),
+    "Psychological": ("mind", "obsession", "trauma", "paranoia", "psychological"),
+    "Adventurous": ("adventure", "journey", "quest", "expedition", "explore"),
+    "Nostalgic": ("childhood", "memories", "reunion", "years later"),
+    "Satirical": ("satire", "satirical", "society", "wealth", "media"),
+    "Tense": ("hostage", "danger", "trapped", "threat", "race against"),
+    "Moving": ("grief", "loss", "family", "love", "reunite"),
+}
+
+def _overview_traits(text):
+    text = " ".join(str(text or "").lower().split())
+    if not text:
+        return []
+    out=[]
+    for trait, keywords in OVERVIEW_TRAIT_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            out.append(trait)
+    return out[:5]
+
 
 def _movie_tags(item):
     genre_ids = item.get("genre_ids") or []
@@ -97,6 +133,9 @@ def _movie_tags(item):
         tags.append("Recent Release")
     if year and year <= 2000:
         tags.append("Classic")
+    for trait in _overview_traits(item.get("overview")):
+        if trait not in tags:
+            tags.append(trait)
     return tags
 
 
@@ -117,6 +156,7 @@ def _to_icinema_movie(item):
         "original_language": item.get("original_language"),
         "tmdb_vote": item.get("vote_average"),
         "tmdb_vote_count": item.get("vote_count"),
+        "popularity": item.get("popularity"),
         "external": True,
     }
 

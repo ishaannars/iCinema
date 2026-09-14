@@ -1,5 +1,6 @@
 
 from collections import Counter
+import math
 
 GENRES = [
     "Action", "Adventure", "Anime", "Animation", "Comedy", "Documentary",
@@ -90,68 +91,119 @@ def searchable_titles():
     return sorted(MOVIE_INDEX.keys())
 
 
+# Explicit feature weights keep the model interpretable and make the effect of
+# each behavioral signal reproducible. Favorites remain 3x a standard Like.
+SIGNAL_WEIGHTS = {
+    "like": 1.0,
+    "favorite": 3.0,
+    "selected_genre": 4.0,
+    "saved": 2.5,
+    "seen": 0.5,
+    "skip": -2.5,
+}
+
+
+def get_movie(title, extra_movies=None):
+    if extra_movies and title in extra_movies:
+        return extra_movies[title]
+    return MOVIE_INDEX.get(title)
+
+
+def searchable_titles():
+    return sorted(MOVIE_INDEX.keys())
+
+
 def _movie_signal(movie, weight, trait_counts, genre_counts):
-    genre_counts[movie["genre"]] += weight
+    """Project one movie into interpretable genre + trait feature spaces."""
+    genre = movie.get("genre")
+    if genre:
+        genre_counts[genre] += weight
     for tag in movie.get("tags", []):
         if tag in PROFILE_TRAITS:
             trait_counts[tag] += weight
 
 
-def build_profile(likes, favorites, selected_genres, review_priority, more_of, saved_titles=None, skipped_titles=None, adventure=45, extra_movies=None):
-    saved_titles = saved_titles or set()
-    skipped_titles = skipped_titles or set()
+def _positive_items(counter):
+    return [(k, float(v)) for k, v in counter.items() if float(v) > 0]
+
+
+def _nonzero_items(counter):
+    return [(k, float(v)) for k, v in counter.items() if float(v) != 0.0]
+
+
+def build_profile(
+    likes,
+    favorites,
+    selected_genres,
+    review_priority,
+    more_of,
+    saved_titles=None,
+    skipped_titles=None,
+    adventure=50,
+    extra_movies=None,
+    seen_titles=None,
+):
+    """Build a weighted behavioral feature profile.
+
+    Browser-local history is not just restored for display. Saved, Seen, and Skip
+    history is re-projected into the same feature vectors every time the profile is
+    rebuilt, so returning users immediately resume with the model they trained.
+    """
+    saved_titles = set(saved_titles or [])
+    skipped_titles = set(skipped_titles or [])
+    seen_titles = set(seen_titles or [])
     extra_movies = extra_movies or {}
+    likes = set(likes or [])
+    favorites = set(favorites or [])
 
     def lookup(title):
         return extra_movies.get(title) or MOVIE_INDEX.get(title)
 
     traits = Counter()
     genres = Counter()
-    negative_traits = Counter()
 
-    # Likes/favorites
-    for title in likes:
+    # Explicit onboarding feedback. A Favorite is intentionally 3x a Like.
+    for title in likes | favorites:
         movie = lookup(title)
         if not movie:
             continue
-        weight = 3 if title in favorites else 1
+        weight = SIGNAL_WEIGHTS["favorite"] if title in favorites else SIGNAL_WEIGHTS["like"]
         _movie_signal(movie, weight, traits, genres)
 
-    # Directly selected genres matter strongly.
-    for genre in selected_genres:
-        genres[genre] += 4
+    # Direct preference controls are strong priors before behavior accumulates.
+    for genre in selected_genres or []:
+        genres[genre] += SIGNAL_WEIGHTS["selected_genre"]
 
-    # Saved titles refine the profile.
+    # Persistent behavioral feedback. These sets are restored from localStorage.
     for title in saved_titles:
         movie = lookup(title)
         if movie:
-            _movie_signal(movie, 2, traits, genres)
+            _movie_signal(movie, SIGNAL_WEIGHTS["saved"], traits, genres)
 
-    # Skipped titles reduce matching traits.
+    # Seen is deliberately weak: viewing history is evidence of exposure, not proof
+    # of preference. It nudges the model without overpowering explicit feedback.
+    for title in seen_titles:
+        movie = lookup(title)
+        if movie:
+            _movie_signal(movie, SIGNAL_WEIGHTS["seen"], traits, genres)
+
+    # Skip is negative evidence in both feature spaces, not merely a UI exclusion.
     for title in skipped_titles:
         movie = lookup(title)
-        if not movie:
-            continue
-        for tag in movie.get("tags", []):
-            if tag in PROFILE_TRAITS:
-                negative_traits[tag] += 2
+        if movie:
+            _movie_signal(movie, SIGNAL_WEIGHTS["skip"], traits, genres)
 
-    trait_scores = []
-    for trait, count in traits.items():
-        score = count - negative_traits.get(trait, 0)
-        if score > 0:
-            trait_scores.append((trait, score))
-    trait_scores.sort(key=lambda x: (-x[1], x[0]))
+    # Keep both signed and positive views. The signed vectors are used by ranking,
+    # so repeated skips actively push similar candidates down instead of merely
+    # disappearing from the visible profile summary.
+    signed_trait_scores = dict(_nonzero_items(traits))
+    signed_genre_scores = dict(_nonzero_items(genres))
+    trait_scores = sorted(_positive_items(traits), key=lambda x: (-x[1], x[0]))
+    genre_scores = sorted(_positive_items(genres), key=lambda x: (-x[1], x[0]))
 
-    top_traits = [t for t, _ in trait_scores[:3]]
-    if not top_traits:
-        top_traits = ["Story-driven"]
+    top_traits = [t for t, _ in trait_scores[:3]] or ["Story-driven"]
+    top_genres = [g for g, _ in genre_scores[:3]] or ["Drama"]
 
-    top_genres = [g for g, _ in genres.most_common(3)]
-    if not top_genres:
-        top_genres = ["Drama"]
-
-    # What matters most is derived only from controls / observed ratings preference.
     matters = []
     if review_priority <= 35:
         matters.append("Strong reviews")
@@ -160,7 +212,6 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
     else:
         matters.append("A balance of reviews and entertainment")
 
-    # Add evidence-backed preference from repeated movie traits.
     if trait_scores:
         strongest = trait_scores[0][0]
         if strongest in {"Character-driven", "Emotional", "Heartfelt", "Moving", "Grounded"}:
@@ -174,10 +225,8 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
         elif strongest in {"Funny", "Lighthearted", "Offbeat"}:
             matters.append("Humor and personality")
 
-    # Step 3 is explicitly a recommendation priority.
-    priorities = list(more_of[:4]) if more_of else ["Balanced recommendations"]
+    priorities = list((more_of or [])[:4]) if more_of else ["Balanced recommendations"]
 
-    # Analytical section 1: viewing patterns from repeated evidence.
     patterns = []
     if any(t in top_traits for t in ["Suspenseful", "Tense", "Psychological", "Dark"]):
         patterns.append("Leans toward higher-tension stories")
@@ -192,7 +241,6 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
     if not patterns:
         patterns.append("Shows a broad viewing range")
 
-    # Analytical section 2: direct slider interpretation.
     if adventure <= 30:
         adventure_text = "Mostly familiar"
     elif adventure >= 70:
@@ -209,7 +257,6 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
 
     balance = [adventure_text, review_text]
 
-    # Natural-language summary generated from strongest real signals.
     trait_text = ", ".join(t.lower() for t in top_traits[:2])
     genre_text = " and ".join(top_genres[:2]).lower()
     if top_traits and top_traits[0] != "Story-driven":
@@ -226,6 +273,23 @@ def build_profile(likes, favorites, selected_genres, review_priority, more_of, s
         "balance": balance,
         "summary": summary,
         "trait_scores": dict(trait_scores),
+        "genre_scores": dict(genre_scores),
+        "signed_trait_scores": signed_trait_scores,
+        "signed_genre_scores": signed_genre_scores,
+        "controls": {
+            "review_priority": int(review_priority),
+            "adventure": int(adventure),
+            "selected_genres": list(selected_genres or []),
+            "priorities": list(more_of or []),
+        },
+        "model_version": "v2-full-signal",
+        "behavior_counts": {
+            "liked": len(likes - favorites),
+            "favorited": len(favorites),
+            "saved": len(saved_titles),
+            "seen": len(seen_titles),
+            "skipped": len(skipped_titles),
+        },
     }
 
 
@@ -236,41 +300,151 @@ def _num(value, default=0.0):
         return float(default)
 
 
-def score_movie(movie, profile, adventure, review_priority):
-    score = 68.0
+def _signed_cosine(user_scores, movie_features):
+    """Cosine similarity in a signed feature space, mapped from [-1, 1] to [0, 1]."""
+    if not user_scores or not movie_features:
+        return 0.5
+    keys = set(user_scores) | set(movie_features)
+    dot = sum(float(user_scores.get(k, 0.0)) * float(movie_features.get(k, 0.0)) for k in keys)
+    u_norm = math.sqrt(sum(float(user_scores.get(k, 0.0)) ** 2 for k in keys))
+    m_norm = math.sqrt(sum(float(movie_features.get(k, 0.0)) ** 2 for k in keys))
+    if not u_norm or not m_norm:
+        return 0.5
+    cosine = max(-1.0, min(1.0, dot / (u_norm * m_norm)))
+    return (cosine + 1.0) / 2.0
+
+
+def _content_signals(movie, profile):
+    """Genre + semantic-trait affinity using the full signed behavioral profile."""
+    signed_genres = profile.get("signed_genre_scores") or profile.get("genre_scores", {}) or {}
+    signed_traits = profile.get("signed_trait_scores") or profile.get("trait_scores", {}) or {}
+
+    movie_genres = {}
+    primary = movie.get("genre")
+    if primary:
+        movie_genres[primary] = 1.0
+    # TMDB tags can contain additional genres. Give them lower weight than primary genre.
+    for tag in movie.get("tags", []):
+        if tag in GENRES and tag != primary:
+            movie_genres[tag] = max(movie_genres.get(tag, 0.0), 0.65)
+
+    movie_traits = {tag: 1.0 for tag in movie.get("tags", []) if tag in PROFILE_TRAITS}
+    genre_affinity = _signed_cosine(signed_genres, movie_genres)
+    trait_affinity = _signed_cosine(signed_traits, movie_traits)
+    return genre_affinity, trait_affinity
+
+
+def _quality_signal(movie, review_priority):
+    """Continuously blend critic and audience evidence with confidence shrinkage."""
+    rt = _num(movie.get("rt"), -1)
+    imdb = _num(movie.get("imdb"), -1)
+    tmdb_vote = _num(movie.get("tmdb_vote"), -1)
+    vote_count = max(0.0, _num(movie.get("tmdb_vote_count"), 0.0))
+
+    critic = rt / 100.0 if rt >= 0 else None
+    audience_values = []
+    if imdb >= 0:
+        audience_values.append(imdb / 10.0)
+    if tmdb_vote >= 0:
+        audience_values.append(tmdb_vote / 10.0)
+    audience = sum(audience_values) / len(audience_values) if audience_values else None
+
+    if critic is None and audience is None:
+        observed = 0.5
+    elif critic is None:
+        observed = audience
+    elif audience is None:
+        observed = critic
+    else:
+        # Step 2 prompt is directly embedded: 0 = reviews first, 100 = enjoyment first.
+        audience_weight = max(0.0, min(1.0, float(review_priority) / 100.0))
+        observed = critic * (1.0 - audience_weight) + audience * audience_weight
+
+    # TMDB vote_count is used as a reliability feature. Sparse titles are gently
+    # shrunk toward neutral rather than being allowed to dominate on a tiny sample.
+    confidence = 1.0 - math.exp(-vote_count / 450.0) if vote_count else (0.72 if imdb >= 0 or rt >= 0 else 0.0)
+    return max(0.0, min(1.0, 0.5 + (float(observed) - 0.5) * confidence))
+
+
+def _priority_signal(movie, profile):
+    """Directly encode every Step 3 card selection as a candidate feature."""
     tags = set(movie.get("tags", []))
+    priorities = set(profile.get("controls", {}).get("priorities") or profile.get("priorities", []))
+    priorities.discard("Balanced recommendations")
+    if not priorities:
+        return 0.5
 
-    if movie["genre"] in profile["genres"]:
-        score += 9
+    year = int(_num(movie.get("year")))
+    popularity = max(0.0, _num(movie.get("popularity"), 0.0))
+    tests = {
+        "International Films": "International" in tags or str(movie.get("original_language") or "en").lower() != "en",
+        "Hidden Gems": "Hidden Gem" in tags or (0 < popularity < 28),
+        "Critically Acclaimed": "Critically Acclaimed" in tags or _num(movie.get("rt"), -1) >= 90 or _num(movie.get("imdb"), -1) >= 8.0,
+        "Recent Releases": "Recent Release" in tags or year >= 2023,
+        "Classics": "Classic" in tags or (0 < year <= 2005),
+        "Documentaries": movie.get("genre") == "Documentary" or "Documentary" in tags,
+    }
+    values = [1.0 if tests.get(priority, False) else 0.0 for priority in priorities if priority in tests]
+    return sum(values) / len(values) if values else 0.5
 
-    for trait in profile["traits"]:
-        if trait in tags:
-            score += 5
 
-    if review_priority <= 35 and _num(movie.get("rt")) >= 90:
-        score += 5
+def _discovery_signal(movie, profile, adventure):
+    """Use Step 2 openness across genre novelty, language, popularity and age."""
+    openness = max(0.0, min(1.0, float(adventure) / 100.0))
+    preferred_genres = set(profile.get("controls", {}).get("selected_genres") or profile.get("genres", []))
+    familiar_genre = movie.get("genre") in preferred_genres
+    genre_novelty = 0.0 if familiar_genre else 1.0
 
-    if "International Films" in profile["priorities"] and "International" in tags:
-        score += 5
-    if "Hidden Gems" in profile["priorities"] and "Hidden Gem" in tags:
-        score += 5
-    if "Critically Acclaimed" in profile["priorities"] and "Critically Acclaimed" in tags:
-        score += 5
-    if "Recent Releases" in profile["priorities"] and "Recent Release" in tags:
-        score += 5
-    if "Classics" in profile["priorities"] and "Classic" in tags:
-        score += 5
-    if "Documentaries" in profile["priorities"] and movie["genre"] == "Documentary":
-        score += 5
+    language_novelty = 1.0 if str(movie.get("original_language") or "en").lower() not in {"", "en"} else 0.0
+    popularity = max(0.0, _num(movie.get("popularity"), 0.0))
+    # Lower-popularity titles are a discovery signal, but cap the effect so obscure
+    # metadata never overwhelms actual preference similarity.
+    popularity_novelty = 1.0 / (1.0 + popularity / 35.0) if popularity else 0.45
+    year = int(_num(movie.get("year"), 0))
+    era_novelty = 1.0 if year and (year <= 2005 or year >= 2023) else 0.35
 
-    if adventure >= 70 and movie["genre"] not in profile["genres"]:
-        score += 4
+    novelty = 0.52 * genre_novelty + 0.20 * language_novelty + 0.18 * popularity_novelty + 0.10 * era_novelty
+    familiarity = 1.0 - novelty
+    return max(0.0, min(1.0, openness * novelty + (1.0 - openness) * familiarity))
 
-    return max(72, min(98, int(round(score))))
+
+def score_movie_components(movie, profile, adventure, review_priority):
+    """Return the full, inspectable feature decomposition for one candidate."""
+    genre_affinity, trait_affinity = _content_signals(movie, profile)
+    quality = _quality_signal(movie, review_priority)
+    discovery = _discovery_signal(movie, profile, adventure)
+    priority = _priority_signal(movie, profile)
+
+    # Every onboarding prompt and behavioral action reaches one of these components.
+    # The calculation is intentionally local and O(features), so adding data depth does
+    # not add network latency to each recommendation render.
+    components = {
+        "genre_affinity": genre_affinity,
+        "trait_affinity": trait_affinity,
+        "quality_alignment": quality,
+        "discovery_alignment": discovery,
+        "priority_alignment": priority,
+    }
+    raw = (
+        0.22 * genre_affinity
+        + 0.20 * trait_affinity
+        + 0.23 * quality
+        + 0.17 * discovery
+        + 0.18 * priority
+    )
+    components["raw_score"] = max(0.0, min(1.0, raw))
+    return components
+
+
+def score_movie(movie, profile, adventure, review_priority):
+    """Calibrate the full-signal model to iCinema's consumer-facing match percent."""
+    raw = score_movie_components(movie, profile, adventure, review_priority)["raw_score"]
+    calibrated = 55.0 + (43.0 * raw)
+    return int(round(max(55.0, min(98.0, calibrated))))
 
 
 def rank_movies(movies, profile, adventure, review_priority, excluded=None, limit=None):
-    """Rank any candidate pool with the same iCinema personalization algorithm."""
+    """Rank any candidate pool with the same weighted personalization model."""
     excluded = set(excluded or [])
     scored = []
     seen_keys = set()
@@ -283,7 +457,11 @@ def rank_movies(movies, profile, adventure, review_priority, excluded=None, limi
         seen_keys.add(key)
         scored.append((score_movie(movie, profile, adventure, review_priority), movie))
     scored.sort(
-        key=lambda x: (x[0], _num(x[1].get("rt")), _num(x[1].get("imdb")), _num(x[1].get("tmdb_vote"))),
+        key=lambda x: (
+            x[0],
+            _quality_signal(x[1], review_priority),
+            _num(x[1].get("tmdb_vote")),
+        ),
         reverse=True,
     )
     return scored if limit is None else scored[:limit]
