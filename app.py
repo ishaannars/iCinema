@@ -489,7 +489,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 .profile-grid{
     display:grid;
     grid-template-columns:1fr;
-    row-gap:1.9rem
+    row-gap:1.55rem
 }
 .profile-block{
     padding:0;
@@ -499,6 +499,9 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     grid-column:1;
     padding:0
 }
+.profile-block:last-child{
+    margin-bottom:.15rem
+}
 .profile-label{
     color:var(--muted2);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -506,12 +509,13 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     text-transform:uppercase;
     letter-spacing:.105em;
     font-weight:760;
-    margin:0 0 .78rem
+    margin:0 0 .62rem
 }
 .profile-chip-wrap{
     display:flex;
     flex-wrap:wrap;
-    gap:.62rem;
+    column-gap:.62rem;
+    row-gap:.55rem;
     align-items:center
 }
 .profile-chip{
@@ -535,7 +539,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     display:flex;
     flex-direction:column;
     align-items:flex-start;
-    gap:.62rem
+    gap:.55rem
 }
 .profile-analysis-row{
     display:inline-flex;
@@ -555,10 +559,10 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     letter-spacing:-.006em
 }
 .profile-summary{
-    margin-top:2.4rem;
+    margin-top:2.9rem;
     margin-bottom:1.85rem;
     border-top:1px solid var(--border);
-    padding-top:1.35rem;
+    padding-top:1.75rem;
     color:var(--ivory);
     font-family:Georgia,"Times New Roman",serif;
     font-size:1.06rem;
