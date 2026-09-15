@@ -1347,6 +1347,63 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     margin-top:.08rem !important;
 }
 
+/* V5.93 library + text polish: Saved and Seen get independent spacing rules. */
+.saved-poster-caption{
+    margin:.64rem 0 .48rem !important;
+    min-height:0 !important;
+    padding:0 .05rem !important;
+}
+.saved-poster-caption .poster-caption-title{
+    margin:0 !important;
+    line-height:1.16 !important;
+    min-height:0 !important;
+    max-height:none !important;
+}
+.saved-poster-caption .poster-caption-year{
+    margin-top:.18rem !important;
+    min-height:0 !important;
+}
+.seen-poster-caption{
+    margin:.62rem 0 .40rem !important;
+    min-height:0 !important;
+    padding:0 .05rem !important;
+}
+.seen-poster-caption .poster-caption-title{
+    margin:0 !important;
+    line-height:1.16 !important;
+    min-height:0 !important;
+    max-height:none !important;
+}
+.seen-poster-caption .poster-caption-year{
+    margin-top:.26rem !important;
+    min-height:0 !important;
+}
+[class*="st-key-savedseen_"], [class*="st-key-unsave_"]{
+    margin-top:.22rem !important;
+}
+/* Render complete, concise text. No CSS-generated ellipsis/clipping. */
+.watch-availability{
+    min-height:3.15rem !important;
+    max-height:none !important;
+    margin:.28rem 0 .38rem !important;
+    line-height:1.35 !important;
+    display:block !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    overflow-wrap:anywhere !important;
+}
+.movie-description{
+    min-height:5.55rem !important;
+    max-height:none !important;
+    line-height:1.46 !important;
+    margin-top:0 !important;
+    margin-bottom:.52rem !important;
+    display:block !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    overflow-wrap:anywhere !important;
+}
+
 
 /* V5.86 onboarding compactness + profile spacing + hidden persistence bridge */
 /* The localStorage component is functional-only; keep its iframe/container invisible so
@@ -1432,6 +1489,37 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 }
 .profile-intro{
     margin-top:0 !important;
+}
+
+/* V5.94 Showroom vertical rhythm: balanced spacing without stretching cards */
+.poster-caption{
+    margin-top:.68rem !important;
+    margin-bottom:.12rem !important;
+}
+.poster-caption-year{
+    margin-top:.28rem !important;
+}
+.match{
+    margin-top:.48rem !important;
+    margin-bottom:.02rem !important;
+}
+.ratings{
+    margin-top:.04rem !important;
+    margin-bottom:.28rem !important;
+}
+.watch-availability{
+    margin-top:.26rem !important;
+    margin-bottom:.28rem !important;
+    min-height:2.35rem !important;
+}
+.movie-description{
+    margin-top:.24rem !important;
+    margin-bottom:.36rem !important;
+    min-height:5.35rem !important;
+    line-height:1.42 !important;
+}
+.movie-card-actions{
+    margin-top:.28rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1786,7 +1874,7 @@ def reset_profile_from_fragment():
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
 
-def movie_thumb(movie, poster_url=None, compact=False):
+def movie_thumb(movie, poster_url=None, compact=False, library_mode=None):
     title = html.escape(str(movie.get("title", "")))
     year = html.escape(str(movie.get("year", "")))
     poster_url = poster_url or movie.get("poster_url")
@@ -1797,7 +1885,13 @@ def movie_thumb(movie, poster_url=None, compact=False):
         poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
 
     year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
-    caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
+    
+    if library_mode == "saved":
+        caption_class = "poster-caption library-poster-caption saved-poster-caption"
+    elif library_mode == "seen":
+        caption_class = "poster-caption library-poster-caption seen-poster-caption"
+    else:
+        caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
     st.markdown(
         poster_html
         + f'<div class="{caption_class}"><div class="poster-caption-title">{title}</div>{year_html}</div>',
@@ -1812,7 +1906,7 @@ def current_profile():
         st.session_state.external_movies, st.session_state.seen
     )
 
-def concise_description(text, limit=118):
+def concise_description(text, limit=92):
     text = " ".join(str(text).split()).strip()
     if not text:
         return ""
@@ -1826,6 +1920,26 @@ def concise_description(text, limit=118):
     if len(text) > limit:
         text = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.…")
     return text.rstrip(" ,;:.…") + "."
+
+def concise_availability_text(text, max_providers=2):
+    """Keep watch availability complete and compact instead of visually truncating it."""
+    text = " ".join(str(text or "").split()).strip()
+    if not text or ":" not in text:
+        return text
+    label, providers = text.split(":", 1)
+    parts = [p.strip(" .") for p in providers.split("·") if p.strip(" .")]
+    # Preserve order while removing duplicate provider names.
+    unique = []
+    seen = set()
+    for part in parts:
+        key = part.casefold()
+        if key not in seen:
+            seen.add(key)
+            unique.append(part)
+    if len(unique) <= max_providers:
+        return f"{label.strip()}: " + " · ".join(unique)
+    shown = " · ".join(unique[:max_providers])
+    return f"{label.strip()}: {shown} + more"
 
 def profile_chip_html(items):
     return "".join(f'<span class="profile-chip">{item}</span>' for item in items)
@@ -2357,7 +2471,8 @@ def render_showroom_fragment(p):
                     st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
                     availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
                     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
-                    st.markdown(f'<div class="{availability_class}">{availability["text"]}</div>', unsafe_allow_html=True)
+                    availability_text = concise_availability_text(availability["text"])
+                    st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
                     short_desc = concise_description(movie["why"])
                     st.markdown(f'<div class="movie-description">{short_desc}</div>',unsafe_allow_html=True)
                     st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
@@ -2405,7 +2520,7 @@ def render_showroom_fragment(p):
                         display_movie["title"] = identity["display_title"]
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True)
+                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
                         st.button(
@@ -2442,7 +2557,7 @@ def render_showroom_fragment(p):
                         display_movie["title"] = identity["display_title"]
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True)
+                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
