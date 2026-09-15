@@ -1071,10 +1071,11 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 /* V5.77 Cinema Profile wording + balanced one-page rhythm */
 .profile-heading{margin-bottom:.32rem !important}
 .profile-intro{
-    margin-bottom:.88rem !important;
+    margin-bottom:.72rem !important;
     max-width:720px !important;
     line-height:1.42 !important;
 }
+.profile-grid{padding-top:.82rem !important}
 .profile-block + .profile-block{margin-top:1.02rem !important}
 .profile-label{margin-bottom:.38rem !important}
 .profile-chip-wrap{row-gap:.4rem !important}
@@ -1178,6 +1179,7 @@ def persist_profile_if_needed():
         # creating a new component instance on every ordinary render.
         browser_storage("set_silent", PROFILE_STORAGE_KEY, value=snapshot, key="icinema_profile_saver")
         st.session_state._last_persisted_profile = serialized
+        st.session_state._pending_profile_save = None
 
 def queue_profile_save():
     """Queue persistence without forcing an extra rerun.
@@ -1232,6 +1234,12 @@ def go(screen):
         st.session_state.onboarding_complete = True
     queue_profile_save()
 
+def go_from_fragment(screen):
+    """Leave a fragment with one intentional page-level transition."""
+    go(screen)
+    persist_profile_if_needed()
+    st.rerun(scope="app")
+
 def select_search_result(movie):
     st.session_state.search_selected_movie = movie
     st.session_state.search_selected_title = movie.get("title")
@@ -1284,6 +1292,11 @@ def reset_profile_state():
         st.session_state[k] = v.copy() if isinstance(v, (set, dict)) else (list(v) if isinstance(v, list) else v)
     st.session_state._last_persisted_profile = None
     queue_profile_save()
+
+def reset_profile_from_fragment():
+    reset_profile_state()
+    persist_profile_if_needed()
+    st.rerun(scope="app")
 
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
@@ -1362,27 +1375,9 @@ def render_cinema_profile(p):
         unsafe_allow_html=True
     )
 
-screen=st.session_state.screen
 
-if screen=="welcome":
-    logo()
-    st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences</div>',unsafe_allow_html=True)
-
-    c1,c2,c3=st.columns(3)
-    steps=[
-        ("01","Rate the Shelf","Choose titles you already enjoy, or search for one you like"),
-        ("02","Tailor Your Preferences","Choose what matters most when deciding what to watch"),
-        ("03","Shape Your Showroom","Choose what iCinema should surface more often"),
-    ]
-    for col,(n,title,body) in zip((c1,c2,c3),steps):
-        with col:
-            st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
-
-    st.markdown('<div class="adapt-note"><strong>iCinema responds to your choices</strong><br><span>Every save, skip, and seen title continuously influences what appears next</span></div>',unsafe_allow_html=True)
-    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
-
-elif screen=="shelf":
+@st.fragment
+def render_shelf_fragment():
     logo()
     st.markdown("### Step 1 of 3 — Rate the Shelf")
     st.caption("Choose a few titles you already like. If none fit, search for one you know you enjoy.")
@@ -1543,9 +1538,13 @@ elif screen=="shelf":
         )
 
     st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
-    st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", on_click=go, args=("taste",))
+    st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", on_click=go_from_fragment, args=("taste",))
 
-elif screen=="taste":
+
+    persist_profile_if_needed()
+
+@st.fragment
+def render_taste_fragment():
     logo()
     st.markdown(
         '<div class="step2-header">'
@@ -1642,9 +1641,13 @@ elif screen=="taste":
             )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.button("Continue →", type="primary", key="continue_taste", on_click=go, args=("more",))
+    st.button("Continue →", type="primary", key="continue_taste", on_click=go_from_fragment, args=("more",))
 
-elif screen=="more":
+
+    persist_profile_if_needed()
+
+@st.fragment
+def render_more_fragment():
     logo()
     st.markdown("### Step 3 of 3 — Shape Your Showroom")
     st.caption("What should iCinema lean toward? Choose any that you want to see more often")
@@ -1675,26 +1678,14 @@ elif screen=="more":
 
     st.session_state.more_of = list(selected)
 
-    st.button("Build My Cinema Profile →", type="primary", key="build_profile", on_click=go, args=("profile",))
+    st.button("Build My Cinema Profile →", type="primary", key="build_profile", on_click=go_from_fragment, args=("profile",))
 
-elif screen=="profile":
-    logo()
-    p=current_profile()
-    render_cinema_profile(p)
 
-    st.button("Enter My Showroom →", type="primary", key="enter_showroom", on_click=go, args=("showroom",))
+    persist_profile_if_needed()
 
-elif screen=="showroom":
-    logo()
-    p=current_profile()
-    st.markdown(
-        '<div class="showroom-header">'
-        '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark as seen</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
 
+@st.fragment
+def render_showroom_fragment(p):
     tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
 
     excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed
@@ -1925,7 +1916,59 @@ elif screen=="showroom":
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         render_cinema_profile(p)
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
-        st.button("Reset Profile", key="reset_profile_tab", on_click=reset_profile_state)
+        st.button("Reset Profile", key="reset_profile_tab", on_click=reset_profile_from_fragment)
+
+
+    persist_profile_if_needed()
+
+screen=st.session_state.screen
+
+if screen=="welcome":
+    logo()
+    st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences</div>',unsafe_allow_html=True)
+
+    c1,c2,c3=st.columns(3)
+    steps=[
+        ("01","Rate the Shelf","Choose titles you already enjoy, or search for one you like"),
+        ("02","Tailor Your Preferences","Choose what matters most when deciding what to watch"),
+        ("03","Shape Your Showroom","Choose what iCinema should surface more often"),
+    ]
+    for col,(n,title,body) in zip((c1,c2,c3),steps):
+        with col:
+            st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
+
+    st.markdown('<div class="adapt-note"><strong>iCinema responds to your choices</strong><br><span>Every save, skip, and seen title continuously influences what appears next</span></div>',unsafe_allow_html=True)
+    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
+
+elif screen=="shelf":
+    render_shelf_fragment()
+
+elif screen=="taste":
+    render_taste_fragment()
+
+elif screen=="more":
+    render_more_fragment()
+
+elif screen=="profile":
+    logo()
+    p=current_profile()
+    render_cinema_profile(p)
+
+    st.button("Enter My Showroom →", type="primary", key="enter_showroom", on_click=go, args=("showroom",))
+
+elif screen=="showroom":
+    logo()
+    p=current_profile()
+    st.markdown(
+        '<div class="showroom-header">'
+        '<div class="showroom-heading">Your Showroom of Movies</div>'
+        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark as seen</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    render_showroom_fragment(p)
 
 # Persist the latest profile/history after the page has processed this run.
 persist_profile_if_needed()

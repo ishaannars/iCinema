@@ -124,3 +124,11 @@ The onboarding flow uses callback-based state updates for faster Like/Favorite i
 
 The Showroom keeps card spacing consistent across recommendations, including aligned action buttons beneath variable-length descriptions. Onboarding CTAs use larger click targets with restrained typography for a cleaner product feel.
 
+
+<!-- V5.76 interaction note: profile-changing controls use a single Streamlit interaction rerun with silent local-storage persistence to avoid duplicate rerenders. -->
+
+## V5.78 interaction polish
+- Uses Streamlit fragments for onboarding selections and Showroom interactions so ordinary button presses rerender only the affected section instead of blanking the full page.
+- Keeps full-app reruns only for intentional page navigation such as Continue, Build Profile, and Reset.
+- Adds a clearer visual break between the Cinema Profile subtitle and the first analysis section.
+
