@@ -1491,6 +1491,45 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     margin-top:0 !important;
 }
 
+/* V5.101 Cinema Profile spacing: shared by standalone profile and Showroom Profile tab. */
+.profile-wrap{
+    padding-bottom:.42rem !important;
+}
+.profile-heading{
+    margin-bottom:.78rem !important;
+}
+.profile-intro{
+    margin-bottom:1.18rem !important;
+    line-height:1.48 !important;
+}
+.profile-grid{
+    padding-top:.18rem !important;
+}
+.profile-block + .profile-block{
+    margin-top:1.42rem !important;
+}
+.profile-label{
+    margin-bottom:.5rem !important;
+}
+.profile-chip-wrap{
+    row-gap:.46rem !important;
+    column-gap:.52rem !important;
+}
+.profile-analysis{
+    gap:.44rem !important;
+}
+.profile-summary{
+    margin-top:1.48rem !important;
+    padding-top:1.18rem !important;
+    margin-bottom:.88rem !important;
+    line-height:1.5 !important;
+}
+@media (max-width:800px){
+    .profile-intro{margin-bottom:1.02rem !important;}
+    .profile-block + .profile-block{margin-top:1.22rem !important;}
+    .profile-summary{margin-top:1.28rem !important;padding-top:1.02rem !important;}
+}
+
 /* V5.94 Showroom vertical rhythm: balanced spacing without stretching cards */
 .poster-caption{
     margin-top:.68rem !important;
@@ -1598,6 +1637,26 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .tab-section-heading{
     margin-top:0 !important;
 }
+
+/* V5.100 final onboarding + tab alignment polish */
+/* Step 1: pull Like/Favorite closer to the year without changing card sizing. */
+.shelf-action-gap{height:.08rem !important;}
+[class*="st-key-like_"],
+[class*="st-key-fav_"]{
+    margin-top:-.08rem !important;
+}
+
+/* Step 3: ordinary card clicks stay fragment-local; persistence occurs on the
+   page transition, preventing the browser-storage bridge from flashing. */
+
+/* The larger Top Matches heading rendered visually lower than the Saved/Seen
+   headings even with the same spacer. Lift only that first heading so its top
+   edge matches the other tabs. */
+.showroom-row.first{
+    transform:translateY(-1.65rem) !important;
+    margin-bottom:-1.2rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2374,8 +2433,9 @@ def render_more_fragment():
 
     st.button("Build My Cinema Profile →", type="primary", key="build_profile", on_click=go_from_fragment, args=("profile",))
 
-
-    persist_profile_if_needed()
+    # Step 3 selections are queued in session state and persisted on the page-level
+    # transition to Profile. Avoid rendering the localStorage bridge inside this
+    # fragment, which could briefly surface as a dark strip after a card click.
 
 
 @st.fragment
@@ -2707,3 +2767,4 @@ persist_profile_if_needed()
 # V5.90 is implemented through CSS overrides injected above in the main style block.
 
 # V5.99 tab content alignment polish injected via CSS override.
+
