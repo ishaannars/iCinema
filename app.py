@@ -1708,6 +1708,41 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     margin-bottom:0 !important;
 }
 
+
+/* V5.103 final Step 1 + top-control alignment */
+/* Pull Like/Favorite materially closer to the movie year. */
+[class*="st-key-like_"],
+[class*="st-key-fav_"]{
+    margin-top:-.78rem !important;
+}
+
+/* Keep iCinema Match and Skip on the exact same horizontal line. */
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+}
+.match-pill{
+    min-height:1.62rem !important;
+    height:1.62rem !important;
+    font-size:.72rem !important;
+    font-weight:760 !important;
+    line-height:1 !important;
+    margin:0 !important;
+}
+.showroom-skip-row{
+    height:1.62rem !important;
+    display:flex !important;
+    align-items:center !important;
+    margin:0 !important;
+}
+[class*="st-key-skip_"]{
+    margin:0 !important;
+    width:100% !important;
+}
+[class*="st-key-skip_"] button{
+    min-height:1.62rem !important;
+    height:1.62rem !important;
+    margin:0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
