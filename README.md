@@ -132,3 +132,6 @@ The Showroom keeps card spacing consistent across recommendations, including ali
 - Keeps full-app reruns only for intentional page navigation such as Continue, Build Profile, and Reset.
 - Adds a clearer visual break between the Cinema Profile subtitle and the first analysis section.
 
+
+### V5.79 persistence fix
+Saved, Seen, and Skipped titles from the live TMDB discovery pool now persist their movie metadata with the browser profile, so history tabs remain resolvable after refreshes and restarts.

@@ -1270,22 +1270,49 @@ def toggle_priority_choice(option):
     st.session_state.more_of = list(selected)
     queue_profile_save()
 
-def skip_movie(title):
+def _remember_movie(movie):
+    if not movie or not isinstance(movie, dict):
+        return
+    title = movie.get("title")
+    if not title:
+        return
+    if movie.get("external") or not get_movie(title, {}):
+        st.session_state.external_movies[title] = dict(movie)
+
+def skip_movie(title, movie=None):
+    _remember_movie(movie)
     st.session_state.dismissed.add(title)
     st.session_state.saved.discard(title)
     queue_profile_save()
 
-def save_movie(title):
+def save_movie(title, movie=None):
+    _remember_movie(movie)
     st.session_state.saved.add(title)
     st.session_state.seen.discard(title)
     st.session_state.dismissed.discard(title)
     queue_profile_save()
 
-def mark_movie_seen(title):
+def mark_movie_seen(title, movie=None):
+    _remember_movie(movie)
     st.session_state.seen.add(title)
     st.session_state.saved.discard(title)
     st.session_state.dismissed.discard(title)
     queue_profile_save()
+
+def resolve_history_movie(title):
+    movie = get_movie(title, st.session_state.external_movies)
+    if movie:
+        return movie
+    if tmdb_catalog_configured():
+        try:
+            movie = find_movie(title)
+        except Exception:
+            movie = None
+        if movie:
+            st.session_state.external_movies[title] = movie
+            queue_profile_save()
+            return movie
+    return None
 
 def reset_profile_state():
     for k, v in defaults.items():
@@ -1838,7 +1865,7 @@ def render_showroom_fragment(p):
                             key=f"skip_{row_name}_{movie['title']}",
                             use_container_width=True,
                             on_click=skip_movie,
-                            args=(movie["title"],),
+                            args=(movie["title"], movie),
                         )
                         st.markdown('</div>', unsafe_allow_html=True)
                     movie_thumb(movie, showroom_poster_map.get(movie["title"]))
@@ -1863,7 +1890,7 @@ def render_showroom_fragment(p):
                             key=f"save_{row_name}_{movie['title']}",
                             use_container_width=True,
                             on_click=save_movie,
-                            args=(movie["title"],),
+                            args=(movie["title"], movie),
                         )
                     with b:
                         st.button(
@@ -1871,7 +1898,7 @@ def render_showroom_fragment(p):
                             key=f"seen_{row_name}_{movie['title']}",
                             use_container_width=True,
                             on_click=mark_movie_seen,
-                            args=(movie["title"],),
+                            args=(movie["title"], movie),
                         )
                     st.markdown('</div>', unsafe_allow_html=True)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
@@ -1885,7 +1912,7 @@ def render_showroom_fragment(p):
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-section-heading">Saved</div>', unsafe_allow_html=True)
-        movies=[get_movie(t, st.session_state.external_movies) for t in st.session_state.saved if get_movie(t, st.session_state.external_movies)]
+        movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
         saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing saved yet.")
         else:
@@ -1898,13 +1925,13 @@ def render_showroom_fragment(p):
                         key=f"savedseen_{m['title']}",
                         use_container_width=True,
                         on_click=mark_movie_seen,
-                        args=(m["title"],),
+                        args=(m["title"], m),
                     )
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-section-heading">Seen</div>', unsafe_allow_html=True)
-        movies=[get_movie(t, st.session_state.external_movies) for t in st.session_state.seen if get_movie(t, st.session_state.external_movies)]
+        movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
         seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
