@@ -99,14 +99,39 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         letter-spacing:-.005em
     }
 .movie-card{margin-bottom:.55rem}
-.poster{height:300px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(0,0,0,.32)),radial-gradient(circle at 30% 20%,#303640 0%,#1E232A 42%,#15181D 100%);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:1rem;position:relative;overflow:hidden}
-.poster.has-image{padding:.42rem;background:#0F1114}
-.poster.has-image img{width:100%;height:100%;object-fit:contain;object-position:center center;display:block;border-radius:14px}
+.poster{
+    width:100%;
+    aspect-ratio:2 / 3;
+    border-radius:18px;
+    border:1px solid var(--border);
+    background:#0F1114;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    box-sizing:border-box;
+}
+.poster.has-image{
+    padding:0;
+    background:#0F1114;
+}
+.poster.has-image img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    object-position:center center;
+    display:block;
+    margin:0;
+    padding:0;
+    border-radius:17px;
+}
 .poster-placeholder-mark{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.86rem;font-weight:700;letter-spacing:.08em;color:rgba(243,240,234,.34)}
 .poster-caption{margin:.62rem 0 .28rem;padding:0 .08rem;min-height:3rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 .poster-caption-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:1.18rem;line-height:1.18;font-weight:800;letter-spacing:-.025em;color:var(--ivory)}
 .poster-caption-year{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:.75rem;line-height:1.35;font-weight:700;letter-spacing:.055em;text-transform:uppercase;color:var(--muted);margin-top:.18rem}
-@media (max-width:900px){.poster{height:270px}}
+@media (max-width:900px){.poster{aspect-ratio:2 / 3}}
 .match{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-weight:600;
@@ -1019,6 +1044,61 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     margin-top:.3rem !important;
     margin-bottom:.2rem !important;
 }
+/* V5.81 showroom card grid: normalize vertical content blocks across every movie card. */
+.poster-caption{
+    min-height:4.45rem !important;
+    margin-top:.72rem !important;
+    margin-bottom:.22rem !important;
+}
+.poster-caption-title{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    overflow:hidden !important;
+}
+.poster-caption-year{
+    min-height:1rem !important;
+}
+.match{
+    min-height:1.65rem !important;
+    display:flex !important;
+    align-items:flex-end !important;
+    margin-top:.18rem !important;
+    margin-bottom:.04rem !important;
+}
+.ratings{
+    min-height:1.45rem !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    margin-top:.02rem !important;
+    margin-bottom:.2rem !important;
+}
+.watch-availability{
+    min-height:2.7rem !important;
+    max-height:2.7rem !important;
+    line-height:1.32 !important;
+    overflow:hidden !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    margin:.18rem 0 .18rem !important;
+}
+.movie-description{
+    min-height:4.5rem !important;
+    max-height:4.5rem !important;
+    line-height:1.45 !important;
+    margin-top:.08rem !important;
+    margin-bottom:.36rem !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:3 !important;
+    overflow:hidden !important;
+}
+.movie-card-actions{
+    margin-top:.22rem !important;
+    margin-bottom:.2rem !important;
+}
+
 /* Continue CTAs: larger physical target with restrained label size. */
 .st-key-continue_rate,
 .st-key-continue_taste{
@@ -1235,9 +1315,13 @@ def go(screen):
     queue_profile_save()
 
 def go_from_fragment(screen):
-    """Leave a fragment with one intentional page-level transition."""
+    """Leave a fragment with one intentional page-level transition.
+
+    Do not synchronously write browser storage before navigating. The next page
+    render persists the queued snapshot, which avoids making Step 1 → 2 → 3 →
+    Profile → Showroom transitions wait on the browser component first.
+    """
     go(screen)
-    persist_profile_if_needed()
     st.rerun(scope="app")
 
 def select_search_result(movie):
