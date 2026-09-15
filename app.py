@@ -1640,10 +1640,10 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 
 /* V5.100 final onboarding + tab alignment polish */
 /* Step 1: pull Like/Favorite closer to the year without changing card sizing. */
-.shelf-action-gap{height:.08rem !important;}
+.shelf-action-gap{height:0 !important;}
 [class*="st-key-like_"],
 [class*="st-key-fav_"]{
-    margin-top:-.08rem !important;
+    margin-top:-.24rem !important;
 }
 
 /* Step 3: ordinary card clicks stay fragment-local; persistence occurs on the
@@ -1655,6 +1655,57 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .showroom-row.first{
     transform:translateY(-1.65rem) !important;
     margin-bottom:-1.2rem !important;
+}
+
+
+/* V5.102 compact showroom controls + tighter card rhythm */
+.showroom-top-controls{
+    margin-bottom:.12rem !important;
+}
+.match-pill{
+    width:100%;
+    min-height:1.5rem;
+    height:1.5rem;
+    border:1px solid #4A4F57;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-sizing:border-box;
+    padding:.14rem .34rem;
+    color:var(--ivory);
+    font-family:var(--ui-font);
+    font-size:.63rem;
+    font-weight:700;
+    line-height:1;
+    white-space:nowrap;
+}
+/* With match moved above the poster, keep title/year compact and pull ratings up. */
+.showroom-row ~ div .poster-caption,
+.poster-caption:not(.library-poster-caption){
+    height:4.02rem !important;
+    min-height:4.02rem !important;
+}
+.ratings{
+    margin-top:.12rem !important;
+    margin-bottom:.24rem !important;
+}
+/* Bring actions closer to the description while keeping exact alignment. */
+.movie-description{
+    height:4.55rem !important;
+    min-height:4.55rem !important;
+    max-height:4.55rem !important;
+}
+.movie-card-actions{
+    margin-top:.04rem !important;
+}
+[class*="st-key-skip_"]{
+    margin-top:-.04rem !important;
+    margin-bottom:-.16rem !important;
+}
+.showroom-skip-row{
+    height:1.52rem !important;
+    margin-bottom:0 !important;
 }
 
 </style>
@@ -2587,7 +2638,10 @@ def render_showroom_fragment(p):
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
-                    skip_spacer, skip_col = st.columns([3.45,1.55], gap="small")
+                    st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
+                    match_col, skip_col = st.columns([2.15,1.35], gap="small")
+                    with match_col:
+                        st.markdown(f'<div class="match-pill">{match}% iCinema Match</div>', unsafe_allow_html=True)
                     with skip_col:
                         st.markdown('<div class="showroom-skip-row">', unsafe_allow_html=True)
                         st.button(
@@ -2598,6 +2652,7 @@ def render_showroom_fragment(p):
                             args=(movie["title"], movie),
                         )
                         st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
                     identity = identity_by_title.get(movie["title"], {}) or {}
                     display_movie = dict(movie)
                     if identity.get("display_title"):
@@ -2605,7 +2660,6 @@ def render_showroom_fragment(p):
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
                     movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
-                    st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     live_rating = live_ratings_by_title.get(movie["title"], {})
                     imdb_value = live_rating.get("imdb")
                     rt_value = live_rating.get("rt")
