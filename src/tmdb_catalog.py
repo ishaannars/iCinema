@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+import time
+from threading import Lock
 from typing import Dict, Optional, Tuple
 
 import requests
@@ -10,6 +12,14 @@ TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 CACHE_SECONDS = 60 * 60 * 24 * 14
 SEARCH_CACHE_SECONDS = 60 * 60 * 24
 DISCOVERY_CACHE_SECONDS = 60 * 60 * 24
+
+# Process-local TTL cache for TMDB discovery pages. This intentionally avoids
+# wrapping the large multi-page discovery function with Streamlit cache_data;
+# the latter can fail the entire Showroom when signatures change between
+# cumulative deployments. Page-level caching keeps the network work cheap and
+# the recommendation pipeline resilient.
+_DISCOVERY_PAGE_CACHE = {}
+_DISCOVERY_PAGE_CACHE_LOCK = Lock()
 
 GENRE_MAP = {
     28: "Action",
@@ -224,34 +234,64 @@ def get_poster_batch(movies: Tuple[Tuple[str, int], ...]) -> Dict[str, Optional[
     return result
 
 
-@st.cache_data(ttl=DISCOVERY_CACHE_SECONDS, show_spinner=False)
-def discover_movies(limit: int = 120):
-    """Return a broad TMDB candidate pool for resilient recommendation replenishment."""
+def discover_movies(limit: int = 120, start_page: int = 1, *_, **__):
+    """Return a broad TMDB candidate pool for resilient recommendation replenishment.
+
+    start_page lets the showroom rotate through deeper TMDB inventory as a user
+    accumulates skips, while caching keeps repeated sessions fast.
+    """
     if not tmdb_catalog_configured() or limit <= 0:
         return []
 
     results = []
     seen = set()
-    page = 1
-    max_pages = min(8, max(1, (int(limit) + 19) // 20 + 1))
-    while page <= max_pages and len(results) < limit:
+    first_page = max(1, int(start_page or 1))
+    # TMDB returns 20 movies per discover page. Fetch one small buffer page so
+    # duplicates/missing entries do not shrink the effective candidate pool.
+    pages_needed = max(1, (int(limit) + 19) // 20 + 1)
+    final_page = min(500, first_page + pages_needed - 1)
+    pages = list(range(first_page, final_page + 1))
+
+    def fetch_page(page_number):
+        now = time.time()
+        with _DISCOVERY_PAGE_CACHE_LOCK:
+            cached = _DISCOVERY_PAGE_CACHE.get(page_number)
+            if cached and now - cached[0] < DISCOVERY_CACHE_SECONDS:
+                return page_number, cached[1]
+
         payload = _request(
             "/discover/movie",
             {
                 "include_adult": "false",
                 "include_video": "false",
                 "language": "en-US",
-                "page": page,
+                "page": page_number,
                 "sort_by": "popularity.desc",
                 "vote_count.gte": 80,
             },
         )
-        if not payload:
-            break
-        items = payload.get("results", [])
-        if not items:
-            break
-        for item in items:
+        items = (payload or {}).get("results", [])
+        if items:
+            with _DISCOVERY_PAGE_CACHE_LOCK:
+                _DISCOVERY_PAGE_CACHE[page_number] = (now, items)
+        return page_number, items
+
+    # A deeper pool is useful for repeated Skip actions, but fetching ~30 pages
+    # serially would make the first load feel slow. Fetch pages concurrently,
+    # then restore deterministic TMDB page order before feature scoring.
+    page_items = {}
+    workers = min(8, max(1, len(pages)))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(fetch_page, page_number) for page_number in pages]
+        for future in as_completed(futures):
+            try:
+                page_number, items = future.result()
+                page_items[page_number] = items
+            except Exception:
+                continue
+
+    for page_number in pages:
+        for item in page_items.get(page_number, []):
             movie = _to_icinema_movie(item)
             key = (movie["title"].casefold(), int(movie.get("year") or 0))
             if key in seen:
@@ -259,6 +299,5 @@ def discover_movies(limit: int = 120):
             seen.add(key)
             results.append(movie)
             if len(results) >= limit:
-                break
-        page += 1
+                return results
     return results

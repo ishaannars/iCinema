@@ -1490,7 +1490,19 @@ elif screen=="showroom":
     # Rotate deeper into TMDB as a user skips more titles, so the showroom keeps
     # replenishing instead of exhausting one fixed discovery slice.
     discovery_start_page = 1 + (len(st.session_state.dismissed) // 80) * 8
-    external_pool = discover_movies(640, discovery_start_page) if tmdb_catalog_configured() else []
+    external_pool = []
+    if tmdb_catalog_configured():
+        try:
+            external_pool = discover_movies(640, discovery_start_page)
+        except TypeError:
+            # Backward-compatible fallback if Streamlit is briefly serving an
+            # older cached module during a deployment. Never take down Showroom.
+            try:
+                external_pool = discover_movies(640)
+            except Exception:
+                external_pool = []
+        except Exception:
+            external_pool = []
     candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
     ranked = rank_movies(
         candidate_pool,
