@@ -1569,6 +1569,35 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 }
 .showroom-row.first{margin-top:.22rem !important}
 .showroom-row h3{margin-bottom:.34rem !important}
+
+
+/* V5.98 onboarding transition + spacing polish */
+/* Step 2: give the intro and first question a clearer visual break. */
+.step2-header{
+    margin-bottom:1.22rem !important;
+}
+.step2-question{
+    margin-top:.10rem !important;
+}
+/* Keep Continue clearly separated from the final Step 2 preference block. */
+.st-key-continue_taste{
+    margin-top:.88rem !important;
+}
+/* Step 3: add breathing room between the prompt and the six selection cards. */
+.step3-subtitle{
+    margin-bottom:2.02rem !important;
+}
+
+/* V5.99: keep all Showroom tabs starting at the same vertical position. */
+.showroom-tab-start{
+    height:1.9rem !important;
+}
+.showroom-row.first{
+    margin-top:0 !important;
+}
+.tab-section-heading{
+    margin-top:0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1814,11 +1843,18 @@ def add_search_choice(kind):
     queue_profile_save()
 
 def go(screen):
-    """Navigate using the widget's normal single rerun."""
+    """Navigate using the widget's normal single rerun.
+
+    Ordinary onboarding page navigation does not change the learned profile, so
+    it should not invoke the localStorage bridge. Only entering the Showroom
+    changes the persisted onboarding-complete state. Avoiding that unnecessary
+    write also prevents a transient dark component strip during Start
+    Personalizing -> Step 1.
+    """
     st.session_state.screen = screen
     if screen == "showroom":
         st.session_state.onboarding_complete = True
-    queue_profile_save()
+        queue_profile_save()
 
 def go_from_fragment(screen):
     """Leave a fragment with one intentional page-level transition.
@@ -2306,7 +2342,7 @@ def render_more_fragment():
     logo()
     st.markdown(
         '<div class="page-top-heading">Step 3 of 3 — Shape Your Showroom</div>'
-        '<div class="page-top-subtitle">What should iCinema lean toward? Choose any that you want to see more often</div>',
+        '<div class="page-top-subtitle step3-subtitle">What should iCinema lean toward? Choose any that you want to see more often</div>',
         unsafe_allow_html=True,
     )
 
@@ -2669,3 +2705,5 @@ elif screen=="showroom":
 persist_profile_if_needed()
 
 # V5.90 is implemented through CSS overrides injected above in the main style block.
+
+# V5.99 tab content alignment polish injected via CSS override.
