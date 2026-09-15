@@ -99,3 +99,20 @@ This project was an exercise in combining **product design, data-driven personal
 ## Data Attribution
 
 This product uses the TMDB API but is not endorsed or certified by TMDB. Watch-provider availability is supplied through TMDB using JustWatch data. IMDb and Rotten Tomatoes rating data is retrieved through OMDb.
+
+### Current interaction polish
+The current build persists the user profile in browser local storage, restores returning users directly into the Showroom, and keeps all four recommendation rows replenished from a deep cached TMDB candidate pool. Candidates within each row are displayed from highest to lowest personalized iCinema Match score, while Save, Seen, and Skip update the behavioral model immediately.
+
+
+### Deep candidate pool
+The Showroom ranks an effective pool of up to **640 cached TMDB candidates** at a time, plus the built-in catalog and user-added titles. Discovery pages are fetched concurrently and cached, while recommendation scoring stays local in Python so the larger pool improves variety without making normal interactions feel heavy.
+
+
+### iCinema Match calibration
+
+The displayed **iCinema Match %** is derived from the same continuous model score used to rank movies. It is confidence-adjusted based on how much preference evidence the user has supplied, then passed through a logistic calibration so weak, moderate, and strong matches remain visibly separated. New profiles are intentionally prevented from showing overconfident scores before enough feedback exists. The percentage is a compatibility index, not a literal probability that a user will like a movie.
+
+
+### Showroom objectives
+
+All four Showroom rows share the same learned user model, but optimize for different recommendation objectives. **Top Matches for You** uses the highest overall personalized score. **Critically Acclaimed** blends personalized fit with critic/audience quality. **Hidden Gems** blends personalized fit with lower-popularity and discovery signals. **Something Different** blends personalized fit with novelty across genre, language, era, and popularity. Movies are reserved to one row per render, so sections remain distinct while every recommendation stays connected to the same model.

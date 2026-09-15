@@ -4,7 +4,7 @@ import json
 import streamlit as st
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
-    build_profile, score_movie, recommend, rank_movies, CATALOG
+    build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG
 )
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured, discover_movies
@@ -880,6 +880,68 @@ div[data-testid="stTextInput"] input {
 }
 
 
+/* V5.68 full polish: distinct Step 2 tiles, cleaner Step 3 selection, balanced rhythm */
+/* Step 2 genres are intentionally sharp mini-squares to distinguish this step. */
+[class*="st-key-genre_"] button{
+    border-radius:0 !important;
+    width:100% !important;
+    max-width:6.6rem !important;
+    aspect-ratio:1 / 1 !important;
+    min-height:0 !important;
+    height:auto !important;
+    padding:.42rem !important;
+    margin:.08rem 0 .42rem !important;
+}
+[class*="st-key-genre_"] button p{
+    font-size:.77rem !important;
+    line-height:1.15 !important;
+    text-align:center !important;
+    white-space:normal !important;
+}
+.genre-helper{margin-bottom:.9rem !important}
+
+/* Step 3: card itself is the control; selected state is a small top-right check. */
+[class*="st-key-priority_card_"] button{
+    position:relative !important;
+    min-height:7.55rem !important;
+    padding:1.12rem 2.9rem 1.12rem 1.15rem !important;
+}
+[class*="st-key-priority_card_active_"] button{
+    border-color:rgba(92,111,168,.82) !important;
+    background:rgba(92,111,168,.075) !important;
+}
+[class*="st-key-priority_card_active_"] button::after{
+    content:"✓";
+    position:absolute;
+    top:.8rem;
+    right:.9rem;
+    width:1.55rem;
+    height:1.55rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    color:var(--ivory);
+    background:rgba(92,111,168,.9);
+    font-size:.78rem;
+    font-weight:800;
+    line-height:1;
+}
+
+/* Global rhythm pass: calm, consistent spacing across onboarding and showroom. */
+h1,h2,h3,h4{letter-spacing:-.025em}
+div[data-testid="stHeadingWithActionElements"]{margin-bottom:.12rem}
+div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
+.pref-scale-wrap{margin:.42rem 0 .95rem !important}
+.pref-scale-helper{margin-top:1rem !important}
+.pref-scale-clicks{margin-top:.82rem !important;margin-bottom:1.7rem !important}
+.showroom-header{margin-bottom:1.1rem !important}
+.showroom-tab-start{height:.24rem !important}
+.showroom-row{margin-top:.82rem !important;margin-bottom:.06rem !important}
+.showroom-row h3{margin-bottom:.22rem !important}
+.poster-caption{margin-top:.46rem !important}
+.movie-card-actions{margin-top:.34rem !important}
+
 /* V5.59 showroom balance: tighter, more even vertical rhythm without changing card height */
 .poster-caption{margin:.52rem 0 .18rem !important;min-height:2.9rem !important}
 .match{margin-top:.28rem !important;margin-bottom:.04rem !important}
@@ -961,10 +1023,9 @@ if _pending_profile is not None:
     _save_result = browser_storage(
         "set", PROFILE_STORAGE_KEY, value=_pending_profile, key="icinema_profile_pending_saver"
     )
-    if not (isinstance(_save_result, dict) and _save_result.get("saved") is True):
-        st.stop()
-    st.session_state._last_persisted_profile = _pending_sig
-    st.session_state._pending_profile_save = None
+    if isinstance(_save_result, dict) and _save_result.get("saved") is True:
+        st.session_state._last_persisted_profile = _pending_sig
+        st.session_state._pending_profile_save = None
 
 def _snapshot_signature(snapshot):
     return json.dumps(snapshot, sort_keys=True, default=str)
@@ -1306,9 +1367,9 @@ elif screen=="taste":
     st.markdown("#### What do you like to watch?")
     st.markdown('<div class="genre-helper">Select up to five genres</div>', unsafe_allow_html=True)
     selected=set(st.session_state.genres)
-    genre_cols=st.columns(5)
+    genre_cols=st.columns(7, gap="small")
     for i,genre in enumerate(GENRES):
-        with genre_cols[i%5]:
+        with genre_cols[i%7]:
             active=genre in selected
             if st.button(
                 genre,
@@ -1365,7 +1426,7 @@ elif screen=="taste":
 elif screen=="more":
     logo()
     st.markdown("### Step 3 of 3 — Shape Your Showroom")
-    st.caption("Choose what iCinema should surface more often")
+    st.caption("What should iCinema lean toward? Choose any that you want to see more often")
 
     descriptions = {
         "Hidden Gems": "Less obvious titles that still fit your taste",
@@ -1382,10 +1443,9 @@ elif screen=="more":
     for i, option in enumerate(MORE_OF_OPTIONS):
         with (left if i % 2 == 0 else right):
             active = option in selected
-            title = f"✓ {option}" if active else option
             if st.button(
-                f"**{title}**  \n{descriptions[option]}",
-                key=f"priority_card_{i}",
+                f"**{option}**  \n{descriptions[option]}",
+                key=f"priority_card_{'active_' if active else ''}{i}",
                 use_container_width=True,
                 type="secondary",
             ):
@@ -1414,7 +1474,7 @@ elif screen=="showroom":
     p=current_profile()
     st.markdown(
         '<div class="showroom-header">'
-        '<div class="showroom-heading">Your Showroom</div>'
+        '<div class="showroom-heading">Your Showroom of Movies</div>'
         '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark as seen</div>'
         '</div>',
         unsafe_allow_html=True
@@ -1427,7 +1487,10 @@ elif screen=="showroom":
     # Build a deep candidate pool, then rank every candidate with the same iCinema
     # personalization algorithm. TMDB discovery acts only as replenishment: it does not
     # bypass the user's profile, and excluded Save/Seen/Skip titles stay excluded.
-    external_pool = discover_movies(140) if tmdb_catalog_configured() else []
+    # Rotate deeper into TMDB as a user skips more titles, so the showroom keeps
+    # replenishing instead of exhausting one fixed discovery slice.
+    discovery_start_page = 1 + (len(st.session_state.dismissed) // 80) * 8
+    external_pool = discover_movies(640, discovery_start_page) if tmdb_catalog_configured() else []
     candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
     ranked = rank_movies(
         candidate_pool,
@@ -1444,27 +1507,67 @@ elif screen=="showroom":
         except (TypeError, ValueError):
             return default
 
+    def _row_signal(row_name, movie):
+        """Section-specific signal layered on the same learned iCinema profile."""
+        tags=set(movie.get("tags", []))
+        popularity=max(0.0, _safe_num(movie.get("popularity"), 0.0))
+        rt=_safe_num(movie.get("rt"), -1.0)
+        imdb=_safe_num(movie.get("imdb"), -1.0)
+        tmdb_vote=_safe_num(movie.get("tmdb_vote"), -1.0)
+        year=int(_safe_num(movie.get("year"), 0))
+
+        if row_name=="Critically Acclaimed":
+            critic=(rt/100.0) if rt>=0 else 0.5
+            audience_vals=[]
+            if imdb>=0: audience_vals.append(imdb/10.0)
+            if tmdb_vote>=0: audience_vals.append(tmdb_vote/10.0)
+            audience=sum(audience_vals)/len(audience_vals) if audience_vals else 0.5
+            tagged=1.0 if "Critically Acclaimed" in tags else 0.0
+            return max(0.0,min(1.0,0.50*critic+0.35*audience+0.15*tagged))
+
+        if row_name=="Hidden Gems":
+            # Prefer lower-popularity titles with discovery-oriented metadata, while
+            # keeping enough quality evidence to avoid rewarding obscurity by itself.
+            obscurity=1.0/(1.0+popularity/28.0) if popularity else 0.58
+            hidden=1.0 if "Hidden Gem" in tags else 0.0
+            discovery_tags={"International","Offbeat","Slow-burn","Psychological","Documentary","Grounded","Cerebral"}
+            discovery=min(1.0,len(discovery_tags.intersection(tags))/2.0)
+            quality=max(0.0,min(1.0,((rt/100.0) if rt>=0 else ((imdb/10.0) if imdb>=0 else 0.55))))
+            return max(0.0,min(1.0,0.42*obscurity+0.24*hidden+0.18*discovery+0.16*quality))
+
+        if row_name=="Something Different":
+            preferred=set(p.get("genres", []))
+            genre_novelty=0.0 if movie.get("genre") in preferred else 1.0
+            language_novelty=1.0 if str(movie.get("original_language") or "en").lower() not in {"", "en"} else 0.0
+            era_novelty=1.0 if year and (year<=2005 or year>=2023) else 0.35
+            obscurity=1.0/(1.0+popularity/40.0) if popularity else 0.45
+            return max(0.0,min(1.0,0.52*genre_novelty+0.20*language_novelty+0.14*era_novelty+0.14*obscurity))
+
+        return 1.0
+
     def _row_candidates(row_name, already_used):
         available=[item for item in ranked if item[1]["title"] not in already_used]
-        if row_name=="Hidden Gems":
-            # Strong hidden-gem signals first, then broader discovery-oriented fallbacks.
-            discovery_tags={"International","Offbeat","Slow-burn","Psychological","Documentary","Grounded","Cerebral"}
-            primary=[item for item in available if "Hidden Gem" in item[1].get("tags",[])]
-            fallback=[item for item in available if item not in primary and discovery_tags.intersection(set(item[1].get("tags",[])))]
-            rest=[item for item in available if item not in primary and item not in fallback]
-            return primary+fallback+rest
-        if row_name=="Critically Acclaimed":
-            primary=[item for item in available if ("Critically Acclaimed" in item[1].get("tags",[]) or _safe_num(item[1].get("rt"))>=90) and "Hidden Gem" not in item[1].get("tags",[])]
-            primary.sort(key=lambda x:(_safe_num(x[1].get("rt")), x[0], _safe_num(x[1].get("imdb"))), reverse=True)
-            rest=[item for item in available if item not in primary]
-            return primary+rest
-        if row_name=="Something Different":
-            primary=[item for item in available if item[1].get("genre") not in p["genres"]]
-            primary.sort(key=lambda x:(x[0], _safe_num(x[1].get("rt"))), reverse=True)
-            rest=[item for item in available if item not in primary]
-            return primary+rest
-        # Top Matches stays personalization-first.
-        return available
+        scored=[]
+        for display_match,movie in available:
+            components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority)
+            base=components["raw_score"]
+            section=_row_signal(row_name,movie)
+            # The learned profile remains dominant in every row. The section signal
+            # changes the objective, not the underlying personalization system.
+            if row_name=="Top Matches for You":
+                objective=base
+            elif row_name=="Critically Acclaimed":
+                objective=0.70*base+0.30*section
+            elif row_name=="Hidden Gems":
+                objective=0.72*base+0.28*section
+            else:  # Something Different
+                objective=0.68*base+0.32*section
+            scored.append((objective,base,display_match,movie))
+
+        # Section objective chooses membership. Within that objective, stronger core
+        # personalized fit breaks ties, so every row remains grounded in the same model.
+        scored.sort(key=lambda x:(x[0],x[1]),reverse=True)
+        return [(display_match,movie) for _,_,display_match,movie in scored]
 
     # Reserve distinct movies for each row before rendering. This prevents a title from
     # migrating into another section during the same refresh and keeps every row populated.
@@ -1504,7 +1607,7 @@ elif screen=="showroom":
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div>', unsafe_allow_html=True)
             if not choices:
-                st.caption("No additional matches in this demo catalog.")
+                st.caption("Refreshing personalized matches…")
                 continue
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
