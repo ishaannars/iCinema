@@ -1709,39 +1709,71 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 }
 
 
-/* V5.103 final Step 1 + top-control alignment */
-/* Pull Like/Favorite materially closer to the movie year. */
+/* V5.104 final control alignment + clean Showroom transition */
+/* Step 1: keep Like/Favorite close to the title/year block. */
 [class*="st-key-like_"],
 [class*="st-key-fav_"]{
     margin-top:-.78rem !important;
 }
 
-/* Keep iCinema Match and Skip on the exact same horizontal line. */
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
+/* iCinema Match and Skip share one clean horizontal control row.
+   Match is intentionally more prominent, while Skip stays centered. */
+[data-testid="stMarkdownContainer"]:has(.match-pill){
+    margin:0 !important;
+    padding:0 !important;
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    display:flex !important;
     align-items:center !important;
 }
 .match-pill{
-    min-height:1.62rem !important;
-    height:1.62rem !important;
-    font-size:.72rem !important;
-    font-weight:760 !important;
-    line-height:1 !important;
-    margin:0 !important;
-}
-.showroom-skip-row{
-    height:1.62rem !important;
+    width:100% !important;
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    padding:.22rem .58rem !important;
+    border-radius:999px !important;
     display:flex !important;
     align-items:center !important;
+    justify-content:center !important;
+    box-sizing:border-box !important;
+    font-size:.82rem !important;
+    font-weight:780 !important;
+    line-height:1 !important;
     margin:0 !important;
+    white-space:nowrap !important;
 }
 [class*="st-key-skip_"]{
     margin:0 !important;
+    padding:0 !important;
     width:100% !important;
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
 }
 [class*="st-key-skip_"] button{
-    min-height:1.62rem !important;
-    height:1.62rem !important;
+    width:100% !important;
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    padding:.18rem .58rem !important;
     margin:0 !important;
+    border-radius:999px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+}
+[class*="st-key-skip_"] button p{
+    width:100% !important;
+    margin:0 !important;
+    text-align:center !important;
+    line-height:1 !important;
+    font-size:.72rem !important;
+}
+/* Keep the control row close to the poster. */
+.showroom-top-controls{
+    margin:0 0 .2rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1810,20 +1842,12 @@ if not st.session_state.get("_storage_hydrated", False):
     st.session_state._storage_hydrated = True
     st.session_state._last_persisted_profile = json.dumps(profile_snapshot(), sort_keys=True, default=str) if restored else None
 
-# A profile-changing button may request an immediate rerun. Complete its
-# localStorage write first, then continue rendering. This makes refreshes, tab
-# closes/reopens, and Streamlit restarts reliably restore the latest profile.
+# Profile-changing actions queue a snapshot, but we deliberately do NOT mount
+# the browser-storage component before the destination page renders. Mounting
+# that component at the top of a page transition can briefly expose its iframe
+# background as a black strip. The normal persist_profile_if_needed() call at
+# the end of the render writes the exact same snapshot silently.
 _pending_profile = st.session_state.get("_pending_profile_save")
-if _pending_profile is not None:
-    _pending_sig = json.dumps(_pending_profile, sort_keys=True, default=str)
-    # localStorage writes are synchronous in the browser. Use the silent action
-    # so the persistence component does not emit a second value-change rerun
-    # after an ordinary Streamlit button interaction.
-    browser_storage(
-        "set_silent", PROFILE_STORAGE_KEY, value=_pending_profile, key="icinema_profile_pending_saver"
-    )
-    st.session_state._last_persisted_profile = _pending_sig
-    st.session_state._pending_profile_save = None
 
 def _snapshot_signature(snapshot):
     return json.dumps(snapshot, sort_keys=True, default=str)
@@ -2678,7 +2702,6 @@ def render_showroom_fragment(p):
                     with match_col:
                         st.markdown(f'<div class="match-pill">{match}% iCinema Match</div>', unsafe_allow_html=True)
                     with skip_col:
-                        st.markdown('<div class="showroom-skip-row">', unsafe_allow_html=True)
                         st.button(
                             "Skip",
                             key=f"skip_{row_name}_{movie['title']}",
@@ -2686,7 +2709,6 @@ def render_showroom_fragment(p):
                             on_click=skip_movie,
                             args=(movie["title"], movie),
                         )
-                        st.markdown('</div>', unsafe_allow_html=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                     identity = identity_by_title.get(movie["title"], {}) or {}
                     display_movie = dict(movie)
