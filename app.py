@@ -1736,9 +1736,13 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     align-items:center !important;
     justify-content:center !important;
     box-sizing:border-box !important;
-    font-size:.82rem !important;
-    font-weight:780 !important;
+    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
+    color:var(--ivory) !important;
+    font-size:.72rem !important;
+    font-weight:700 !important;
+    letter-spacing:0 !important;
     line-height:1 !important;
+    text-align:center !important;
     margin:0 !important;
     white-space:nowrap !important;
 }
