@@ -116,3 +116,11 @@ The displayed **iCinema Match %** is derived from the same continuous model scor
 ### Showroom objectives
 
 All four Showroom rows share the same learned user model, but optimize for different recommendation objectives. **Top Matches for You** uses the highest overall personalized score. **Critically Acclaimed** blends personalized fit with critic/audience quality. **Hidden Gems** blends personalized fit with lower-popularity and discovery signals. **Something Different** blends personalized fit with novelty across genre, language, era, and popularity. Movies are reserved to one row per render, so sections remain distinct while every recommendation stays connected to the same model.
+
+### Latest interaction polish
+The onboarding flow uses callback-based state updates for faster Like/Favorite interactions, a tighter Step 2 layout, and a compact **Preference Analysis** view before entering the Showroom.
+
+## Current UI polish
+
+The Showroom keeps card spacing consistent across recommendations, including aligned action buttons beneath variable-length descriptions. Onboarding CTAs use larger click targets with restrained typography for a cleaner product feel.
+

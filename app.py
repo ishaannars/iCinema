@@ -942,6 +942,53 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 .poster-caption{margin-top:.46rem !important}
 .movie-card-actions{margin-top:.34rem !important}
 
+/* V5.73 Step 2 + analytical profile polish */
+.step2-header{margin:0 0 1.35rem}
+.step2-title{
+    color:var(--ivory);
+    font-family:var(--ui-font);
+    font-size:2rem;
+    line-height:1.1;
+    font-weight:760;
+    letter-spacing:-.035em;
+    margin:0 0 .48rem;
+}
+.step2-subtitle{
+    color:var(--muted);
+    font-family:var(--ui-font);
+    font-size:.95rem;
+    line-height:1.45;
+    margin:0;
+}
+.step2-question{
+    color:var(--ivory);
+    font-family:var(--ui-font);
+    font-size:1.48rem;
+    line-height:1.15;
+    font-weight:740;
+    letter-spacing:-.025em;
+    margin:.1rem 0 .72rem;
+}
+
+/* Keep the pre-Showroom analysis dense enough to fit comfortably on one screen. */
+.profile-wrap{max-width:760px !important;padding-bottom:.3rem !important}
+.profile-heading{font-size:1.88rem !important;margin-bottom:.34rem !important}
+.profile-intro{font-size:.86rem !important;line-height:1.4 !important;margin-bottom:.88rem !important}
+.profile-block + .profile-block{margin-top:1.22rem !important}
+.profile-label{font-size:.68rem !important;margin-bottom:.42rem !important}
+.profile-chip-wrap{column-gap:.5rem !important;row-gap:.44rem !important}
+.profile-chip{min-height:1.88rem !important;padding:.32rem .66rem !important;font-size:.83rem !important;border-radius:12px !important}
+.profile-analysis{gap:.4rem !important}
+.profile-analysis-row{min-height:1.88rem !important;padding:.32rem .66rem !important;font-size:.82rem !important;line-height:1.22 !important;border-radius:12px !important}
+.profile-summary{margin-top:1.2rem !important;margin-bottom:.72rem !important;padding-top:1.05rem !important;font-size:.96rem !important;line-height:1.48 !important}
+.st-key-enter_showroom{margin-top:.3rem !important}
+.st-key-enter_showroom button{min-height:3rem !important;padding:.68rem 1.35rem !important}
+@media (max-width:800px){
+    .step2-title{font-size:1.72rem}
+    .step2-question{font-size:1.3rem}
+    .profile-block + .profile-block{margin-top:1.05rem !important}
+}
+
 /* V5.59 showroom balance: tighter, more even vertical rhythm without changing card height */
 .poster-caption{margin:.52rem 0 .18rem !important;min-height:2.9rem !important}
 .match{margin-top:.28rem !important;margin-bottom:.04rem !important}
@@ -951,6 +998,47 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 .movie-card-actions{margin-top:.28rem !important;margin-bottom:.18rem !important}
 .showroom-row{margin-top:.68rem !important;margin-bottom:.04rem !important}
 .showroom-row h3{margin-bottom:.14rem !important}
+
+/* V5.74 showroom card alignment + CTA sizing */
+/* Give the poster-to-details transition a little more breathing room. */
+.poster-caption{
+    margin-top:.72rem !important;
+    margin-bottom:.2rem !important;
+}
+/* Reserve a consistent description area so Save / Seen align across a row. */
+.movie-description{
+    min-height:3.95rem !important;
+    margin-top:.14rem !important;
+    margin-bottom:.38rem !important;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:3;
+    overflow:hidden;
+}
+.movie-card-actions{
+    margin-top:.3rem !important;
+    margin-bottom:.2rem !important;
+}
+/* Continue CTAs: larger physical target with restrained label size. */
+.st-key-continue_rate,
+.st-key-continue_taste{
+    margin-top:.5rem !important;
+}
+.st-key-continue_rate button,
+.st-key-continue_taste button,
+.st-key-enter_showroom button{
+    min-height:3.55rem !important;
+    padding:.9rem 1.7rem !important;
+    border-radius:18px !important;
+}
+.st-key-continue_rate button p,
+.st-key-continue_taste button p,
+.st-key-enter_showroom button p{
+    font-size:.76rem !important;
+    line-height:1.1 !important;
+    font-weight:650 !important;
+    margin:0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1052,6 +1140,50 @@ def commit_profile_and_rerun():
     st.session_state._pending_profile_save = profile_snapshot()
     st.rerun()
 
+def queue_profile_save():
+    """Queue persistence without forcing an extra rerun.
+
+    Streamlit button callbacks already trigger the normal interaction rerun.
+    Using that rerun instead of calling st.rerun() again keeps Step 1 much
+    more responsive while still writing the updated profile to localStorage.
+    """
+    st.session_state._pending_profile_save = profile_snapshot()
+
+def toggle_shelf_like(title):
+    liked = title in st.session_state.likes and title not in st.session_state.favorites
+    if liked:
+        st.session_state.likes.discard(title)
+    else:
+        st.session_state.likes.add(title)
+        st.session_state.favorites.discard(title)
+    queue_profile_save()
+
+def toggle_shelf_favorite(title):
+    fav = title in st.session_state.favorites
+    if fav:
+        st.session_state.favorites.discard(title)
+        st.session_state.likes.discard(title)
+    else:
+        st.session_state.favorites.add(title)
+        st.session_state.likes.add(title)
+    queue_profile_save()
+
+def add_search_choice(kind):
+    movie = st.session_state.get("search_selected_movie")
+    if not movie:
+        return
+    title = movie["title"]
+    if movie.get("external"):
+        st.session_state.external_movies[title] = movie
+    st.session_state.likes.add(title)
+    if kind == "favorite":
+        st.session_state.favorites.add(title)
+    else:
+        st.session_state.favorites.discard(title)
+    st.session_state.search_selected_movie = None
+    st.session_state.search_selected_title = None
+    queue_profile_save()
+
 def go(screen):
     st.session_state.screen=screen
     if screen=="showroom":
@@ -1129,8 +1261,8 @@ def render_cinema_profile(p):
 
     st.markdown(
         f'<div class="profile-wrap">'
-        f'<div class="profile-heading">Your Cinema Profile</div>'
-        f'<div class="profile-intro">Built from your tailored preferences</div>'
+        f'<div class="profile-heading">Your Preference Analysis</div>'
+        f'<div class="profile-intro">A data-driven summary of the signals shaping your recommendations</div>'
         f'<div class="profile-grid">{section_html}</div>'
         f'<div class="profile-summary">{p["summary"]}</div>'
         f'</div>',
@@ -1173,15 +1305,23 @@ elif screen=="shelf":
             liked=title in st.session_state.likes and title not in st.session_state.favorites
             fav=title in st.session_state.favorites
             with b1:
-                if st.button("Like",key=f"like_{i}",type="primary" if liked else "secondary",use_container_width=True):
-                    if liked:st.session_state.likes.discard(title)
-                    else:st.session_state.likes.add(title);st.session_state.favorites.discard(title)
-                    commit_profile_and_rerun()
+                st.button(
+                    "Like",
+                    key=f"like_{i}",
+                    type="primary" if liked else "secondary",
+                    use_container_width=True,
+                    on_click=toggle_shelf_like,
+                    args=(title,),
+                )
             with b2:
-                if st.button("Favorite",key=f"fav_{i}",type="primary" if fav else "secondary",use_container_width=True):
-                    if fav:st.session_state.favorites.discard(title);st.session_state.likes.discard(title)
-                    else:st.session_state.favorites.add(title);st.session_state.likes.add(title)
-                    commit_profile_and_rerun()
+                st.button(
+                    "Favorite",
+                    key=f"fav_{i}",
+                    type="primary" if fav else "secondary",
+                    use_container_width=True,
+                    on_click=toggle_shelf_favorite,
+                    args=(title,),
+                )
 
     st.markdown(
         '<div class="search-shell">'
@@ -1273,31 +1413,21 @@ elif screen=="shelf":
         with preview_cols[1]:
             a,b=st.columns([1,1])
             with a:
-                if st.button(
+                st.button(
                     "Add as Like",
                     key="search_add_like",
-                    use_container_width=True
-                ):
-                    if choice_movie.get("external"):
-                        st.session_state.external_movies[choice] = choice_movie
-                    st.session_state.likes.add(choice)
-                    st.session_state.favorites.discard(choice)
-                    st.session_state.search_selected_movie = None
-                    st.session_state.search_selected_title = None
-                    commit_profile_and_rerun()
+                    use_container_width=True,
+                    on_click=add_search_choice,
+                    args=("like",),
+                )
             with b:
-                if st.button(
+                st.button(
                     "Add as Favorite",
                     key="search_add_favorite",
-                    use_container_width=True
-                ):
-                    if choice_movie.get("external"):
-                        st.session_state.external_movies[choice] = choice_movie
-                    st.session_state.likes.add(choice)
-                    st.session_state.favorites.add(choice)
-                    st.session_state.search_selected_movie = None
-                    st.session_state.search_selected_title = None
-                    commit_profile_and_rerun()
+                    use_container_width=True,
+                    on_click=add_search_choice,
+                    args=("favorite",),
+                )
 
     chosen_titles = sorted(st.session_state.likes | st.session_state.favorites)
     chosen_count = len(chosen_titles)
@@ -1321,14 +1451,18 @@ elif screen=="shelf":
         )
 
     st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
-    if st.button("Continue →",type="primary",disabled=chosen_count==0):go("taste")
+    if st.button("Continue →",type="primary",disabled=chosen_count==0,key="continue_rate"):go("taste")
 
 elif screen=="taste":
     logo()
-    st.markdown("### Step 2 of 3 — Tailor Your Preferences")
-    st.caption("Choose what matters most when deciding what to watch")
-
-    st.markdown("### Which matters more?")
+    st.markdown(
+        '<div class="step2-header">'
+        '<div class="step2-title">Step 2 of 3 — Tailor Your Preferences</div>'
+        '<div class="step2-subtitle">Choose what matters most when deciding what to watch</div>'
+        '</div>'
+        '<div class="step2-question">Which matters more?</div>',
+        unsafe_allow_html=True,
+    )
 
     review_scale_map = [15, 32, 50, 68, 85]
     review_idx = min(range(5), key=lambda i: abs(review_scale_map[i] - st.session_state.review_priority))
@@ -1420,7 +1554,7 @@ elif screen=="taste":
                 commit_profile_and_rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("Continue →",type="primary"):
+    if st.button("Continue →",type="primary",key="continue_taste"):
         go("more")
 
 elif screen=="more":
