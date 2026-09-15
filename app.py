@@ -1372,13 +1372,34 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     margin-bottom:.66rem !important;
 }
 
+
+/* V5.88 profile header alignment + durable Step 1 selections */
+.profile-wrap{
+    margin-left:0 !important;
+    padding-left:0 !important;
+}
+.profile-heading,
+.profile-intro,
+.profile-grid,
+.profile-summary{
+    margin-left:0 !important;
+    padding-left:0 !important;
+}
+.profile-heading{
+    margin-bottom:.72rem !important;
+}
+.profile-intro{
+    margin-top:0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 defaults={
     "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),
-    "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{}
+    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"selection_order":[],
+    "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
+    "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
+    "shelf_pool_initialized":False,"shelf_tmdb_loaded":False
 }
 for k,v in defaults.items():
     if k not in st.session_state:
@@ -1399,6 +1420,7 @@ def profile_snapshot():
         "saved": sorted(st.session_state.saved),
         "seen": sorted(st.session_state.seen),
         "dismissed": sorted(st.session_state.dismissed),
+        "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
     }
 
@@ -1415,6 +1437,7 @@ def restore_profile(data):
         st.session_state.saved = set(data.get("saved") or [])
         st.session_state.seen = set(data.get("seen") or [])
         st.session_state.dismissed = set(data.get("dismissed") or [])
+        st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
         if st.session_state.onboarding_complete:
@@ -1476,23 +1499,122 @@ def queue_profile_save():
     """
     st.session_state._pending_profile_save = profile_snapshot()
 
-def toggle_shelf_like(title):
-    liked = title in st.session_state.likes and title not in st.session_state.favorites
-    if liked:
-        st.session_state.likes.discard(title)
-    else:
-        st.session_state.likes.add(title)
-        st.session_state.favorites.discard(title)
-    queue_profile_save()
+RECOGNIZABLE_SHELF_TITLES = [
+    "Dune: Part Two", "Blade Runner 2049", "The Prestige", "Prisoners",
+    "Nightcrawler", "The Truman Show", "The Grand Budapest Hotel",
+    "No Country for Old Men", "Before Sunrise", "Train to Busan",
+    "Your Name", "Princess Mononoke", "Akira", "Ex Machina",
+    "Past Lives", "The Holdovers", "The Wailing", "The Handmaiden",
+    "Memories of Murder", "The Worst Person in the World",
+]
 
-def toggle_shelf_favorite(title):
-    fav = title in st.session_state.favorites
-    if fav:
-        st.session_state.favorites.discard(title)
-        st.session_state.likes.discard(title)
+def _shelf_key(movie):
+    return (str(movie.get("title", "")).casefold(), int(movie.get("year") or 0))
+
+def _seed_local_shelf_pool():
+    if st.session_state.shelf_pool_initialized:
+        return
+    selected = st.session_state.likes | st.session_state.favorites
+    pool = []
+    for title in RECOGNIZABLE_SHELF_TITLES:
+        movie = get_movie(title)
+        if not movie or movie.get("title") in selected:
+            continue
+        pool.append(dict(movie))
+    st.session_state.shelf_replacement_pool = pool
+    st.session_state.shelf_pool_initialized = True
+
+def _load_tmdb_shelf_pool():
+    if st.session_state.shelf_tmdb_loaded or not tmdb_catalog_configured():
+        return
+    try:
+        candidates = discover_movies(100)
+    except Exception:
+        candidates = []
+    # Keep the shelf broadly recognizable: prioritize popularity and substantial voting.
+    candidates = [
+        dict(m) for m in candidates
+        if m.get("poster_url")
+        and (float(m.get("popularity") or 0) >= 25 or int(m.get("tmdb_vote_count") or 0) >= 750)
+    ]
+    candidates.sort(
+        key=lambda m: (float(m.get("popularity") or 0), int(m.get("tmdb_vote_count") or 0)),
+        reverse=True,
+    )
+    existing = {_shelf_key(m) for m in st.session_state.shelf_replacement_pool}
+    existing |= {_shelf_key(m) for m in st.session_state.shelf_movies}
+    existing |= {(str(t).casefold(), 0) for t in (st.session_state.likes | st.session_state.favorites)}
+    for movie in candidates:
+        key = _shelf_key(movie)
+        if key in existing or movie.get("title") in st.session_state.likes or movie.get("title") in st.session_state.favorites:
+            continue
+        st.session_state.shelf_replacement_pool.append(movie)
+        existing.add(key)
+    st.session_state.shelf_tmdb_loaded = True
+
+def _next_shelf_movie():
+    _seed_local_shelf_pool()
+    visible_keys = {_shelf_key(m) for m in st.session_state.shelf_movies}
+    selected = st.session_state.likes | st.session_state.favorites
+
+    def pop_valid():
+        while st.session_state.shelf_replacement_pool:
+            movie = st.session_state.shelf_replacement_pool.pop(0)
+            if movie.get("title") in selected:
+                continue
+            key = _shelf_key(movie)
+            if key in visible_keys or key in st.session_state.shelf_seen_titles:
+                continue
+            return movie
+        return None
+
+    movie = pop_valid()
+    if movie is None:
+        _load_tmdb_shelf_pool()
+        movie = pop_valid()
+    return movie
+
+def ensure_rotating_shelf():
+    selected = st.session_state.likes | st.session_state.favorites
+    if not st.session_state.shelf_movies:
+        st.session_state.shelf_movies = [dict(m) for m in STARTER_MOVIES if m.get("title") not in selected]
+        st.session_state.shelf_seen_titles.update(_shelf_key(m) for m in st.session_state.shelf_movies)
     else:
+        st.session_state.shelf_movies = [m for m in st.session_state.shelf_movies if m.get("title") not in selected]
+
+    while len(st.session_state.shelf_movies) < 12:
+        replacement = _next_shelf_movie()
+        if not replacement:
+            break
+        st.session_state.shelf_movies.append(replacement)
+        st.session_state.shelf_seen_titles.add(_shelf_key(replacement))
+
+def rate_shelf_movie(movie, kind, slot_index):
+    movie = dict(movie)
+    title = movie.get("title")
+    if not title:
+        return
+    # TMDB replacement movies carry rich metadata. Persist that metadata so every
+    # available feature (genre, semantic traits, popularity, quality, language, era)
+    # enters the same recommendation model immediately after Like/Favorite.
+    if movie.get("external") or movie.get("tmdb_id"):
+        st.session_state.external_movies[title] = movie
+
+    st.session_state.likes.add(title)
+    if title not in st.session_state.selection_order:
+        st.session_state.selection_order.append(title)
+    if kind == "favorite":
         st.session_state.favorites.add(title)
-        st.session_state.likes.add(title)
+    else:
+        st.session_state.favorites.discard(title)
+
+    replacement = _next_shelf_movie()
+    if 0 <= slot_index < len(st.session_state.shelf_movies):
+        if replacement:
+            st.session_state.shelf_movies[slot_index] = replacement
+            st.session_state.shelf_seen_titles.add(_shelf_key(replacement))
+        else:
+            st.session_state.shelf_movies.pop(slot_index)
     queue_profile_save()
 
 def add_search_choice(kind):
@@ -1503,6 +1625,8 @@ def add_search_choice(kind):
     if movie.get("external"):
         st.session_state.external_movies[title] = movie
     st.session_state.likes.add(title)
+    if title not in st.session_state.selection_order:
+        st.session_state.selection_order.append(title)
     if kind == "favorite":
         st.session_state.favorites.add(title)
     else:
@@ -1701,33 +1825,35 @@ def render_shelf_fragment():
         unsafe_allow_html=True,
     )
 
-    starter_poster_map = get_poster_batch(tuple((m["title"], int(m["year"])) for m in STARTER_MOVIES))
+    ensure_rotating_shelf()
+    shelf_movies = list(st.session_state.shelf_movies)
+    missing_posters = tuple(
+        (m["title"], int(m.get("year") or 0))
+        for m in shelf_movies if not m.get("poster_url")
+    )
+    shelf_poster_map = get_poster_batch(missing_posters) if missing_posters else {}
     cols=st.columns(4)
-    for i,movie in enumerate(STARTER_MOVIES):
+    for i,movie in enumerate(shelf_movies):
         title=movie["title"]
         with cols[i%4]:
-            movie_thumb(movie, starter_poster_map.get(title))
+            movie_thumb(movie, movie.get("poster_url") or shelf_poster_map.get(title))
             st.markdown('<div class="shelf-action-gap"></div>', unsafe_allow_html=True)
             b1,b2=st.columns(2)
-            liked=title in st.session_state.likes and title not in st.session_state.favorites
-            fav=title in st.session_state.favorites
             with b1:
                 st.button(
                     "Like",
-                    key=f"like_{i}",
-                    type="primary" if liked else "secondary",
+                    key=f"like_{i}_{movie.get('tmdb_id') or title}",
                     use_container_width=True,
-                    on_click=toggle_shelf_like,
-                    args=(title,),
+                    on_click=rate_shelf_movie,
+                    args=(movie, "like", i),
                 )
             with b2:
                 st.button(
                     "Favorite",
-                    key=f"fav_{i}",
-                    type="primary" if fav else "secondary",
+                    key=f"fav_{i}_{movie.get('tmdb_id') or title}",
                     use_container_width=True,
-                    on_click=toggle_shelf_favorite,
-                    args=(title,),
+                    on_click=rate_shelf_movie,
+                    args=(movie, "favorite", i),
                 )
 
     st.markdown(
@@ -1835,7 +1961,9 @@ def render_shelf_fragment():
                     args=("favorite",),
                 )
 
-    chosen_titles = sorted(st.session_state.likes | st.session_state.favorites)
+    _selected_set = st.session_state.likes | st.session_state.favorites
+    chosen_titles = [t for t in st.session_state.get("selection_order", []) if t in _selected_set]
+    chosen_titles += sorted(_selected_set - set(chosen_titles))
     chosen_count = len(chosen_titles)
 
     if chosen_titles:
