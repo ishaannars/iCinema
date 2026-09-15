@@ -1379,7 +1379,7 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     min-height:0 !important;
 }
 [class*="st-key-savedseen_"], [class*="st-key-unsave_"]{
-    margin-top:.22rem !important;
+    margin-top:.38rem !important;
 }
 /* Render complete, concise text. No CSS-generated ellipsis/clipping. */
 .watch-availability{
