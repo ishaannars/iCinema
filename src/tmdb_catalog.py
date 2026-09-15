@@ -301,3 +301,67 @@ def discover_movies(limit: int = 120, start_page: int = 1, *_, **__):
             if len(results) >= limit:
                 return results
     return results
+
+@st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
+def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
+    """Resolve a movie to canonical TMDB display metadata + stable IMDb ID.
+
+    Uses TMDB's movie details endpoint when an ID is known. Falls back to the
+    existing cached title/year resolver, then fetches details for the resolved ID.
+    """
+    if not tmdb_catalog_configured():
+        return None
+
+    resolved_id = int(tmdb_id or 0)
+    if not resolved_id:
+        resolved = find_movie(title, int(year or 0))
+        if not resolved:
+            return None
+        resolved_id = int(resolved.get("tmdb_id") or 0)
+        if not resolved_id:
+            return {
+                "display_title": resolved.get("title") or title,
+                "year": int(resolved.get("year") or year or 0),
+                "poster_url": resolved.get("poster_url"),
+                "tmdb_id": None,
+                "imdb_id": None,
+            }
+
+    payload = _request(f"/movie/{resolved_id}", {"language": "en-US"})
+    if not payload:
+        return None
+
+    canonical_title = str(payload.get("title") or payload.get("original_title") or title).strip()
+    release = str(payload.get("release_date") or "")
+    canonical_year = int(release[:4]) if len(release) >= 4 and release[:4].isdigit() else int(year or 0)
+    return {
+        "display_title": canonical_title,
+        "year": canonical_year,
+        "poster_url": _poster_url(payload.get("poster_path")),
+        "tmdb_id": resolved_id,
+        "imdb_id": payload.get("imdb_id") or None,
+    }
+
+
+@st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
+def get_movie_identity_batch(movies: Tuple[Tuple[str, int, int], ...]) -> Dict[str, dict]:
+    """Resolve visible movies concurrently without changing internal iCinema keys."""
+    if not movies or not tmdb_catalog_configured():
+        return {}
+
+    result: Dict[str, dict] = {}
+    workers = min(8, max(1, len(movies)))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {
+            pool.submit(get_movie_identity, title, int(year or 0), int(tmdb_id or 0)): title
+            for title, year, tmdb_id in movies
+        }
+        for future in as_completed(futures):
+            internal_title = futures[future]
+            try:
+                identity = future.result()
+            except Exception:
+                identity = None
+            if identity:
+                result[internal_title] = identity
+    return result

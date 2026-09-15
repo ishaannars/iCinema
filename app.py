@@ -7,7 +7,7 @@ from src.recommender import (
     build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG
 )
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
-from src.tmdb_catalog import search_movies, get_poster_batch, tmdb_catalog_configured, discover_movies
+from src.tmdb_catalog import search_movies, get_poster_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 
@@ -1287,6 +1287,33 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     margin-bottom:.24rem !important;
 }
 
+/* V5.90 showroom text-fit polish: preserve alignment without clipping streaming or descriptions. */
+.watch-availability{
+    min-height:3.45rem !important;
+    max-height:3.45rem !important;
+    margin:.28rem 0 .42rem !important;
+    line-height:1.35 !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    overflow-wrap:anywhere !important;
+}
+.movie-description{
+    min-height:6.2rem !important;
+    max-height:6.2rem !important;
+    line-height:1.48 !important;
+    margin-top:0 !important;
+    margin-bottom:.58rem !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:4 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    overflow-wrap:anywhere !important;
+}
+
 /* Saved / Seen library cards: same poster size, tighter caption-to-action rhythm. */
 .library-poster-caption{
     min-height:0 !important;
@@ -2266,9 +2293,12 @@ def render_showroom_fragment(p):
 
     visible_movies=[movie for row_name in ["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"] for _,movie in row_choices.get(row_name,[])]
     visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in visible_movies)
+    visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in visible_movies)
     watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
-    showroom_poster_map=get_poster_batch(visible_movie_keys)
-    live_ratings_by_title=get_live_ratings_batch(visible_movie_keys)
+    identity_by_title=get_movie_identity_batch(visible_identity_keys)
+    showroom_poster_map={title: data.get("poster_url") for title, data in identity_by_title.items()}
+    live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in visible_movies)
+    live_ratings_by_title=get_live_ratings_batch(live_rating_keys)
 
     row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
 
@@ -2295,14 +2325,20 @@ def render_showroom_fragment(p):
                             args=(movie["title"], movie),
                         )
                         st.markdown('</div>', unsafe_allow_html=True)
-                    movie_thumb(movie, showroom_poster_map.get(movie["title"]))
+                    identity = identity_by_title.get(movie["title"], {}) or {}
+                    display_movie = dict(movie)
+                    if identity.get("display_title"):
+                        display_movie["title"] = identity["display_title"]
+                    if identity.get("year"):
+                        display_movie["year"] = identity["year"]
+                    movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
                     st.markdown(f'<div class="match">{match}% iCinema Match</div>',unsafe_allow_html=True)
                     live_rating = live_ratings_by_title.get(movie["title"], {})
                     imdb_value = live_rating.get("imdb")
                     rt_value = live_rating.get("rt")
-                    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "—"
-                    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "—"
-                    rating_class = "ratings" if live_rating else "ratings muted"
+                    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
+                    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+                    rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
                     st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
                     availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
                     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
@@ -2340,13 +2376,21 @@ def render_showroom_fragment(p):
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-section-heading">Saved</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
+        saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+        saved_identity_map = get_movie_identity_batch(saved_identity_keys)
         saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing saved yet.")
         else:
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
-                    movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True)
+                    identity = saved_identity_map.get(m["title"], {}) or {}
+                    display_movie = dict(m)
+                    if identity.get("display_title"):
+                        display_movie["title"] = identity["display_title"]
+                    if identity.get("year"):
+                        display_movie["year"] = identity["year"]
+                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
                         st.button(
@@ -2369,13 +2413,21 @@ def render_showroom_fragment(p):
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-section-heading">Seen</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
+        seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+        seen_identity_map = get_movie_identity_batch(seen_identity_keys)
         seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
-                    movie_thumb(m, m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True)
+                    identity = seen_identity_map.get(m["title"], {}) or {}
+                    display_movie = dict(m)
+                    if identity.get("display_title"):
+                        display_movie["title"] = identity["display_title"]
+                    if identity.get("year"):
+                        display_movie["year"] = identity["year"]
+                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True)
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -2437,3 +2489,5 @@ elif screen=="showroom":
 
 # Persist the latest profile/history after the page has processed this run.
 persist_profile_if_needed()
+
+# V5.90 is implemented through CSS overrides injected above in the main style block.
