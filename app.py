@@ -1551,15 +1551,24 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     overflow:hidden !important;
 }
 .movie-description{
-    height:5.75rem !important;
-    min-height:5.75rem !important;
-    max-height:5.75rem !important;
+    height:5.05rem !important;
+    min-height:5.05rem !important;
+    max-height:5.05rem !important;
     box-sizing:border-box !important;
     overflow:hidden !important;
 }
 .movie-card-actions{
-    margin-top:.34rem !important;
+    margin-top:.12rem !important;
+    margin-bottom:.08rem !important;
 }
+
+/* V5.97 tighter showroom vertical rhythm while preserving fixed alignment */
+.showroom-row{
+    margin-top:.82rem !important;
+    margin-bottom:.14rem !important;
+}
+.showroom-row.first{margin-top:.22rem !important}
+.showroom-row h3{margin-bottom:.34rem !important}
 </style>
 """, unsafe_allow_html=True)
 
