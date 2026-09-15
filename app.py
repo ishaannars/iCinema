@@ -1332,6 +1332,21 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 [class*="st-key-savedseen_"] button, [class*="st-key-unsave_"] button{min-height:2.6rem !important}
 .tab-section-heading{margin-bottom:1rem !important}
 
+/* V5.92 title/year rhythm: keep year directly under title without losing card alignment. */
+.poster-caption-title{
+    min-height:0 !important;
+}
+.poster-caption-year{
+    margin-top:.10rem !important;
+}
+.library-poster-caption .poster-caption-title{
+    min-height:0 !important;
+    max-height:none !important;
+}
+.library-poster-caption .poster-caption-year{
+    margin-top:.08rem !important;
+}
+
 
 /* V5.86 onboarding compactness + profile spacing + hidden persistence bridge */
 /* The localStorage component is functional-only; keep its iframe/container invisible so
