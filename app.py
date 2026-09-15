@@ -1099,6 +1099,51 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     margin-bottom:.2rem !important;
 }
 
+/* V5.83: tighter, more even Showroom metadata rhythm. */
+.poster-caption{
+    min-height:3.85rem !important;
+    margin-top:.58rem !important;
+    margin-bottom:.16rem !important;
+}
+.poster-caption-title{
+    font-size:1.12rem !important;
+    line-height:1.16 !important;
+    min-height:2.58rem !important;
+    max-height:2.58rem !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    overflow:hidden !important;
+}
+.poster-caption-year{
+    min-height:.95rem !important;
+    margin-top:.08rem !important;
+}
+.match{
+    min-height:1.45rem !important;
+    margin-top:.08rem !important;
+    margin-bottom:.02rem !important;
+}
+.ratings{
+    min-height:1.3rem !important;
+    margin-bottom:.14rem !important;
+}
+.watch-availability{
+    min-height:2.35rem !important;
+    max-height:2.35rem !important;
+    margin:.12rem 0 .14rem !important;
+}
+.movie-description{
+    min-height:4.35rem !important;
+    max-height:4.35rem !important;
+    margin-top:.04rem !important;
+    margin-bottom:.26rem !important;
+}
+.movie-card-actions{
+    margin-top:.12rem !important;
+    margin-bottom:.18rem !important;
+}
+
 /* Continue CTAs: larger physical target with restrained label size. */
 .st-key-continue_rate,
 .st-key-continue_taste{
@@ -2000,9 +2045,9 @@ def render_showroom_fragment(p):
         saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing saved yet.")
         else:
-            cols=st.columns(min(4,len(movies)))
+            cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
-                with cols[i%len(cols)]:
+                with cols[i % 4]:
                     movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]))
                     st.button(
                         "Mark Seen",
@@ -2019,9 +2064,10 @@ def render_showroom_fragment(p):
         seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
-            cols=st.columns(min(4,len(movies)))
+            cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
-                with cols[i%len(cols)]:movie_thumb(m, m.get("poster_url") or seen_poster_map.get(m["title"]))
+                with cols[i % 4]:
+                    movie_thumb(m, m.get("poster_url") or seen_poster_map.get(m["title"]))
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
