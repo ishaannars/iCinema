@@ -1521,6 +1521,45 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .movie-card-actions{
     margin-top:.28rem !important;
 }
+
+/* V5.96 Showroom action alignment: exact vertical slots keep every action row level. */
+/* Keep title/year visually close while reserving a consistent total caption slot. */
+.showroom-row ~ div .poster-caption,
+.poster-caption:not(.library-poster-caption){
+    height:4.35rem !important;
+    min-height:4.35rem !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+/* Ratings and match are one-line slots. */
+.match{
+    height:1.55rem !important;
+    min-height:1.55rem !important;
+    box-sizing:border-box !important;
+}
+.ratings{
+    height:1.48rem !important;
+    min-height:1.48rem !important;
+    box-sizing:border-box !important;
+}
+/* Streaming and description get exact slots rather than variable minimum heights. */
+.watch-availability{
+    height:2.75rem !important;
+    min-height:2.75rem !important;
+    max-height:2.75rem !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+.movie-description{
+    height:5.75rem !important;
+    min-height:5.75rem !important;
+    max-height:5.75rem !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+.movie-card-actions{
+    margin-top:.34rem !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
