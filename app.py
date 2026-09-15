@@ -1213,6 +1213,98 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     font-size:.96rem !important;
     line-height:1.5 !important;
 }
+
+/* V5.84 global spacing polish */
+/* One consistent logo-to-first-heading rhythm across every page. */
+.icinema-logo{margin-bottom:1.05rem !important}
+.hero-title{margin-top:0 !important}
+.page-top-heading,
+.step2-title,
+.profile-heading,
+.showroom-heading{margin-top:0 !important}
+.page-top-heading{
+    color:var(--ivory);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:2rem;
+    line-height:1.08;
+    font-weight:760;
+    letter-spacing:-.03em;
+    margin-bottom:.48rem;
+}
+.page-top-subtitle{
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:.93rem;
+    line-height:1.5;
+    font-weight:450;
+    margin:0 0 1.35rem;
+    max-width:760px;
+}
+.step2-header{margin-top:0 !important}
+.profile-wrap{margin-top:0 !important}
+.showroom-header{margin-top:0 !important}
+
+/* Consistent Showroom row spacing and calmer card information hierarchy. */
+.showroom-row{
+    margin-top:1.18rem !important;
+    margin-bottom:.32rem !important;
+}
+.showroom-row.first{margin-top:.28rem !important}
+.showroom-row h3{
+    margin:0 0 .5rem !important;
+    line-height:1.15 !important;
+}
+.poster-caption{
+    min-height:3.75rem !important;
+    margin-top:.62rem !important;
+    margin-bottom:.24rem !important;
+}
+.match{
+    min-height:1.45rem !important;
+    margin-top:.22rem !important;
+    margin-bottom:.08rem !important;
+}
+.ratings{
+    min-height:1.25rem !important;
+    margin-top:.04rem !important;
+    margin-bottom:.28rem !important;
+}
+.watch-availability{
+    min-height:2.5rem !important;
+    max-height:2.5rem !important;
+    margin:.3rem 0 .42rem !important;
+    line-height:1.35 !important;
+}
+.movie-description{
+    min-height:4.85rem !important;
+    max-height:4.85rem !important;
+    line-height:1.48 !important;
+    margin-top:0 !important;
+    margin-bottom:.58rem !important;
+}
+.movie-card-actions{
+    margin-top:.42rem !important;
+    margin-bottom:.24rem !important;
+}
+
+/* Saved / Seen library cards: same poster size, tighter caption-to-action rhythm. */
+.library-poster-caption{
+    min-height:0 !important;
+    margin:.62rem 0 .42rem !important;
+    padding:0 .05rem !important;
+}
+.library-poster-caption .poster-caption-title{
+    margin:0 !important;
+    line-height:1.16 !important;
+}
+.library-poster-caption .poster-caption-year{
+    margin-top:.28rem !important;
+    min-height:0 !important;
+}
+[class*="st-key-savedseen_"]{margin-top:.1rem !important}
+[class*="st-key-savedseen_"] button{min-height:2.6rem !important}
+.tab-section-heading{margin-bottom:1rem !important}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1457,7 +1549,7 @@ def reset_profile_from_fragment():
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
 
-def movie_thumb(movie, poster_url=None):
+def movie_thumb(movie, poster_url=None, compact=False):
     title = html.escape(str(movie.get("title", "")))
     year = html.escape(str(movie.get("year", "")))
     poster_url = poster_url or movie.get("poster_url")
@@ -1468,9 +1560,10 @@ def movie_thumb(movie, poster_url=None):
         poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
 
     year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
+    caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
     st.markdown(
         poster_html
-        + f'<div class="poster-caption"><div class="poster-caption-title">{title}</div>{year_html}</div>',
+        + f'<div class="{caption_class}"><div class="poster-caption-title">{title}</div>{year_html}</div>',
         unsafe_allow_html=True
     )
 
@@ -1535,8 +1628,11 @@ def render_cinema_profile(p):
 @st.fragment
 def render_shelf_fragment():
     logo()
-    st.markdown("### Step 1 of 3 — Rate the Shelf")
-    st.caption("Choose a few titles you already like. If none fit, search for one you know you enjoy.")
+    st.markdown(
+        '<div class="page-top-heading">Step 1 of 3 — Rate the Shelf</div>'
+        '<div class="page-top-subtitle">Choose a few titles you already like. If none fit, search for one you know you enjoy.</div>',
+        unsafe_allow_html=True,
+    )
 
     starter_poster_map = get_poster_batch(tuple((m["title"], int(m["year"])) for m in STARTER_MOVIES))
     cols=st.columns(4)
@@ -1805,8 +1901,11 @@ def render_taste_fragment():
 @st.fragment
 def render_more_fragment():
     logo()
-    st.markdown("### Step 3 of 3 — Shape Your Showroom")
-    st.caption("What should iCinema lean toward? Choose any that you want to see more often")
+    st.markdown(
+        '<div class="page-top-heading">Step 3 of 3 — Shape Your Showroom</div>'
+        '<div class="page-top-subtitle">What should iCinema lean toward? Choose any that you want to see more often</div>',
+        unsafe_allow_html=True,
+    )
 
     descriptions = {
         "Hidden Gems": "Less obvious titles that still fit your taste",
@@ -2048,7 +2147,7 @@ def render_showroom_fragment(p):
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
-                    movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]))
+                    movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True)
                     st.button(
                         "Mark Seen",
                         key=f"savedseen_{m['title']}",
@@ -2067,7 +2166,7 @@ def render_showroom_fragment(p):
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
-                    movie_thumb(m, m.get("poster_url") or seen_poster_map.get(m["title"]))
+                    movie_thumb(m, m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True)
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -2095,7 +2194,7 @@ if screen=="welcome":
         with col:
             st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
 
-    st.markdown('<div class="adapt-note"><strong>iCinema responds to your choices</strong><br><span>Every save, skip, and seen title continuously influences what appears next</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="adapt-note"><strong>iCinema RESPONDS TO YOUR CHOICES</strong><br><span>Every save, skip, and seen title continuously feeds iCinema’s recommendation model, updating your preference profile and shaping what appears next.</span></div>',unsafe_allow_html=True)
     st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
 
 elif screen=="shelf":
