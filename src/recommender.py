@@ -259,10 +259,37 @@ def build_profile(
 
     trait_text = ", ".join(t.lower() for t in top_traits[:2])
     genre_text = " and ".join(top_genres[:2]).lower()
+
     if top_traits and top_traits[0] != "Story-driven":
-        summary = f"You favor {trait_text} {genre_text} titles that match the priorities you selected."
+        opening = f"You favor {trait_text} stories, especially {genre_text} titles."
     else:
-        summary = f"You favor {genre_text} titles that match the priorities you selected."
+        opening = f"You show the strongest affinity for {genre_text} titles."
+
+    if review_priority <= 35:
+        review_clause = "Strong critical reception plays a larger role in what iCinema surfaces."
+    elif review_priority >= 65:
+        review_clause = "Entertainment value carries more weight than critical reception in your recommendations."
+    else:
+        review_clause = "Your profile balances critical reception with entertainment value."
+
+    if adventure <= 30:
+        discovery_clause = "The model stays closer to familiar patterns in your taste."
+    elif adventure >= 70:
+        discovery_clause = "The model has more room to surface unfamiliar genres, eras, languages, and styles."
+    else:
+        discovery_clause = "The model balances familiar choices with room for discovery."
+
+    selected_priorities = [p for p in (more_of or []) if p and p != "Balanced recommendations"]
+    if selected_priorities:
+        if len(selected_priorities) == 1:
+            priority_text = selected_priorities[0].lower()
+        else:
+            priority_text = ", ".join(p.lower() for p in selected_priorities[:-1]) + f" and {selected_priorities[-1].lower()}"
+        priority_clause = f"It also leans toward {priority_text} when those choices still fit your learned profile."
+    else:
+        priority_clause = "No single showroom priority overrides the broader preference profile."
+
+    summary = " ".join([opening, review_clause, discovery_clause, priority_clause])
 
     return {
         "traits": top_traits,
@@ -282,7 +309,7 @@ def build_profile(
             "selected_genres": list(selected_genres or []),
             "priorities": list(more_of or []),
         },
-        "model_version": "v2-full-signal",
+        "model_version": "v3-calibrated-full-signal",
         "behavior_counts": {
             "liked": len(likes - favorites),
             "favorited": len(favorites),
@@ -436,15 +463,56 @@ def score_movie_components(movie, profile, adventure, review_priority):
     return components
 
 
+def _profile_confidence(profile):
+    """Estimate how much evidence exists behind the learned user profile.
+
+    Explicit onboarding choices matter immediately, while repeated behavioral feedback
+    increases confidence over time. This prevents a brand-new profile from displaying
+    overconfident 90%+ matches before the model has enough evidence.
+    """
+    counts = profile.get("behavior_counts", {}) or {}
+    controls = profile.get("controls", {}) or {}
+    evidence = (
+        1.0 * float(counts.get("liked", 0))
+        + 2.2 * float(counts.get("favorited", 0))
+        + 1.6 * float(counts.get("saved", 0))
+        + 0.30 * float(counts.get("seen", 0))
+        + 1.4 * float(counts.get("skipped", 0))
+        + 0.85 * len(controls.get("selected_genres", []) or [])
+        + 0.65 * len(controls.get("priorities", []) or [])
+    )
+    # Onboarding itself provides a useful prior, so confidence never starts at zero.
+    return max(0.45, min(1.0, 1.0 - math.exp(-(evidence + 2.0) / 9.0)))
+
+
+def _calibrated_match_percent(raw_score, profile):
+    """Convert the model score into a consumer-facing iCinema Match index.
+
+    This is a calibrated compatibility index, not a literal probability that a user
+    will like a movie. The same raw score used for ranking drives this display value.
+    Confidence shrinks sparse profiles toward neutral, then a logistic transform gives
+    useful separation between weak, moderate, and strong matches without bunching every
+    recommendation into the 80-90% range.
+    """
+    raw = max(0.0, min(1.0, float(raw_score)))
+    confidence = _profile_confidence(profile)
+    confidence_adjusted = 0.5 + (raw - 0.5) * (0.55 + 0.45 * confidence)
+    logistic = 1.0 / (1.0 + math.exp(-7.0 * (confidence_adjusted - 0.5)))
+    return int(round(max(20.0, min(97.0, logistic * 100.0))))
+
+
 def score_movie(movie, profile, adventure, review_priority):
-    """Calibrate the full-signal model to iCinema's consumer-facing match percent."""
+    """Return the calibrated iCinema Match index for one candidate."""
     raw = score_movie_components(movie, profile, adventure, review_priority)["raw_score"]
-    calibrated = 55.0 + (43.0 * raw)
-    return int(round(max(55.0, min(98.0, calibrated))))
+    return _calibrated_match_percent(raw, profile)
 
 
 def rank_movies(movies, profile, adventure, review_priority, excluded=None, limit=None):
-    """Rank any candidate pool with the same weighted personalization model."""
+    """Rank candidates by the full-precision model score and display its calibration.
+
+    Ordering is based on the underlying continuous score, not the rounded percentage,
+    so two movies that both display e.g. 82% can still be ordered correctly.
+    """
     excluded = set(excluded or [])
     scored = []
     seen_keys = set()
@@ -455,16 +523,21 @@ def rank_movies(movies, profile, adventure, review_priority, excluded=None, limi
         if key in seen_keys:
             continue
         seen_keys.add(key)
-        scored.append((score_movie(movie, profile, adventure, review_priority), movie))
+        components = score_movie_components(movie, profile, adventure, review_priority)
+        raw = components["raw_score"]
+        display_match = _calibrated_match_percent(raw, profile)
+        scored.append((raw, display_match, movie))
+
     scored.sort(
         key=lambda x: (
             x[0],
-            _quality_signal(x[1], review_priority),
-            _num(x[1].get("tmdb_vote")),
+            _quality_signal(x[2], review_priority),
+            _num(x[2].get("tmdb_vote")),
         ),
         reverse=True,
     )
-    return scored if limit is None else scored[:limit]
+    output = [(display_match, movie) for _, display_match, movie in scored]
+    return output if limit is None else output[:limit]
 
 
 def recommend(profile, adventure, review_priority, excluded=None, limit=16):
