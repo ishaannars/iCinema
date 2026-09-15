@@ -1305,6 +1305,73 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 [class*="st-key-savedseen_"] button{min-height:2.6rem !important}
 .tab-section-heading{margin-bottom:1rem !important}
 
+
+/* V5.86 onboarding compactness + profile spacing + hidden persistence bridge */
+/* The localStorage component is functional-only; keep its iframe/container invisible so
+   ordinary selections never flash a small black rectangle near the bottom of the page. */
+div[data-testid="stCustomComponentV1"]{
+    height:0 !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    position:relative !important;
+}
+div[data-testid="stCustomComponentV1"] iframe{
+    position:absolute !important;
+    width:1px !important;
+    height:1px !important;
+    min-height:0 !important;
+    border:0 !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+}
+
+/* Step 1: slightly denser without changing the poster treatment. */
+.shelf-action-gap{height:.30rem !important}
+[class*="st-key-like_"] button,
+[class*="st-key-fav_"] button{
+    min-height:1.92rem !important;
+    padding:.28rem .2rem !important;
+}
+.search-shell{
+    margin-top:1.10rem !important;
+    margin-bottom:.50rem !important;
+    padding:1.05rem 1rem 1rem !important;
+}
+.selection-area{margin-top:.78rem !important;margin-bottom:.88rem !important}
+div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem !important}
+.st-key-continue_rate{margin-top:.32rem !important}
+
+/* Step 2: preserve readability while pulling the full step closer to one viewport. */
+.step2-header{margin-bottom:.82rem !important}
+.step2-title{margin-bottom:.34rem !important}
+.step2-question{margin:.04rem 0 .48rem !important}
+.pref-scale-wrap{margin:.26rem 0 .54rem !important}
+.pref-scale-ends{margin-bottom:.34rem !important}
+.pref-scale-helper{margin-top:.52rem !important}
+.pref-scale-clicks{margin-top:.46rem !important;margin-bottom:1.02rem !important}
+.pref-scale-clicks div.stButton>button{
+    min-height:3.35rem !important;
+    height:3.35rem !important;
+}
+.genre-helper{margin:.08rem 0 .52rem !important}
+[class*="st-key-genre_"] button{
+    margin:.04rem 0 .26rem !important;
+}
+.st-key-continue_taste{margin-top:.26rem !important}
+
+/* Cinema Profile: slightly more breathing room than V5.77, while staying page-friendly. */
+.profile-intro{margin-bottom:.82rem !important}
+.profile-grid{padding-top:.96rem !important}
+.profile-block + .profile-block{margin-top:1.16rem !important}
+.profile-label{margin-bottom:.42rem !important}
+.profile-summary{
+    margin-top:1.12rem !important;
+    padding-top:1.02rem !important;
+    margin-bottom:.66rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
