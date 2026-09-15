@@ -1290,7 +1290,7 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 /* Saved / Seen library cards: same poster size, tighter caption-to-action rhythm. */
 .library-poster-caption{
     min-height:0 !important;
-    margin:.62rem 0 .42rem !important;
+    margin:.56rem 0 .32rem !important;
     padding:0 .05rem !important;
 }
 .library-poster-caption .poster-caption-title{
@@ -1298,11 +1298,11 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     line-height:1.16 !important;
 }
 .library-poster-caption .poster-caption-year{
-    margin-top:.28rem !important;
+    margin-top:.10rem !important;
     min-height:0 !important;
 }
-[class*="st-key-savedseen_"]{margin-top:.1rem !important}
-[class*="st-key-savedseen_"] button{min-height:2.6rem !important}
+[class*="st-key-savedseen_"], [class*="st-key-unsave_"]{margin-top:.08rem !important}
+[class*="st-key-savedseen_"] button, [class*="st-key-unsave_"] button{min-height:2.6rem !important}
 .tab-section-heading{margin-bottom:1rem !important}
 
 
@@ -1702,6 +1702,10 @@ def save_movie(title, movie=None):
     st.session_state.saved.add(title)
     st.session_state.seen.discard(title)
     st.session_state.dismissed.discard(title)
+    queue_profile_save()
+
+def remove_saved_movie(title):
+    st.session_state.saved.discard(title)
     queue_profile_save()
 
 def mark_movie_seen(title, movie=None):
@@ -2343,13 +2347,23 @@ def render_showroom_fragment(p):
             for i,m in enumerate(movies):
                 with cols[i % 4]:
                     movie_thumb(m, m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True)
-                    st.button(
-                        "Mark Seen",
-                        key=f"savedseen_{m['title']}",
-                        use_container_width=True,
-                        on_click=mark_movie_seen,
-                        args=(m["title"], m),
-                    )
+                    saved_actions = st.columns(2, gap="small")
+                    with saved_actions[0]:
+                        st.button(
+                            "Mark Seen",
+                            key=f"savedseen_{m['title']}",
+                            use_container_width=True,
+                            on_click=mark_movie_seen,
+                            args=(m["title"], m),
+                        )
+                    with saved_actions[1]:
+                        st.button(
+                            "Remove",
+                            key=f"unsave_{m['title']}",
+                            use_container_width=True,
+                            on_click=remove_saved_movie,
+                            args=(m["title"],),
+                        )
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
