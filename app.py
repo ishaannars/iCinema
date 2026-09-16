@@ -2450,20 +2450,20 @@ div[data-testid="stStatusWidget"]{
     text-align:center !important;
 }
 
-/* Move the transient loading cue next to the iCinema logo and make it a film camera. */
+/* V5.121 — refined film-camera loader beside the iCinema logo. */
 div[data-testid="stStatusWidget"]{
     position:fixed !important;
-    top:1.1rem !important;
-    left:8.9rem !important;
+    top:1.02rem !important;
+    left:8.72rem !important;
     right:auto !important;
     transform:none !important;
     z-index:999999 !important;
-    width:2.3rem !important;
-    min-width:2.3rem !important;
-    max-width:2.3rem !important;
-    height:1.5rem !important;
-    min-height:1.5rem !important;
-    max-height:1.5rem !important;
+    width:2.9rem !important;
+    min-width:2.9rem !important;
+    max-width:2.9rem !important;
+    height:1.85rem !important;
+    min-height:1.85rem !important;
+    max-height:1.85rem !important;
     padding:0 !important;
     border:0 !important;
     border-radius:0 !important;
@@ -2476,61 +2476,170 @@ div[data-testid="stStatusWidget"]{
 div[data-testid="stStatusWidget"] > *{
     display:none !important;
 }
-/* Camera body + twin reels */
+/* Camera silhouette with body, viewfinder, support, and twin reels. */
 div[data-testid="stStatusWidget"]::before{
     content:"" !important;
     position:absolute !important;
-    left:.1rem !important;
-    top:.08rem !important;
-    width:1.52rem !important;
-    height:1.02rem !important;
+    inset:0 !important;
     background:
-        radial-gradient(circle at .34rem .22rem, rgba(243,240,234,.96) 0 .12rem, transparent .125rem),
-        radial-gradient(circle at .74rem .22rem, rgba(243,240,234,.96) 0 .12rem, transparent .125rem),
-        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) .22rem .42rem / .94rem .42rem no-repeat,
-        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) 1.06rem .53rem / .38rem .08rem no-repeat,
-        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) .28rem .86rem / .08rem .22rem no-repeat,
-        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) .78rem .86rem / .08rem .22rem no-repeat;
-    border-radius:4px !important;
+        radial-gradient(circle at .56rem .38rem, rgba(244,241,235,.98) 0 .17rem, transparent .18rem),
+        radial-gradient(circle at 1.03rem .38rem, rgba(244,241,235,.98) 0 .17rem, transparent .18rem),
+        radial-gradient(circle at .56rem .38rem, rgba(15,20,32,1) 0 .06rem, transparent .065rem),
+        radial-gradient(circle at 1.03rem .38rem, rgba(15,20,32,1) 0 .06rem, transparent .065rem),
+        linear-gradient(rgba(244,241,235,.96), rgba(244,241,235,.96)) .56rem .6rem / 1.02rem .54rem no-repeat,
+        linear-gradient(rgba(244,241,235,.96), rgba(244,241,235,.96)) 1.52rem .68rem / .36rem .11rem no-repeat,
+        linear-gradient(rgba(244,241,235,.96), rgba(244,241,235,.96)) .73rem .43rem / .42rem .11rem no-repeat,
+        linear-gradient(rgba(244,241,235,.96), rgba(244,241,235,.96)) .71rem 1.13rem / .1rem .22rem no-repeat,
+        linear-gradient(rgba(244,241,235,.96), rgba(244,241,235,.96)) 1.2rem 1.13rem / .1rem .22rem no-repeat,
+        linear-gradient(rgba(244,241,235,.96), rgba(244,241,235,.96)) .81rem 1.24rem / .38rem .08rem no-repeat;
+    filter:drop-shadow(0 0 8px rgba(255,255,255,.05));
     opacity:.98 !important;
 }
-/* Glowing lens */
+/* Lens acts as the active loading indicator. */
 div[data-testid="stStatusWidget"]::after{
     content:"" !important;
     position:absolute !important;
-    left:1.46rem !important;
-    top:.46rem !important;
-    width:.46rem !important;
-    height:.46rem !important;
-    border:1.5px solid rgba(243,240,234,.96) !important;
+    left:1.74rem !important;
+    top:.57rem !important;
+    width:.54rem !important;
+    height:.54rem !important;
     border-radius:50% !important;
-    background:rgba(92,111,168,.18) !important;
+    border:1.6px solid rgba(244,241,235,.98) !important;
+    background:
+        radial-gradient(circle at 38% 34%, rgba(135,160,255,.82) 0 .08rem, rgba(135,160,255,.28) .09rem .18rem, rgba(12,18,29,.86) .19rem 100%) !important;
     box-shadow:
-        0 0 0 2px rgba(92,111,168,.09),
-        0 0 7px rgba(92,111,168,.72) !important;
+        0 0 0 2px rgba(92,111,168,.08),
+        0 0 10px rgba(92,111,168,.42),
+        inset 0 0 7px rgba(135,160,255,.26) !important;
     animation:icinema-camera-lens 1.05s ease-in-out infinite !important;
 }
 @media(max-width:700px){
     div[data-testid="stStatusWidget"]{
-        top:.86rem !important;
-        left:6.25rem !important;
-        width:2rem !important;
-        min-width:2rem !important;
-        max-width:2rem !important;
-        height:1.34rem !important;
-        min-height:1.34rem !important;
-        max-height:1.34rem !important;
+        top:.82rem !important;
+        left:6rem !important;
+        width:2.45rem !important;
+        min-width:2.45rem !important;
+        max-width:2.45rem !important;
+        height:1.55rem !important;
+        min-height:1.55rem !important;
+        max-height:1.55rem !important;
     }
     div[data-testid="stStatusWidget"]::before{
-        transform:scale(.92) !important;
+        transform:scale(.88) !important;
         transform-origin:left top !important;
     }
     div[data-testid="stStatusWidget"]::after{
-        left:1.32rem !important;
-        top:.42rem !important;
-        width:.4rem !important;
-        height:.4rem !important;
+        left:1.48rem !important;
+        top:.48rem !important;
+        width:.46rem !important;
+        height:.46rem !important;
     }
+}
+
+
+/* V5.122 — final compact Showroom spacing + collision-proof controls */
+
+/* Give each section subtitle a little breathing room below the heading. */
+.showroom-row-header .tab-primary-heading,
+.showroom-row-header h3{
+    margin-bottom:.34rem !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.34 !important;
+}
+.showroom-row-header{
+    margin-bottom:.52rem !important;
+}
+
+/* Keep Match and Skip fully contained inside each individual movie card. */
+.showroom-top-controls{
+    width:100% !important;
+    max-width:100% !important;
+    overflow:hidden !important;
+    margin:0 0 .18rem !important;
+}
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    width:100% !important;
+    max-width:100% !important;
+    display:grid !important;
+    grid-template-columns:minmax(0,2.75fr) minmax(3.25rem,1.05fr) !important;
+    gap:.46rem !important;
+    align-items:center !important;
+}
+.showroom-top-controls [data-testid="column"]{
+    width:auto !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    flex:none !important;
+    overflow:hidden !important;
+}
+.showroom-top-controls div[data-testid="stPopover"]{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    overflow:hidden !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:1.96rem !important;
+    min-height:1.96rem !important;
+    padding:.12rem .28rem !important;
+    overflow:hidden !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] button p,
+.showroom-top-controls div[data-testid="stPopover"] button span{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    font-size:.59rem !important;
+    line-height:1 !important;
+    letter-spacing:-.012em !important;
+    text-align:center !important;
+}
+.showroom-top-controls [class*="st-key-skip_"]{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    margin:0 !important;
+    overflow:hidden !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:1.96rem !important;
+    min-height:1.96rem !important;
+    padding:.12rem .2rem !important;
+    margin:0 !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button p{
+    font-size:.62rem !important;
+    line-height:1 !important;
+    margin:0 !important;
+    text-align:center !important;
+}
+
+/* Reduce unused description whitespace so actions sit closer while preserving row alignment. */
+.movie-description{
+    height:5.45rem !important;
+    min-height:5.45rem !important;
+    max-height:5.45rem !important;
+    overflow:hidden !important;
+    line-height:1.42 !important;
+    margin-top:.12rem !important;
+    margin-bottom:.08rem !important;
+}
+.movie-card-actions{
+    margin-top:0 !important;
+    margin-bottom:.06rem !important;
 }
 
 </style>
@@ -3567,7 +3676,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
-                    match_col, skip_col = st.columns([3.8,0.9], gap="small")
+                    match_col, skip_col = st.columns([2.75,1.05], gap="small")
                     with match_col:
                         with st.popover(f"{match}% iCinema Match", use_container_width=True):
                             reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
