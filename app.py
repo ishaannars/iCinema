@@ -2956,6 +2956,174 @@ div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
     margin-bottom:.04rem !important;
 }
 
+/* V5.126 — final Showroom control separation, equal row spacing, native summary toggle */
+
+/* Every row gets the exact same subtitle-to-controls breathing room. */
+.showroom-row-header{
+    margin-top:0 !important;
+    margin-bottom:1.02rem !important;
+    padding:0 !important;
+}
+.showroom-row-header .tab-primary-heading,
+.showroom-row-header h3{
+    margin:0 0 .28rem !important;
+    padding:0 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* Pull controls close to poster, but shrink the row inside each card to leave inter-card air. */
+[class*="st-key-showroom_controls_"]{
+    width:94% !important;
+    max-width:94% !important;
+    margin:0 6% -.28rem 0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.5rem !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="column"]{
+    min-width:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"],
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] > button,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] > button,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    height:1.92rem !important;
+    min-height:1.92rem !important;
+    padding:.12rem .28rem !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    font-size:.57rem !important;
+    letter-spacing:-.008em !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"]{
+    min-width:0 !important;
+    margin:0 !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{
+    font-size:.60rem !important;
+}
+
+/* Native clickable sentence: no Streamlit arrow, no marker, no extra label. */
+.movie-summary-details{
+    margin:.12rem 0 .08rem !important;
+    padding:0 !important;
+    border:0 !important;
+    background:transparent !important;
+}
+.movie-summary-details > summary{
+    list-style:none !important;
+    cursor:pointer !important;
+    margin:0 !important;
+    padding:0 !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.64rem !important;
+    line-height:1.25 !important;
+    font-weight:630 !important;
+    letter-spacing:-.004em !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    min-height:1.48rem !important;
+}
+.movie-summary-details > summary::-webkit-details-marker{display:none !important;}
+.movie-summary-details > summary::marker{content:"" !important;display:none !important;}
+.movie-summary-details > summary:hover{color:var(--ivory) !important;}
+.movie-summary-details[open] > summary{
+    color:var(--ivory) !important;
+    margin-bottom:.34rem !important;
+}
+.movie-summary-details .movie-full-description{
+    margin:0 !important;
+    padding:.02rem 0 .08rem !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.68rem !important;
+    line-height:1.42 !important;
+    font-weight:500 !important;
+}
+
+/* Loader: only a camera inside a circular loading ring, next to the logo. */
+div[data-testid="stStatusWidget"]{
+    position:fixed !important;
+    top:.96rem !important;
+    left:8.68rem !important;
+    right:auto !important;
+    transform:none !important;
+    z-index:999999 !important;
+    width:2rem !important;
+    min-width:2rem !important;
+    max-width:2rem !important;
+    height:2rem !important;
+    min-height:2rem !important;
+    max-height:2rem !important;
+    padding:0 !important;
+    border:1px solid rgba(169,173,183,.28) !important;
+    border-radius:50% !important;
+    background:rgba(17,19,21,.96) !important;
+    box-shadow:0 0 0 1px rgba(92,111,168,.06) !important;
+    overflow:visible !important;
+    backdrop-filter:blur(10px) !important;
+    animation:icinema-loader-ring 1.1s linear infinite !important;
+    background-image:none !important;
+}
+div[data-testid="stStatusWidget"] > *{display:none !important;}
+/* Simple camera body */
+div[data-testid="stStatusWidget"]::before{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.86rem !important;
+    height:.58rem !important;
+    transform:translate(-50%,-45%) !important;
+    border:1.35px solid rgba(243,240,234,.94) !important;
+    border-radius:3px !important;
+    background:transparent !important;
+    box-sizing:border-box !important;
+}
+/* Camera lens */
+div[data-testid="stStatusWidget"]::after{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.32rem !important;
+    height:.32rem !important;
+    transform:translate(-50%,-42%) !important;
+    border:1.25px solid rgba(243,240,234,.98) !important;
+    border-radius:50% !important;
+    background:rgba(92,111,168,.2) !important;
+    box-shadow:0 0 6px rgba(92,111,168,.65) !important;
+    animation:none !important;
+}
+@keyframes icinema-loader-ring{
+    0%{border-top-color:rgba(92,111,168,.95);border-right-color:rgba(169,173,183,.22);}
+    25%{border-right-color:rgba(92,111,168,.95);border-bottom-color:rgba(169,173,183,.22);}
+    50%{border-bottom-color:rgba(92,111,168,.95);border-left-color:rgba(169,173,183,.22);}
+    75%{border-left-color:rgba(92,111,168,.95);border-top-color:rgba(169,173,183,.22);}
+    100%{border-top-color:rgba(92,111,168,.95);border-right-color:rgba(169,173,183,.22);}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3382,46 +3550,47 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=122):
-    """Create one complete, informative sentence with a restrained witty finish."""
+def quick_card_description(movie, limit=76):
+    """One concise, movie-specific sentence: premise first, light wit second."""
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
     if not full:
-        return "A promising match with just enough mystery to make the next two hours look well spent."
+        return "A strong match with enough intrigue to earn a closer look."
 
     first = re.split(r"(?<=[.!?])\s+", full)[0].strip().rstrip(".;:, ")
     genre = str((movie or {}).get("genre") or "").casefold()
 
-    finishes = {
-        "thriller": "—and peace of mind is not part of the package.",
-        "mystery": "—with answers proving inconveniently hard to find.",
-        "horror": "—and calm is very much temporary.",
-        "comedy": "—with chaos doing most of the scheduling.",
-        "sci-fi": "—then reality starts negotiating the terms.",
-        "science fiction": "—then reality starts negotiating the terms.",
-        "romance": "—because timing rarely behaves itself.",
-        "documentary": "—with stakes that are very real.",
-        "action": "—and the plan does not stay simple for long.",
-        "adventure": "—and the plan does not stay simple for long.",
-        "anime": "—where ordinary rules are merely suggestions.",
-        "animation": "—where ordinary rules are merely suggestions.",
-        "fantasy": "—where ordinary rules are merely suggestions.",
-        "drama": "—and the emotional math gets complicated.",
-    }
-    finish = finishes.get(genre, "—and things get complicated from there.")
-
-    # Preserve a meaningful premise before adding the finish.
-    premise_limit = max(62, limit - len(finish) - 1)
+    # Keep the premise meaningful but short enough to read comfortably in one card line.
+    premise_target = 56
     premise = first
-    if len(premise) > premise_limit:
-        cut = premise[:premise_limit]
-        natural = max(cut.rfind(", "), cut.rfind(" and "), cut.rfind(" while "), cut.rfind(" when "))
-        if natural >= 48:
-            premise = cut[:natural]
-        else:
-            premise = cut.rsplit(" ", 1)[0]
+    if len(premise) > premise_target:
+        cut = premise[:premise_target]
+        natural = max(cut.rfind(", "), cut.rfind(" and "), cut.rfind(" when "), cut.rfind(" as "))
+        premise = cut[:natural] if natural >= 34 else cut.rsplit(" ", 1)[0]
     premise = premise.rstrip(" ,;:–—-")
 
-    sentence = f"{premise} {finish}".strip()
+    tails = {
+        "thriller":"Tension clocks in early.",
+        "mystery":"Answers refuse to cooperate.",
+        "horror":"Calm is temporary.",
+        "comedy":"Chaos has plans.",
+        "sci-fi":"Reality gets flexible.",
+        "science fiction":"Reality gets flexible.",
+        "romance":"Timing complicates things.",
+        "documentary":"The stakes are real.",
+        "action":"The plan gets messy.",
+        "adventure":"The plan gets messy.",
+        "anime":"Normal rules take the night off.",
+        "animation":"Normal rules take the night off.",
+        "fantasy":"Normal rules take the night off.",
+        "drama":"The emotional math gets messy.",
+    }
+    tail = tails.get(genre, "Things get complicated.")
+    sentence = f"{premise}. {tail}" if premise else tail
+    if len(sentence) > limit:
+        tail = "Worth the complication."
+        premise_target = max(38, limit-len(tail)-2)
+        premise = first[:premise_target].rsplit(" ",1)[0].rstrip(" ,;:–—-")
+        sentence = f"{premise}. {tail}"
     return sentence
 
 
@@ -4066,7 +4235,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                        match_col, skip_col = st.columns([3.55,0.9], gap="medium")
+                        match_col, skip_col = st.columns([3.2,0.95], gap="small")
                         with match_col:
                             with st.popover(f"{match}% iCinema Match", use_container_width=True):
                                 reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
@@ -4105,8 +4274,13 @@ def render_showroom_fragment(p):
                     st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
                     quick_desc = quick_card_description(movie)
                     expanded_desc = expanded_card_description(movie)
-                    with st.expander(quick_desc):
-                        st.markdown(f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<details class="movie-summary-details">'
+                        f'<summary>{html.escape(quick_desc)}</summary>'
+                        f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
+                        f'</details>',
+                        unsafe_allow_html=True,
+                    )
                     st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
                     a,b=st.columns(2, gap="small")
                     with a:
