@@ -4253,10 +4253,10 @@ div[data-testid="stLoadingSpinner"],
     padding:0 !important;
 }
 
-/* V5.157 — slightly more breathing room below the Cinema Profile title. */
+/* V5.158 — a touch more breathing room below the Cinema Profile title. */
 .profile-heading,
 .profile-heading-aligned{
-    margin-bottom:.94rem !important;
+    margin-bottom:1.12rem !important;
 }
 .profile-wrap .model-status-line{
     margin-top:0 !important;
