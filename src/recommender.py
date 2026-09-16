@@ -689,6 +689,11 @@ def _semantic_batch_scores(movies, profile):
         return {id(m):0.5 for m in movies}
 
 
+def semantic_similarity_scores(movies, profile):
+    """Public wrapper around iCinema's latent theme/tone similarity layer."""
+    return _semantic_batch_scores(list(movies or []), profile)
+
+
 def build_profile(
     likes, favorites, selected_genres, review_priority, more_of,
     saved_titles=None, skipped_titles=None, adventure=50, extra_movies=None,
@@ -847,20 +852,108 @@ def rank_movies(movies, profile, adventure, review_priority, excluded=None, limi
     return output if limit is None else output[:limit]
 
 
-def recommendation_explanation(movie, profile, adventure, review_priority, semantic_similarity=None):
-    c=score_movie_components(movie,profile,adventure,review_priority,semantic_similarity)
-    reasons=[]
-    ranked=[
-        (c["semantic_similarity"],"Strong thematic similarity to movies shaping your profile"),
-        (c["genre_affinity"],"Fits your strongest genre preferences"),
-        (c["trait_affinity"],"Matches storytelling traits you respond to"),
-        (c["quality_alignment"],"Fits your reviews-versus-enjoyment preference"),
-        (c["priority_alignment"],"Aligns with the Showroom priorities you selected"),
-        (c["discovery_alignment"],"Fits your preferred balance of familiarity and discovery"),
+def recommendation_explanation(
+    movie, profile, adventure, review_priority,
+    semantic_similarity=None, availability_score=0.5, components=None
+):
+    """Return the three strongest movie-specific reasons behind a recommendation.
+
+    Reasons are ranked from the same component scores used by the hybrid model.
+    The wording exposes the underlying data-science signal without forcing a user
+    to understand raw weights or feature vectors.
+    """
+    c = dict(components or score_movie_components(
+        movie, profile, adventure, review_priority,
+        semantic_similarity=semantic_similarity,
+        availability_score=availability_score,
+    ))
+
+    controls = profile.get("controls", {}) or {}
+    selected_genres = list(controls.get("selected_genres", []) or [])
+    priorities = list(controls.get("priorities", []) or [])
+    profile_genres = list(profile.get("genres", []) or [])
+    profile_traits = list(profile.get("traits", []) or [])
+    movie_genre = str(movie.get("genre") or "").strip()
+    movie_tags = [str(x) for x in (movie.get("tags") or [])]
+
+    genre_pool = []
+    for g in selected_genres + profile_genres:
+        if g and g not in genre_pool:
+            genre_pool.append(g)
+    overlap_genres = [g for g in genre_pool if g.casefold() == movie_genre.casefold() or any(g.casefold() == t.casefold() for t in movie_tags)]
+    genre_detail = ", ".join(overlap_genres[:2]) if overlap_genres else (movie_genre or "your strongest genres")
+
+    trait_overlap = [t for t in profile_traits if any(t.casefold() == mt.casefold() for mt in movie_tags)]
+    theme_detail = ", ".join(trait_overlap[:2]) if trait_overlap else "movies you liked or favorited"
+
+    priority_overlap = [p for p in priorities if any(p.casefold() == t.casefold() for t in movie_tags)]
+    priority_detail = ", ".join(priority_overlap[:2]) if priority_overlap else "your Step 3 priorities"
+
+    review_value = int(controls.get("review_priority", review_priority) or review_priority)
+    adventure_value = int(controls.get("adventure", adventure) or adventure)
+
+    if review_value <= 35:
+        quality_text = "Its rating profile fits your stronger preference for critical quality."
+    elif review_value >= 65:
+        quality_text = "Its rating profile fits your preference for audience-friendly enjoyment."
+    else:
+        quality_text = "Its ratings fit your balanced quality-versus-enjoyment setting."
+
+    if adventure_value >= 65:
+        discovery_text = "It lands inside your more adventurous discovery range without becoming random."
+    elif adventure_value <= 35:
+        discovery_text = "It stays close to your familiar-taste range, which your discovery setting favors."
+    else:
+        discovery_text = "It sits near the middle of your familiarity-versus-discovery range."
+
+    candidates = [
+        (
+            0.18 * float(c.get("genre_affinity", 0.5)),
+            "Genre affinity",
+            f"Strong overlap with {genre_detail}."
+        ),
+        (
+            0.20 * float(c.get("semantic_similarity", 0.5)),
+            "Theme & tone fit",
+            f"Its themes and tone sit close to {theme_detail}."
+        ),
+        (
+            0.16 * float(c.get("trait_affinity", 0.5)),
+            "Storytelling fit",
+            "Its pacing and storytelling traits line up with patterns in your positive movie signals."
+        ),
+        (
+            0.18 * float(c.get("quality_alignment", 0.5)),
+            "Quality alignment",
+            quality_text
+        ),
+        (
+            0.13 * float(c.get("discovery_alignment", 0.5)),
+            "Discovery fit",
+            discovery_text
+        ),
+        (
+            0.15 * float(c.get("priority_alignment", 0.5)),
+            "Priority alignment",
+            f"It lines up with {priority_detail}."
+        ),
+        (
+            0.07 * float(c.get("availability_alignment", availability_score)),
+            "Availability fit",
+            "Current streaming availability makes it a lower-friction option to watch."
+        ),
     ]
-    for score,label in sorted(ranked,reverse=True)[:3]:
-        if score>=0.54: reasons.append(label)
-    return reasons[:3] or ["Balanced fit across your current preference signals"]
+
+    # Rank by actual weighted contribution. Suppress very weak/neutral signals when
+    # stronger explanations are available, but always return three useful reasons.
+    ranked = sorted(candidates, key=lambda item: item[0], reverse=True)
+    strong = [item for item in ranked if item[0] >= 0.075]
+    chosen = (strong + [item for item in ranked if item not in strong])[:3]
+
+    return [
+        {"label": label, "text": text, "contribution": round(float(contribution), 4)}
+        for contribution, label, text in chosen
+    ]
 
 
 def profile_confidence_label(profile):
