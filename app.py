@@ -4096,6 +4096,96 @@ div[data-testid="stStatusWidget"]{
     }
 }
 
+
+/* V5.151 — single camera loader directly beside the iCinema logo */
+
+/* The app content is max-width 1240px and centered. Position the transient
+   status widget from that same content edge, immediately after the logo. */
+div[data-testid="stStatusWidget"]{
+    position:fixed !important;
+    top:2.22rem !important;
+    left:max(1.25rem, calc((100vw - 1240px) / 2 + 6.55rem)) !important;
+    right:auto !important;
+    transform:none !important;
+    z-index:999999 !important;
+
+    /* Same visual height as the logo text, not a separate floating badge. */
+    width:1.68rem !important;
+    min-width:1.68rem !important;
+    max-width:1.68rem !important;
+    height:1.68rem !important;
+    min-height:1.68rem !important;
+    max-height:1.68rem !important;
+    margin:0 !important;
+    padding:0 !important;
+
+    /* Keep only the existing camera-in-circle loader. */
+    border:1px solid rgba(169,173,183,.28) !important;
+    border-radius:50% !important;
+    background:rgba(17,19,21,.96) !important;
+    box-shadow:0 0 0 1px rgba(92,111,168,.06) !important;
+    overflow:visible !important;
+    backdrop-filter:blur(10px) !important;
+    animation:icinema-loader-ring 1.1s linear infinite !important;
+    background-image:none !important;
+}
+div[data-testid="stStatusWidget"] > *{
+    display:none !important;
+}
+
+/* Same camera mark, scaled to the logo-height loader. */
+div[data-testid="stStatusWidget"]::before{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.76rem !important;
+    height:.51rem !important;
+    transform:translate(-50%,-45%) !important;
+    border:1.25px solid rgba(243,240,234,.94) !important;
+    border-radius:3px !important;
+    background:transparent !important;
+    box-sizing:border-box !important;
+}
+div[data-testid="stStatusWidget"]::after{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.28rem !important;
+    height:.28rem !important;
+    transform:translate(-50%,-42%) !important;
+    border:1.15px solid rgba(243,240,234,.98) !important;
+    border-radius:50% !important;
+    background:rgba(92,111,168,.20) !important;
+    box-shadow:0 0 6px rgba(92,111,168,.65) !important;
+    animation:none !important;
+}
+
+/* Suppress any other Streamlit loading/spinner visuals so the camera above
+   is the only loader the user sees. */
+div[data-testid="stSpinner"],
+div[data-testid="stLoadingSpinner"],
+.stSpinner,
+[data-testid="stStatusWidget"] svg,
+[data-testid="stStatusWidget"] [role="progressbar"]{
+    display:none !important;
+}
+
+/* Align with the mobile logo using the same content edge relationship. */
+@media(max-width:700px){
+    div[data-testid="stStatusWidget"]{
+        top:2.08rem !important;
+        left:6.08rem !important;
+        width:1.52rem !important;
+        min-width:1.52rem !important;
+        max-width:1.52rem !important;
+        height:1.52rem !important;
+        min-height:1.52rem !important;
+        max-height:1.52rem !important;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4592,32 +4682,46 @@ def quick_card_description(movie, limit=66):
 
 
 def expanded_card_description(movie, max_chars=320):
-    """A fuller, calm, spoiler-conscious overview that differs from the witty line."""
-    full = " ".join(str((movie or {}).get("why") or "").split()).strip()
+    """Return a fuller spoiler-free synopsis that is separate from the witty hook.
+
+    The collapsed witty line is its own UI element. This function uses the movie's
+    longer source overview directly and does not prepend, repeat, or remix the
+    collapsed hook into the expanded copy.
+    """
+    full = " ".join(
+        str((movie or {}).get("overview") or (movie or {}).get("why") or "").split()
+    ).strip()
     if not full:
         return "iCinema does not have a longer spoiler-free overview for this title yet."
 
-    genre = str((movie or {}).get("genre") or "movie").strip()
-    sentences = [s.strip() for s in re.split(r"(?<=[.!?;])\s+", full) if s.strip()]
-    first = sentences[0].rstrip(".; ")
-    second = sentences[1] if len(sentences) > 1 else ""
+    # Keep the source overview concise and spoiler-conscious. Prefer up to the
+    # first two complete sentences rather than inventing an additional hook.
+    sentences = [
+        s.strip()
+        for s in re.split(r"(?<=[.!?])\s+", full)
+        if s.strip()
+    ]
 
-    # A neutral framing sentence makes the expanded copy distinct from the collapsed
-    # witty summary while remaining grounded in the supplied overview.
-    opener = f"This {genre.lower()} follows {first[0].lower() + first[1:] if first else 'its central characters through a steadily developing situation'}."
-    expanded = opener
-    if second:
-        expanded += " " + second
-    elif len(full) > len(first):
-        remainder = full[len(first):].lstrip(" ;,.")
-        if remainder:
-            expanded += " " + remainder
+    if sentences:
+        chosen = []
+        total = 0
+        for sentence in sentences:
+            projected = total + len(sentence) + (1 if chosen else 0)
+            if chosen and projected > max_chars:
+                break
+            chosen.append(sentence)
+            total = projected
+            if len(chosen) >= 2:
+                break
+        expanded = " ".join(chosen).strip()
+    else:
+        expanded = full
 
-    expanded = " ".join(expanded.split())
     if len(expanded) > max_chars:
         expanded = expanded[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:")
-        if not expanded.endswith((".", "!", "?")):
+        if expanded and not expanded.endswith((".", "!", "?")):
             expanded += "."
+
     return expanded
 
 
