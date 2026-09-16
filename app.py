@@ -2196,6 +2196,184 @@ body:has(.hero-title) .icinema-logo{
     margin-bottom:0 !important;
 }
 
+
+/* V5.118 — exact tab-heading alignment + Match/Skip breathing room */
+/* Every tab now uses the same spacer + same heading class as its first content. */
+.showroom-tab-start{
+    height:1.12rem !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+.tab-primary-heading{
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:2rem !important;
+    line-height:1.08 !important;
+    font-weight:760 !important;
+    letter-spacing:-.03em !important;
+    margin:0 0 .16rem !important;
+    padding:0 !important;
+}
+/* Profile's internal content begins immediately after the shared tab heading. */
+.profile-wrap{
+    margin-top:0 !important;
+    padding-top:0 !important;
+}
+.profile-wrap .profile-intro{
+    margin-top:0 !important;
+}
+/* Add a little more breathing room between the Match control and Skip. */
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    column-gap:.72rem !important;
+}
+
+
+/* V5.119 — aligned Profile header, live learning signal, cinematic camera loader */
+
+/* Profile title + subtitle are now in the same wrapper; lock them to one left edge. */
+.profile-wrap{
+    margin-left:0 !important;
+    padding-left:0 !important;
+    align-items:flex-start !important;
+}
+.profile-wrap .profile-heading,
+.profile-wrap .profile-heading-aligned,
+.profile-wrap .profile-intro{
+    width:100% !important;
+    max-width:760px !important;
+    margin-left:0 !important;
+    padding-left:0 !important;
+    text-indent:0 !important;
+    box-sizing:border-box !important;
+}
+.profile-wrap .profile-heading-aligned{
+    margin-top:0 !important;
+    margin-bottom:.48rem !important;
+}
+
+/* Keep the learning system visibly active with a calm, continuous lens-like glow. */
+.model-status-dot{
+    width:.42rem !important;
+    height:.42rem !important;
+    background:var(--ai) !important;
+    box-shadow:
+        0 0 0 2px rgba(92,111,168,.10),
+        0 0 7px rgba(92,111,168,.68),
+        0 0 14px rgba(92,111,168,.28) !important;
+    animation:icinema-learning-live 1.8s ease-in-out infinite !important;
+}
+@keyframes icinema-learning-live{
+    0%,100%{
+        opacity:.78;
+        transform:scale(.94);
+        box-shadow:
+            0 0 0 2px rgba(92,111,168,.08),
+            0 0 6px rgba(92,111,168,.50),
+            0 0 11px rgba(92,111,168,.20);
+    }
+    50%{
+        opacity:1;
+        transform:scale(1.08);
+        box-shadow:
+            0 0 0 3px rgba(92,111,168,.12),
+            0 0 9px rgba(92,111,168,.88),
+            0 0 18px rgba(92,111,168,.36);
+    }
+}
+
+/* Loading indicator: compact camera body with a glowing circular lens, no text. */
+div[data-testid="stStatusWidget"]{
+    position:fixed !important;
+    top:1rem !important;
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    z-index:999999 !important;
+    width:2.72rem !important;
+    min-width:2.72rem !important;
+    max-width:2.72rem !important;
+    height:2.72rem !important;
+    min-height:2.72rem !important;
+    max-height:2.72rem !important;
+    padding:0 !important;
+    border:1px solid rgba(169,173,183,.26) !important;
+    border-radius:14px !important;
+    background:rgba(17,19,21,.96) !important;
+    box-shadow:0 8px 24px rgba(0,0,0,.28) !important;
+    overflow:visible !important;
+    backdrop-filter:blur(12px) !important;
+}
+div[data-testid="stStatusWidget"] > *{
+    display:none !important;
+}
+/* Camera body */
+div[data-testid="stStatusWidget"]::before{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:1.34rem !important;
+    height:.92rem !important;
+    transform:translate(-50%,-46%) !important;
+    border:1.5px solid rgba(243,240,234,.90) !important;
+    border-radius:4px !important;
+    background:transparent !important;
+    box-sizing:border-box !important;
+}
+/* Lens */
+div[data-testid="stStatusWidget"]::after{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.48rem !important;
+    height:.48rem !important;
+    transform:translate(-50%,-42%) !important;
+    border:1.5px solid rgba(243,240,234,.95) !important;
+    border-radius:50% !important;
+    background:rgba(92,111,168,.20) !important;
+    box-shadow:
+        0 0 0 2px rgba(92,111,168,.10),
+        0 0 8px rgba(92,111,168,.78) !important;
+    animation:icinema-camera-lens 1.05s ease-in-out infinite !important;
+    box-sizing:border-box !important;
+}
+@keyframes icinema-camera-lens{
+    0%,100%{
+        opacity:.62;
+        transform:translate(-50%,-42%) scale(.9);
+        box-shadow:
+            0 0 0 2px rgba(92,111,168,.08),
+            0 0 6px rgba(92,111,168,.50);
+    }
+    50%{
+        opacity:1;
+        transform:translate(-50%,-42%) scale(1.08);
+        box-shadow:
+            0 0 0 3px rgba(92,111,168,.12),
+            0 0 11px rgba(92,111,168,.95);
+    }
+}
+/* Small camera top housing. */
+div[data-testid="stStatusWidget"]{
+    background-image:
+        linear-gradient(rgba(243,240,234,.88),rgba(243,240,234,.88)) !important;
+    background-size:.46rem .16rem !important;
+    background-repeat:no-repeat !important;
+    background-position:50% .63rem !important;
+}
+@media(max-width:700px){
+    div[data-testid="stStatusWidget"]{
+        top:.72rem !important;
+        width:2.5rem !important;
+        min-width:2.5rem !important;
+        max-width:2.5rem !important;
+        height:2.5rem !important;
+        min-height:2.5rem !important;
+        max-height:2.5rem !important;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2657,7 +2835,7 @@ def _format_seconds(value):
     return f"{value//60}m {value%60:02d}s"
 
 
-def render_cinema_profile(p, include_insights=False):
+def render_cinema_profile(p, include_insights=False, show_heading=True, tab_heading=False):
     sections = [
         ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
         ("Top genres", profile_chip_html(p["genres"]), "profile-chip-wrap"),
@@ -2687,15 +2865,18 @@ def render_cinema_profile(p, include_insights=False):
     insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
 
     insights_section = (
-        f'<div class="profile-insights"><div class="profile-insights-title">Your iCinema Insights</div>'
+        f'<div class="profile-insights"><div class="profile-insights-title">iCinema’s Insights</div>'
         f'<div class="profile-insights-copy">Your recent activity, summarized.</div>'
         f'<div class="insight-grid">{insight_html}</div></div>'
         if include_insights else ""
     )
 
+    heading_class = "tab-primary-heading profile-heading-aligned" if tab_heading else "profile-heading"
+    profile_heading_html = f'<div class="{heading_class}">Your Cinema Profile</div>' if show_heading else ""
+
     st.markdown(
         f'<div class="profile-wrap">'
-        f'<div class="profile-heading">Your Cinema Profile</div>'
+        f'{profile_heading_html}'
         f'<div class="profile-intro">A detailed showing of the preferences, viewing patterns, and recommendation signals iCinema has learned from your choices.</div>'
         f'<div class="model-status-line">'
         f'<span class="model-status-dot"></span>'
@@ -3206,7 +3387,18 @@ def render_showroom_fragment(p):
                 "Hidden Gems":"Strong matches that are less obvious or widely promoted",
                 "Something Different":"A little outside your usual taste, but still likely to click",
             }
-            st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div><div class="row-model-note">{row_notes[row_name]}</div>', unsafe_allow_html=True)
+            if row_index == 0:
+                st.markdown(
+                    f'<div class="tab-primary-heading">{row_name}</div>'
+                    f'<div class="row-model-note">{row_notes[row_name]}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="{row_class}"><h3>{row_name}</h3></div>'
+                    f'<div class="row-model-note">{row_notes[row_name]}</div>',
+                    unsafe_allow_html=True,
+                )
             if not choices:
                 st.caption("Refreshing personalized matches…")
                 continue
@@ -3214,7 +3406,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
-                    match_col, skip_col = st.columns([3.15,0.95], gap="small")
+                    match_col, skip_col = st.columns([3.15,0.95], gap="medium")
                     with match_col:
                         with st.popover(f"{match}% iCinema Match", use_container_width=True):
                             reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
@@ -3283,7 +3475,7 @@ def render_showroom_fragment(p):
 
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="tab-section-heading">Saved</div>', unsafe_allow_html=True)
+        st.markdown('<div class="tab-primary-heading">Saved</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
         saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         saved_identity_map = get_movie_identity_batch(saved_identity_keys)
@@ -3320,7 +3512,7 @@ def render_showroom_fragment(p):
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="tab-section-heading">Seen</div>', unsafe_allow_html=True)
+        st.markdown('<div class="tab-primary-heading">Seen</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
         seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         seen_identity_map = get_movie_identity_batch(seen_identity_keys)
@@ -3340,7 +3532,7 @@ def render_showroom_fragment(p):
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        render_cinema_profile(p, include_insights=True)
+        render_cinema_profile(p, include_insights=True, show_heading=True, tab_heading=True)
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
         st.button("Reset Profile", key="reset_profile_tab", on_click=reset_profile_from_fragment)
 
