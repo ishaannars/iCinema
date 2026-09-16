@@ -3858,6 +3858,88 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1.38rem !important;
 }
 
+
+/* V5.146 — loading icon aligned directly to the right of iCinema logo */
+
+/* Keep the transient loader visually attached to the brand mark. */
+div[data-testid="stStatusWidget"]{
+    position:fixed !important;
+    top:1.03rem !important;
+    left:7.25rem !important;
+    right:auto !important;
+    transform:none !important;
+    z-index:999999 !important;
+    margin:0 !important;
+}
+
+/* Mobile alignment keeps the same brand-adjacent relationship. */
+@media(max-width:700px){
+    div[data-testid="stStatusWidget"]{
+        top:.82rem !important;
+        left:5.15rem !important;
+    }
+}
+
+
+/* V5.147 — Step 1 action breathing room */
+.shelf-action-gap{
+    height:.34rem !important;
+}
+[class*="st-key-like_"],
+[class*="st-key-fav_"]{
+    margin-top:0 !important;
+}
+
+
+/* V5.148 — compact Step 1 shelf */
+
+/* Slightly scale the Step 1 movie cards down while preserving proportions. */
+.step1-shelf .poster,
+[class*="st-key-like_"] ~ * .poster{
+    transform:scale(.92);
+    transform-origin:top center;
+    margin-bottom:-.9rem !important;
+}
+
+/* Keep Step 1 title/year proportionally smaller and compact. */
+.step1-shelf .poster-caption-title,
+.step1-shelf .movie-title,
+.step1-shelf .shelf-title{
+    font-size:1.02rem !important;
+    line-height:1.15 !important;
+}
+.step1-shelf .poster-caption-year,
+.step1-shelf .movie-year,
+.step1-shelf .shelf-year{
+    font-size:.69rem !important;
+    line-height:1 !important;
+}
+
+/* Like / Favorite become slightly shorter while staying easy to tap. */
+[class*="st-key-like_"] button,
+[class*="st-key-fav_"] button{
+    min-height:2.05rem !important;
+    height:2.05rem !important;
+    padding:.12rem .34rem !important;
+    border-radius:999px !important;
+}
+[class*="st-key-like_"] button p,
+[class*="st-key-fav_"] button p{
+    font-size:.72rem !important;
+    line-height:1 !important;
+    font-weight:690 !important;
+}
+
+/* Preserve the new breathing room from V5.147, but keep it compact. */
+.shelf-action-gap{
+    height:.28rem !important;
+}
+
+/* Tighten horizontal spacing slightly across the Step 1 shelf. */
+.step1-shelf [data-testid="stHorizontalBlock"]{
+    column-gap:.72rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
