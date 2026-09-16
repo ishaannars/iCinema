@@ -3796,6 +3796,51 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1.38 !important;
 }
 
+
+/* V5.144 — balanced Match panel + two-line movie summary */
+
+/* Give the Match explanation equal visual breathing room at the top and bottom. */
+.match-explain-title{
+    margin:.58rem 0 .72rem !important;
+    padding:0 !important;
+}
+.match-reason{
+    margin:0 !important;
+    padding:.52rem 0 .56rem !important;
+}
+.match-reason:first-of-type{
+    padding-top:0 !important;
+}
+.match-reason:last-of-type{
+    padding-bottom:.52rem !important;
+}
+.match-model-note{
+    margin:.58rem 0 .58rem !important;
+    padding:.56rem 0 0 !important;
+    border-top:1px solid rgba(169,173,183,.10) !important;
+}
+
+/* Let longer movie summaries use two clean lines instead of clipping. */
+[class*="st-key-showroom_body_"] .movie-summary-toggle{
+    margin:0 0 .24rem !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-label{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:1.35rem !important;
+    max-height:2.72rem !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    white-space:normal !important;
+    text-overflow:clip !important;
+    font-size:.56rem !important;
+    line-height:1.36rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
