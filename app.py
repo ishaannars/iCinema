@@ -4186,6 +4186,47 @@ div[data-testid="stLoadingSpinner"],
     }
 }
 
+
+/* V5.153 — Profile methodology cards */
+.profile-methodology{
+    width:100% !important;
+    max-width:760px !important;
+    margin-top:1.12rem !important;
+    padding-top:1.08rem !important;
+    border-top:1px solid var(--border) !important;
+}
+.methodology-grid{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:.62rem !important;
+}
+.methodology-card{
+    border:1px solid var(--border) !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.018) !important;
+    padding:.76rem .8rem !important;
+    min-height:6.15rem !important;
+}
+.methodology-value{
+    font-family:var(--ui-font) !important;
+    color:var(--ivory) !important;
+    font-size:.78rem !important;
+    line-height:1.28 !important;
+    font-weight:760 !important;
+    letter-spacing:-.012em !important;
+    margin-bottom:.34rem !important;
+}
+.methodology-label{
+    font-family:var(--ui-font) !important;
+    color:var(--muted) !important;
+    font-size:.64rem !important;
+    line-height:1.42 !important;
+    font-weight:500 !important;
+}
+@media(max-width:800px){
+    .methodology-grid{grid-template-columns:1fr !important;}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4622,36 +4663,65 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
+def clean_movie_copy(text, ensure_terminal=True):
+    """Normalize movie copy so UI summaries never end on awkward fragments."""
+    value = " ".join(str(text or "").split()).strip()
+    if not value:
+        return ""
+
+    # Normalize punctuation spacing and repeated punctuation.
+    value = re.sub(r"\s+([,.;:!?])", r"\1", value)
+    value = re.sub(r"([,;:]){2,}", r"\1", value)
+    value = re.sub(r"\.{2,}", ".", value)
+    value = value.strip(" \t\n,;:–—-")
+
+    # Remove dangling connector/article words caused by safe truncation.
+    dangling = {
+        "a", "an", "the", "and", "or", "but", "with", "to", "of", "in",
+        "for", "from", "by", "as", "at", "into", "onto", "on", "its", "his",
+        "her", "their", "who", "that", "which"
+    }
+    words = value.rstrip(".!?").split()
+    while words and words[-1].casefold().strip(".,;:") in dangling:
+        words.pop()
+    value = " ".join(words).rstrip(" ,;:")
+
+    if ensure_terminal and value and value[-1] not in ".!?":
+        value += "."
+    return value
+
+
 def quick_card_description(movie, limit=66):
-    """Create a complete, movie-specific summary sized to fit two card lines."""
-    full = " ".join(str((movie or {}).get("why") or "").split()).strip()
+    """Create a complete, movie-specific hook sized to fit the compact card."""
+    full = clean_movie_copy((movie or {}).get("why"), ensure_terminal=False)
     if not full:
         return "A promising setup where trouble arrives sooner than expected."
 
     first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
 
-    # Prefer a complete clause from the movie's real setup.
     if len(first) <= limit:
         sentence = first
     else:
         cut = first[:limit]
-        natural = max(
+        # Prefer a true phrase boundary. Avoid cutting after weak connectors.
+        boundaries = [
             cut.rfind(", "),
             cut.rfind(" and "),
             cut.rfind(" but "),
             cut.rfind(" when "),
-            cut.rfind(" as "),
             cut.rfind(" while "),
+            cut.rfind(" as "),
             cut.rfind(" who "),
-        )
-        if natural >= 32:
+        ]
+        natural = max(boundaries)
+        if natural >= 30:
             sentence = cut[:natural]
         else:
             sentence = cut.rsplit(" ", 1)[0]
 
-    sentence = sentence.rstrip(" ,;:–—-")
+    sentence = clean_movie_copy(sentence, ensure_terminal=False)
 
-    # A restrained movie-specific nudge only when there is enough room.
+    # Add a small movie-specific tonal nudge only when it fits naturally.
     lower = full.casefold()
     nudges = [
         (["surveillance", "spying", "watching"], " as distance becomes personal"),
@@ -4660,67 +4730,59 @@ def quick_card_description(movie, limit=66):
         (["kidnap", "hostage", "abduct"], " as the situation quickly unravels"),
         (["teacher", "student", "school"], " as normal life stops cooperating"),
     ]
-    if len(sentence) < 46:
-        for words, suffix in nudges:
-            if any(word in lower for word in words) and len(sentence) + len(suffix) <= limit:
+    if len(sentence) < 44:
+        for terms, suffix in nudges:
+            if any(term in lower for term in terms) and len(sentence) + len(suffix) <= limit:
                 sentence += suffix
                 break
 
-    # Hard guarantee: never exceed the source limit.
     if len(sentence) > limit:
-        sentence = sentence[:limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
+        sentence = sentence[:limit].rsplit(" ", 1)[0]
 
-    dangling = {"a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by"}
-    words = sentence.split()
-    while words and words[-1].casefold().strip(".,;:") in dangling:
-        words.pop()
-
-    sentence = " ".join(words).rstrip(" ,;:")
-    if sentence and sentence[-1] not in ".!?":
-        sentence += "."
-    return sentence
+    return clean_movie_copy(sentence, ensure_terminal=True)
 
 
 def expanded_card_description(movie, max_chars=320):
-    """Return a fuller spoiler-free synopsis that is separate from the witty hook.
-
-    The collapsed witty line is its own UI element. This function uses the movie's
-    longer source overview directly and does not prepend, repeat, or remix the
-    collapsed hook into the expanded copy.
-    """
-    full = " ".join(
-        str((movie or {}).get("overview") or (movie or {}).get("why") or "").split()
-    ).strip()
+    """Return a separate, fuller spoiler-free synopsis with clean grammar."""
+    full = clean_movie_copy(
+        (movie or {}).get("overview") or (movie or {}).get("why"),
+        ensure_terminal=False,
+    )
     if not full:
         return "iCinema does not have a longer spoiler-free overview for this title yet."
 
-    # Keep the source overview concise and spoiler-conscious. Prefer up to the
-    # first two complete sentences rather than inventing an additional hook.
     sentences = [
-        s.strip()
+        clean_movie_copy(s, ensure_terminal=True)
         for s in re.split(r"(?<=[.!?])\s+", full)
-        if s.strip()
+        if clean_movie_copy(s, ensure_terminal=False)
     ]
 
-    if sentences:
-        chosen = []
-        total = 0
-        for sentence in sentences:
-            projected = total + len(sentence) + (1 if chosen else 0)
-            if chosen and projected > max_chars:
-                break
-            chosen.append(sentence)
-            total = projected
-            if len(chosen) >= 2:
-                break
-        expanded = " ".join(chosen).strip()
-    else:
-        expanded = full
+    chosen = []
+    total = 0
+    for sentence in sentences:
+        projected = total + len(sentence) + (1 if chosen else 0)
+        if chosen and projected > max_chars:
+            break
+        chosen.append(sentence)
+        total = projected
+        if len(chosen) >= 2:
+            break
+
+    expanded = " ".join(chosen).strip() if chosen else clean_movie_copy(full, True)
 
     if len(expanded) > max_chars:
-        expanded = expanded[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:")
-        if expanded and not expanded.endswith((".", "!", "?")):
-            expanded += "."
+        candidate = expanded[:max_chars]
+        # Prefer ending at the last sentence/phrase boundary.
+        boundary = max(
+            candidate.rfind(". "),
+            candidate.rfind(", "),
+            candidate.rfind("; "),
+        )
+        if boundary >= int(max_chars * 0.60):
+            candidate = candidate[:boundary + (1 if candidate[boundary] == "." else 0)]
+        else:
+            candidate = candidate.rsplit(" ", 1)[0]
+        expanded = clean_movie_copy(candidate, ensure_terminal=True)
 
     return expanded
 
@@ -4789,10 +4851,28 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     cards=[(ttm,"Median Time to Match"),(skips,"Avg. Skips Before Save"),(conv,"Save → Seen Conversion"),(conf,"Profile Confidence")]
     insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
 
+    methodology_html = (
+        '<div class="profile-methodology">'
+        '<div class="profile-insights-title">Methodology &amp; Data</div>'
+        '<div class="profile-insights-copy">Two of the strongest signals behind your recommendations.</div>'
+        '<div class="methodology-grid">'
+        '<div class="methodology-card">'
+        '<div class="methodology-value">20% · Theme &amp; tone fit</div>'
+        '<div class="methodology-label">iCinema converts plot and metadata text into latent features using TF-IDF and SVD, then compares movies to your learned taste with cosine similarity.</div>'
+        '</div>'
+        '<div class="methodology-card">'
+        '<div class="methodology-value">18% · Genre affinity</div>'
+        '<div class="methodology-label">Likes, favorites, saves, skips, and selected genres build a signed genre preference vector. Cosine similarity measures how closely each candidate lines up with it.</div>'
+        '</div>'
+        '</div>'
+        '</div>'
+    )
+
     insights_section = (
         f'<div class="profile-insights"><div class="profile-insights-title">iCinema’s Insights</div>'
         f'<div class="profile-insights-copy">Your recent activity, summarized.</div>'
         f'<div class="insight-grid">{insight_html}</div></div>'
+        f'{methodology_html}'
         if include_insights else ""
     )
 
