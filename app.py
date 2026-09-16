@@ -2374,6 +2374,165 @@ div[data-testid="stStatusWidget"]{
     }
 }
 
+
+/* V5.120 — showroom header alignment, cleaner control row, logo-adjacent loader */
+
+/* Use the exact same heading + note wrapper for all four showroom sections. */
+.showroom-row-header{
+    margin-top:0 !important;
+    margin-bottom:.58rem !important;
+}
+.showroom-row-header .tab-primary-heading,
+.showroom-row-header h3{
+    margin:0 0 .18rem !important;
+    padding:0 !important;
+    line-height:1.08 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.34 !important;
+}
+
+/* Keep Match and Skip distinct, aligned, and non-overlapping across card widths. */
+.showroom-top-controls{
+    margin-top:0 !important;
+    margin-bottom:.2rem !important;
+}
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.42rem !important;
+}
+.showroom-top-controls [data-testid="column"]{
+    min-width:0 !important;
+}
+.showroom-top-controls div[data-testid="stPopover"],
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    min-height:2rem !important;
+    height:2rem !important;
+    padding:.14rem .42rem !important;
+    justify-content:center !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] button p,
+.showroom-top-controls div[data-testid="stPopover"] button span{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    flex-shrink:1 !important;
+    font-size:.64rem !important;
+    font-weight:700 !important;
+    text-align:center !important;
+}
+.showroom-top-controls [class*="st-key-skip_"]{
+    margin:0 !important;
+    min-width:0 !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button{
+    min-height:2rem !important;
+    height:2rem !important;
+    padding:.14rem .26rem !important;
+    margin:0 !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button p{
+    font-size:.66rem !important;
+    font-weight:700 !important;
+    text-align:center !important;
+}
+
+/* Move the transient loading cue next to the iCinema logo and make it a film camera. */
+div[data-testid="stStatusWidget"]{
+    position:fixed !important;
+    top:1.1rem !important;
+    left:8.9rem !important;
+    right:auto !important;
+    transform:none !important;
+    z-index:999999 !important;
+    width:2.3rem !important;
+    min-width:2.3rem !important;
+    max-width:2.3rem !important;
+    height:1.5rem !important;
+    min-height:1.5rem !important;
+    max-height:1.5rem !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    overflow:visible !important;
+    backdrop-filter:none !important;
+    background-image:none !important;
+}
+div[data-testid="stStatusWidget"] > *{
+    display:none !important;
+}
+/* Camera body + twin reels */
+div[data-testid="stStatusWidget"]::before{
+    content:"" !important;
+    position:absolute !important;
+    left:.1rem !important;
+    top:.08rem !important;
+    width:1.52rem !important;
+    height:1.02rem !important;
+    background:
+        radial-gradient(circle at .34rem .22rem, rgba(243,240,234,.96) 0 .12rem, transparent .125rem),
+        radial-gradient(circle at .74rem .22rem, rgba(243,240,234,.96) 0 .12rem, transparent .125rem),
+        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) .22rem .42rem / .94rem .42rem no-repeat,
+        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) 1.06rem .53rem / .38rem .08rem no-repeat,
+        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) .28rem .86rem / .08rem .22rem no-repeat,
+        linear-gradient(rgba(243,240,234,.92), rgba(243,240,234,.92)) .78rem .86rem / .08rem .22rem no-repeat;
+    border-radius:4px !important;
+    opacity:.98 !important;
+}
+/* Glowing lens */
+div[data-testid="stStatusWidget"]::after{
+    content:"" !important;
+    position:absolute !important;
+    left:1.46rem !important;
+    top:.46rem !important;
+    width:.46rem !important;
+    height:.46rem !important;
+    border:1.5px solid rgba(243,240,234,.96) !important;
+    border-radius:50% !important;
+    background:rgba(92,111,168,.18) !important;
+    box-shadow:
+        0 0 0 2px rgba(92,111,168,.09),
+        0 0 7px rgba(92,111,168,.72) !important;
+    animation:icinema-camera-lens 1.05s ease-in-out infinite !important;
+}
+@media(max-width:700px){
+    div[data-testid="stStatusWidget"]{
+        top:.86rem !important;
+        left:6.25rem !important;
+        width:2rem !important;
+        min-width:2rem !important;
+        max-width:2rem !important;
+        height:1.34rem !important;
+        min-height:1.34rem !important;
+        max-height:1.34rem !important;
+    }
+    div[data-testid="stStatusWidget"]::before{
+        transform:scale(.92) !important;
+        transform-origin:left top !important;
+    }
+    div[data-testid="stStatusWidget"]::after{
+        left:1.32rem !important;
+        top:.42rem !important;
+        width:.4rem !important;
+        height:.4rem !important;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3389,14 +3548,16 @@ def render_showroom_fragment(p):
             }
             if row_index == 0:
                 st.markdown(
+                    f'<div class="{row_class} showroom-row-header">'
                     f'<div class="tab-primary-heading">{row_name}</div>'
-                    f'<div class="row-model-note">{row_notes[row_name]}</div>',
+                    f'<div class="row-model-note">{row_notes[row_name]}</div>'
+                    f'</div>',
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
-                    f'<div class="{row_class}"><h3>{row_name}</h3></div>'
-                    f'<div class="row-model-note">{row_notes[row_name]}</div>',
+                    f'<div class="{row_class} showroom-row-header"><h3>{row_name}</h3>'
+                    f'<div class="row-model-note">{row_notes[row_name]}</div></div>',
                     unsafe_allow_html=True,
                 )
             if not choices:
@@ -3406,7 +3567,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
-                    match_col, skip_col = st.columns([3.15,0.95], gap="medium")
+                    match_col, skip_col = st.columns([3.8,0.9], gap="small")
                     with match_col:
                         with st.popover(f"{match}% iCinema Match", use_container_width=True):
                             reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
