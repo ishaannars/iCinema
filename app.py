@@ -4264,6 +4264,16 @@ div[data-testid="stLoadingSpinner"],
 }
 
 
+/* V5.163 — explicit spacer between Cinema Profile heading and learning-status row.
+   This avoids Streamlit/global tab-heading margin rules overriding the intended gap. */
+.profile-heading-gap{
+    display:block !important;
+    height:.78rem !important;
+    min-height:.78rem !important;
+    width:100% !important;
+    flex:0 0 .78rem !important;
+}
+
 /* V5.155 — uniform learning-status text color */
 .model-status-line,
 .model-status-primary,
@@ -5049,6 +5059,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     st.markdown(
         f'<div class="profile-wrap">'
         f'{profile_heading_html}'
+        f'<div class="profile-heading-gap"></div>'
         f'<div class="model-status-line">'
         f'<span class="model-status-dot"></span>'
         f'<span class="model-status-primary">{model_primary}</span>'
