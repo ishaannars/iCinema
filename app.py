@@ -3741,6 +3741,61 @@ div[data-testid="stStatusWidget"]::after{
     margin-bottom:.78rem !important;
 }
 
+
+/* V5.142 — Saved action centering + unique natural summaries */
+[class*="st-key-savedseen_"] button,
+[class*="st-key-unsave_"] button{
+    display:grid !important;
+    place-items:center !important;
+    text-align:center !important;
+}
+[class*="st-key-savedseen_"] button p,
+[class*="st-key-savedseen_"] button span,
+[class*="st-key-unsave_"] button p,
+[class*="st-key-unsave_"] button span{
+    display:block !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    text-align:center !important;
+    line-height:1 !important;
+}
+
+
+/* V5.143 — even spacing in Match explanation popover */
+.match-explain-title{
+    margin:0 0 .72rem !important;
+    padding:0 !important;
+}
+.match-reason{
+    margin:0 !important;
+    padding:.52rem 0 .56rem !important;
+    border-bottom:1px solid rgba(169,173,183,.12) !important;
+}
+.match-reason:first-of-type{
+    padding-top:0 !important;
+}
+.match-reason:last-of-type{
+    border-bottom:0 !important;
+    padding-bottom:.52rem !important;
+}
+.match-reason-label{
+    margin:0 0 .22rem !important;
+    padding:0 !important;
+    line-height:1.2 !important;
+}
+.match-reason-copy{
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.4 !important;
+}
+.match-model-note{
+    margin:.58rem 0 0 !important;
+    padding:.56rem 0 0 !important;
+    border-top:1px solid rgba(169,173,183,.10) !important;
+    line-height:1.38 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4167,30 +4222,65 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=60):
-    """Short, informative, lightly witty sentence intended for one card line."""
+def quick_card_description(movie, limit=88):
+    """Create one concise, movie-specific sentence with a light witty edge.
+
+    Uses only the movie's own overview/setup. No canned genre suffixes or repeated
+    stock phrases such as 'reality bends.'
+    """
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
-    genre = str((movie or {}).get("genre") or "").casefold()
     if not full:
-        return "A strong setup, with trouble waiting just off-screen."
+        return "A promising setup with enough trouble to make things interesting."
 
     first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
-    endings = {
-        "thriller":"—tension follows.", "mystery":"—questions remain.",
-        "horror":"—calm does not last.", "comedy":"—chaos follows.",
-        "sci-fi":"—reality bends.", "science fiction":"—reality bends.",
-        "romance":"—timing interferes.", "documentary":"—with real stakes.",
-        "action":"—the plan unravels.", "adventure":"—the plan unravels.",
-        "anime":"—rules bend.", "animation":"—rules bend.",
-        "fantasy":"—rules bend.", "drama":"—consequences follow.",
-    }
-    ending=endings.get(genre,"—things get complicated.")
-    room=max(30, limit-len(ending)-1)
-    premise=first
-    if len(premise)>room:
-        premise=premise[:room].rsplit(" ",1)[0]
-    premise=premise.rstrip(" ,;:–—-")
-    return f"{premise} {ending}".strip()
+
+    if len(first) <= limit:
+        sentence = first
+    else:
+        cut = first[:limit]
+        natural = max(
+            cut.rfind(", "),
+            cut.rfind(" and "),
+            cut.rfind(" but "),
+            cut.rfind(" when "),
+            cut.rfind(" as "),
+            cut.rfind(" while "),
+            cut.rfind(" who "),
+        )
+        if natural >= 42:
+            sentence = cut[:natural]
+        else:
+            sentence = cut.rsplit(" ", 1)[0]
+
+    sentence = sentence.rstrip(" ,;:–—-")
+    lower = full.casefold()
+
+    # Add a tiny, movie-specific tonal nudge only when the premise is very short.
+    if len(sentence) < 62:
+        if any(word in lower for word in ["surveillance", "spying", "watching"]):
+            sentence += ", until watching from a distance stops feeling distant"
+        elif any(word in lower for word in ["kidnap", "hostage", "abduct"]):
+            sentence += ", and the situation gets complicated fast"
+        elif any(word in lower for word in ["mission", "space", "mars", "planet"]):
+            sentence += ", where the margin for error is basically zero"
+        elif any(word in lower for word in ["conspiracy", "secret", "mystery"]):
+            sentence += ", with more questions than anyone asked for"
+        elif any(word in lower for word in ["teacher", "student", "school"]):
+            sentence += ", and normal life quickly stops cooperating"
+        elif any(word in lower for word in ["friend", "friends", "relationship"]):
+            sentence += ", with chemistry doing most of the heavy lifting"
+
+    if len(sentence) > limit:
+        sentence = sentence[:limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
+
+    dangling = {"a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by"}
+    words = sentence.split()
+    while words and words[-1].casefold().strip(".,;:") in dangling:
+        words.pop()
+    sentence = " ".join(words).rstrip(" ,;:")
+    if sentence and sentence[-1] not in ".!?":
+        sentence += "."
+    return sentence
 
 
 def expanded_card_description(movie, max_chars=320):
