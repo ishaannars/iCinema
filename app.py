@@ -2642,6 +2642,210 @@ div[data-testid="stStatusWidget"]::after{
     margin-bottom:.06rem !important;
 }
 
+
+/* V5.123 — full Match label + compact expandable movie description */
+/* Guarantee enough visual width for the complete Match label. */
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    column-gap:.46rem !important;
+}
+.showroom-top-controls [data-testid="column"]{
+    min-width:0 !important;
+}
+.showroom-top-controls div[data-testid="stPopover"]{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    overflow:visible !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:1.96rem !important;
+    min-height:1.96rem !important;
+    padding:.12rem .34rem !important;
+    overflow:visible !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] button p,
+.showroom-top-controls div[data-testid="stPopover"] button span{
+    display:block !important;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    flex-shrink:1 !important;
+    font-size:.575rem !important;
+    font-weight:700 !important;
+    letter-spacing:-.012em !important;
+    text-align:center !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button,
+.showroom-top-controls [class*="st-key-skip_"] button p{
+    font-size:.59rem !important;
+}
+
+/* One complete quick line stays visible; full plot lives in the expander below. */
+.movie-quick-description{
+    min-height:2.55rem !important;
+    max-height:2.55rem !important;
+    overflow:hidden !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.76rem !important;
+    line-height:1.38 !important;
+    font-weight:600 !important;
+    letter-spacing:-.006em !important;
+    margin:.12rem 0 .18rem !important;
+}
+/* Retire the old fixed plot slot now that descriptions are expandable. */
+.movie-description{
+    display:none !important;
+}
+/* Make the description expander read like a small text control, not a large panel. */
+div[data-testid="stExpander"]{
+    border:0 !important;
+    background:transparent !important;
+    margin:0 0 .14rem !important;
+    padding:0 !important;
+}
+div[data-testid="stExpander"] details{
+    border:0 !important;
+    background:transparent !important;
+}
+div[data-testid="stExpander"] summary{
+    min-height:1.35rem !important;
+    padding:0 !important;
+    margin:0 !important;
+    color:var(--muted2) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.62rem !important;
+    line-height:1.2 !important;
+    font-weight:650 !important;
+}
+div[data-testid="stExpander"] summary p{
+    margin:0 !important;
+    font-size:.62rem !important;
+    font-weight:650 !important;
+    color:var(--muted2) !important;
+}
+div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
+    padding:.38rem 0 .12rem !important;
+}
+.movie-full-description{
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.72rem !important;
+    line-height:1.48 !important;
+    font-weight:500 !important;
+}
+.movie-card-actions{
+    margin-top:.02rem !important;
+    margin-bottom:.05rem !important;
+}
+
+
+/* V5.124 — compact controls + one-line expandable plot summary */
+
+/* Use the keyed Streamlit container to reliably pull controls toward the poster. */
+[class*="st-key-showroom_controls_"]{
+    margin-top:0 !important;
+    margin-bottom:-.42rem !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.44rem !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="column"]{
+    min-width:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"],
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] > button,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] > button,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    height:1.92rem !important;
+    min-height:1.92rem !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    font-size:.60rem !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{
+    font-size:.62rem !important;
+}
+
+/* The summary sentence itself is the expander. Keep it to one line. */
+div[data-testid="stExpander"]{
+    margin:.08rem 0 .08rem !important;
+    border:0 !important;
+    background:transparent !important;
+}
+div[data-testid="stExpander"] details{
+    border:0 !important;
+    background:transparent !important;
+}
+div[data-testid="stExpander"] summary{
+    min-height:1.72rem !important;
+    padding:0 !important;
+    margin:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+}
+div[data-testid="stExpander"] summary p{
+    margin:0 !important;
+    padding:0 !important;
+    max-width:calc(100% - 1rem) !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.68rem !important;
+    line-height:1.25 !important;
+    font-weight:620 !important;
+    letter-spacing:-.004em !important;
+}
+div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
+    padding:.3rem 0 .1rem !important;
+}
+.movie-full-description{
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.70rem !important;
+    line-height:1.42 !important;
+    font-weight:500 !important;
+    letter-spacing:-.003em !important;
+    margin:0 !important;
+}
+
+/* Retire the separate quick-description block from earlier builds. */
+.movie-quick-description{
+    display:none !important;
+}
+
+/* Keep Save / Seen immediately below the collapsed summary. */
+.movie-card-actions{
+    margin-top:.04rem !important;
+    margin-bottom:.04rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3067,6 +3271,109 @@ def concise_description(text, limit=138):
         words.pop()
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
+
+def quick_card_description(movie, limit=82):
+    """Create one informative, slightly witty sentence for the collapsed card.
+
+    The line stays grounded in the movie's real overview, explains the setup,
+    and adds only a restrained genre-aware finish.
+    """
+    full = " ".join(str((movie or {}).get("why") or "").split()).strip()
+    if not full:
+        return "A strong match with enough going on to deserve a closer look."
+
+    # Start from the actual plot setup rather than a generic tag line.
+    first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:,")
+    first = first.split(";", 1)[0].strip()
+
+    # Keep enough plot information to explain the premise in one visual line.
+    target_base = max(50, limit - 22)
+    if len(first) > target_base:
+        cut = first[:target_base]
+        natural = max(cut.rfind(", "), cut.rfind(" and "), cut.rfind(" but "), cut.rfind(" while "))
+        if natural >= 34:
+            first = cut[:natural]
+        else:
+            first = cut.rsplit(" ", 1)[0]
+    first = first.rstrip(" ,;:–—-")
+
+    genre = str((movie or {}).get("genre") or "").casefold()
+    if genre in {"thriller", "mystery", "horror"}:
+        finish = "—and calm does not last."
+    elif genre == "comedy":
+        finish = "—with chaos nearby."
+    elif genre in {"sci-fi", "science fiction"}:
+        finish = "—then reality bends."
+    elif genre == "romance":
+        finish = "—timing has opinions."
+    elif genre == "documentary":
+        finish = "—with very real stakes."
+    elif genre in {"action", "adventure"}:
+        finish = "—the plan gets complicated."
+    elif genre in {"anime", "animation", "fantasy"}:
+        finish = "—normal rules need not apply."
+    else:
+        finish = "—and things get complicated."
+
+    quick = f"{first} {finish}" if first else finish.lstrip("—").capitalize()
+    if len(quick) > limit:
+        # Keep the plot premise intact; shorten the witty finish first.
+        short_finishes = {
+            "thriller": "—tension follows.",
+            "mystery": "—questions follow.",
+            "horror": "—calm does not last.",
+            "comedy": "—chaos follows.",
+            "sci-fi": "—reality bends.",
+            "science fiction": "—reality bends.",
+            "romance": "—timing matters.",
+            "documentary": "—real stakes.",
+            "action": "—the plan shifts.",
+            "adventure": "—the plan shifts.",
+            "anime": "—rules bend.",
+            "animation": "—rules bend.",
+            "fantasy": "—rules bend.",
+        }
+        finish = short_finishes.get(genre, "—pressure builds.")
+        quick = f"{first} {finish}"
+    if len(quick) > limit:
+        first_limit = max(42, limit - len(finish) - 1)
+        first = first[:first_limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
+        quick = f"{first} {finish}"
+    return quick.rstrip()
+
+
+def expanded_card_description(movie, max_chars=330):
+    """Return a short spoiler-conscious expanded overview (usually 2 sentences).
+
+    iCinema uses the catalog overview/why text and caps it before it turns into
+    a long synopsis. This avoids adding plot details beyond the supplied source.
+    """
+    full = " ".join(str((movie or {}).get("why") or "").split()).strip()
+    if not full:
+        return "iCinema does not have a longer spoiler-free overview for this title yet."
+
+    sentences = re.split(r"(?<=[.!?])\s+", full)
+    chosen = []
+    total = 0
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        projected = total + len(sentence) + (1 if chosen else 0)
+        if chosen and projected > max_chars:
+            break
+        chosen.append(sentence)
+        total = projected
+        if len(chosen) >= 2:
+            break
+
+    expanded = " ".join(chosen).strip() or full[:max_chars].rsplit(" ", 1)[0].strip()
+    if len(expanded) > max_chars:
+        expanded = expanded[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:")
+        if expanded and not expanded.endswith((".", "!", "?")):
+            expanded += "."
+    return expanded
+
 
 def concise_availability_text(text, max_providers=2):
     """Keep watch availability complete and compact instead of visually truncating it."""
@@ -3675,27 +3982,26 @@ def render_showroom_fragment(p):
             cols=st.columns(len(choices))
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
-                    st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
-                    match_col, skip_col = st.columns([2.75,1.05], gap="small")
-                    with match_col:
-                        with st.popover(f"{match}% iCinema Match", use_container_width=True):
-                            reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
-                            st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
-                            for reason in reasons:
-                                st.markdown(f'<div class="why-reason">{html.escape(reason)}</div>',unsafe_allow_html=True)
-                            if learning_result.ready:
-                                st.caption(f"Personalized with the {learning_result.model_name} learning layer and the recommendation model.")
-                            else:
-                                st.caption("Personalized by the learning model while it gathers enough interaction history to train its supervised layer.")
-                    with skip_col:
-                        st.button(
-                            "Skip",
-                            key=f"skip_{row_name}_{movie['title']}",
-                            use_container_width=True,
-                            on_click=skip_movie,
-                            args=(movie["title"], movie),
-                        )
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    with st.container(key=f"showroom_controls_{row_index}_{i}"):
+                        match_col, skip_col = st.columns([3.35,0.9], gap="small")
+                        with match_col:
+                            with st.popover(f"{match}% iCinema Match", use_container_width=True):
+                                reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
+                                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                                for reason in reasons:
+                                    st.markdown(f'<div class="why-reason">{html.escape(reason)}</div>',unsafe_allow_html=True)
+                                if learning_result.ready:
+                                    st.caption(f"Personalized with the {learning_result.model_name} learning layer and the recommendation model.")
+                                else:
+                                    st.caption("Personalized by the learning model while it gathers enough interaction history to train its supervised layer.")
+                        with skip_col:
+                            st.button(
+                                "Skip",
+                                key=f"skip_{row_name}_{movie['title']}",
+                                use_container_width=True,
+                                on_click=skip_movie,
+                                args=(movie["title"], movie),
+                            )
                     identity = identity_by_title.get(movie["title"], {}) or {}
                     display_movie = dict(movie)
                     if identity.get("display_title"):
@@ -3714,8 +4020,10 @@ def render_showroom_fragment(p):
                     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
                     availability_text = concise_availability_text(availability["text"])
                     st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
-                    short_desc = concise_description(movie["why"])
-                    st.markdown(f'<div class="movie-description">{html.escape(short_desc)}</div>',unsafe_allow_html=True)
+                    quick_desc = quick_card_description(movie)
+                    expanded_desc = expanded_card_description(movie)
+                    with st.expander(quick_desc):
+                        st.markdown(f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>', unsafe_allow_html=True)
                     st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
                     a,b=st.columns(2, gap="small")
                     with a:
