@@ -3617,6 +3617,281 @@ div[data-testid="stStatusWidget"]::after{
     margin:.08rem 0 .04rem !important;
 }
 
+
+/* V5.134 — fully uniform Showroom section rhythm */
+
+/* Every Showroom section title now uses the same class and exact measurements. */
+.showroom-row-header{
+    margin:0 !important;
+    padding:0 0 1.02rem 0 !important;
+    box-sizing:border-box !important;
+}
+.showroom-row-title{
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:2rem !important;
+    line-height:1.08 !important;
+    font-weight:760 !important;
+    letter-spacing:-.03em !important;
+    margin:0 0 .28rem !important;
+    padding:0 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.34 !important;
+}
+
+/* The whole section gets the same bottom padding after its Save/Seen row.
+   This guarantees identical Save/Seen → next-section-title distance. */
+[class*="st-key-showroom_section_"]{
+    margin:0 !important;
+    padding:0 0 1.34rem 0 !important;
+    box-sizing:border-box !important;
+}
+[class*="st-key-showroom_section_"]:last-of-type{
+    padding-bottom:.42rem !important;
+}
+
+/* Remove older per-row margin rules so they cannot override the shared rhythm. */
+.showroom-row,
+.showroom-row.first{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    transform:none !important;
+}
+
+
+/* V5.135 HOTFIX — remove oversized responsive card reservation */
+/* V5.132 used container-query width units to reserve an action baseline.
+   In Streamlit's nested layout this could become enormous. Return cards to
+   compact natural document flow instead. */
+[class*="st-key-showroom_body_"]{
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+    max-height:none !important;
+    container-type:normal !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+}
+
+/* Do not push Save/Seen to the bottom of a synthetic card height. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
+    margin-top:.04rem !important;
+    padding-top:0 !important;
+}
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions) + [data-testid="stHorizontalBlock"]{
+    margin-top:0 !important;
+}
+
+/* Expanded summaries simply grow the card naturally. */
+[class*="st-key-showroom_body_"]:has(.movie-summary-checkbox:checked){
+    min-height:0 !important;
+    height:auto !important;
+}
+
+/* Keep the intentional, uniform row-to-row rhythm from V5.134. */
+[class*="st-key-showroom_section_"]{
+    margin:0 !important;
+    padding:0 0 1.10rem 0 !important;
+    box-sizing:border-box !important;
+}
+
+
+/* V5.136 — Showroom layout recovery
+   Final override layer to remove accumulated spacing conflicts. */
+
+/* SECTION RHYTHM */
+[class*="st-key-showroom_section_"]{
+    margin:0 !important;
+    padding:0 0 1.45rem 0 !important;
+    min-height:0 !important;
+    height:auto !important;
+    box-sizing:border-box !important;
+}
+.showroom-row-header{
+    margin:0 !important;
+    padding:0 0 .82rem 0 !important;
+}
+.showroom-row-title{
+    margin:0 0 .26rem 0 !important;
+    padding:0 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* TOP CONTROLS */
+[class*="st-key-showroom_controls_"]{
+    margin:0 0 .42rem 0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    height:auto !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.48rem !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="column"]{
+    min-width:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    margin:0 !important;
+    padding:.12rem .32rem !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    font-size:.60rem !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    text-align:center !important;
+    justify-content:center !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{
+    font-size:.62rem !important;
+    line-height:1 !important;
+    text-align:center !important;
+}
+
+/* MOVIE BODY: never reserve synthetic viewport/container-query height. */
+[class*="st-key-showroom_body_"]{
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+    max-height:none !important;
+    container-type:normal !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* POSTER */
+[class*="st-key-showroom_body_"] .poster{
+    margin:0 !important;
+}
+
+/* TITLE/YEAR: compact fixed slot, enough for a two-line title + year. */
+[class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
+    display:block !important;
+    height:4.25rem !important;
+    min-height:4.25rem !important;
+    max-height:4.25rem !important;
+    margin:.52rem 0 .12rem !important;
+    padding:0 .04rem !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-title{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    height:2.72rem !important;
+    min-height:2.72rem !important;
+    max-height:2.72rem !important;
+    overflow:hidden !important;
+    margin:0 !important;
+    line-height:1.16 !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-year{
+    display:block !important;
+    height:.92rem !important;
+    min-height:.92rem !important;
+    max-height:.92rem !important;
+    margin:.14rem 0 0 !important;
+    padding:0 !important;
+    line-height:.92rem !important;
+}
+
+/* RATINGS: own slot, no negative margins. */
+[class*="st-key-showroom_body_"] .ratings{
+    display:block !important;
+    height:1.35rem !important;
+    min-height:1.35rem !important;
+    max-height:1.35rem !important;
+    margin:.18rem 0 .12rem !important;
+    padding:0 !important;
+    line-height:1.35rem !important;
+    overflow:hidden !important;
+}
+
+/* STREAMING: fixed compact 3-line slot. */
+[class*="st-key-showroom_body_"] .watch-availability{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:3 !important;
+    height:3.35rem !important;
+    min-height:3.35rem !important;
+    max-height:3.35rem !important;
+    margin:.04rem 0 .18rem !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    line-height:1.32 !important;
+}
+
+/* SUMMARY: one clean visible line; expanded copy grows below it. */
+[class*="st-key-showroom_body_"] .movie-summary-toggle{
+    display:block !important;
+    width:100% !important;
+    min-height:1.5rem !important;
+    height:auto !important;
+    margin:0 0 .12rem !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-label{
+    display:block !important;
+    width:100% !important;
+    height:1.5rem !important;
+    min-height:1.5rem !important;
+    max-height:1.5rem !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+    text-overflow:clip !important;
+    line-height:1.5rem !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
+    margin:.34rem 0 .08rem !important;
+    padding:.36rem 0 .08rem !important;
+}
+
+/* ACTIONS: natural flow, immediately after summary. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
+    margin:.06rem 0 0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] .movie-card-actions{
+    margin:0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] [class*="st-key-save_"],
+[class*="st-key-showroom_body_"] [class*="st-key-seen_"]{
+    margin:0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] [class*="st-key-save_"] button,
+[class*="st-key-showroom_body_"] [class*="st-key-seen_"] button{
+    height:1.82rem !important;
+    min-height:1.82rem !important;
+    margin:0 !important;
+}
+
+/* Attribution belongs once at the bottom of Showroom. */
+.watch-attribution{
+    display:block !important;
+    margin:.38rem 0 .14rem !important;
+    padding:0 !important;
+    font-size:.49rem !important;
+    line-height:1.34 !important;
+    color:rgba(169,173,183,.45) !important;
+    max-width:92% !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4740,113 +5015,107 @@ def render_showroom_fragment(p):
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
-            row_notes={
-                "Top Matches for You":"Best overall fits based on your full preference profile",
-                "Critically Acclaimed":"Highly rated films that still match your taste",
-                "Hidden Gems":"Strong matches that are less obvious or widely promoted",
-                "Something Different":"A little outside your usual taste, but still likely to click",
-            }
-            if row_index == 0:
+            row_shell = st.container(key=f"showroom_section_{row_index}")
+            with row_shell:
+                row_notes={
+                    "Top Matches for You":"Best overall fits based on your full preference profile",
+                    "Critically Acclaimed":"Highly rated films that still match your taste",
+                    "Hidden Gems":"Strong matches that are less obvious or widely promoted",
+                    "Something Different":"A little outside your usual taste, but still likely to click",
+                }
                 st.markdown(
                     f'<div class="{row_class} showroom-row-header">'
-                    f'<div class="tab-primary-heading">{row_name}</div>'
+                    f'<div class="showroom-row-title">{row_name}</div>'
                     f'<div class="row-model-note">{row_notes[row_name]}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-            else:
-                st.markdown(
-                    f'<div class="{row_class} showroom-row-header"><h3>{row_name}</h3>'
-                    f'<div class="row-model-note">{row_notes[row_name]}</div></div>',
-                    unsafe_allow_html=True,
-                )
-            if not choices:
-                st.caption("Refreshing personalized matches…")
-                continue
-            cols=st.columns(len(choices))
-            for i,(match,movie) in enumerate(choices):
-                with cols[i]:
-                    with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                        match_col, skip_col = st.columns([3.35,0.90], gap="small")
-                        with match_col:
-                            with st.popover(f"{match}% iCinema Match", use_container_width=True):
-                                context = recommendation_context.get(movie["title"], {})
-                                reasons = recommendation_explanation(
-                                    movie,p,st.session_state.adventure,st.session_state.review_priority,
-                                    semantic_similarity=context.get("semantic_similarity"),
-                                    availability_score=context.get("availability_alignment",0.5),
-                                    components=context,
-                                )
-                                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
-                                for reason in reasons:
+                if not choices:
+                    st.caption("Refreshing personalized matches…")
+                    continue
+                cols=st.columns(len(choices))
+                for i,(match,movie) in enumerate(choices):
+                    with cols[i]:
+                        with st.container(key=f"showroom_controls_{row_index}_{i}"):
+                            match_col, skip_col = st.columns([3.35,0.90], gap="small")
+                            with match_col:
+                                with st.popover(f"{match}% iCinema Match", use_container_width=True):
+                                    context = recommendation_context.get(movie["title"], {})
+                                    reasons = recommendation_explanation(
+                                        movie,p,st.session_state.adventure,st.session_state.review_priority,
+                                        semantic_similarity=context.get("semantic_similarity"),
+                                        availability_score=context.get("availability_alignment",0.5),
+                                        components=context,
+                                    )
+                                    st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                                    for reason in reasons:
+                                        st.markdown(
+                                            f'<div class="match-reason">'
+                                            f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
+                                            f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
+                                            f'</div>',
+                                            unsafe_allow_html=True,
+                                        )
                                     st.markdown(
-                                        f'<div class="match-reason">'
-                                        f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
-                                        f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
-                                        f'</div>',
+                                        '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
                                         unsafe_allow_html=True,
                                     )
-                                st.markdown(
-                                    '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
-                                    unsafe_allow_html=True,
+                            with skip_col:
+                                st.button(
+                                    "Skip",
+                                    key=f"skip_{row_name}_{movie['title']}",
+                                    use_container_width=True,
+                                    on_click=skip_movie,
+                                    args=(movie["title"], movie),
                                 )
-                        with skip_col:
-                            st.button(
-                                "Skip",
-                                key=f"skip_{row_name}_{movie['title']}",
-                                use_container_width=True,
-                                on_click=skip_movie,
-                                args=(movie["title"], movie),
+                        with st.container(key=f"showroom_body_{row_index}_{i}"):
+                            identity = identity_by_title.get(movie["title"], {}) or {}
+                            display_movie = dict(movie)
+                            if identity.get("display_title"):
+                                display_movie["title"] = identity["display_title"]
+                            if identity.get("year"):
+                                display_movie["year"] = identity["year"]
+                            movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
+                            live_rating = live_ratings_by_title.get(movie["title"], {})
+                            imdb_value = live_rating.get("imdb")
+                            rt_value = live_rating.get("rt")
+                            imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
+                            rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+                            rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
+                            st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
+                            availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
+                            availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
+                            availability_text = concise_availability_text(availability["text"])
+                            st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
+                            quick_desc = quick_card_description(movie)
+                            expanded_desc = expanded_card_description(movie)
+                            summary_id = f"movie-summary-{row_index}-{i}"
+                            st.markdown(
+                                f'<div class="movie-summary-toggle">'
+                                f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
+                                f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
+                                f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
                             )
-                    with st.container(key=f"showroom_body_{row_index}_{i}"):
-                        identity = identity_by_title.get(movie["title"], {}) or {}
-                        display_movie = dict(movie)
-                        if identity.get("display_title"):
-                            display_movie["title"] = identity["display_title"]
-                        if identity.get("year"):
-                            display_movie["year"] = identity["year"]
-                        movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
-                        live_rating = live_ratings_by_title.get(movie["title"], {})
-                        imdb_value = live_rating.get("imdb")
-                        rt_value = live_rating.get("rt")
-                        imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
-                        rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
-                        rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
-                        st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
-                        availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
-                        availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
-                        availability_text = concise_availability_text(availability["text"])
-                        st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
-                        quick_desc = quick_card_description(movie)
-                        expanded_desc = expanded_card_description(movie)
-                        summary_id = f"movie-summary-{row_index}-{i}"
-                        st.markdown(
-                            f'<div class="movie-summary-toggle">'
-                            f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
-                            f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
-                            f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
-                        a,b=st.columns(2, gap="small")
-                        with a:
-                            st.button(
-                                "Save",
-                                key=f"save_{row_name}_{movie['title']}",
-                                use_container_width=True,
-                                on_click=save_movie,
-                                args=(movie["title"], movie),
-                            )
-                        with b:
-                            st.button(
-                                "Seen",
-                                key=f"seen_{row_name}_{movie['title']}",
-                                use_container_width=True,
-                                on_click=mark_movie_seen,
-                                args=(movie["title"], movie),
-                            )
-                    st.markdown('</div>', unsafe_allow_html=True)
+                            st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
+                            a,b=st.columns(2, gap="small")
+                            with a:
+                                st.button(
+                                    "Save",
+                                    key=f"save_{row_name}_{movie['title']}",
+                                    use_container_width=True,
+                                    on_click=save_movie,
+                                    args=(movie["title"], movie),
+                                )
+                            with b:
+                                st.button(
+                                    "Seen",
+                                    key=f"seen_{row_name}_{movie['title']}",
+                                    use_container_width=True,
+                                    on_click=mark_movie_seen,
+                                    args=(movie["title"], movie),
+                                )
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
