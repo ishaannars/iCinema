@@ -1,6 +1,7 @@
 
 import html
 import json
+import re
 import streamlit as st
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
