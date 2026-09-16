@@ -4253,10 +4253,10 @@ div[data-testid="stLoadingSpinner"],
     padding:0 !important;
 }
 
-/* Profile title now flows directly into model status/content. */
+/* V5.157 — slightly more breathing room below the Cinema Profile title. */
 .profile-heading,
 .profile-heading-aligned{
-    margin-bottom:.72rem !important;
+    margin-bottom:.94rem !important;
 }
 .profile-wrap .model-status-line{
     margin-top:0 !important;
