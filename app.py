@@ -3998,6 +3998,104 @@ div[data-testid="stStatusWidget"]{
     column-gap:.66rem !important;
 }
 
+
+/* V5.150 — removable Step 1 selections */
+.selection-area-heading{
+    margin-top:.78rem !important;
+}
+.selection-heading{
+    margin-bottom:.5rem !important;
+}
+
+[class*="st-key-selection_card_"]{
+    position:relative !important;
+    min-height:4.1rem !important;
+    margin:0 0 .5rem !important;
+    padding:.56rem .72rem !important;
+    border:1px solid rgba(169,173,183,.22) !important;
+    background:rgba(243,240,234,.04) !important;
+    border-radius:13px !important;
+    box-sizing:border-box !important;
+    transition:border-color .16s ease, background .16s ease !important;
+}
+[class*="st-key-selection_card_"]:hover{
+    border-color:rgba(169,173,183,.38) !important;
+    background:rgba(243,240,234,.055) !important;
+}
+[class*="st-key-selection_card_"] .selection-card-copy{
+    padding-right:1.45rem !important;
+}
+[class*="st-key-selection_card_"] .selection-title{
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.91rem !important;
+    line-height:1.26 !important;
+    font-weight:800 !important;
+    letter-spacing:-.018em !important;
+    margin:0 0 .12rem !important;
+}
+[class*="st-key-selection_card_"] .selection-state{
+    color:var(--muted2) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.64rem !important;
+    line-height:1 !important;
+    font-weight:740 !important;
+    text-transform:uppercase !important;
+    letter-spacing:.08em !important;
+}
+
+/* The remove control lives in the top-right and becomes prominent on hover. */
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"]{
+    position:absolute !important;
+    top:.28rem !important;
+    right:.3rem !important;
+    width:1.36rem !important;
+    height:1.36rem !important;
+    margin:0 !important;
+    z-index:3 !important;
+    opacity:.28 !important;
+    transition:opacity .16s ease, transform .16s ease !important;
+}
+[class*="st-key-selection_card_"]:hover [class*="st-key-remove_selection_"]{
+    opacity:1 !important;
+}
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"] button{
+    width:1.36rem !important;
+    min-width:1.36rem !important;
+    max-width:1.36rem !important;
+    height:1.36rem !important;
+    min-height:1.36rem !important;
+    max-height:1.36rem !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:999px !important;
+    background:transparent !important;
+    color:var(--muted) !important;
+    box-shadow:none !important;
+    display:grid !important;
+    place-items:center !important;
+}
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"] button:hover{
+    color:var(--ivory) !important;
+    background:rgba(255,255,255,.06) !important;
+}
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"] button p,
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"] button span{
+    margin:0 !important;
+    padding:0 !important;
+    font-size:.9rem !important;
+    line-height:1 !important;
+    font-weight:500 !important;
+    text-align:center !important;
+}
+
+@media(max-width:800px){
+    [class*="st-key-selection_card_"] [class*="st-key-remove_selection_"]{
+        opacity:.72 !important;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4236,6 +4334,16 @@ def add_search_choice(kind):
         st.session_state.favorites.discard(title)
     st.session_state.search_selected_movie = None
     st.session_state.search_selected_title = None
+    queue_profile_save()
+
+def remove_step1_selection(title):
+    """Remove a Like/Favorite signal from Step 1 and persist the updated profile."""
+    st.session_state.likes.discard(title)
+    st.session_state.favorites.discard(title)
+    st.session_state.selection_order = [
+        item for item in st.session_state.get("selection_order", [])
+        if item != title
+    ]
     queue_profile_save()
 
 def go(screen):
@@ -4757,22 +4865,33 @@ def render_shelf_fragment():
     chosen_count = len(chosen_titles)
 
     if chosen_titles:
-        chips = []
-        for title in chosen_titles:
-            state = "Favorite" if title in st.session_state.favorites else "Liked"
-            chips.append(
-                f'<div class="selection-chip">'
-                f'<div class="selection-title">{title}</div>'
-                f'<div class="selection-state">{state}</div>'
-                f'</div>'
-            )
         st.markdown(
-            '<div class="selection-area">'
+            '<div class="selection-area-heading">'
             '<div class="selection-heading">Your selections</div>'
-            '<div class="selection-grid">' + "".join(chips) + '</div>'
             '</div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
+
+        # Keep the familiar compact chip layout while making every item removable.
+        selection_cols = st.columns(min(4, len(chosen_titles)), gap="small")
+        for idx, title in enumerate(chosen_titles):
+            state = "Favorite" if title in st.session_state.favorites else "Liked"
+            with selection_cols[idx % len(selection_cols)]:
+                with st.container(key=f"selection_card_{idx}"):
+                    st.markdown(
+                        f'<div class="selection-card-copy">'
+                        f'<div class="selection-title">{html.escape(title)}</div>'
+                        f'<div class="selection-state">{html.escape(state)}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.button(
+                        "×",
+                        key=f"remove_selection_{idx}",
+                        help=f"Remove {title}",
+                        on_click=remove_step1_selection,
+                        args=(title,),
+                    )
 
     st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
     st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", on_click=go_from_fragment, args=("taste",))
