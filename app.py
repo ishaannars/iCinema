@@ -4262,6 +4262,22 @@ div[data-testid="stLoadingSpinner"],
     margin-top:0 !important;
 }
 
+
+/* V5.155 — uniform learning-status text color */
+.model-status-line,
+.model-status-primary,
+.model-status-secondary,
+.model-status-separator{
+    color:var(--muted) !important;
+}
+.model-status-primary{
+    font-weight:680 !important;
+}
+.model-status-dot{
+    color:var(--ai) !important;
+    background:var(--ai) !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
