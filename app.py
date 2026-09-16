@@ -3520,111 +3520,12 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 
-/* V5.132 — quiet attribution + aligned Showroom action baseline */
+/* V5.139 — clean Showroom rebuild from stable V5.131 */
 
-/* Keep required data/API attribution present but visually secondary. */
-.watch-attribution{
-    color:rgba(169,173,183,.52) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.52rem !important;
-    line-height:1.35 !important;
-    font-weight:450 !important;
-    letter-spacing:.002em !important;
-    margin-top:.72rem !important;
-    margin-bottom:.08rem !important;
-    max-width:92% !important;
-}
-
-/* Poster-through-actions body uses one responsive minimum height.
-   cqw ties the baseline to the card width, so it remains compact at different
-   desktop widths while keeping all four collapsed action rows aligned. */
-[class*="st-key-showroom_body_"]{
-    display:flex !important;
-    flex-direction:column !important;
-    container-type:inline-size !important;
-    min-height:calc(150cqw + 15.2rem) !important;
-    margin:0 !important;
-    padding:0 !important;
-    box-sizing:border-box !important;
-}
-
-/* Streamlit places the action marker and button columns in element containers.
-   Push that action element to the bottom of the movie body. */
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
-    margin-top:auto !important;
-    padding-top:.12rem !important;
-}
-
-/* Keep the action columns immediately after their marker and compact. */
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions) + [data-testid="stHorizontalBlock"]{
-    margin-top:0 !important;
-}
-
-/* Expanded plot copy is allowed to grow its own card naturally instead of
-   clipping or overlapping the anchored buttons. */
-[class*="st-key-showroom_body_"]:has(.movie-summary-checkbox:checked){
-    min-height:unset !important;
-}
-
-/* Narrow/mobile layouts should flow naturally rather than reserving desktop height. */
-@media(max-width:800px){
-    [class*="st-key-showroom_body_"]{
-        min-height:0 !important;
-    }
-    [class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
-        margin-top:.08rem !important;
-    }
-}
-
-
-/* V5.133 — iCinema Match model note + true one-line movie summary */
-
-.match-model-note{
-    color:var(--muted2) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.62rem !important;
-    line-height:1.36 !important;
-    font-weight:500 !important;
-    letter-spacing:-.002em !important;
-    margin:.42rem 0 0 !important;
-    padding:0 !important;
-}
-
-/* The clickable witty summary is now deliberately one line.
-   The generator is capped to a shorter complete sentence so we do not rely on
-   clipping or an ellipsis to make it fit. */
-.movie-summary-label{
-    display:block !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-height:1.46rem !important;
-    max-height:1.46rem !important;
-    overflow:hidden !important;
-    text-overflow:clip !important;
-    white-space:nowrap !important;
-    cursor:pointer !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.57rem !important;
-    line-height:1.46rem !important;
-    font-weight:620 !important;
-    letter-spacing:-.006em !important;
-    margin:0 !important;
-    padding:0 !important;
-    box-sizing:border-box !important;
-}
-.movie-summary-toggle{
-    margin:.08rem 0 .04rem !important;
-}
-
-
-/* V5.134 — fully uniform Showroom section rhythm */
-
-/* Every Showroom section title now uses the same class and exact measurements. */
+/* Uniform section heading rhythm. */
 .showroom-row-header{
     margin:0 !important;
-    padding:0 0 1.02rem 0 !important;
-    box-sizing:border-box !important;
+    padding:0 0 .86rem 0 !important;
 }
 .showroom-row-title{
     color:var(--ivory) !important;
@@ -3633,89 +3534,6 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1.08 !important;
     font-weight:760 !important;
     letter-spacing:-.03em !important;
-    margin:0 0 .28rem !important;
-    padding:0 !important;
-}
-.showroom-row-header .row-model-note{
-    margin:0 !important;
-    padding:0 !important;
-    line-height:1.34 !important;
-}
-
-/* The whole section gets the same bottom padding after its Save/Seen row.
-   This guarantees identical Save/Seen → next-section-title distance. */
-[class*="st-key-showroom_section_"]{
-    margin:0 !important;
-    padding:0 0 1.34rem 0 !important;
-    box-sizing:border-box !important;
-}
-[class*="st-key-showroom_section_"]:last-of-type{
-    padding-bottom:.42rem !important;
-}
-
-/* Remove older per-row margin rules so they cannot override the shared rhythm. */
-.showroom-row,
-.showroom-row.first{
-    margin-top:0 !important;
-    margin-bottom:0 !important;
-    transform:none !important;
-}
-
-
-/* V5.135 HOTFIX — remove oversized responsive card reservation */
-/* V5.132 used container-query width units to reserve an action baseline.
-   In Streamlit's nested layout this could become enormous. Return cards to
-   compact natural document flow instead. */
-[class*="st-key-showroom_body_"]{
-    display:block !important;
-    min-height:0 !important;
-    height:auto !important;
-    max-height:none !important;
-    container-type:normal !important;
-    margin:0 !important;
-    padding:0 !important;
-    box-sizing:border-box !important;
-}
-
-/* Do not push Save/Seen to the bottom of a synthetic card height. */
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
-    margin-top:.04rem !important;
-    padding-top:0 !important;
-}
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions) + [data-testid="stHorizontalBlock"]{
-    margin-top:0 !important;
-}
-
-/* Expanded summaries simply grow the card naturally. */
-[class*="st-key-showroom_body_"]:has(.movie-summary-checkbox:checked){
-    min-height:0 !important;
-    height:auto !important;
-}
-
-/* Keep the intentional, uniform row-to-row rhythm from V5.134. */
-[class*="st-key-showroom_section_"]{
-    margin:0 !important;
-    padding:0 0 1.10rem 0 !important;
-    box-sizing:border-box !important;
-}
-
-
-/* V5.136 — Showroom layout recovery
-   Final override layer to remove accumulated spacing conflicts. */
-
-/* SECTION RHYTHM */
-[class*="st-key-showroom_section_"]{
-    margin:0 !important;
-    padding:0 0 1.45rem 0 !important;
-    min-height:0 !important;
-    height:auto !important;
-    box-sizing:border-box !important;
-}
-.showroom-row-header{
-    margin:0 !important;
-    padding:0 0 .82rem 0 !important;
-}
-.showroom-row-title{
     margin:0 0 .26rem 0 !important;
     padding:0 !important;
 }
@@ -3723,351 +3541,43 @@ div[data-testid="stStatusWidget"]::after{
     margin:0 !important;
     padding:0 !important;
 }
-
-/* TOP CONTROLS */
-[class*="st-key-showroom_controls_"]{
-    margin:0 0 .42rem 0 !important;
-    padding:0 !important;
-    min-height:0 !important;
-    height:auto !important;
-}
-[class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{
-    align-items:center !important;
-    column-gap:.48rem !important;
-}
-[class*="st-key-showroom_controls_"] [data-testid="column"]{
-    min-width:0 !important;
-}
-[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button,
-[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
-    min-height:1.95rem !important;
-    height:1.95rem !important;
+.showroom-row,
+.showroom-row.first{
     margin:0 !important;
-    padding:.12rem .32rem !important;
+    transform:none !important;
 }
-[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
-[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
-    font-size:.60rem !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-    text-align:center !important;
-    justify-content:center !important;
-}
-[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{
+
+/* Match explanation note uses the product font system. */
+.match-model-note{
+    color:var(--muted2) !important;
+    font-family:var(--ui-font) !important;
     font-size:.62rem !important;
-    line-height:1 !important;
-    text-align:center !important;
+    line-height:1.36 !important;
+    font-weight:500 !important;
+    margin:.42rem 0 0 !important;
 }
 
-/* MOVIE BODY: never reserve synthetic viewport/container-query height. */
+/* Critical reset: normal document flow for the full Showroom card. */
 [class*="st-key-showroom_body_"]{
     display:block !important;
-    min-height:0 !important;
+    position:static !important;
     height:auto !important;
+    min-height:0 !important;
     max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
     container-type:normal !important;
-    margin:0 !important;
-    padding:0 !important;
 }
 
-/* POSTER */
-[class*="st-key-showroom_body_"] .poster{
-    margin:0 !important;
-}
-
-/* TITLE/YEAR: compact fixed slot, enough for a two-line title + year. */
+/* Title + year use content-aware height. */
 [class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
     display:block !important;
-    height:4.25rem !important;
-    min-height:4.25rem !important;
-    max-height:4.25rem !important;
-    margin:.52rem 0 .12rem !important;
-    padding:0 .04rem !important;
-    overflow:hidden !important;
-    box-sizing:border-box !important;
-}
-[class*="st-key-showroom_body_"] .poster-caption-title{
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:2 !important;
-    height:2.72rem !important;
-    min-height:2.72rem !important;
-    max-height:2.72rem !important;
-    overflow:hidden !important;
-    margin:0 !important;
-    line-height:1.16 !important;
-}
-[class*="st-key-showroom_body_"] .poster-caption-year{
-    display:block !important;
-    height:.92rem !important;
-    min-height:.92rem !important;
-    max-height:.92rem !important;
-    margin:.14rem 0 0 !important;
-    padding:0 !important;
-    line-height:.92rem !important;
-}
-
-/* RATINGS: own slot, no negative margins. */
-[class*="st-key-showroom_body_"] .ratings{
-    display:block !important;
-    height:1.35rem !important;
-    min-height:1.35rem !important;
-    max-height:1.35rem !important;
-    margin:.18rem 0 .12rem !important;
-    padding:0 !important;
-    line-height:1.35rem !important;
-    overflow:hidden !important;
-}
-
-/* STREAMING: fixed compact 3-line slot. */
-[class*="st-key-showroom_body_"] .watch-availability{
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:3 !important;
-    height:3.35rem !important;
-    min-height:3.35rem !important;
-    max-height:3.35rem !important;
-    margin:.04rem 0 .18rem !important;
-    padding:0 !important;
-    overflow:hidden !important;
-    line-height:1.32 !important;
-}
-
-/* SUMMARY: one clean visible line; expanded copy grows below it. */
-[class*="st-key-showroom_body_"] .movie-summary-toggle{
-    display:block !important;
-    width:100% !important;
-    min-height:1.5rem !important;
-    height:auto !important;
-    margin:0 0 .12rem !important;
-    padding:0 !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-label{
-    display:block !important;
-    width:100% !important;
-    height:1.5rem !important;
-    min-height:1.5rem !important;
-    max-height:1.5rem !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:hidden !important;
-    white-space:nowrap !important;
-    text-overflow:clip !important;
-    line-height:1.5rem !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
-    margin:.34rem 0 .08rem !important;
-    padding:.36rem 0 .08rem !important;
-}
-
-/* ACTIONS: natural flow, immediately after summary. */
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
-    margin:.06rem 0 0 !important;
-    padding:0 !important;
-}
-[class*="st-key-showroom_body_"] .movie-card-actions{
-    margin:0 !important;
-    padding:0 !important;
-}
-[class*="st-key-showroom_body_"] [class*="st-key-save_"],
-[class*="st-key-showroom_body_"] [class*="st-key-seen_"]{
-    margin:0 !important;
-    padding:0 !important;
-}
-[class*="st-key-showroom_body_"] [class*="st-key-save_"] button,
-[class*="st-key-showroom_body_"] [class*="st-key-seen_"] button{
-    height:1.82rem !important;
-    min-height:1.82rem !important;
-    margin:0 !important;
-}
-
-/* Attribution belongs once at the bottom of Showroom. */
-.watch-attribution{
-    display:block !important;
-    margin:.38rem 0 .14rem !important;
-    padding:0 !important;
-    font-size:.49rem !important;
-    line-height:1.34 !important;
-    color:rgba(169,173,183,.45) !important;
-    max-width:92% !important;
-}
-
-
-/* V5.137 — structural Showroom recovery */
-
-/* Movie body is ordinary natural flow. */
-[class*="st-key-showroom_body_"]{
-    display:block !important;
-    min-height:0 !important;
-    height:auto !important;
-    max-height:none !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:visible !important;
-}
-
-/* Poster caption is a self-contained title/year stack. */
-[class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
-    display:block !important;
-    position:relative !important;
-    height:auto !important;
-    min-height:4.05rem !important;
-    max-height:none !important;
-    margin:.52rem 0 .28rem !important;
-    padding:0 !important;
-    overflow:visible !important;
-}
-[class*="st-key-showroom_body_"] .poster-caption-title{
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:2 !important;
-    position:relative !important;
-    height:auto !important;
-    min-height:2.34rem !important;
-    max-height:2.34rem !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:hidden !important;
-    line-height:1.17 !important;
-}
-[class*="st-key-showroom_body_"] .poster-caption-year{
-    display:block !important;
-    position:relative !important;
-    height:auto !important;
-    min-height:1rem !important;
-    max-height:none !important;
-    margin:.24rem 0 0 !important;
-    padding:0 !important;
-    line-height:1 !important;
-}
-
-/* Ratings always get their own row below title/year. */
-[class*="st-key-showroom_body_"] .ratings{
-    display:block !important;
-    position:relative !important;
-    clear:both !important;
-    height:auto !important;
-    min-height:1.15rem !important;
-    max-height:none !important;
-    margin:.18rem 0 .26rem !important;
-    padding:0 !important;
-    line-height:1.2 !important;
-    overflow:visible !important;
-}
-
-/* Streaming gets its own compact block and can wrap without colliding. */
-[class*="st-key-showroom_body_"] .watch-availability{
-    display:block !important;
-    position:relative !important;
-    clear:both !important;
-    height:auto !important;
-    min-height:2.55rem !important;
-    max-height:none !important;
-    margin:0 0 .28rem !important;
-    padding:0 !important;
-    line-height:1.32 !important;
-    overflow:visible !important;
-    -webkit-line-clamp:unset !important;
-}
-
-/* Witty line is separate from streaming and always visible. */
-[class*="st-key-showroom_body_"] .movie-summary-toggle{
-    display:block !important;
-    position:relative !important;
-    clear:both !important;
-    width:100% !important;
-    height:auto !important;
-    min-height:1.42rem !important;
-    margin:0 0 .16rem !important;
-    padding:0 !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-label{
-    display:block !important;
-    width:100% !important;
-    height:auto !important;
-    min-height:1.42rem !important;
-    max-height:none !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:hidden !important;
-    white-space:nowrap !important;
-    text-overflow:clip !important;
-    line-height:1.42rem !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
-    display:none !important;
-    position:relative !important;
-    clear:both !important;
-    margin:.32rem 0 .12rem !important;
-    padding:.38rem 0 .06rem !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-checkbox:checked ~ .movie-full-description{
-    display:block !important;
-}
-
-/* Save / Seen now live in a real Streamlit container. */
-[class*="st-key-movie_actions_"]{
-    display:block !important;
-    position:relative !important;
-    clear:both !important;
-    width:100% !important;
-    height:auto !important;
-    min-height:0 !important;
-    margin:.08rem 0 .02rem !important;
-    padding:0 !important;
-}
-[class*="st-key-movie_actions_"] [data-testid="stHorizontalBlock"]{
-    margin:0 !important;
-    padding:0 !important;
-    align-items:center !important;
-}
-[class*="st-key-movie_actions_"] button{
-    min-height:1.82rem !important;
-    height:1.82rem !important;
-    margin:0 !important;
-    padding:.12rem .26rem !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-}
-[class*="st-key-movie_actions_"] button p{
-    margin:0 !important;
-    line-height:1 !important;
-    text-align:center !important;
-}
-
-/* Neutralize legacy marker-based action positioning entirely. */
-.movie-card-actions{
-    display:none !important;
-}
-
-/* Keep row spacing compact and deterministic. */
-[class*="st-key-showroom_section_"]{
-    min-height:0 !important;
-    height:auto !important;
-    margin:0 !important;
-    padding:0 0 1.35rem !important;
-}
-
-
-/* V5.138 — content-aware metadata stack; no overlapping blocks */
-
-/* Let Streamlit's element wrappers own vertical flow. */
-[class*="st-key-showroom_body_"]{
-    display:block !important;
+    position:static !important;
     height:auto !important;
     min-height:0 !important;
     max-height:none !important;
-    overflow:visible !important;
-}
-
-/* Poster caption grows naturally with a one- or two-line title. */
-[class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
-    display:block !important;
-    height:auto !important;
-    min-height:0 !important;
-    max-height:none !important;
-    margin:.52rem 0 0 !important;
+    margin:.52rem 0 .34rem !important;
     padding:0 !important;
     overflow:visible !important;
 }
@@ -4085,72 +3595,48 @@ div[data-testid="stStatusWidget"]::after{
 }
 [class*="st-key-showroom_body_"] .poster-caption-year{
     display:block !important;
+    position:static !important;
     height:auto !important;
     min-height:0 !important;
     max-height:none !important;
-    margin:.16rem 0 0 !important;
+    margin:.17rem 0 0 !important;
     padding:0 !important;
     line-height:1.05 !important;
 }
 
-/* Explicitly space the Streamlit wrapper containing title/year. */
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.poster-caption){
-    margin:0 0 .34rem !important;
-    padding:0 !important;
-    height:auto !important;
-    min-height:0 !important;
-}
-
-/* Ratings are a separate block in normal flow. */
+/* Each metadata block is ordinary flow with explicit bottom gap. */
 [class*="st-key-showroom_body_"] .ratings{
     display:block !important;
     position:static !important;
-    clear:none !important;
     height:auto !important;
     min-height:0 !important;
     max-height:none !important;
-    margin:0 !important;
+    margin:0 0 .30rem !important;
     padding:0 !important;
-    line-height:1.24 !important;
+    line-height:1.22 !important;
     overflow:visible !important;
 }
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.ratings){
-    margin:0 0 .34rem !important;
-    padding:0 !important;
-    height:auto !important;
-    min-height:0 !important;
-}
-
-/* Streaming follows ratings naturally and may wrap as needed. */
 [class*="st-key-showroom_body_"] .watch-availability{
     display:block !important;
     position:static !important;
-    clear:none !important;
     height:auto !important;
     min-height:0 !important;
     max-height:none !important;
-    margin:0 !important;
+    margin:0 0 .32rem !important;
     padding:0 !important;
     line-height:1.32 !important;
     overflow:visible !important;
     -webkit-line-clamp:unset !important;
 }
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.watch-availability){
-    margin:0 0 .38rem !important;
-    padding:0 !important;
-    height:auto !important;
-    min-height:0 !important;
-}
 
-/* Witty summary gets its own independent block. */
+/* Clickable summary: one line collapsed, normal-flow expanded copy. */
 [class*="st-key-showroom_body_"] .movie-summary-toggle{
     display:block !important;
     position:static !important;
-    clear:none !important;
     width:100% !important;
     height:auto !important;
     min-height:0 !important;
-    margin:0 !important;
+    margin:0 0 .24rem !important;
     padding:0 !important;
 }
 [class*="st-key-showroom_body_"] .movie-summary-label{
@@ -4161,36 +3647,43 @@ div[data-testid="stStatusWidget"]::after{
     max-height:none !important;
     margin:0 !important;
     padding:0 !important;
-    overflow:visible !important;
+    overflow:hidden !important;
     white-space:nowrap !important;
     text-overflow:clip !important;
-    font-size:.54rem !important;
+    font-size:.56rem !important;
     line-height:1.35 !important;
 }
-[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-summary-toggle){
-    margin:0 0 .28rem !important;
-    padding:0 !important;
-    height:auto !important;
-    min-height:0 !important;
-}
-
-/* Expanded description has normal vertical flow and cannot cover actions. */
 [class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
     position:static !important;
-    clear:none !important;
-    margin:.34rem 0 .04rem !important;
-    padding:.34rem 0 .04rem !important;
+    margin:.34rem 0 .06rem !important;
+    padding:.36rem 0 .04rem !important;
     line-height:1.42 !important;
 }
 
-/* Real Save/Seen container stays beneath metadata. */
+/* Save/Seen are normal flow. No auto-bottom alignment or artificial card height. */
 [class*="st-key-movie_actions_"]{
+    display:block !important;
     position:static !important;
-    clear:none !important;
     height:auto !important;
     min-height:0 !important;
     margin:.02rem 0 0 !important;
     padding:0 !important;
+}
+[class*="st-key-movie_actions_"] button{
+    height:1.82rem !important;
+    min-height:1.82rem !important;
+    margin:0 !important;
+}
+
+/* Required attribution stays quiet. */
+.watch-attribution{
+    color:rgba(169,173,183,.45) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.49rem !important;
+    line-height:1.34 !important;
+    font-weight:450 !important;
+    margin:.55rem 0 .10rem !important;
+    max-width:92% !important;
 }
 
 </style>
@@ -4619,59 +4112,30 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=56):
-    """Compact, informative, lightly witty summary designed to fit one card line."""
+def quick_card_description(movie, limit=60):
+    """Short, informative, lightly witty sentence intended for one card line."""
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
     genre = str((movie or {}).get("genre") or "").casefold()
-
     if not full:
         return "A strong setup, with trouble waiting just off-screen."
 
     first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
-
     endings = {
-        "thriller": "—tension follows.",
-        "mystery": "—questions remain.",
-        "horror": "—calm does not last.",
-        "comedy": "—chaos follows.",
-        "sci-fi": "—reality bends.",
-        "science fiction": "—reality bends.",
-        "romance": "—timing interferes.",
-        "documentary": "—with real stakes.",
-        "action": "—the plan unravels.",
-        "adventure": "—the plan unravels.",
-        "anime": "—rules bend.",
-        "animation": "—rules bend.",
-        "fantasy": "—rules bend.",
-        "drama": "—consequences follow.",
+        "thriller":"—tension follows.", "mystery":"—questions remain.",
+        "horror":"—calm does not last.", "comedy":"—chaos follows.",
+        "sci-fi":"—reality bends.", "science fiction":"—reality bends.",
+        "romance":"—timing interferes.", "documentary":"—with real stakes.",
+        "action":"—the plan unravels.", "adventure":"—the plan unravels.",
+        "anime":"—rules bend.", "animation":"—rules bend.",
+        "fantasy":"—rules bend.", "drama":"—consequences follow.",
     }
-    ending = endings.get(genre, "—things get complicated.")
-
-    room = max(28, limit - len(ending) - 1)
-    premise = first
-    if len(premise) > room:
-        cut = premise[:room]
-        natural = max(
-            cut.rfind(", "),
-            cut.rfind(" and "),
-            cut.rfind(" when "),
-            cut.rfind(" as "),
-            cut.rfind(" while "),
-            cut.rfind(" who "),
-        )
-        premise = cut[:natural] if natural >= 24 else cut.rsplit(" ", 1)[0]
-
-    premise = premise.rstrip(" ,;:–—-")
-    sentence = f"{premise} {ending}".strip()
-
-    dangling = {"a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by"}
-    words = sentence.rstrip(".!?").split()
-    while words and words[-1].casefold().strip(".,;:") in dangling:
-        words.pop()
-    sentence = " ".join(words).rstrip(" ,;:")
-    if sentence and sentence[-1] not in ".!?":
-        sentence += "."
-    return sentence
+    ending=endings.get(genre,"—things get complicated.")
+    room=max(30, limit-len(ending)-1)
+    premise=first
+    if len(premise)>room:
+        premise=premise[:room].rsplit(" ",1)[0]
+    premise=premise.rstrip(" ,;:–—-")
+    return f"{premise} {ending}".strip()
 
 
 def expanded_card_description(movie, max_chars=320):
@@ -5290,107 +4754,105 @@ def render_showroom_fragment(p):
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
-            row_shell = st.container(key=f"showroom_section_{row_index}")
-            with row_shell:
-                row_notes={
-                    "Top Matches for You":"Best overall fits based on your full preference profile",
-                    "Critically Acclaimed":"Highly rated films that still match your taste",
-                    "Hidden Gems":"Strong matches that are less obvious or widely promoted",
-                    "Something Different":"A little outside your usual taste, but still likely to click",
-                }
-                st.markdown(
-                    f'<div class="{row_class} showroom-row-header">'
-                    f'<div class="showroom-row-title">{row_name}</div>'
-                    f'<div class="row-model-note">{row_notes[row_name]}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                if not choices:
-                    st.caption("Refreshing personalized matches…")
-                    continue
-                cols=st.columns(len(choices))
-                for i,(match,movie) in enumerate(choices):
-                    with cols[i]:
-                        with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                            match_col, skip_col = st.columns([3.35,0.90], gap="small")
-                            with match_col:
-                                with st.popover(f"{match}% iCinema Match", use_container_width=True):
-                                    context = recommendation_context.get(movie["title"], {})
-                                    reasons = recommendation_explanation(
-                                        movie,p,st.session_state.adventure,st.session_state.review_priority,
-                                        semantic_similarity=context.get("semantic_similarity"),
-                                        availability_score=context.get("availability_alignment",0.5),
-                                        components=context,
-                                    )
-                                    st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
-                                    for reason in reasons:
-                                        st.markdown(
-                                            f'<div class="match-reason">'
-                                            f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
-                                            f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
-                                            f'</div>',
-                                            unsafe_allow_html=True,
-                                        )
+            row_notes={
+                "Top Matches for You":"Best overall fits based on your full preference profile",
+                "Critically Acclaimed":"Highly rated films that still match your taste",
+                "Hidden Gems":"Strong matches that are less obvious or widely promoted",
+                "Something Different":"A little outside your usual taste, but still likely to click",
+            }
+            st.markdown(
+                f'<div class="{row_class} showroom-row-header">'
+                f'<div class="showroom-row-title">{row_name}</div>'
+                f'<div class="row-model-note">{row_notes[row_name]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if not choices:
+                st.caption("Refreshing personalized matches…")
+                continue
+            cols=st.columns(len(choices))
+            for i,(match,movie) in enumerate(choices):
+                with cols[i]:
+                    with st.container(key=f"showroom_controls_{row_index}_{i}"):
+                        match_col, skip_col = st.columns([3.35,0.90], gap="small")
+                        with match_col:
+                            with st.popover(f"{match}% iCinema Match", use_container_width=True):
+                                context = recommendation_context.get(movie["title"], {})
+                                reasons = recommendation_explanation(
+                                    movie,p,st.session_state.adventure,st.session_state.review_priority,
+                                    semantic_similarity=context.get("semantic_similarity"),
+                                    availability_score=context.get("availability_alignment",0.5),
+                                    components=context,
+                                )
+                                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                                for reason in reasons:
                                     st.markdown(
-                                        '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
+                                        f'<div class="match-reason">'
+                                        f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
+                                        f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
+                                        f'</div>',
                                         unsafe_allow_html=True,
                                     )
-                            with skip_col:
-                                st.button(
-                                    "Skip",
-                                    key=f"skip_{row_name}_{movie['title']}",
-                                    use_container_width=True,
-                                    on_click=skip_movie,
-                                    args=(movie["title"], movie),
+                                st.markdown(
+                                    '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
+                                    unsafe_allow_html=True,
                                 )
-                        with st.container(key=f"showroom_body_{row_index}_{i}"):
-                            identity = identity_by_title.get(movie["title"], {}) or {}
-                            display_movie = dict(movie)
-                            if identity.get("display_title"):
-                                display_movie["title"] = identity["display_title"]
-                            if identity.get("year"):
-                                display_movie["year"] = identity["year"]
-                            movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
-                            live_rating = live_ratings_by_title.get(movie["title"], {})
-                            imdb_value = live_rating.get("imdb")
-                            rt_value = live_rating.get("rt")
-                            imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
-                            rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
-                            rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
-                            st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
-                            availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
-                            availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
-                            availability_text = concise_availability_text(availability["text"])
-                            st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
-                            quick_desc = quick_card_description(movie)
-                            expanded_desc = expanded_card_description(movie)
-                            summary_id = f"movie-summary-{row_index}-{i}"
-                            st.markdown(
-                                f'<div class="movie-summary-toggle">'
-                                f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
-                                f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
-                                f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
-                                f'</div>',
-                                unsafe_allow_html=True,
+                        with skip_col:
+                            st.button(
+                                "Skip",
+                                key=f"skip_{row_name}_{movie['title']}",
+                                use_container_width=True,
+                                on_click=skip_movie,
+                                args=(movie["title"], movie),
                             )
-                            with st.container(key=f"movie_actions_{row_index}_{i}"):
-                                a,b=st.columns(2, gap="small")
-                                with a:
-                                    st.button(
-                                        "Save",
-                                        key=f"save_{row_name}_{movie['title']}",
-                                        use_container_width=True,
-                                        on_click=save_movie,
-                                        args=(movie["title"], movie),
-                                    )
-                                with b:
-                                    st.button(
-                                        "Seen",
-                                        key=f"seen_{row_name}_{movie['title']}",
-                                        use_container_width=True,
-                                        on_click=mark_movie_seen,
-                                        args=(movie["title"], movie),
-                                    )
+                    identity = identity_by_title.get(movie["title"], {}) or {}
+                    display_movie = dict(movie)
+                    if identity.get("display_title"):
+                        display_movie["title"] = identity["display_title"]
+                    if identity.get("year"):
+                        display_movie["year"] = identity["year"]
+                    movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
+                    live_rating = live_ratings_by_title.get(movie["title"], {})
+                    imdb_value = live_rating.get("imdb")
+                    rt_value = live_rating.get("rt")
+                    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
+                    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+                    rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
+                    st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
+                    availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
+                    availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
+                    availability_text = concise_availability_text(availability["text"])
+                    st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
+                    quick_desc = quick_card_description(movie)
+                    expanded_desc = expanded_card_description(movie)
+                    summary_id = f"movie-summary-{row_index}-{i}"
+                    st.markdown(
+                        f'<div class="movie-summary-toggle">'
+                        f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
+                        f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
+                        f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
+                    a,b=st.columns(2, gap="small")
+                    with a:
+                        st.button(
+                            "Save",
+                            key=f"save_{row_name}_{movie['title']}",
+                            use_container_width=True,
+                            on_click=save_movie,
+                            args=(movie["title"], movie),
+                        )
+                    with b:
+                        st.button(
+                            "Seen",
+                            key=f"seen_{row_name}_{movie['title']}",
+                            use_container_width=True,
+                            on_click=mark_movie_seen,
+                            args=(movie["title"], movie),
+                        )
+                    st.markdown('</div>', unsafe_allow_html=True)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
