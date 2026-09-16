@@ -3193,6 +3193,132 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1 !important;
 }
 
+
+/* V5.128 — full Match label + deterministic movie-card vertical slots */
+
+/* MATCH PILL
+   Keep the popover functionality, but remove the dropdown-chevron appearance. */
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button svg,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button [data-testid="stIconMaterial"],
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button [data-testid="stExpanderToggleIcon"]{
+    display:none !important;
+    width:0 !important;
+    min-width:0 !important;
+    height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+    overflow:hidden !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin:0 !important;
+    padding:0 .18rem !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    text-align:center !important;
+    font-size:.57rem !important;
+    font-weight:700 !important;
+    line-height:1 !important;
+    letter-spacing:-.009em !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button span{
+    text-align:center !important;
+    justify-content:center !important;
+}
+
+/* TITLE + YEAR SLOT
+   Two-line titles and one-line titles consume the exact same card height. */
+.poster-caption:not(.library-poster-caption){
+    height:4.35rem !important;
+    min-height:4.35rem !important;
+    max-height:4.35rem !important;
+    margin-top:.56rem !important;
+    margin-bottom:.12rem !important;
+    padding:0 .08rem !important;
+    overflow:hidden !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:flex-start !important;
+    box-sizing:border-box !important;
+}
+.poster-caption:not(.library-poster-caption) .poster-caption-title{
+    min-height:2.78rem !important;
+    max-height:2.78rem !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    overflow:hidden !important;
+    line-height:1.18 !important;
+}
+.poster-caption:not(.library-poster-caption) .poster-caption-year{
+    height:1rem !important;
+    min-height:1rem !important;
+    max-height:1rem !important;
+    margin-top:.14rem !important;
+    line-height:1 !important;
+}
+
+/* RATINGS SLOT
+   Ratings always start and end at the same level. */
+.ratings{
+    height:1.52rem !important;
+    min-height:1.52rem !important;
+    max-height:1.52rem !important;
+    margin:0 0 .10rem !important;
+    display:flex !important;
+    align-items:center !important;
+    overflow:hidden !important;
+}
+
+/* STREAMING SLOT
+   Reserve room for up to three provider lines so the summary below never shifts. */
+.watch-availability{
+    height:3.7rem !important;
+    min-height:3.7rem !important;
+    max-height:3.7rem !important;
+    margin:.04rem 0 .12rem !important;
+    line-height:1.34 !important;
+    overflow:hidden !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:3 !important;
+}
+
+/* SUMMARY SLOT
+   Give the clickable witty sentence an identical row on every card. */
+.movie-summary-details{
+    min-height:1.72rem !important;
+    margin:0 0 .08rem !important;
+}
+.movie-summary-details > summary{
+    min-height:1.72rem !important;
+    max-height:1.72rem !important;
+    display:flex !important;
+    align-items:center !important;
+    overflow:hidden !important;
+}
+
+/* Buttons stay close to the collapsed summary but line up across all cards. */
+.movie-card-actions{
+    margin-top:.02rem !important;
+    margin-bottom:.04rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4304,7 +4430,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                        match_col, skip_col = st.columns([3.2,0.95], gap="small")
+                        match_col, skip_col = st.columns([3.35,0.90], gap="small")
                         with match_col:
                             with st.popover(f"{match}% iCinema Match", use_container_width=True):
                                 reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
