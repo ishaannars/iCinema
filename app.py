@@ -3841,6 +3841,23 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1.36rem !important;
 }
 
+
+/* V5.145 — complete two-line witty summary */
+[class*="st-key-showroom_body_"] .movie-summary-label{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    width:100% !important;
+    min-height:1.35rem !important;
+    max-height:2.76rem !important;
+    height:auto !important;
+    overflow:hidden !important;
+    white-space:normal !important;
+    text-overflow:clip !important;
+    font-size:.56rem !important;
+    line-height:1.38rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4267,18 +4284,15 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=88):
-    """Create one concise, movie-specific sentence with a light witty edge.
-
-    Uses only the movie's own overview/setup. No canned genre suffixes or repeated
-    stock phrases such as 'reality bends.'
-    """
+def quick_card_description(movie, limit=66):
+    """Create a complete, movie-specific summary sized to fit two card lines."""
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
     if not full:
-        return "A promising setup with enough trouble to make things interesting."
+        return "A promising setup where trouble arrives sooner than expected."
 
     first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
 
+    # Prefer a complete clause from the movie's real setup.
     if len(first) <= limit:
         sentence = first
     else:
@@ -4292,29 +4306,29 @@ def quick_card_description(movie, limit=88):
             cut.rfind(" while "),
             cut.rfind(" who "),
         )
-        if natural >= 42:
+        if natural >= 32:
             sentence = cut[:natural]
         else:
             sentence = cut.rsplit(" ", 1)[0]
 
     sentence = sentence.rstrip(" ,;:–—-")
+
+    # A restrained movie-specific nudge only when there is enough room.
     lower = full.casefold()
+    nudges = [
+        (["surveillance", "spying", "watching"], " as distance becomes personal"),
+        (["mission", "mars", "space", "planet"], " with almost no room for error"),
+        (["conspiracy", "secret", "mystery"], " as the questions keep multiplying"),
+        (["kidnap", "hostage", "abduct"], " as the situation quickly unravels"),
+        (["teacher", "student", "school"], " as normal life stops cooperating"),
+    ]
+    if len(sentence) < 46:
+        for words, suffix in nudges:
+            if any(word in lower for word in words) and len(sentence) + len(suffix) <= limit:
+                sentence += suffix
+                break
 
-    # Add a tiny, movie-specific tonal nudge only when the premise is very short.
-    if len(sentence) < 62:
-        if any(word in lower for word in ["surveillance", "spying", "watching"]):
-            sentence += ", until watching from a distance stops feeling distant"
-        elif any(word in lower for word in ["kidnap", "hostage", "abduct"]):
-            sentence += ", and the situation gets complicated fast"
-        elif any(word in lower for word in ["mission", "space", "mars", "planet"]):
-            sentence += ", where the margin for error is basically zero"
-        elif any(word in lower for word in ["conspiracy", "secret", "mystery"]):
-            sentence += ", with more questions than anyone asked for"
-        elif any(word in lower for word in ["teacher", "student", "school"]):
-            sentence += ", and normal life quickly stops cooperating"
-        elif any(word in lower for word in ["friend", "friends", "relationship"]):
-            sentence += ", with chemistry doing most of the heavy lifting"
-
+    # Hard guarantee: never exceed the source limit.
     if len(sentence) > limit:
         sentence = sentence[:limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
 
@@ -4322,6 +4336,7 @@ def quick_card_description(movie, limit=88):
     words = sentence.split()
     while words and words[-1].casefold().strip(".,;:") in dangling:
         words.pop()
+
     sentence = " ".join(words).rstrip(" ,;:")
     if sentence and sentence[-1] not in ".!?":
         sentence += "."
