@@ -4,8 +4,11 @@ import json
 import streamlit as st
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
-    build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG
+    build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG,
+    recommendation_explanation, profile_confidence_label, mmr_rerank, availability_utility
 )
+from src.analytics import ensure_session, start_new_session, record_event, record_impressions, analytics_insights
+from src.ml_engine import train_learning_model, predict_success, ranking_metrics, calibration_metrics
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
@@ -1779,6 +1782,25 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .showroom-top-controls{
     margin:0 0 .2rem !important;
 }
+
+/* V5.108 explainable ML + iCinema Insights */
+.model-status-line{
+    display:flex;align-items:center;gap:.48rem;flex-wrap:wrap;
+    margin:.2rem 0 1rem;color:var(--muted);font-family:var(--ui-font);font-size:.78rem;
+}
+.model-status-dot{width:.42rem;height:.42rem;border-radius:999px;background:var(--ai);display:inline-block}
+.profile-insights{width:100%;max-width:760px;margin-top:1.3rem;padding-top:1.18rem;border-top:1px solid var(--border)}
+.profile-insights-title{font-family:var(--ui-font);font-size:1rem;font-weight:760;color:var(--ivory);margin-bottom:.24rem;letter-spacing:-.015em}
+.profile-insights-copy{font-family:var(--ui-font);font-size:.78rem;line-height:1.4;color:var(--muted);margin-bottom:.82rem}
+.insight-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.62rem}
+.insight-card{border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.018);padding:.72rem .76rem;min-height:4.4rem}
+.insight-value{font-family:var(--ui-font);font-size:1.05rem;font-weight:780;color:var(--ivory);letter-spacing:-.02em}
+.insight-label{font-family:var(--ui-font);font-size:.66rem;line-height:1.28;color:var(--muted);margin-top:.25rem}
+.row-model-note{font-family:var(--ui-font);font-size:.72rem;line-height:1.3;color:var(--muted2);margin:-.04rem 0 .4rem}
+div[data-testid="stPopover"] button{min-height:1.7rem !important;padding:.18rem .58rem !important;font-size:.68rem !important;border-radius:999px !important;color:var(--muted) !important}
+div[data-testid="stPopover"] button p{font-size:.68rem !important;font-weight:650 !important;margin:0 !important}
+.why-reason{font-family:var(--ui-font);font-size:.77rem;line-height:1.42;color:var(--muted);margin:.22rem 0}
+@media(max-width:800px){.insight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1787,7 +1809,9 @@ defaults={
     "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"selection_order":[],
     "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
     "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
-    "shelf_pool_initialized":False,"shelf_tmdb_loaded":False
+    "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
+    "analytics_events":[],"showroom_session_id":None,"showroom_session_start":None,
+    "showroom_impression_keys":set(),"recommendation_context":{}
 }
 for k,v in defaults.items():
     if k not in st.session_state:
@@ -1810,6 +1834,7 @@ def profile_snapshot():
         "dismissed": sorted(st.session_state.dismissed),
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
+        "analytics_events": list(st.session_state.get("analytics_events", []))[-500:],
     }
 
 def restore_profile(data):
@@ -1827,6 +1852,7 @@ def restore_profile(data):
         st.session_state.dismissed = set(data.get("dismissed") or [])
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
+        st.session_state.analytics_events = list(data.get("analytics_events") or [])[-500:]
         st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
         if st.session_state.onboarding_complete:
             st.session_state.screen = "showroom"
@@ -2027,6 +2053,7 @@ def go(screen):
     st.session_state.screen = screen
     if screen == "showroom":
         st.session_state.onboarding_complete = True
+        start_new_session(st.session_state)
         queue_profile_save()
 
 def go_from_fragment(screen):
@@ -2078,14 +2105,19 @@ def _remember_movie(movie):
     if movie.get("external") or not get_movie(title, {}):
         st.session_state.external_movies[title] = dict(movie)
 
+def _current_recommendation_context(title):
+    return dict((st.session_state.get("recommendation_context") or {}).get(title) or {})
+
 def skip_movie(title, movie=None):
     _remember_movie(movie)
+    record_event(st.session_state, "skip", title, _current_recommendation_context(title))
     st.session_state.dismissed.add(title)
     st.session_state.saved.discard(title)
     queue_profile_save()
 
 def save_movie(title, movie=None):
     _remember_movie(movie)
+    record_event(st.session_state, "save", title, _current_recommendation_context(title))
     st.session_state.saved.add(title)
     st.session_state.seen.discard(title)
     st.session_state.dismissed.discard(title)
@@ -2097,6 +2129,7 @@ def remove_saved_movie(title):
 
 def mark_movie_seen(title, movie=None):
     _remember_movie(movie)
+    record_event(st.session_state, "seen", title, _current_recommendation_context(title))
     st.session_state.seen.add(title)
     st.session_state.saved.discard(title)
     st.session_state.dismissed.discard(title)
@@ -2108,7 +2141,8 @@ def resolve_history_movie(title):
         return movie
     if tmdb_catalog_configured():
         try:
-            movie = find_movie(title)
+            matches = search_movies(title, 1)
+            movie = matches[0] if matches else None
         except Exception:
             movie = None
         if movie:
@@ -2204,6 +2238,15 @@ def profile_chip_html(items):
 def profile_analysis_html(items):
     return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
 
+def _format_seconds(value):
+    if value is None:
+        return "Learning"
+    value=max(0,int(round(value)))
+    if value<60:
+        return f"{value}s"
+    return f"{value//60}m {value%60:02d}s"
+
+
 def render_cinema_profile(p):
     sections = [
         ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
@@ -2213,23 +2256,35 @@ def render_cinema_profile(p):
         ("Viewing patterns", profile_analysis_html(p["patterns"]), "profile-analysis"),
         ("Recommendation balance", profile_analysis_html(p["balance"]), "profile-analysis"),
     ]
-
     section_html = "".join(
-        f'<div class="profile-block full">'
-        f'<div class="profile-label">{label}</div>'
-        f'<div class="{wrapper_class}">{content}</div>'
-        f'</div>'
+        f'<div class="profile-block full"><div class="profile-label">{label}</div><div class="{wrapper_class}">{content}</div></div>'
         for label, content, wrapper_class in sections
     )
+    events=list(st.session_state.get("analytics_events") or [])
+    insights=analytics_insights(events)
+    learned=train_learning_model(events)
+    conf=profile_confidence_label(p)
+    signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
+    model_text=(f"{learned.model_name} active · {learned.samples} labeled outcomes" if learned.ready else f"Hybrid model active · supervised learner collecting evidence ({learned.samples}/24 labeled outcomes)")
+
+    ttm=_format_seconds(insights.get("time_to_match_seconds"))
+    skips="Learning" if insights.get("avg_skips_before_save") is None else f'{insights["avg_skips_before_save"]:.1f}'
+    conv="Learning" if insights.get("saved_to_seen_rate") is None else f'{insights["saved_to_seen_rate"]*100:.0f}%'
+    discovery="Learning" if insights.get("discovery_rate") is None else f'{insights["discovery_rate"]*100:.0f}%'
+    cards=[(ttm,"Typical Time to Match"),(skips,"Skips Before Save"),(conv,"Saved → Seen"),(conf,"Profile Confidence")]
+    insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
 
     st.markdown(
         f'<div class="profile-wrap">'
         f'<div class="profile-heading">Your Cinema Profile</div>'
         f'<div class="profile-intro">A detailed showing of the preferences, viewing patterns, and recommendation signals iCinema has learned from your choices.</div>'
+        f'<div class="model-status-line"><span class="model-status-dot"></span><span>{model_text}</span><span>·</span><span>{signals} preference signals</span></div>'
         f'<div class="profile-grid">{section_html}</div>'
         f'<div class="profile-summary">{p["summary"]}</div>'
-        f'</div>',
-        unsafe_allow_html=True
+        f'<div class="profile-insights"><div class="profile-insights-title">Your iCinema Insights</div>'
+        f'<div class="profile-insights-copy">A quiet look at how efficiently iCinema is learning your taste and helping narrow the search.</div>'
+        f'<div class="insight-grid">{insight_html}</div></div>'
+        f'</div>', unsafe_allow_html=True
     )
 
 
@@ -2554,6 +2609,7 @@ def render_more_fragment():
 
 @st.fragment
 def render_showroom_fragment(p):
+    ensure_session(st.session_state)
     tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
 
     excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed
@@ -2586,6 +2642,7 @@ def render_showroom_fragment(p):
         excluded,
         None,
     )
+    learning_result=train_learning_model(st.session_state.get("analytics_events", []))
 
     def _safe_num(value, default=0):
         try:
@@ -2637,6 +2694,11 @@ def render_showroom_fragment(p):
         for display_match,movie in available:
             components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority)
             base=components["raw_score"]
+            ml_context=dict(components)
+            ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
+            learned_probability=predict_success(learning_result,ml_context)
+            if learned_probability is not None:
+                base=0.78*base+0.22*learned_probability
             section=_row_signal(row_name,movie)
             # The learned profile remains dominant in every row. The section signal
             # changes the objective, not the underlying personalization system.
@@ -2653,7 +2715,10 @@ def render_showroom_fragment(p):
         # Section objective chooses membership. Within that objective, stronger core
         # personalized fit breaks ties, so every row remains grounded in the same model.
         scored.sort(key=lambda x:(x[0],x[1]),reverse=True)
-        return [(display_match,movie) for _,_,display_match,movie in scored]
+        diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.80 if row_name=="Top Matches for You" else 0.74)
+        chosen={item[3]["title"] for item in diversified}
+        ordered=diversified+[item for item in scored if item[3]["title"] not in chosen]
+        return [(display_match,movie) for _,_,display_match,movie in ordered]
 
     # Reserve distinct movies for each row before rendering. This prevents a title from
     # migrating into another section during the same refresh and keeps every row populated.
@@ -2682,6 +2747,23 @@ def render_showroom_fragment(p):
     visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in visible_movies)
     visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in visible_movies)
     watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
+    for row_name in row_order:
+        row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*availability_utility((watch_by_title.get(item[1]["title"]) or {}).get("status")),reverse=True)
+
+    recommendation_context={}
+    for row_name in row_order:
+        for position,(match,movie) in enumerate(row_choices.get(row_name,[]),start=1):
+            comps=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority)
+            availability_value=availability_utility((watch_by_title.get(movie["title"]) or {}).get("status"))
+            comps=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority,availability_score=availability_value)
+            recommendation_context[movie["title"]]={
+                "row":row_name,"position":position,"match":match,
+                "model_score":round(float(comps.get("raw_score",0)),6),
+                "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
+                **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]}
+            }
+    st.session_state.recommendation_context=recommendation_context
+    record_impressions(st.session_state,recommendation_context)
     identity_by_title=get_movie_identity_batch(visible_identity_keys)
     showroom_poster_map={title: data.get("poster_url") for title, data in identity_by_title.items()}
     live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in visible_movies)
@@ -2694,7 +2776,13 @@ def render_showroom_fragment(p):
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
-            st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div>', unsafe_allow_html=True)
+            row_notes={
+                "Top Matches for You":"Highest predicted overall fit from your full preference profile",
+                "Critically Acclaimed":"Strong personal fit with higher-confidence quality signals",
+                "Hidden Gems":"Personalized matches with lower-popularity discovery value",
+                "Something Different":"Controlled exploration beyond your usual patterns without becoming random",
+            }
+            st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div><div class="row-model-note">{row_notes[row_name]}</div>', unsafe_allow_html=True)
             if not choices:
                 st.caption("Refreshing personalized matches…")
                 continue
@@ -2734,6 +2822,14 @@ def render_showroom_fragment(p):
                     st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
                     short_desc = concise_description(movie["why"])
                     st.markdown(f'<div class="movie-description">{short_desc}</div>',unsafe_allow_html=True)
+                    with st.popover("Why this match?"):
+                        reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
+                        for reason in reasons:
+                            st.markdown(f'<div class="why-reason">{html.escape(reason)}</div>',unsafe_allow_html=True)
+                        if learning_result.ready:
+                            st.caption(f"Personalized with the {learning_result.model_name} learning layer and the hybrid recommendation model.")
+                        else:
+                            st.caption("Based on the hybrid recommendation model. The supervised learning layer activates after enough labeled behavior is collected.")
                     st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
                     a,b=st.columns(2, gap="small")
                     with a:

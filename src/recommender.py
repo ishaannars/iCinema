@@ -1,6 +1,11 @@
 
 from collections import Counter
 import math
+import re
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import normalize
 
 GENRES = [
     "Action", "Adventure", "Anime", "Animation", "Comedy", "Documentary",
@@ -542,3 +547,349 @@ def rank_movies(movies, profile, adventure, review_priority, excluded=None, limi
 
 def recommend(profile, adventure, review_priority, excluded=None, limit=16):
     return rank_movies(CATALOG, profile, adventure, review_priority, excluded, limit)
+
+
+# -----------------------------------------------------------------------------
+# V5.106 ANALYTICAL CORE
+# Richer normalized feature engineering + latent semantic similarity +
+# Bayesian quality + profile confidence + decision utility.
+# These definitions intentionally override the earlier compatible functions.
+# -----------------------------------------------------------------------------
+
+def _clip01(value):
+    return max(0.0, min(1.0, float(value)))
+
+
+def _movie_text(movie):
+    tags = " ".join(str(x) for x in (movie.get("tags") or []))
+    overview = movie.get("overview") or movie.get("why") or ""
+    return " ".join([
+        str(movie.get("title") or ""),
+        str(movie.get("genre") or ""),
+        tags,
+        str(overview),
+    ]).strip()
+
+
+def _norm_popularity(value):
+    # Smooth robust scaling. TMDB popularity is heavy-tailed, so log scaling keeps
+    # blockbuster outliers from overwhelming the rest of the feature vector.
+    v = max(0.0, _num(value, 0.0))
+    return _clip01(math.log1p(v) / math.log1p(250.0))
+
+
+def _norm_vote_count(value):
+    v = max(0.0, _num(value, 0.0))
+    return _clip01(math.log1p(v) / math.log1p(50000.0))
+
+
+def _era_features(year):
+    y = int(_num(year, 0))
+    if not y:
+        return {"classic":0.0,"modern":0.5,"recent":0.0}
+    return {
+        "classic": 1.0 if y <= 2005 else 0.0,
+        "modern": 1.0 if 2006 <= y <= 2022 else 0.0,
+        "recent": 1.0 if y >= 2023 else 0.0,
+    }
+
+
+def _bayesian_quality(movie, review_priority):
+    """Bayesian/confidence-adjusted quality score in [0,1]."""
+    rt = _num(movie.get("rt"), -1)
+    imdb = _num(movie.get("imdb"), -1)
+    tmdb = _num(movie.get("tmdb_vote"), -1)
+    n = max(0.0, _num(movie.get("tmdb_vote_count"), 0.0))
+
+    critic = rt/100.0 if rt >= 0 else None
+    audience_parts = []
+    if imdb >= 0: audience_parts.append(imdb/10.0)
+    if tmdb >= 0: audience_parts.append(tmdb/10.0)
+    audience = sum(audience_parts)/len(audience_parts) if audience_parts else None
+
+    if critic is None and audience is None:
+        observed = 0.60
+    elif critic is None:
+        observed = audience
+    elif audience is None:
+        observed = critic
+    else:
+        enjoyment = _clip01(float(review_priority)/100.0)
+        observed = critic*(1.0-enjoyment) + audience*enjoyment
+
+    # Prior is intentionally conservative. m controls how much evidence is needed
+    # before a sparse title can move far away from the catalog prior.
+    prior = 0.68
+    m = 900.0
+    effective_n = n if n > 0 else (300.0 if imdb >= 0 or rt >= 0 else 0.0)
+    posterior = (effective_n*observed + m*prior) / (effective_n+m) if effective_n+m else prior
+    return _clip01(posterior)
+
+
+def _profile_confidence(profile):
+    counts = profile.get("behavior_counts", {}) or {}
+    controls = profile.get("controls", {}) or {}
+    evidence = (
+        1.0*float(counts.get("liked",0))
+        + 2.4*float(counts.get("favorited",0))
+        + 1.8*float(counts.get("saved",0))
+        + 0.45*float(counts.get("seen",0))
+        + 1.5*float(counts.get("skipped",0))
+        + 0.9*len(controls.get("selected_genres",[]) or [])
+        + 0.7*len(controls.get("priorities",[]) or [])
+    )
+    # Variety makes confidence more robust than raw volume alone.
+    variety = sum(1 for k in ("liked","favorited","saved","seen","skipped") if counts.get(k,0))
+    conf = (1.0-math.exp(-(evidence+2.0)/10.0)) * (0.88 + 0.024*variety)
+    return _clip01(max(0.42, conf))
+
+
+def _semantic_batch_scores(movies, profile):
+    """Latent semantic analysis (TF-IDF -> SVD) for user-to-movie similarity.
+
+    This gives iCinema an NLP layer without requiring an external model API. The
+    latent vectors capture co-occurring themes/phrasing beyond one-hot genres.
+    """
+    signals = profile.get("semantic_signals") or []
+    if not movies or not signals:
+        return {id(m):0.5 for m in movies}
+
+    signal_docs = [s.get("text","") for s in signals if s.get("text")]
+    signal_weights = [float(s.get("weight",0.0)) for s in signals if s.get("text")]
+    movie_docs = [_movie_text(m) for m in movies]
+    docs = signal_docs + movie_docs
+    if len(docs) < 3 or not any(d.strip() for d in docs):
+        return {id(m):0.5 for m in movies}
+    try:
+        vectorizer = TfidfVectorizer(
+            stop_words="english", ngram_range=(1,2), min_df=1, max_features=2500,
+            sublinear_tf=True
+        )
+        X = vectorizer.fit_transform(docs)
+        max_components = min(32, X.shape[0]-1, X.shape[1]-1)
+        if max_components >= 2:
+            svd = TruncatedSVD(n_components=max_components, random_state=42)
+            Z = normalize(svd.fit_transform(X))
+        else:
+            Z = normalize(X).toarray()
+        sig = Z[:len(signal_docs)]
+        cand = Z[len(signal_docs):]
+        w = np.asarray(signal_weights, dtype=float)
+        if np.allclose(np.abs(w).sum(),0):
+            return {id(m):0.5 for m in movies}
+        user = (sig * w[:,None]).sum(axis=0)
+        norm = float(np.linalg.norm(user))
+        if norm <= 1e-12:
+            return {id(m):0.5 for m in movies}
+        user = user/norm
+        sims = cand @ user
+        # signed cosine [-1,1] -> [0,1]
+        return {id(m):_clip01((float(s)+1.0)/2.0) for m,s in zip(movies,sims)}
+    except Exception:
+        return {id(m):0.5 for m in movies}
+
+
+def build_profile(
+    likes, favorites, selected_genres, review_priority, more_of,
+    saved_titles=None, skipped_titles=None, adventure=50, extra_movies=None,
+    seen_titles=None,
+):
+    saved_titles=set(saved_titles or [])
+    skipped_titles=set(skipped_titles or [])
+    seen_titles=set(seen_titles or [])
+    extra_movies=extra_movies or {}
+    likes=set(likes or [])
+    favorites=set(favorites or [])
+
+    def lookup(title): return extra_movies.get(title) or MOVIE_INDEX.get(title)
+    traits=Counter(); genres=Counter(); semantic=[]
+
+    def add(title, weight):
+        movie=lookup(title)
+        if not movie: return
+        _movie_signal(movie, weight, traits, genres)
+        semantic.append({"title":title,"text":_movie_text(movie),"weight":float(weight)})
+
+    for title in likes|favorites:
+        add(title, SIGNAL_WEIGHTS["favorite"] if title in favorites else SIGNAL_WEIGHTS["like"])
+    for genre in selected_genres or []:
+        genres[genre]+=SIGNAL_WEIGHTS["selected_genre"]
+    for title in saved_titles: add(title,SIGNAL_WEIGHTS["saved"])
+    for title in seen_titles: add(title,SIGNAL_WEIGHTS["seen"])
+    for title in skipped_titles: add(title,SIGNAL_WEIGHTS["skip"])
+
+    signed_trait_scores=dict(_nonzero_items(traits)); signed_genre_scores=dict(_nonzero_items(genres))
+    trait_scores=sorted(_positive_items(traits),key=lambda x:(-x[1],x[0]))
+    genre_scores=sorted(_positive_items(genres),key=lambda x:(-x[1],x[0]))
+    top_traits=[t for t,_ in trait_scores[:3]] or ["Story-driven"]
+    top_genres=[g for g,_ in genre_scores[:3]] or ["Drama"]
+
+    matters=[]
+    if review_priority<=35: matters.append("Strong reviews")
+    elif review_priority>=65: matters.append("Entertainment value")
+    else: matters.append("A balance of reviews and entertainment")
+    if trait_scores:
+        strongest=trait_scores[0][0]
+        mapping=[
+            ({"Character-driven","Emotional","Heartfelt","Moving","Grounded"},"Character and story"),
+            ({"Suspenseful","Tense","Psychological","Unpredictable"},"Tension and suspense"),
+            ({"Visually striking","Stylish","Epic"},"Strong visual style"),
+            ({"Thought-provoking","Cerebral"},"Ideas and complexity"),
+            ({"Funny","Lighthearted","Offbeat"},"Humor and personality"),
+        ]
+        for group,label in mapping:
+            if strongest in group: matters.append(label); break
+
+    priorities=list((more_of or [])[:4]) if more_of else ["Balanced recommendations"]
+    patterns=[]
+    if any(t in top_traits for t in ["Suspenseful","Tense","Psychological","Dark"]): patterns.append("Leans toward higher-tension stories")
+    if any(t in top_traits for t in ["Character-driven","Emotional","Heartfelt","Moving"]): patterns.append("Responds to character-focused stories")
+    if any(t in top_traits for t in ["Thought-provoking","Cerebral","Unpredictable"]): patterns.append("Likes stories that reward attention")
+    if any(t in top_traits for t in ["Funny","Lighthearted","Offbeat"]): patterns.append("Enjoys humor and lighter energy")
+    if any(t in top_traits for t in ["Visually striking","Stylish","Epic"]): patterns.append("Notices strong visual presentation")
+    if not patterns: patterns.append("Shows a broad viewing range")
+
+    adventure_text="Mostly familiar" if adventure<=30 else ("Open to unexpected picks" if adventure>=70 else "Balanced between familiar and new")
+    review_text="Reviews matter a lot" if review_priority<=35 else ("Entertainment comes first" if review_priority>=65 else "Reviews and enjoyment are balanced")
+    trait_text=", ".join(t.lower() for t in top_traits[:2]); genre_text=" and ".join(top_genres[:2]).lower()
+    opening=f"You favor {trait_text} stories, especially {genre_text} titles." if top_traits and top_traits[0]!="Story-driven" else f"You show the strongest affinity for {genre_text} titles."
+    review_clause="Strong critical reception plays a larger role in what iCinema surfaces." if review_priority<=35 else ("Entertainment value carries more weight than critical reception in your recommendations." if review_priority>=65 else "Your profile balances critical reception with entertainment value.")
+    discovery_clause="The model stays closer to familiar patterns in your taste." if adventure<=30 else ("The model has more room to surface unfamiliar genres, eras, languages, and styles." if adventure>=70 else "The model balances familiar choices with room for discovery.")
+    selected_priorities=[x for x in (more_of or []) if x and x!="Balanced recommendations"]
+    priority_clause=("It also leans toward " + ", ".join(x.lower() for x in selected_priorities) + " when those choices still fit your learned profile.") if selected_priorities else "No single showroom priority overrides the broader preference profile."
+
+    p={
+        "traits":top_traits,"genres":top_genres,"matters":matters[:3],"priorities":priorities,
+        "patterns":patterns[:3],"balance":[adventure_text,review_text],
+        "summary":" ".join([opening,review_clause,discovery_clause,priority_clause]),
+        "trait_scores":dict(trait_scores),"genre_scores":dict(genre_scores),
+        "signed_trait_scores":signed_trait_scores,"signed_genre_scores":signed_genre_scores,
+        "controls":{"review_priority":int(review_priority),"adventure":int(adventure),"selected_genres":list(selected_genres or []),"priorities":list(more_of or [])},
+        "behavior_counts":{"liked":len(likes-favorites),"favorited":len(favorites),"saved":len(saved_titles),"seen":len(seen_titles),"skipped":len(skipped_titles)},
+        "semantic_signals":semantic,
+        "model_version":"v5-hybrid-lsa-bayesian-decision",
+    }
+    p["profile_confidence"]=_profile_confidence(p)
+    return p
+
+
+def score_movie_components(movie, profile, adventure, review_priority, semantic_similarity=None, availability_score=0.5):
+    genre_affinity,trait_affinity=_content_signals(movie,profile)
+    quality=_bayesian_quality(movie,review_priority)
+    discovery=_discovery_signal(movie,profile,adventure)
+    priority=_priority_signal(movie,profile)
+    semantic=0.5 if semantic_similarity is None else _clip01(semantic_similarity)
+    availability=_clip01(availability_score)
+    popularity=_norm_popularity(movie.get("popularity"))
+    vote_conf=_norm_vote_count(movie.get("tmdb_vote_count"))
+    era=_era_features(movie.get("year"))
+
+    # Immediate hybrid model. Semantic similarity has meaningful weight but the
+    # interpretable onboarding/behavioral signals remain dominant and inspectable.
+    compatibility=(
+        0.18*genre_affinity + 0.16*trait_affinity + 0.20*semantic +
+        0.18*quality + 0.13*discovery + 0.15*priority
+    )
+    evidence_conf=0.55+0.45*vote_conf
+    confidence=_profile_confidence(profile)
+    # Decision utility asks whether this candidate is useful to show now, not just
+    # whether it resembles the profile. Availability is neutral until real provider
+    # data is supplied by the presentation/reranking layer.
+    decision_utility=(
+        0.70*compatibility + 0.13*quality + 0.07*availability +
+        0.05*evidence_conf + 0.05*confidence
+    )
+    return {
+        "genre_affinity":genre_affinity,
+        "trait_affinity":trait_affinity,
+        "semantic_similarity":semantic,
+        "quality_alignment":quality,
+        "discovery_alignment":discovery,
+        "priority_alignment":priority,
+        "availability_alignment":availability,
+        "popularity_normalized":popularity,
+        "vote_confidence":vote_conf,
+        "era_classic":era["classic"],"era_modern":era["modern"],"era_recent":era["recent"],
+        "profile_confidence":confidence,
+        "raw_score":_clip01(compatibility),
+        "decision_utility":_clip01(decision_utility),
+    }
+
+
+def _calibrated_match_percent(raw_score, profile):
+    raw=_clip01(raw_score); conf=_profile_confidence(profile)
+    adjusted=0.5+(raw-0.5)*(0.52+0.48*conf)
+    logistic=1.0/(1.0+math.exp(-7.2*(adjusted-0.5)))
+    return int(round(max(20.0,min(97.0,logistic*100.0))))
+
+
+def score_movie(movie, profile, adventure, review_priority):
+    raw=score_movie_components(movie,profile,adventure,review_priority)["raw_score"]
+    return _calibrated_match_percent(raw,profile)
+
+
+def rank_movies(movies, profile, adventure, review_priority, excluded=None, limit=None):
+    excluded=set(excluded or [])
+    unique=[]; seen=set()
+    for m in movies:
+        if not m or m.get("title") in excluded: continue
+        key=(str(m.get("title","")).casefold(),int(m.get("year") or 0))
+        if key in seen: continue
+        seen.add(key); unique.append(m)
+    semantic=_semantic_batch_scores(unique,profile)
+    scored=[]
+    for movie in unique:
+        c=score_movie_components(movie,profile,adventure,review_priority,semantic.get(id(movie),0.5))
+        display=_calibrated_match_percent(c["raw_score"],profile)
+        scored.append((c["decision_utility"],c["raw_score"],display,movie))
+    scored.sort(key=lambda x:(x[0],x[1],_bayesian_quality(x[3],review_priority)),reverse=True)
+    output=[(display,movie) for _,_,display,movie in scored]
+    return output if limit is None else output[:limit]
+
+
+def recommendation_explanation(movie, profile, adventure, review_priority, semantic_similarity=None):
+    c=score_movie_components(movie,profile,adventure,review_priority,semantic_similarity)
+    reasons=[]
+    ranked=[
+        (c["semantic_similarity"],"Strong thematic similarity to movies shaping your profile"),
+        (c["genre_affinity"],"Fits your strongest genre preferences"),
+        (c["trait_affinity"],"Matches storytelling traits you respond to"),
+        (c["quality_alignment"],"Fits your reviews-versus-enjoyment preference"),
+        (c["priority_alignment"],"Aligns with the Showroom priorities you selected"),
+        (c["discovery_alignment"],"Fits your preferred balance of familiarity and discovery"),
+    ]
+    for score,label in sorted(ranked,reverse=True)[:3]:
+        if score>=0.54: reasons.append(label)
+    return reasons[:3] or ["Balanced fit across your current preference signals"]
+
+
+def profile_confidence_label(profile):
+    c=_profile_confidence(profile)
+    if c>=0.82: return "Strong"
+    if c>=0.64: return "Growing"
+    return "Learning"
+
+
+# V5.107 recommendation-set optimization
+def movie_pair_similarity(a,b):
+    a_tags=set(a.get("tags") or []); b_tags=set(b.get("tags") or [])
+    if a.get("genre"): a_tags.add(a.get("genre"))
+    if b.get("genre"): b_tags.add(b.get("genre"))
+    union=a_tags|b_tags; tag_sim=len(a_tags&b_tags)/len(union) if union else 0.0
+    lang_sim=1.0 if str(a.get("original_language") or "en")==str(b.get("original_language") or "en") else 0.0
+    ya=int(_num(a.get("year"),0)); yb=int(_num(b.get("year"),0)); era_sim=max(0.0,1.0-min(abs(ya-yb),40)/40.0) if ya and yb else 0.5
+    return _clip01(.72*tag_sim+.16*lang_sim+.12*era_sim)
+
+def mmr_rerank(scored_items,limit=4,relevance_lambda=.78):
+    pool=list(scored_items or []); selected=[]; lam=_clip01(relevance_lambda)
+    while pool and len(selected)<limit:
+        best_idx=0; best=-1e9
+        for idx,item in enumerate(pool):
+            redundancy=max((movie_pair_similarity(item[3],s[3]) for s in selected),default=0.0)
+            val=lam*float(item[0])-(1-lam)*redundancy
+            if val>best: best=val; best_idx=idx
+        selected.append(pool.pop(best_idx))
+    return selected
+
+def availability_utility(status):
+    return {"streaming":1.0,"free":1.0,"ads":.92,"rent":.68,"buy":.56,"unavailable":.24,"unknown":.48,"not_configured":.50}.get(str(status or "unknown"),.48)
