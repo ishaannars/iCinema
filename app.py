@@ -3686,6 +3686,61 @@ div[data-testid="stStatusWidget"]::after{
     max-width:92% !important;
 }
 
+
+/* V5.140 — Saved library action label fix */
+[class*="st-key-savedseen_"],
+[class*="st-key-unsave_"]{
+    min-width:0 !important;
+    width:100% !important;
+}
+[class*="st-key-savedseen_"] button,
+[class*="st-key-unsave_"] button{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:2.34rem !important;
+    height:2.34rem !important;
+    padding:.14rem .34rem !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+    overflow:visible !important;
+}
+[class*="st-key-savedseen_"] button p,
+[class*="st-key-savedseen_"] button span,
+[class*="st-key-unsave_"] button p,
+[class*="st-key-unsave_"] button span{
+    width:100% !important;
+    max-width:none !important;
+    min-width:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    font-size:.62rem !important;
+    line-height:1 !important;
+    font-weight:690 !important;
+    text-align:center !important;
+    justify-content:center !important;
+}
+
+
+/* V5.141 — Saved heading breathing room */
+.st-key-saved_tab_header,
+.tab-primary-heading{
+    scroll-margin-top:0;
+}
+
+/* Add a little more space only below the Saved tab heading before the grid. */
+[data-testid="stVerticalBlock"]:has(.tab-primary-heading) .tab-primary-heading{
+    margin-bottom:.34rem !important;
+}
+
+.saved-tab-heading{
+    margin-bottom:.78rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4863,7 +4918,7 @@ def render_showroom_fragment(p):
 
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="tab-primary-heading">Saved</div>', unsafe_allow_html=True)
+        st.markdown('<div class="tab-primary-heading saved-tab-heading">Saved</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
         saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         saved_identity_map = get_movie_identity_batch(saved_identity_keys)
@@ -4969,7 +5024,7 @@ elif screen=="showroom":
     st.markdown(
         '<div class="showroom-header">'
         '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark seen</div>'
+        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark</div>'
         '</div>',
         unsafe_allow_html=True
     )
