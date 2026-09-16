@@ -3940,6 +3940,64 @@ div[data-testid="stStatusWidget"]{
     column-gap:.72rem !important;
 }
 
+
+/* V5.149 — refined Step 1 scale + centered actions */
+
+/* Scale Step 1 posters down slightly more than V5.148. */
+.step1-shelf .poster,
+[class*="st-key-like_"] ~ * .poster{
+    transform:scale(.89) !important;
+    transform-origin:top center !important;
+    margin-bottom:-1.18rem !important;
+}
+
+/* Scale title/year proportionally. */
+.step1-shelf .poster-caption-title,
+.step1-shelf .movie-title,
+.step1-shelf .shelf-title{
+    font-size:.98rem !important;
+    line-height:1.14 !important;
+}
+.step1-shelf .poster-caption-year,
+.step1-shelf .movie-year,
+.step1-shelf .shelf-year{
+    font-size:.66rem !important;
+    line-height:1 !important;
+}
+
+/* Slightly smaller Like/Favorite buttons, with exact centered labels. */
+[class*="st-key-like_"] button,
+[class*="st-key-fav_"] button{
+    min-height:1.96rem !important;
+    height:1.96rem !important;
+    padding:.1rem .3rem !important;
+    border-radius:999px !important;
+    display:grid !important;
+    place-items:center !important;
+    text-align:center !important;
+}
+[class*="st-key-like_"] button p,
+[class*="st-key-like_"] button span,
+[class*="st-key-fav_"] button p,
+[class*="st-key-fav_"] button span{
+    display:block !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    font-size:.69rem !important;
+    line-height:1 !important;
+    font-weight:690 !important;
+    text-align:center !important;
+}
+
+/* Keep spacing compact but not cramped. */
+.shelf-action-gap{
+    height:.24rem !important;
+}
+.step1-shelf [data-testid="stHorizontalBlock"]{
+    column-gap:.66rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
