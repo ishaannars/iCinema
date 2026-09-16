@@ -3319,6 +3319,116 @@ div[data-testid="stStatusWidget"]::after{
     margin-bottom:.04rem !important;
 }
 
+
+/* V5.129 — content-aware title/year and streaming/summary spacing */
+
+/* Let title height grow naturally up to two lines, with the year always
+   directly underneath the actual title. */
+.poster-caption:not(.library-poster-caption){
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin-top:.56rem !important;
+    margin-bottom:.12rem !important;
+    padding:0 .08rem !important;
+    overflow:visible !important;
+    display:block !important;
+}
+.poster-caption:not(.library-poster-caption) .poster-caption-title{
+    min-height:0 !important;
+    max-height:none !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    overflow:hidden !important;
+    line-height:1.18 !important;
+    margin:0 !important;
+}
+.poster-caption:not(.library-poster-caption) .poster-caption-year{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin-top:.18rem !important;
+    line-height:1.1 !important;
+}
+
+/* IMDb / RT sits a consistent distance below the year, regardless of title length. */
+.ratings{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:.34rem 0 .12rem !important;
+    display:block !important;
+    overflow:visible !important;
+}
+
+/* Streaming can wrap naturally. The summary always sits the same distance
+   below the *end* of the streaming block. */
+.watch-availability{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:.06rem 0 .34rem !important;
+    line-height:1.34 !important;
+    overflow:visible !important;
+    display:block !important;
+    -webkit-line-clamp:unset !important;
+}
+
+/* Keep the clickable one-line summary close to streaming with a consistent gap. */
+.movie-summary-details{
+    min-height:0 !important;
+    margin:0 0 .08rem !important;
+}
+.movie-summary-details > summary{
+    min-height:1.72rem !important;
+    max-height:none !important;
+    margin:0 !important;
+}
+
+/* Actions remain close to the summary. */
+.movie-card-actions{
+    margin-top:.02rem !important;
+    margin-bottom:.04rem !important;
+}
+
+
+/* V5.130 — compact Save / Seen action row */
+.movie-card-actions{
+    margin-top:.02rem !important;
+    margin-bottom:.02rem !important;
+}
+
+/* Keep Save / Seen visually balanced but slightly shorter to save vertical space. */
+[class*="st-key-save_"],
+[class*="st-key-seen_"]{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+}
+[class*="st-key-save_"] button,
+[class*="st-key-seen_"] button{
+    min-height:1.82rem !important;
+    height:1.82rem !important;
+    padding:.12rem .28rem !important;
+    border-radius:999px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+}
+[class*="st-key-save_"] button p,
+[class*="st-key-seen_"] button p{
+    margin:0 !important;
+    font-size:.64rem !important;
+    line-height:1 !important;
+    font-weight:690 !important;
+    text-align:center !important;
+}
+
+/* Pull the action row slightly closer to the collapsed summary without crowding it. */
+.movie-summary-details{
+    margin-bottom:.04rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
