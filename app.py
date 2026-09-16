@@ -4227,6 +4227,41 @@ div[data-testid="stLoadingSpinner"],
     .methodology-grid{grid-template-columns:1fr !important;}
 }
 
+
+/* V5.154 — clearly separate witty hook from expanded synopsis */
+.movie-full-description{
+    margin-top:.42rem !important;
+    padding-top:.48rem !important;
+    border-top:1px solid rgba(169,173,183,.13) !important;
+}
+.movie-synopsis-label{
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.60rem !important;
+    line-height:1.2 !important;
+    font-weight:740 !important;
+    letter-spacing:.012em !important;
+    margin:0 0 .28rem !important;
+}
+.movie-synopsis-copy{
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.66rem !important;
+    line-height:1.46 !important;
+    font-weight:500 !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* Profile title now flows directly into model status/content. */
+.profile-heading,
+.profile-heading-aligned{
+    margin-bottom:.72rem !important;
+}
+.profile-wrap .model-status-line{
+    margin-top:0 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4743,7 +4778,7 @@ def quick_card_description(movie, limit=66):
 
 
 def expanded_card_description(movie, max_chars=320):
-    """Return a separate, fuller spoiler-free synopsis with clean grammar."""
+    """Return a distinct spoiler-free synopsis, separate from the witty hook."""
     full = clean_movie_copy(
         (movie or {}).get("overview") or (movie or {}).get("why"),
         ensure_terminal=False,
@@ -4751,15 +4786,31 @@ def expanded_card_description(movie, max_chars=320):
     if not full:
         return "iCinema does not have a longer spoiler-free overview for this title yet."
 
+    quick = clean_movie_copy(
+        quick_card_description(movie),
+        ensure_terminal=False,
+    ).casefold()
+
     sentences = [
         clean_movie_copy(s, ensure_terminal=True)
         for s in re.split(r"(?<=[.!?])\s+", full)
         if clean_movie_copy(s, ensure_terminal=False)
     ]
 
+    # If the first source sentence is essentially the same material used in the
+    # collapsed hook, start from later source material when available.
+    usable = list(sentences)
+    if len(usable) > 1:
+        first_words = " ".join(usable[0].casefold().split()[:6])
+        quick_words = " ".join(quick.split()[:6])
+        if first_words and quick_words and (
+            first_words in quick or quick_words in usable[0].casefold()
+        ):
+            usable = usable[1:]
+
     chosen = []
     total = 0
-    for sentence in sentences:
+    for sentence in usable:
         projected = total + len(sentence) + (1 if chosen else 0)
         if chosen and projected > max_chars:
             break
@@ -4768,11 +4819,23 @@ def expanded_card_description(movie, max_chars=320):
         if len(chosen) >= 2:
             break
 
-    expanded = " ".join(chosen).strip() if chosen else clean_movie_copy(full, True)
+    # If the source only had one sentence, rewrite the framing so the expanded
+    # synopsis still reads as a separate block rather than a continuation.
+    if not chosen:
+        title = str((movie or {}).get("title") or "This film").strip()
+        genre = str((movie or {}).get("genre") or "film").strip().lower()
+        core = clean_movie_copy(full, ensure_terminal=False)
+        chosen = [
+            clean_movie_copy(
+                f"{title} is a {genre} centered on {core[0].lower() + core[1:] if core else 'its central characters and conflict'}",
+                ensure_terminal=True,
+            )
+        ]
+
+    expanded = " ".join(chosen).strip()
 
     if len(expanded) > max_chars:
         candidate = expanded[:max_chars]
-        # Prefer ending at the last sentence/phrase boundary.
         boundary = max(
             candidate.rfind(". "),
             candidate.rfind(", "),
@@ -4882,7 +4945,6 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     st.markdown(
         f'<div class="profile-wrap">'
         f'{profile_heading_html}'
-        f'<div class="profile-intro">A detailed showing of the preferences, viewing patterns, and recommendation signals iCinema has learned from your choices.</div>'
         f'<div class="model-status-line">'
         f'<span class="model-status-dot"></span>'
         f'<span class="model-status-primary">{model_primary}</span>'
@@ -5478,7 +5540,10 @@ def render_showroom_fragment(p):
                         f'<div class="movie-summary-toggle">'
                         f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
                         f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
-                        f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
+                        f'<div class="movie-full-description">'
+                        f'<div class="movie-synopsis-label">Spoiler-free synopsis</div>'
+                        f'<div class="movie-synopsis-copy">{html.escape(expanded_desc)}</div>'
+                        f'</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
