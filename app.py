@@ -2846,6 +2846,116 @@ div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
     margin-bottom:.04rem !important;
 }
 
+/* V5.125 — final Showroom control spacing + clickable full-sentence summary */
+
+/* Give the section explanation its own breathing room before movie controls. */
+.showroom-row-header{
+    margin-bottom:.86rem !important;
+}
+.showroom-row-header .row-model-note{
+    margin-top:.22rem !important;
+    margin-bottom:0 !important;
+}
+
+/* Match and Skip stay visually separate inside each card. */
+[class*="st-key-showroom_controls_"]{
+    margin-top:0 !important;
+    margin-bottom:-.34rem !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.62rem !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="column"]{
+    min-width:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] > button,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    min-height:1.94rem !important;
+    height:1.94rem !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    font-size:.59rem !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    padding-left:.24rem !important;
+    padding-right:.24rem !important;
+}
+
+/* The sentence itself is the expander. No arrow/chevron or separate label. */
+div[data-testid="stExpander"]{
+    margin:.1rem 0 .08rem !important;
+    border:0 !important;
+    background:transparent !important;
+}
+div[data-testid="stExpander"] details,
+div[data-testid="stExpander"] summary{
+    border:0 !important;
+    background:transparent !important;
+}
+div[data-testid="stExpander"] summary{
+    min-height:2.72rem !important;
+    padding:0 !important;
+    margin:0 !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    cursor:pointer !important;
+    list-style:none !important;
+}
+div[data-testid="stExpander"] summary::-webkit-details-marker,
+div[data-testid="stExpander"] summary::marker{
+    display:none !important;
+    content:"" !important;
+}
+div[data-testid="stExpander"] summary svg,
+div[data-testid="stExpander"] summary [data-testid="stExpanderToggleIcon"]{
+    display:none !important;
+    width:0 !important;
+    min-width:0 !important;
+    margin:0 !important;
+}
+div[data-testid="stExpander"] summary p{
+    margin:0 !important;
+    padding:0 !important;
+    width:100% !important;
+    max-width:100% !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:normal !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.67rem !important;
+    line-height:1.34 !important;
+    font-weight:620 !important;
+    letter-spacing:-.004em !important;
+}
+div[data-testid="stExpander"] summary:hover p{
+    color:var(--ivory) !important;
+}
+div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
+    padding:.34rem 0 .08rem !important;
+}
+.movie-full-description{
+    margin:0 !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.70rem !important;
+    line-height:1.45 !important;
+    font-weight:500 !important;
+}
+.movie-card-actions{
+    margin-top:.03rem !important;
+    margin-bottom:.04rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3272,74 +3382,47 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=82):
-    """Create one informative, slightly witty sentence for the collapsed card.
-
-    The line stays grounded in the movie's real overview, explains the setup,
-    and adds only a restrained genre-aware finish.
-    """
+def quick_card_description(movie, limit=122):
+    """Create one complete, informative sentence with a restrained witty finish."""
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
     if not full:
-        return "A strong match with enough going on to deserve a closer look."
+        return "A promising match with just enough mystery to make the next two hours look well spent."
 
-    # Start from the actual plot setup rather than a generic tag line.
-    first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:,")
-    first = first.split(";", 1)[0].strip()
-
-    # Keep enough plot information to explain the premise in one visual line.
-    target_base = max(50, limit - 22)
-    if len(first) > target_base:
-        cut = first[:target_base]
-        natural = max(cut.rfind(", "), cut.rfind(" and "), cut.rfind(" but "), cut.rfind(" while "))
-        if natural >= 34:
-            first = cut[:natural]
-        else:
-            first = cut.rsplit(" ", 1)[0]
-    first = first.rstrip(" ,;:–—-")
-
+    first = re.split(r"(?<=[.!?])\s+", full)[0].strip().rstrip(".;:, ")
     genre = str((movie or {}).get("genre") or "").casefold()
-    if genre in {"thriller", "mystery", "horror"}:
-        finish = "—and calm does not last."
-    elif genre == "comedy":
-        finish = "—with chaos nearby."
-    elif genre in {"sci-fi", "science fiction"}:
-        finish = "—then reality bends."
-    elif genre == "romance":
-        finish = "—timing has opinions."
-    elif genre == "documentary":
-        finish = "—with very real stakes."
-    elif genre in {"action", "adventure"}:
-        finish = "—the plan gets complicated."
-    elif genre in {"anime", "animation", "fantasy"}:
-        finish = "—normal rules need not apply."
-    else:
-        finish = "—and things get complicated."
 
-    quick = f"{first} {finish}" if first else finish.lstrip("—").capitalize()
-    if len(quick) > limit:
-        # Keep the plot premise intact; shorten the witty finish first.
-        short_finishes = {
-            "thriller": "—tension follows.",
-            "mystery": "—questions follow.",
-            "horror": "—calm does not last.",
-            "comedy": "—chaos follows.",
-            "sci-fi": "—reality bends.",
-            "science fiction": "—reality bends.",
-            "romance": "—timing matters.",
-            "documentary": "—real stakes.",
-            "action": "—the plan shifts.",
-            "adventure": "—the plan shifts.",
-            "anime": "—rules bend.",
-            "animation": "—rules bend.",
-            "fantasy": "—rules bend.",
-        }
-        finish = short_finishes.get(genre, "—pressure builds.")
-        quick = f"{first} {finish}"
-    if len(quick) > limit:
-        first_limit = max(42, limit - len(finish) - 1)
-        first = first[:first_limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
-        quick = f"{first} {finish}"
-    return quick.rstrip()
+    finishes = {
+        "thriller": "—and peace of mind is not part of the package.",
+        "mystery": "—with answers proving inconveniently hard to find.",
+        "horror": "—and calm is very much temporary.",
+        "comedy": "—with chaos doing most of the scheduling.",
+        "sci-fi": "—then reality starts negotiating the terms.",
+        "science fiction": "—then reality starts negotiating the terms.",
+        "romance": "—because timing rarely behaves itself.",
+        "documentary": "—with stakes that are very real.",
+        "action": "—and the plan does not stay simple for long.",
+        "adventure": "—and the plan does not stay simple for long.",
+        "anime": "—where ordinary rules are merely suggestions.",
+        "animation": "—where ordinary rules are merely suggestions.",
+        "fantasy": "—where ordinary rules are merely suggestions.",
+        "drama": "—and the emotional math gets complicated.",
+    }
+    finish = finishes.get(genre, "—and things get complicated from there.")
+
+    # Preserve a meaningful premise before adding the finish.
+    premise_limit = max(62, limit - len(finish) - 1)
+    premise = first
+    if len(premise) > premise_limit:
+        cut = premise[:premise_limit]
+        natural = max(cut.rfind(", "), cut.rfind(" and "), cut.rfind(" while "), cut.rfind(" when "))
+        if natural >= 48:
+            premise = cut[:natural]
+        else:
+            premise = cut.rsplit(" ", 1)[0]
+    premise = premise.rstrip(" ,;:–—-")
+
+    sentence = f"{premise} {finish}".strip()
+    return sentence
 
 
 def expanded_card_description(movie, max_chars=330):
@@ -3983,7 +4066,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                        match_col, skip_col = st.columns([3.35,0.9], gap="small")
+                        match_col, skip_col = st.columns([3.55,0.9], gap="medium")
                         with match_col:
                             with st.popover(f"{match}% iCinema Match", use_container_width=True):
                                 reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
@@ -4159,7 +4242,7 @@ elif screen=="showroom":
     st.markdown(
         '<div class="showroom-header">'
         '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark as seen</div>'
+        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark seen</div>'
         '</div>',
         unsafe_allow_html=True
     )
