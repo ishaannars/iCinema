@@ -3661,6 +3661,44 @@ div[data-testid="stStatusWidget"]::after{
     transform:none !important;
 }
 
+
+/* V5.135 HOTFIX — remove oversized responsive card reservation */
+/* V5.132 used container-query width units to reserve an action baseline.
+   In Streamlit's nested layout this could become enormous. Return cards to
+   compact natural document flow instead. */
+[class*="st-key-showroom_body_"]{
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+    max-height:none !important;
+    container-type:normal !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+}
+
+/* Do not push Save/Seen to the bottom of a synthetic card height. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
+    margin-top:.04rem !important;
+    padding-top:0 !important;
+}
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions) + [data-testid="stHorizontalBlock"]{
+    margin-top:0 !important;
+}
+
+/* Expanded summaries simply grow the card naturally. */
+[class*="st-key-showroom_body_"]:has(.movie-summary-checkbox:checked){
+    min-height:0 !important;
+    height:auto !important;
+}
+
+/* Keep the intentional, uniform row-to-row rhythm from V5.134. */
+[class*="st-key-showroom_section_"]{
+    margin:0 !important;
+    padding:0 0 1.10rem 0 !important;
+    box-sizing:border-box !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
