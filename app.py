@@ -3124,6 +3124,75 @@ div[data-testid="stStatusWidget"]::after{
     100%{border-top-color:rgba(92,111,168,.95);border-right-color:rgba(169,173,183,.22);}
 }
 
+
+/* V5.127 — exact row-header spacing + truly centered control labels */
+
+/* Use padding rather than margin so the subtitle-to-controls gap cannot collapse
+   differently on the first Showroom row. */
+.showroom-row-header{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    padding:0 0 1.04rem 0 !important;
+    box-sizing:border-box !important;
+}
+.showroom-row-header .tab-primary-heading,
+.showroom-row-header h3{
+    margin:0 0 .28rem !important;
+    padding:0 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* Center Match text independently from the chevron. */
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button{
+    position:relative !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 .9rem 0 .25rem !important;
+    box-sizing:border-box !important;
+    line-height:1 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button svg{
+    position:absolute !important;
+    right:.42rem !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    margin:0 !important;
+    flex:0 0 auto !important;
+}
+
+/* Center Skip label exactly in its capsule. */
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button span{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    text-align:center !important;
+    line-height:1 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
