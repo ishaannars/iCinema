@@ -2012,6 +2012,190 @@ div[data-testid="stStatusWidget"]::after{
     div[data-testid="stStatusWidget"]::before{font-size:.64rem !important}
 }
 
+
+/* V5.114 — full Match label + complete aligned descriptions */
+/* Give the Match popover enough room and disable Streamlit text ellipsis. */
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.46rem !important;
+}
+.showroom-top-controls div[data-testid="stPopover"],
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    width:100% !important;
+    max-width:none !important;
+    min-width:0 !important;
+    overflow:visible !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    min-height:2.08rem !important;
+    height:2.08rem !important;
+    padding:.18rem .5rem !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] button p,
+.showroom-top-controls div[data-testid="stPopover"] button span{
+    display:block !important;
+    width:auto !important;
+    max-width:none !important;
+    min-width:max-content !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    flex-shrink:0 !important;
+    font-size:.66rem !important;
+    font-weight:700 !important;
+    letter-spacing:-.008em !important;
+}
+.showroom-top-controls [class*="st-key-skip_"],
+.showroom-top-controls [class*="st-key-skip_"] button{
+    min-width:0 !important;
+    width:100% !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button{
+    min-height:2.08rem !important;
+    height:2.08rem !important;
+    padding:.16rem .34rem !important;
+}
+
+/* The concise description is capped in Python. Reserve enough room for that
+   complete text at four-column card widths so no last line is hidden. */
+.movie-description{
+    height:7.65rem !important;
+    min-height:7.65rem !important;
+    max-height:7.65rem !important;
+    overflow:visible !important;
+    display:block !important;
+    line-height:1.42 !important;
+    margin-top:.18rem !important;
+    margin-bottom:.22rem !important;
+}
+
+
+/* V5.115 — final product spacing pass */
+/* All four Showroom tabs begin their first content heading at the same vertical position. */
+.showroom-tab-start{
+    height:1.12rem !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+.showroom-row.first{
+    transform:none !important;
+    margin-top:0 !important;
+    margin-bottom:.08rem !important;
+}
+.tab-section-heading,
+.profile-heading{
+    margin-top:0 !important;
+}
+.tab-section-heading{
+    margin-bottom:.56rem !important;
+}
+/* Keep the Profile tab from inheriting any extra top offset compared with Showroom/Saved/Seen. */
+.profile-wrap{
+    margin-top:0 !important;
+    padding-top:0 !important;
+}
+.profile-heading{
+    margin-bottom:.48rem !important;
+}
+.profile-intro{
+    margin-top:0 !important;
+    margin-bottom:.88rem !important;
+}
+
+/* Showroom section title + explanation read as one compact header block. */
+.showroom-row{
+    margin-top:.88rem !important;
+    margin-bottom:0 !important;
+}
+.showroom-row.first{
+    margin-top:0 !important;
+}
+.showroom-row h3{
+    margin:0 0 .16rem !important;
+    line-height:1.08 !important;
+}
+.row-model-note{
+    margin:0 0 .54rem !important;
+    line-height:1.32 !important;
+}
+
+/* Keep controls close to the section explanation and poster. */
+.showroom-top-controls{
+    margin-top:0 !important;
+    margin-bottom:.18rem !important;
+}
+
+/* Refine card rhythm without changing the established alignment system. */
+.poster-caption{
+    margin-top:.58rem !important;
+    margin-bottom:.18rem !important;
+}
+.ratings{
+    margin-top:.02rem !important;
+    margin-bottom:.16rem !important;
+}
+.watch-availability{
+    margin-top:.16rem !important;
+    margin-bottom:.16rem !important;
+}
+.movie-description{
+    margin-top:.12rem !important;
+    margin-bottom:.18rem !important;
+}
+.movie-card-actions{
+    margin-top:.1rem !important;
+    margin-bottom:.08rem !important;
+}
+
+/* Consistent top-page rhythm across onboarding and standalone profile screens. */
+.page-top-heading{
+    margin-bottom:.36rem !important;
+}
+.page-top-subtitle{
+    margin-top:0 !important;
+    margin-bottom:1.08rem !important;
+}
+.step2-header{
+    margin-bottom:1.02rem !important;
+}
+.step3-subtitle{
+    margin-bottom:1.48rem !important;
+}
+.search-shell{
+    margin-top:1.35rem !important;
+}
+
+
+/* V5.117 — final landing-page rhythm */
+body:has(.hero-title) .icinema-logo{
+    margin-bottom:.62rem !important;
+}
+.hero-title{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+}
+.hero-subtitle{
+    margin-top:.78rem !important;
+    margin-bottom:1.55rem !important;
+    line-height:1.52 !important;
+}
+.step-card{
+    padding:1.1rem 1.16rem !important;
+}
+.adapt-note{
+    margin:1.35rem 0 .9rem !important;
+    padding:1.12rem 1.22rem 1.08rem !important;
+}
+.adapt-note strong{
+    margin-bottom:.38rem !important;
+}
+.st-key-start_personalizing{
+    margin-top:.5rem !important;
+    margin-bottom:0 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2499,12 +2683,12 @@ def render_cinema_profile(p, include_insights=False):
     skips="Learning" if insights.get("avg_skips_before_save") is None else f'{insights["avg_skips_before_save"]:.1f}'
     conv="Learning" if insights.get("saved_to_seen_rate") is None else f'{insights["saved_to_seen_rate"]*100:.0f}%'
     discovery="Learning" if insights.get("discovery_rate") is None else f'{insights["discovery_rate"]*100:.0f}%'
-    cards=[(ttm,"Typical Time to Match"),(skips,"Skips Before Save"),(conv,"Saved → Seen"),(conf,"Profile Confidence")]
+    cards=[(ttm,"Median Time to Match"),(skips,"Avg. Skips Before Save"),(conv,"Save → Seen Conversion"),(conf,"Profile Confidence")]
     insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
 
     insights_section = (
         f'<div class="profile-insights"><div class="profile-insights-title">Your iCinema Insights</div>'
-        f'<div class="profile-insights-copy">A quiet look at how efficiently iCinema is learning your taste and helping narrow the search.</div>'
+        f'<div class="profile-insights-copy">Your recent activity, summarized.</div>'
         f'<div class="insight-grid">{insight_html}</div></div>'
         if include_insights else ""
     )
@@ -3017,10 +3201,10 @@ def render_showroom_fragment(p):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             row_notes={
-                "Top Matches for You":"Highest predicted overall fit from your full preference profile",
-                "Critically Acclaimed":"Strong personal fit with higher-confidence quality signals",
-                "Hidden Gems":"Personalized matches with lower-popularity discovery value",
-                "Something Different":"Controlled exploration beyond your usual patterns without becoming random",
+                "Top Matches for You":"Best overall fits based on your full preference profile",
+                "Critically Acclaimed":"Highly rated films that still match your taste",
+                "Hidden Gems":"Strong matches that are less obvious or widely promoted",
+                "Something Different":"A little outside your usual taste, but still likely to click",
             }
             st.markdown(f'<div class="{row_class}"><h3>{row_name}</h3></div><div class="row-model-note">{row_notes[row_name]}</div>', unsafe_allow_html=True)
             if not choices:
@@ -3030,7 +3214,7 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
-                    match_col, skip_col = st.columns([2.65,1.15], gap="small")
+                    match_col, skip_col = st.columns([3.15,0.95], gap="small")
                     with match_col:
                         with st.popover(f"{match}% iCinema Match", use_container_width=True):
                             reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
@@ -3180,7 +3364,7 @@ if screen=="welcome":
         with col:
             st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
 
-    st.markdown('<div class="adapt-note"><strong>iCinema RESPONDS TO YOUR CHOICES</strong><br><span>Every save, skip, and seen title continuously feeds iCinema’s recommendation model, updating your preference profile and shaping what appears next.</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="adapt-note"><strong>iCinema RESPONDS TO YOUR CHOICES</strong><br><span>Every save, skip, and seen title feeds iCinema’s learning model, updating your preference profile and shaping what appears next.</span></div>',unsafe_allow_html=True)
     st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
 
 elif screen=="shelf":
