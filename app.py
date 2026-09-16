@@ -4253,10 +4253,11 @@ div[data-testid="stLoadingSpinner"],
     padding:0 !important;
 }
 
-/* V5.161 — clearly more breathing room between the Cinema Profile title and model status line. */
-.profile-heading,
-.profile-heading-aligned{
-    margin-bottom:2.65rem !important;
+/* V5.162 — visibly larger gap between the Cinema Profile title and learning-status row.
+   Use the more-specific profile-wrap selectors so this overrides the earlier tab-heading rule. */
+.profile-wrap .profile-heading,
+.profile-wrap .profile-heading-aligned{
+    margin-bottom:1.45rem !important;
 }
 .profile-wrap .model-status-line{
     margin-top:0 !important;
