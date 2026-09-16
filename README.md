@@ -1,3 +1,5 @@
+#© 2026 Ishaan Narasimhan. All rights reserved.
+
 # iCinema — Personalized Movie Discovery
 
 iCinema is an explainable hybrid recommendation and decision-optimization system built to help people find something worth watching faster. The consumer experience stays intentionally simple while the ranking engine combines behavioral signals, content features, NLP, statistical adjustment, diversity optimization, and browser-local supervised learning.
