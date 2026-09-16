@@ -3892,6 +3892,307 @@ div[data-testid="stStatusWidget"]::after{
     max-width:92% !important;
 }
 
+
+/* V5.137 — structural Showroom recovery */
+
+/* Movie body is ordinary natural flow. */
+[class*="st-key-showroom_body_"]{
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+}
+
+/* Poster caption is a self-contained title/year stack. */
+[class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
+    display:block !important;
+    position:relative !important;
+    height:auto !important;
+    min-height:4.05rem !important;
+    max-height:none !important;
+    margin:.52rem 0 .28rem !important;
+    padding:0 !important;
+    overflow:visible !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-title{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    position:relative !important;
+    height:auto !important;
+    min-height:2.34rem !important;
+    max-height:2.34rem !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    line-height:1.17 !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-year{
+    display:block !important;
+    position:relative !important;
+    height:auto !important;
+    min-height:1rem !important;
+    max-height:none !important;
+    margin:.24rem 0 0 !important;
+    padding:0 !important;
+    line-height:1 !important;
+}
+
+/* Ratings always get their own row below title/year. */
+[class*="st-key-showroom_body_"] .ratings{
+    display:block !important;
+    position:relative !important;
+    clear:both !important;
+    height:auto !important;
+    min-height:1.15rem !important;
+    max-height:none !important;
+    margin:.18rem 0 .26rem !important;
+    padding:0 !important;
+    line-height:1.2 !important;
+    overflow:visible !important;
+}
+
+/* Streaming gets its own compact block and can wrap without colliding. */
+[class*="st-key-showroom_body_"] .watch-availability{
+    display:block !important;
+    position:relative !important;
+    clear:both !important;
+    height:auto !important;
+    min-height:2.55rem !important;
+    max-height:none !important;
+    margin:0 0 .28rem !important;
+    padding:0 !important;
+    line-height:1.32 !important;
+    overflow:visible !important;
+    -webkit-line-clamp:unset !important;
+}
+
+/* Witty line is separate from streaming and always visible. */
+[class*="st-key-showroom_body_"] .movie-summary-toggle{
+    display:block !important;
+    position:relative !important;
+    clear:both !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:1.42rem !important;
+    margin:0 0 .16rem !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-label{
+    display:block !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:1.42rem !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+    text-overflow:clip !important;
+    line-height:1.42rem !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
+    display:none !important;
+    position:relative !important;
+    clear:both !important;
+    margin:.32rem 0 .12rem !important;
+    padding:.38rem 0 .06rem !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-checkbox:checked ~ .movie-full-description{
+    display:block !important;
+}
+
+/* Save / Seen now live in a real Streamlit container. */
+[class*="st-key-movie_actions_"]{
+    display:block !important;
+    position:relative !important;
+    clear:both !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:.08rem 0 .02rem !important;
+    padding:0 !important;
+}
+[class*="st-key-movie_actions_"] [data-testid="stHorizontalBlock"]{
+    margin:0 !important;
+    padding:0 !important;
+    align-items:center !important;
+}
+[class*="st-key-movie_actions_"] button{
+    min-height:1.82rem !important;
+    height:1.82rem !important;
+    margin:0 !important;
+    padding:.12rem .26rem !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+}
+[class*="st-key-movie_actions_"] button p{
+    margin:0 !important;
+    line-height:1 !important;
+    text-align:center !important;
+}
+
+/* Neutralize legacy marker-based action positioning entirely. */
+.movie-card-actions{
+    display:none !important;
+}
+
+/* Keep row spacing compact and deterministic. */
+[class*="st-key-showroom_section_"]{
+    min-height:0 !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 0 1.35rem !important;
+}
+
+
+/* V5.138 — content-aware metadata stack; no overlapping blocks */
+
+/* Let Streamlit's element wrappers own vertical flow. */
+[class*="st-key-showroom_body_"]{
+    display:block !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+}
+
+/* Poster caption grows naturally with a one- or two-line title. */
+[class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
+    display:block !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:.52rem 0 0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-title{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    line-height:1.17 !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-year{
+    display:block !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:.16rem 0 0 !important;
+    padding:0 !important;
+    line-height:1.05 !important;
+}
+
+/* Explicitly space the Streamlit wrapper containing title/year. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.poster-caption){
+    margin:0 0 .34rem !important;
+    padding:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+}
+
+/* Ratings are a separate block in normal flow. */
+[class*="st-key-showroom_body_"] .ratings{
+    display:block !important;
+    position:static !important;
+    clear:none !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.24 !important;
+    overflow:visible !important;
+}
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.ratings){
+    margin:0 0 .34rem !important;
+    padding:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+}
+
+/* Streaming follows ratings naturally and may wrap as needed. */
+[class*="st-key-showroom_body_"] .watch-availability{
+    display:block !important;
+    position:static !important;
+    clear:none !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.32 !important;
+    overflow:visible !important;
+    -webkit-line-clamp:unset !important;
+}
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.watch-availability){
+    margin:0 0 .38rem !important;
+    padding:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+}
+
+/* Witty summary gets its own independent block. */
+[class*="st-key-showroom_body_"] .movie-summary-toggle{
+    display:block !important;
+    position:static !important;
+    clear:none !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-label{
+    display:block !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+    white-space:nowrap !important;
+    text-overflow:clip !important;
+    font-size:.54rem !important;
+    line-height:1.35 !important;
+}
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-summary-toggle){
+    margin:0 0 .28rem !important;
+    padding:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+}
+
+/* Expanded description has normal vertical flow and cannot cover actions. */
+[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
+    position:static !important;
+    clear:none !important;
+    margin:.34rem 0 .04rem !important;
+    padding:.34rem 0 .04rem !important;
+    line-height:1.42 !important;
+}
+
+/* Real Save/Seen container stays beneath metadata. */
+[class*="st-key-movie_actions_"]{
+    position:static !important;
+    clear:none !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:.02rem 0 0 !important;
+    padding:0 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4318,41 +4619,38 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=68):
-    """One complete, informative, lightly witty sentence sized for one card line."""
+def quick_card_description(movie, limit=56):
+    """Compact, informative, lightly witty summary designed to fit one card line."""
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
     genre = str((movie or {}).get("genre") or "").casefold()
 
     if not full:
-        return "A strong setup, with just enough trouble waiting off-screen."
+        return "A strong setup, with trouble waiting just off-screen."
 
     first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
 
-    # Preserve the actual premise, but compress it aggressively enough to remain
-    # a real one-line card summary instead of being visually clipped.
     endings = {
-        "thriller": "—and tension follows.",
-        "mystery": "—with answers still missing.",
-        "horror": "—and calm does not last.",
-        "comedy": "—then chaos joins in.",
-        "sci-fi": "—and reality bends.",
-        "science fiction": "—and reality bends.",
-        "romance": "—while timing complicates things.",
-        "documentary": "—with very real stakes.",
-        "action": "—and the plan quickly unravels.",
-        "adventure": "—and the plan quickly unravels.",
-        "anime": "—where normal rules bend.",
-        "animation": "—where normal rules bend.",
-        "fantasy": "—where normal rules bend.",
-        "drama": "—with consequences close behind.",
+        "thriller": "—tension follows.",
+        "mystery": "—questions remain.",
+        "horror": "—calm does not last.",
+        "comedy": "—chaos follows.",
+        "sci-fi": "—reality bends.",
+        "science fiction": "—reality bends.",
+        "romance": "—timing interferes.",
+        "documentary": "—with real stakes.",
+        "action": "—the plan unravels.",
+        "adventure": "—the plan unravels.",
+        "anime": "—rules bend.",
+        "animation": "—rules bend.",
+        "fantasy": "—rules bend.",
+        "drama": "—consequences follow.",
     }
-    ending = endings.get(genre, "—and things get complicated.")
+    ending = endings.get(genre, "—things get complicated.")
 
-    # Leave space for the witty ending and cut only on whole words.
-    premise_limit = max(34, limit - len(ending) - 1)
+    room = max(28, limit - len(ending) - 1)
     premise = first
-    if len(premise) > premise_limit:
-        cut = premise[:premise_limit]
+    if len(premise) > room:
+        cut = premise[:room]
         natural = max(
             cut.rfind(", "),
             cut.rfind(" and "),
@@ -4361,33 +4659,10 @@ def quick_card_description(movie, limit=68):
             cut.rfind(" while "),
             cut.rfind(" who "),
         )
-        premise = cut[:natural] if natural >= 28 else cut.rsplit(" ", 1)[0]
+        premise = cut[:natural] if natural >= 24 else cut.rsplit(" ", 1)[0]
 
     premise = premise.rstrip(" ,;:–—-")
     sentence = f"{premise} {ending}".strip()
-
-    # Final hard guard: always end as a complete sentence and never with a
-    # dangling filler word.
-    if len(sentence) > limit:
-        shorter_end = {
-            "thriller": "—tension follows.",
-            "mystery": "—questions remain.",
-            "horror": "—calm does not last.",
-            "comedy": "—chaos follows.",
-            "sci-fi": "—reality bends.",
-            "science fiction": "—reality bends.",
-            "romance": "—timing interferes.",
-            "documentary": "—real stakes.",
-            "action": "—the plan unravels.",
-            "adventure": "—the plan unravels.",
-            "anime": "—rules bend.",
-            "animation": "—rules bend.",
-            "fantasy": "—rules bend.",
-            "drama": "—consequences follow.",
-        }.get(genre, "—things get complicated.")
-        room = max(30, limit - len(shorter_end) - 1)
-        premise = first[:room].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
-        sentence = f"{premise} {shorter_end}".strip()
 
     dangling = {"a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by"}
     words = sentence.rstrip(".!?").split()
@@ -5098,24 +5373,24 @@ def render_showroom_fragment(p):
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
-                            st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
-                            a,b=st.columns(2, gap="small")
-                            with a:
-                                st.button(
-                                    "Save",
-                                    key=f"save_{row_name}_{movie['title']}",
-                                    use_container_width=True,
-                                    on_click=save_movie,
-                                    args=(movie["title"], movie),
-                                )
-                            with b:
-                                st.button(
-                                    "Seen",
-                                    key=f"seen_{row_name}_{movie['title']}",
-                                    use_container_width=True,
-                                    on_click=mark_movie_seen,
-                                    args=(movie["title"], movie),
-                                )
+                            with st.container(key=f"movie_actions_{row_index}_{i}"):
+                                a,b=st.columns(2, gap="small")
+                                with a:
+                                    st.button(
+                                        "Save",
+                                        key=f"save_{row_name}_{movie['title']}",
+                                        use_container_width=True,
+                                        on_click=save_movie,
+                                        args=(movie["title"], movie),
+                                    )
+                                with b:
+                                    st.button(
+                                        "Seen",
+                                        key=f"seen_{row_name}_{movie['title']}",
+                                        use_container_width=True,
+                                        on_click=mark_movie_seen,
+                                        args=(movie["title"], movie),
+                                    )
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
