@@ -4253,10 +4253,10 @@ div[data-testid="stLoadingSpinner"],
     padding:0 !important;
 }
 
-/* V5.160 — a little more breathing room below the Cinema Profile title. */
+/* V5.161 — clearly more breathing room between the Cinema Profile title and model status line. */
 .profile-heading,
 .profile-heading-aligned{
-    margin-bottom:1.85rem !important;
+    margin-bottom:2.65rem !important;
 }
 .profile-wrap .model-status-line{
     margin-top:0 !important;
