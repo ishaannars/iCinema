@@ -3519,6 +3519,148 @@ div[data-testid="stStatusWidget"]::after{
     clear:both !important;
 }
 
+
+/* V5.132 — quiet attribution + aligned Showroom action baseline */
+
+/* Keep required data/API attribution present but visually secondary. */
+.watch-attribution{
+    color:rgba(169,173,183,.52) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.52rem !important;
+    line-height:1.35 !important;
+    font-weight:450 !important;
+    letter-spacing:.002em !important;
+    margin-top:.72rem !important;
+    margin-bottom:.08rem !important;
+    max-width:92% !important;
+}
+
+/* Poster-through-actions body uses one responsive minimum height.
+   cqw ties the baseline to the card width, so it remains compact at different
+   desktop widths while keeping all four collapsed action rows aligned. */
+[class*="st-key-showroom_body_"]{
+    display:flex !important;
+    flex-direction:column !important;
+    container-type:inline-size !important;
+    min-height:calc(150cqw + 15.2rem) !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+}
+
+/* Streamlit places the action marker and button columns in element containers.
+   Push that action element to the bottom of the movie body. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
+    margin-top:auto !important;
+    padding-top:.12rem !important;
+}
+
+/* Keep the action columns immediately after their marker and compact. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions) + [data-testid="stHorizontalBlock"]{
+    margin-top:0 !important;
+}
+
+/* Expanded plot copy is allowed to grow its own card naturally instead of
+   clipping or overlapping the anchored buttons. */
+[class*="st-key-showroom_body_"]:has(.movie-summary-checkbox:checked){
+    min-height:unset !important;
+}
+
+/* Narrow/mobile layouts should flow naturally rather than reserving desktop height. */
+@media(max-width:800px){
+    [class*="st-key-showroom_body_"]{
+        min-height:0 !important;
+    }
+    [class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
+        margin-top:.08rem !important;
+    }
+}
+
+
+/* V5.133 — iCinema Match model note + true one-line movie summary */
+
+.match-model-note{
+    color:var(--muted2) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.62rem !important;
+    line-height:1.36 !important;
+    font-weight:500 !important;
+    letter-spacing:-.002em !important;
+    margin:.42rem 0 0 !important;
+    padding:0 !important;
+}
+
+/* The clickable witty summary is now deliberately one line.
+   The generator is capped to a shorter complete sentence so we do not rely on
+   clipping or an ellipsis to make it fit. */
+.movie-summary-label{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-height:1.46rem !important;
+    max-height:1.46rem !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    cursor:pointer !important;
+    color:var(--muted) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.57rem !important;
+    line-height:1.46rem !important;
+    font-weight:620 !important;
+    letter-spacing:-.006em !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+}
+.movie-summary-toggle{
+    margin:.08rem 0 .04rem !important;
+}
+
+
+/* V5.134 — fully uniform Showroom section rhythm */
+
+/* Every Showroom section title now uses the same class and exact measurements. */
+.showroom-row-header{
+    margin:0 !important;
+    padding:0 0 1.02rem 0 !important;
+    box-sizing:border-box !important;
+}
+.showroom-row-title{
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:2rem !important;
+    line-height:1.08 !important;
+    font-weight:760 !important;
+    letter-spacing:-.03em !important;
+    margin:0 0 .28rem !important;
+    padding:0 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+    line-height:1.34 !important;
+}
+
+/* The whole section gets the same bottom padding after its Save/Seen row.
+   This guarantees identical Save/Seen → next-section-title distance. */
+[class*="st-key-showroom_section_"]{
+    margin:0 !important;
+    padding:0 0 1.34rem 0 !important;
+    box-sizing:border-box !important;
+}
+[class*="st-key-showroom_section_"]:last-of-type{
+    padding-bottom:.42rem !important;
+}
+
+/* Remove older per-row margin rules so they cannot override the shared rhythm. */
+.showroom-row,
+.showroom-row.first{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    transform:none !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3945,18 +4087,38 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def quick_card_description(movie, limit=118):
-    """A complete, informative, lightly witty one-sentence movie summary."""
+def quick_card_description(movie, limit=68):
+    """One complete, informative, lightly witty sentence sized for one card line."""
     full = " ".join(str((movie or {}).get("why") or "").split()).strip()
-    if not full:
-        return "A promising setup with enough intrigue to make choosing the next scene easy."
-
-    first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
     genre = str((movie or {}).get("genre") or "").casefold()
 
-    # Keep the real premise, then add one restrained ending so the collapsed line
-    # feels authored rather than mechanically truncated.
-    premise_limit = 82
+    if not full:
+        return "A strong setup, with just enough trouble waiting off-screen."
+
+    first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
+
+    # Preserve the actual premise, but compress it aggressively enough to remain
+    # a real one-line card summary instead of being visually clipped.
+    endings = {
+        "thriller": "—and tension follows.",
+        "mystery": "—with answers still missing.",
+        "horror": "—and calm does not last.",
+        "comedy": "—then chaos joins in.",
+        "sci-fi": "—and reality bends.",
+        "science fiction": "—and reality bends.",
+        "romance": "—while timing complicates things.",
+        "documentary": "—with very real stakes.",
+        "action": "—and the plan quickly unravels.",
+        "adventure": "—and the plan quickly unravels.",
+        "anime": "—where normal rules bend.",
+        "animation": "—where normal rules bend.",
+        "fantasy": "—where normal rules bend.",
+        "drama": "—with consequences close behind.",
+    }
+    ending = endings.get(genre, "—and things get complicated.")
+
+    # Leave space for the witty ending and cut only on whole words.
+    premise_limit = max(34, limit - len(ending) - 1)
     premise = first
     if len(premise) > premise_limit:
         cut = premise[:premise_limit]
@@ -3968,48 +4130,41 @@ def quick_card_description(movie, limit=118):
             cut.rfind(" while "),
             cut.rfind(" who "),
         )
-        premise = cut[:natural] if natural >= 48 else cut.rsplit(" ", 1)[0]
+        premise = cut[:natural] if natural >= 28 else cut.rsplit(" ", 1)[0]
+
     premise = premise.rstrip(" ,;:–—-")
+    sentence = f"{premise} {ending}".strip()
 
-    endings = {
-        "thriller": "and keeping things simple quickly stops being an option",
-        "mystery": "while the answers remain stubbornly off-camera",
-        "horror": "and calm proves to be a very temporary arrangement",
-        "comedy": "while chaos quietly takes over the schedule",
-        "sci-fi": "and reality starts asking some inconvenient questions",
-        "science fiction": "and reality starts asking some inconvenient questions",
-        "romance": "while timing makes a perfectly good mess of things",
-        "documentary": "with very real stakes behind every turn",
-        "action": "and the original plan does not survive for long",
-        "adventure": "and the original plan does not survive for long",
-        "anime": "where normal rules politely step aside",
-        "animation": "where normal rules politely step aside",
-        "fantasy": "where normal rules politely step aside",
-        "drama": "with consequences that refuse to stay tidy",
-    }
-    ending = endings.get(genre, "and things become complicated in exactly the right way")
-    sentence = f"{premise}, {ending}."
-
+    # Final hard guard: always end as a complete sentence and never with a
+    # dangling filler word.
     if len(sentence) > limit:
-        shorter = {
-            "thriller":"and tension takes over",
-            "mystery":"while answers stay elusive",
-            "horror":"and calm does not last",
-            "comedy":"while chaos takes over",
-            "sci-fi":"and reality bends",
-            "science fiction":"and reality bends",
-            "romance":"while timing complicates everything",
-            "documentary":"with real stakes",
-            "action":"and the plan falls apart",
-            "adventure":"and the plan falls apart",
-            "anime":"where normal rules bend",
-            "animation":"where normal rules bend",
-            "fantasy":"where normal rules bend",
-            "drama":"with messy consequences",
-        }.get(genre, "and things get complicated")
-        room = max(58, limit - len(shorter) - 3)
+        shorter_end = {
+            "thriller": "—tension follows.",
+            "mystery": "—questions remain.",
+            "horror": "—calm does not last.",
+            "comedy": "—chaos follows.",
+            "sci-fi": "—reality bends.",
+            "science fiction": "—reality bends.",
+            "romance": "—timing interferes.",
+            "documentary": "—real stakes.",
+            "action": "—the plan unravels.",
+            "adventure": "—the plan unravels.",
+            "anime": "—rules bend.",
+            "animation": "—rules bend.",
+            "fantasy": "—rules bend.",
+            "drama": "—consequences follow.",
+        }.get(genre, "—things get complicated.")
+        room = max(30, limit - len(shorter_end) - 1)
         premise = first[:room].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
-        sentence = f"{premise}, {shorter}."
+        sentence = f"{premise} {shorter_end}".strip()
+
+    dangling = {"a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by"}
+    words = sentence.rstrip(".!?").split()
+    while words and words[-1].casefold().strip(".,;:") in dangling:
+        words.pop()
+    sentence = " ".join(words).rstrip(" ,;:")
+    if sentence and sentence[-1] not in ".!?":
+        sentence += "."
     return sentence
 
 
@@ -4629,117 +4784,115 @@ def render_showroom_fragment(p):
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
-            row_notes={
-                "Top Matches for You":"Best overall fits based on your full preference profile",
-                "Critically Acclaimed":"Highly rated films that still match your taste",
-                "Hidden Gems":"Strong matches that are less obvious or widely promoted",
-                "Something Different":"A little outside your usual taste, but still likely to click",
-            }
-            if row_index == 0:
+            row_shell = st.container(key=f"showroom_section_{row_index}")
+            with row_shell:
+                row_notes={
+                    "Top Matches for You":"Best overall fits based on your full preference profile",
+                    "Critically Acclaimed":"Highly rated films that still match your taste",
+                    "Hidden Gems":"Strong matches that are less obvious or widely promoted",
+                    "Something Different":"A little outside your usual taste, but still likely to click",
+                }
                 st.markdown(
                     f'<div class="{row_class} showroom-row-header">'
-                    f'<div class="tab-primary-heading">{row_name}</div>'
+                    f'<div class="showroom-row-title">{row_name}</div>'
                     f'<div class="row-model-note">{row_notes[row_name]}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-            else:
-                st.markdown(
-                    f'<div class="{row_class} showroom-row-header"><h3>{row_name}</h3>'
-                    f'<div class="row-model-note">{row_notes[row_name]}</div></div>',
-                    unsafe_allow_html=True,
-                )
-            if not choices:
-                st.caption("Refreshing personalized matches…")
-                continue
-            cols=st.columns(len(choices))
-            for i,(match,movie) in enumerate(choices):
-                with cols[i]:
-                    with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                        match_col, skip_col = st.columns([3.35,0.90], gap="small")
-                        with match_col:
-                            with st.popover(f"{match}% iCinema Match", use_container_width=True):
-                                context = recommendation_context.get(movie["title"], {})
-                                reasons = recommendation_explanation(
-                                    movie,p,st.session_state.adventure,st.session_state.review_priority,
-                                    semantic_similarity=context.get("semantic_similarity"),
-                                    availability_score=context.get("availability_alignment",0.5),
-                                    components=context,
-                                )
-                                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
-                                for reason in reasons:
+                if not choices:
+                    st.caption("Refreshing personalized matches…")
+                    continue
+                cols=st.columns(len(choices))
+                for i,(match,movie) in enumerate(choices):
+                    with cols[i]:
+                        with st.container(key=f"showroom_controls_{row_index}_{i}"):
+                            match_col, skip_col = st.columns([3.35,0.90], gap="small")
+                            with match_col:
+                                with st.popover(f"{match}% iCinema Match", use_container_width=True):
+                                    context = recommendation_context.get(movie["title"], {})
+                                    reasons = recommendation_explanation(
+                                        movie,p,st.session_state.adventure,st.session_state.review_priority,
+                                        semantic_similarity=context.get("semantic_similarity"),
+                                        availability_score=context.get("availability_alignment",0.5),
+                                        components=context,
+                                    )
+                                    st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                                    for reason in reasons:
+                                        st.markdown(
+                                            f'<div class="match-reason">'
+                                            f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
+                                            f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
+                                            f'</div>',
+                                            unsafe_allow_html=True,
+                                        )
                                     st.markdown(
-                                        f'<div class="match-reason">'
-                                        f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
-                                        f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
-                                        f'</div>',
+                                        '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
                                         unsafe_allow_html=True,
                                     )
-                                st.caption("Top signals ranked from this movie’s personalized model score.")
-                        with skip_col:
-                            st.button(
-                                "Skip",
-                                key=f"skip_{row_name}_{movie['title']}",
-                                use_container_width=True,
-                                on_click=skip_movie,
-                                args=(movie["title"], movie),
+                            with skip_col:
+                                st.button(
+                                    "Skip",
+                                    key=f"skip_{row_name}_{movie['title']}",
+                                    use_container_width=True,
+                                    on_click=skip_movie,
+                                    args=(movie["title"], movie),
+                                )
+                        with st.container(key=f"showroom_body_{row_index}_{i}"):
+                            identity = identity_by_title.get(movie["title"], {}) or {}
+                            display_movie = dict(movie)
+                            if identity.get("display_title"):
+                                display_movie["title"] = identity["display_title"]
+                            if identity.get("year"):
+                                display_movie["year"] = identity["year"]
+                            movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
+                            live_rating = live_ratings_by_title.get(movie["title"], {})
+                            imdb_value = live_rating.get("imdb")
+                            rt_value = live_rating.get("rt")
+                            imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
+                            rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+                            rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
+                            st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
+                            availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
+                            availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
+                            availability_text = concise_availability_text(availability["text"])
+                            st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
+                            quick_desc = quick_card_description(movie)
+                            expanded_desc = expanded_card_description(movie)
+                            summary_id = f"movie-summary-{row_index}-{i}"
+                            st.markdown(
+                                f'<div class="movie-summary-toggle">'
+                                f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
+                                f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
+                                f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
                             )
-                    identity = identity_by_title.get(movie["title"], {}) or {}
-                    display_movie = dict(movie)
-                    if identity.get("display_title"):
-                        display_movie["title"] = identity["display_title"]
-                    if identity.get("year"):
-                        display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
-                    live_rating = live_ratings_by_title.get(movie["title"], {})
-                    imdb_value = live_rating.get("imdb")
-                    rt_value = live_rating.get("rt")
-                    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
-                    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
-                    rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
-                    st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
-                    availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
-                    availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
-                    availability_text = concise_availability_text(availability["text"])
-                    st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
-                    quick_desc = quick_card_description(movie)
-                    expanded_desc = expanded_card_description(movie)
-                    summary_id = f"movie-summary-{row_index}-{i}"
-                    st.markdown(
-                        f'<div class="movie-summary-toggle">'
-                        f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
-                        f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
-                        f'<div class="movie-full-description">{html.escape(expanded_desc)}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
-                    a,b=st.columns(2, gap="small")
-                    with a:
-                        st.button(
-                            "Save",
-                            key=f"save_{row_name}_{movie['title']}",
-                            use_container_width=True,
-                            on_click=save_movie,
-                            args=(movie["title"], movie),
-                        )
-                    with b:
-                        st.button(
-                            "Seen",
-                            key=f"seen_{row_name}_{movie['title']}",
-                            use_container_width=True,
-                            on_click=mark_movie_seen,
-                            args=(movie["title"], movie),
-                        )
-                    st.markdown('</div>', unsafe_allow_html=True)
-        rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
-        st.markdown(
-            '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
-            'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
-            'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
-            unsafe_allow_html=True
-        )
-
+                            st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
+                            a,b=st.columns(2, gap="small")
+                            with a:
+                                st.button(
+                                    "Save",
+                                    key=f"save_{row_name}_{movie['title']}",
+                                    use_container_width=True,
+                                    on_click=save_movie,
+                                    args=(movie["title"], movie),
+                                )
+                            with b:
+                                st.button(
+                                    "Seen",
+                                    key=f"seen_{row_name}_{movie['title']}",
+                                    use_container_width=True,
+                                    on_click=mark_movie_seen,
+                                    args=(movie["title"], movie),
+                                )
+                        st.markdown('</div>', unsafe_allow_html=True)
+            rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
+            st.markdown(
+                '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
+                'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
+                'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
+                unsafe_allow_html=True
+            )
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-primary-heading">Saved</div>', unsafe_allow_html=True)
