@@ -3699,6 +3699,199 @@ div[data-testid="stStatusWidget"]::after{
     box-sizing:border-box !important;
 }
 
+
+/* V5.136 — Showroom layout recovery
+   Final override layer to remove accumulated spacing conflicts. */
+
+/* SECTION RHYTHM */
+[class*="st-key-showroom_section_"]{
+    margin:0 !important;
+    padding:0 0 1.45rem 0 !important;
+    min-height:0 !important;
+    height:auto !important;
+    box-sizing:border-box !important;
+}
+.showroom-row-header{
+    margin:0 !important;
+    padding:0 0 .82rem 0 !important;
+}
+.showroom-row-title{
+    margin:0 0 .26rem 0 !important;
+    padding:0 !important;
+}
+.showroom-row-header .row-model-note{
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* TOP CONTROLS */
+[class*="st-key-showroom_controls_"]{
+    margin:0 0 .42rem 0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    height:auto !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.48rem !important;
+}
+[class*="st-key-showroom_controls_"] [data-testid="column"]{
+    min-width:0 !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button,
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    margin:0 !important;
+    padding:.12rem .32rem !important;
+}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p,
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button span{
+    font-size:.60rem !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    text-align:center !important;
+    justify-content:center !important;
+}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{
+    font-size:.62rem !important;
+    line-height:1 !important;
+    text-align:center !important;
+}
+
+/* MOVIE BODY: never reserve synthetic viewport/container-query height. */
+[class*="st-key-showroom_body_"]{
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+    max-height:none !important;
+    container-type:normal !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* POSTER */
+[class*="st-key-showroom_body_"] .poster{
+    margin:0 !important;
+}
+
+/* TITLE/YEAR: compact fixed slot, enough for a two-line title + year. */
+[class*="st-key-showroom_body_"] .poster-caption:not(.library-poster-caption){
+    display:block !important;
+    height:4.25rem !important;
+    min-height:4.25rem !important;
+    max-height:4.25rem !important;
+    margin:.52rem 0 .12rem !important;
+    padding:0 .04rem !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-title{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    height:2.72rem !important;
+    min-height:2.72rem !important;
+    max-height:2.72rem !important;
+    overflow:hidden !important;
+    margin:0 !important;
+    line-height:1.16 !important;
+}
+[class*="st-key-showroom_body_"] .poster-caption-year{
+    display:block !important;
+    height:.92rem !important;
+    min-height:.92rem !important;
+    max-height:.92rem !important;
+    margin:.14rem 0 0 !important;
+    padding:0 !important;
+    line-height:.92rem !important;
+}
+
+/* RATINGS: own slot, no negative margins. */
+[class*="st-key-showroom_body_"] .ratings{
+    display:block !important;
+    height:1.35rem !important;
+    min-height:1.35rem !important;
+    max-height:1.35rem !important;
+    margin:.18rem 0 .12rem !important;
+    padding:0 !important;
+    line-height:1.35rem !important;
+    overflow:hidden !important;
+}
+
+/* STREAMING: fixed compact 3-line slot. */
+[class*="st-key-showroom_body_"] .watch-availability{
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:3 !important;
+    height:3.35rem !important;
+    min-height:3.35rem !important;
+    max-height:3.35rem !important;
+    margin:.04rem 0 .18rem !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    line-height:1.32 !important;
+}
+
+/* SUMMARY: one clean visible line; expanded copy grows below it. */
+[class*="st-key-showroom_body_"] .movie-summary-toggle{
+    display:block !important;
+    width:100% !important;
+    min-height:1.5rem !important;
+    height:auto !important;
+    margin:0 0 .12rem !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-label{
+    display:block !important;
+    width:100% !important;
+    height:1.5rem !important;
+    min-height:1.5rem !important;
+    max-height:1.5rem !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+    text-overflow:clip !important;
+    line-height:1.5rem !important;
+}
+[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
+    margin:.34rem 0 .08rem !important;
+    padding:.36rem 0 .08rem !important;
+}
+
+/* ACTIONS: natural flow, immediately after summary. */
+[class*="st-key-showroom_body_"] [data-testid="stElementContainer"]:has(.movie-card-actions){
+    margin:.06rem 0 0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] .movie-card-actions{
+    margin:0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] [class*="st-key-save_"],
+[class*="st-key-showroom_body_"] [class*="st-key-seen_"]{
+    margin:0 !important;
+    padding:0 !important;
+}
+[class*="st-key-showroom_body_"] [class*="st-key-save_"] button,
+[class*="st-key-showroom_body_"] [class*="st-key-seen_"] button{
+    height:1.82rem !important;
+    min-height:1.82rem !important;
+    margin:0 !important;
+}
+
+/* Attribution belongs once at the bottom of Showroom. */
+.watch-attribution{
+    display:block !important;
+    margin:.38rem 0 .14rem !important;
+    padding:0 !important;
+    font-size:.49rem !important;
+    line-height:1.34 !important;
+    color:rgba(169,173,183,.45) !important;
+    max-width:92% !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4923,14 +5116,14 @@ def render_showroom_fragment(p):
                                     on_click=mark_movie_seen,
                                     args=(movie["title"], movie),
                                 )
-                        st.markdown('</div>', unsafe_allow_html=True)
-            rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
-            st.markdown(
-                '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
-                'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
-                'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
-                unsafe_allow_html=True
-            )
+        rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
+        st.markdown(
+            '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
+            'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
+            unsafe_allow_html=True
+        )
+
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.markdown('<div class="tab-primary-heading">Saved</div>', unsafe_allow_html=True)
