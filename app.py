@@ -4742,55 +4742,142 @@ def clean_movie_copy(text, ensure_terminal=True):
     return value
 
 
-def quick_card_description(movie, limit=66):
-    """Create a complete, movie-specific hook sized to fit the compact card."""
-    full = clean_movie_copy((movie or {}).get("why"), ensure_terminal=False)
+def quick_card_description(movie, limit=72):
+    """Create a short, complete witty hook without showing sentence fragments."""
+    movie = movie or {}
+    full = clean_movie_copy(movie.get("why") or movie.get("overview"), ensure_terminal=False)
+    title = str(movie.get("title") or "This film").strip()
+    genre = str(movie.get("genre") or "movie").strip().lower()
+    tags = [str(tag).strip() for tag in (movie.get("tags") or []) if str(tag).strip()]
+
     if not full:
-        return "A promising setup where trouble arrives sooner than expected."
+        return f"{title} makes a strong case for one more movie night."
 
-    first = re.split(r"(?<=[.!?;])\s+", full)[0].strip().rstrip(".;:, ")
+    # Work only from the first complete source sentence. Never finish a hook by
+    # chopping at an arbitrary word boundary; that was the source of fragments
+    # such as “In a near-future Britain, young Alexander DeLarge.”
+    first = re.split(r"(?<=[.!?])\s+", full)[0].strip().rstrip(".;:, ")
 
-    if len(first) <= limit:
-        sentence = first
-    else:
-        cut = first[:limit]
-        # Prefer a true phrase boundary. Avoid cutting after weak connectors.
-        boundaries = [
-            cut.rfind(", "),
-            cut.rfind(" and "),
-            cut.rfind(" but "),
-            cut.rfind(" when "),
-            cut.rfind(" while "),
-            cut.rfind(" as "),
-            cut.rfind(" who "),
-        ]
-        natural = max(boundaries)
-        if natural >= 30:
-            sentence = cut[:natural]
-        else:
-            sentence = cut.rsplit(" ", 1)[0]
+    candidates = []
+    if first:
+        candidates.append(first)
 
-    sentence = clean_movie_copy(sentence, ensure_terminal=False)
+        # Drop a short introductory setup when the remainder is a complete,
+        # stronger subject-led thought: “In 1970s Boston, a reporter…” ->
+        # “A reporter…”. This avoids keeping only the setup phrase.
+        intro = re.match(
+            r"^(?:in|on|at|during|after|before|following|inside|outside|across|amid|within|years after|decades after)\b[^,]{3,34},\s+(.+)$",
+            first,
+            flags=re.IGNORECASE,
+        )
+        if intro:
+            candidates.append(intro.group(1).strip())
 
-    # Add a small movie-specific tonal nudge only when it fits naturally.
+        # Safe clause boundaries. The text before these boundaries is only used
+        # when it already reads as a complete independent thought.
+        for source in list(candidates):
+            for marker in ("; ", " — ", " – ", ": "):
+                if marker in source:
+                    candidates.append(source.split(marker, 1)[0].strip())
+            for marker in (" while ", " but ", " before ", " after ", " as "):
+                pos = source.lower().find(marker, 28)
+                if pos != -1:
+                    candidates.append(source[:pos].strip(" ,;:–—-"))
+
+    dangling_starts = (
+        "in ", "on ", "at ", "during ", "after ", "before ", "while ",
+        "when ", "as ", "with ", "without ", "through ", "across ", "amid ",
+    )
+    dangling_ends = {
+        "a", "an", "the", "and", "or", "but", "with", "to", "of", "in",
+        "for", "from", "by", "as", "at", "into", "onto", "on", "its", "his",
+        "her", "their", "who", "that", "which", "young",
+    }
+
+    def usable(candidate):
+        candidate = clean_movie_copy(candidate, ensure_terminal=False)
+        if not candidate or len(candidate) < 24 or len(candidate) > limit:
+            return False
+        lower = candidate.casefold()
+        if lower.startswith(dangling_starts):
+            return False
+        last = candidate.split()[-1].casefold().strip(".,;:!?()[]{}\"'")
+        if last in dangling_ends:
+            return False
+        # A useful hook should contain at least a likely verb. This is a small,
+        # dependency-free guard against noun-phrase fragments.
+        verb_markers = (
+            " is ", " are ", " was ", " were ", " becomes ", " become ",
+            " finds ", " find ", " follows ", " follow ", " discovers ",
+            " discover ", " tries ", " try ", " must ", " has ", " have ",
+            " gets ", " get ", " enters ", " enter ", " returns ", " return ",
+            " meets ", " meet ", " faces ", " face ", " uncovers ", " uncover ",
+            " struggles ", " struggle ", " begins ", " begin ", " turns ", " turn ",
+            " joins ", " join ", " becomes ", " become ", " grows ", " grow ",
+            " investigates ", " investigate ", " reconnects ", " reconnect ",
+            " attempts ", " attempt ", " receives ", " receive ", " attends ", " attend ",
+            " moves ", " move ", " prepares ", " prepare ", " realizes ", " realize ",
+            " spends ", " spend ", " fight ", " fights ", " searches ", " search ",
+        )
+        padded = f" {lower} "
+        return any(v in padded for v in verb_markers)
+
+    valid = []
+    seen = set()
+    for candidate in candidates:
+        cleaned = clean_movie_copy(candidate, ensure_terminal=False)
+        key = cleaned.casefold()
+        if key not in seen and usable(cleaned):
+            valid.append(cleaned)
+            seen.add(key)
+
+    if valid:
+        # Prefer the most informative complete thought that still fits the card.
+        best = max(valid, key=len)
+        return clean_movie_copy(best, ensure_terminal=True)
+
+    # If the source sentence cannot be shortened cleanly, use a compact tonal
+    # line built from real movie metadata instead of displaying a broken plot
+    # fragment. Keyword themes keep these fallbacks specific when possible.
     lower = full.casefold()
-    nudges = [
-        (["surveillance", "spying", "watching"], " as distance becomes personal"),
-        (["mission", "mars", "space", "planet"], " with almost no room for error"),
-        (["conspiracy", "secret", "mystery"], " as the questions keep multiplying"),
-        (["kidnap", "hostage", "abduct"], " as the situation quickly unravels"),
-        (["teacher", "student", "school"], " as normal life stops cooperating"),
+    themed = [
+        (("surveillance", "spying", "monitored", "watching"), "Watching other people gets dangerously personal."),
+        (("artificial intelligence", "android", "robot", "replicant"), "Human behavior gets harder to define once technology pushes back."),
+        (("missing", "disappear", "kidnap", "abduct"), "A disappearance turns every new answer into another problem."),
+        (("trial", "court", "accused", "murder"), "The truth gets less comfortable each time the story is retold."),
+        (("space", "mars", "planet", "astronaut"), "A mission leaves almost no room for a second mistake."),
+        (("gang", "juvenile crime", "state", "procedure", "incarcerated"), "Violence, control, and free will collide in deeply uncomfortable ways."),
+        (("relationship", "romance", "love", "reconnect"), "Timing turns out to be just as important as chemistry."),
+        (("school", "teacher", "student"), "Normal school life does not stay normal for very long."),
+        (("conspiracy", "secret", "mystery", "identity"), "Every answer seems to create a better question."),
+        (("outbreak", "infected", "zombie"), "Survival gets complicated the moment panic starts moving faster."),
     ]
-    if len(sentence) < 44:
-        for terms, suffix in nudges:
-            if any(term in lower for term in terms) and len(sentence) + len(suffix) <= limit:
-                sentence += suffix
-                break
+    for terms, line in themed:
+        if any(term in lower for term in terms) and len(line) <= limit:
+            return line
 
-    if len(sentence) > limit:
-        sentence = sentence[:limit].rsplit(" ", 1)[0]
+    tone = None
+    tone_map = [
+        ("Dark", "dark"), ("Funny", "funny"), ("Emotional", "emotional"),
+        ("Intense", "intense"), ("Suspenseful", "tense"), ("Offbeat", "offbeat"),
+        ("Thought-provoking", "thoughtful"), ("Romantic", "romantic"),
+        ("Heartfelt", "heartfelt"), ("Stylish", "stylish"),
+    ]
+    tagset = {t.casefold(): t for t in tags}
+    for raw, adjective in tone_map:
+        if raw.casefold() in tagset:
+            tone = adjective
+            break
 
-    return clean_movie_copy(sentence, ensure_terminal=True)
+    if tone:
+        line = f"A {tone} {genre} story that keeps its central conflict moving."
+    else:
+        article = "an" if genre[:1] in "aeiou" else "a"
+        line = f"{title} is {article} {genre} story built around a strong central conflict."
+
+    if len(line) > limit:
+        line = f"A {genre} story where the central conflict refuses to stay simple."
+    return clean_movie_copy(line, ensure_terminal=True)
 
 
 def expanded_card_description(movie, max_chars=320):
