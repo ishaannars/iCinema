@@ -1785,10 +1785,40 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 
 /* V5.108 explainable ML + iCinema Insights */
 .model-status-line{
-    display:flex;align-items:center;gap:.48rem;flex-wrap:wrap;
-    margin:.2rem 0 1rem;color:var(--muted);font-family:var(--ui-font);font-size:.78rem;
+    display:flex;
+    align-items:center;
+    gap:.42rem;
+    flex-wrap:wrap;
+    margin:.18rem 0 1.05rem;
+    font-family:var(--ui-font);
+    font-size:.72rem;
+    line-height:1.3;
+    letter-spacing:.004em;
+    color:var(--muted2);
 }
-.model-status-dot{width:.42rem;height:.42rem;border-radius:999px;background:var(--ai);display:inline-block}
+.model-status-dot{
+    width:.38rem;
+    height:.38rem;
+    border-radius:999px;
+    background:var(--ai);
+    display:inline-block;
+    flex:0 0 auto;
+}
+.model-status-primary{
+    color:var(--ivory);
+    font-size:.74rem;
+    font-weight:680;
+    letter-spacing:-.006em;
+}
+.model-status-secondary{
+    color:var(--muted);
+    font-size:.72rem;
+    font-weight:500;
+}
+.model-status-separator{
+    color:rgba(169,173,183,.46);
+    padding:0 .04rem;
+}
 .profile-insights{width:100%;max-width:760px;margin-top:1.3rem;padding-top:1.18rem;border-top:1px solid var(--border)}
 .profile-insights-title{font-family:var(--ui-font);font-size:1rem;font-weight:760;color:var(--ivory);margin-bottom:.24rem;letter-spacing:-.015em}
 .profile-insights-copy{font-family:var(--ui-font);font-size:.78rem;line-height:1.4;color:var(--muted);margin-bottom:.82rem}
@@ -1801,6 +1831,186 @@ div[data-testid="stPopover"] button{min-height:1.7rem !important;padding:.18rem 
 div[data-testid="stPopover"] button p{font-size:.68rem !important;font-weight:650 !important;margin:0 !important}
 .why-reason{font-family:var(--ui-font);font-size:.77rem;line-height:1.42;color:var(--muted);margin:.22rem 0}
 @media(max-width:800px){.insight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* V5.111 — Match explanation, complete descriptions, and interaction stability */
+/* The iCinema Match pill is now the explanation control itself. */
+div[data-testid="stPopover"]{
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+div[data-testid="stPopover"] > button,
+div[data-testid="stPopover"] button{
+    width:100% !important;
+    min-height:1.95rem !important;
+    height:1.95rem !important;
+    padding:.18rem .58rem !important;
+    margin:0 !important;
+    border:1px solid #4A4F57 !important;
+    border-radius:999px !important;
+    background:transparent !important;
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.72rem !important;
+    font-weight:700 !important;
+    letter-spacing:0 !important;
+    line-height:1 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+    box-shadow:none !important;
+}
+div[data-testid="stPopover"] button p{
+    margin:0 !important;
+    width:100% !important;
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.72rem !important;
+    font-weight:700 !important;
+    line-height:1 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+}
+div[data-testid="stPopover"] button:hover{
+    border-color:rgba(169,173,183,.58) !important;
+    background:rgba(255,255,255,.028) !important;
+}
+.match-explain-title{
+    font-family:var(--ui-font);
+    color:var(--ivory);
+    font-size:.82rem;
+    font-weight:760;
+    letter-spacing:-.01em;
+    margin:0 0 .45rem;
+}
+/* Descriptions are generated as complete phrases and receive the same roomy slot
+   on every card so no card looks clipped or shifts its action row. */
+.movie-description{
+    height:5.85rem !important;
+    min-height:5.85rem !important;
+    max-height:5.85rem !important;
+    line-height:1.42 !important;
+    margin-top:.18rem !important;
+    margin-bottom:.16rem !important;
+    overflow:hidden !important;
+    display:block !important;
+}
+/* The persistence bridge must never occupy a visible pixel during any rerun. */
+div[data-testid="stCustomComponentV1"],
+div[data-testid="stCustomComponentV1"] iframe,
+iframe[title*="icinema_browser_storage"],
+iframe[src*="icinema_browser_storage"]{
+    height:0 !important;
+    min-height:0 !important;
+    max-height:0 !important;
+    width:0 !important;
+    min-width:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    overflow:hidden !important;
+    opacity:0 !important;
+    visibility:hidden !important;
+    background:transparent !important;
+}
+
+
+/* V5.112 — cinematic running state + relaxed Match pill */
+/* Give the Match label enough room to breathe while preserving the compact card top row. */
+.showroom-top-controls [data-testid="stHorizontalBlock"]{
+    align-items:center !important;
+    column-gap:.55rem !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] > button,
+.showroom-top-controls div[data-testid="stPopover"] button{
+    min-height:2.02rem !important;
+    height:2.02rem !important;
+    padding:.18rem .78rem !important;
+    border-radius:999px !important;
+    justify-content:center !important;
+}
+.showroom-top-controls div[data-testid="stPopover"] button p,
+.showroom-top-controls div[data-testid="stPopover"] button span{
+    font-family:var(--ui-font) !important;
+    color:var(--ivory) !important;
+    font-size:.68rem !important;
+    font-weight:690 !important;
+    letter-spacing:-.006em !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    text-align:center !important;
+}
+.showroom-top-controls [class*="st-key-skip_"] button{
+    min-height:2.02rem !important;
+    height:2.02rem !important;
+}
+
+/* Replace Streamlit's generic running indicator with a small iCinema screening cue.
+   It appears only while Streamlit is actively executing a rerun. */
+div[data-testid="stStatusWidget"]{
+    position:fixed !important;
+    top:1rem !important;
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    z-index:999999 !important;
+    width:auto !important;
+    min-width:13.2rem !important;
+    height:2.35rem !important;
+    min-height:2.35rem !important;
+    padding:0 .9rem !important;
+    border:1px solid rgba(169,173,183,.26) !important;
+    border-radius:999px !important;
+    background:rgba(17,19,21,.96) !important;
+    box-shadow:0 10px 28px rgba(0,0,0,.28) !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    overflow:hidden !important;
+    backdrop-filter:blur(12px) !important;
+}
+div[data-testid="stStatusWidget"] > *{
+    display:none !important;
+}
+div[data-testid="stStatusWidget"]::before{
+    content:"▣  iCinema · Cueing your next scene…";
+    display:block !important;
+    color:var(--ivory) !important;
+    font-family:var(--ui-font) !important;
+    font-size:.7rem !important;
+    font-weight:650 !important;
+    letter-spacing:-.006em !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+}
+div[data-testid="stStatusWidget"]::after{
+    content:"";
+    position:absolute;
+    left:.55rem;
+    right:.55rem;
+    bottom:.22rem;
+    height:1px;
+    border-radius:999px;
+    background:linear-gradient(90deg, transparent 0%, rgba(92,111,168,.35) 20%, rgba(92,111,168,.95) 50%, rgba(92,111,168,.35) 80%, transparent 100%);
+    animation:icinema-projector-pulse 1.2s ease-in-out infinite;
+}
+@keyframes icinema-projector-pulse{
+    0%,100%{opacity:.28;transform:scaleX(.55)}
+    50%{opacity:1;transform:scaleX(1)}
+}
+@media(max-width:700px){
+    div[data-testid="stStatusWidget"]{
+        top:.72rem !important;
+        min-width:11.5rem !important;
+        max-width:calc(100vw - 2rem) !important;
+        height:2.2rem !important;
+        min-height:2.2rem !important;
+        padding:0 .72rem !important;
+    }
+    div[data-testid="stStatusWidget"]::before{font-size:.64rem !important}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2197,20 +2407,35 @@ def current_profile():
         st.session_state.external_movies, st.session_state.seen
     )
 
-def concise_description(text, limit=92):
-    text = " ".join(str(text).split()).strip()
+def concise_description(text, limit=138):
+    """Return a compact *complete-sounding* description for aligned movie cards.
+
+    Prefer a full first sentence. If the source is longer, shorten on a natural
+    phrase boundary and never leave dangling filler words such as "a" or "the".
+    """
+    text = " ".join(str(text or "").split()).strip()
     if not text:
         return ""
-    # Prefer the first clause/sentence for a cleaner card.
-    for separator in ["; ", ". "]:
-        if separator in text:
-            first = text.split(separator, 1)[0].strip()
-            if len(first) >= 55:
-                text = first
-                break
-    if len(text) > limit:
-        text = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.…")
-    return text.rstrip(" ,;:.…") + "."
+
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    first_sentence = sentences[0].strip() if sentences else text
+    if len(first_sentence) <= limit:
+        return first_sentence if first_sentence.endswith((".", "!", "?")) else first_sentence + "."
+
+    candidate = first_sentence
+    # Prefer a natural clause boundary before falling back to a word boundary.
+    boundaries = [m.end() for m in re.finditer(r"[,;:]\s+|\s+[–—-]\s+", candidate[:limit + 1])]
+    if boundaries:
+        candidate = candidate[:boundaries[-1]].rstrip(" ,;:–—-")
+    else:
+        candidate = candidate[:limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
+
+    dangling = {"a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by"}
+    words = candidate.split()
+    while words and words[-1].casefold().strip(".,;:") in dangling:
+        words.pop()
+    candidate = " ".join(words).rstrip(" ,;:.…")
+    return candidate + "." if candidate else first_sentence
 
 def concise_availability_text(text, max_providers=2):
     """Keep watch availability complete and compact instead of visually truncating it."""
@@ -2247,7 +2472,7 @@ def _format_seconds(value):
     return f"{value//60}m {value%60:02d}s"
 
 
-def render_cinema_profile(p):
+def render_cinema_profile(p, include_insights=False):
     sections = [
         ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
         ("Top genres", profile_chip_html(p["genres"]), "profile-chip-wrap"),
@@ -2265,7 +2490,9 @@ def render_cinema_profile(p):
     learned=train_learning_model(events)
     conf=profile_confidence_label(p)
     signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
-    model_text=(f"{learned.model_name} active · {learned.samples} labeled outcomes" if learned.ready else f"Hybrid model active · supervised learner collecting evidence ({learned.samples}/24 labeled outcomes)")
+    model_primary = "Learning model active"
+    model_secondary = "Adapting from your choices" if learned.ready else "Learning from your choices"
+    signal_text = f"{signals} signal{'s' if signals != 1 else ''} shaping recommendations"
 
     ttm=_format_seconds(insights.get("time_to_match_seconds"))
     skips="Learning" if insights.get("avg_skips_before_save") is None else f'{insights["avg_skips_before_save"]:.1f}'
@@ -2274,16 +2501,28 @@ def render_cinema_profile(p):
     cards=[(ttm,"Typical Time to Match"),(skips,"Skips Before Save"),(conv,"Saved → Seen"),(conf,"Profile Confidence")]
     insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
 
+    insights_section = (
+        f'<div class="profile-insights"><div class="profile-insights-title">Your iCinema Insights</div>'
+        f'<div class="profile-insights-copy">A quiet look at how efficiently iCinema is learning your taste and helping narrow the search.</div>'
+        f'<div class="insight-grid">{insight_html}</div></div>'
+        if include_insights else ""
+    )
+
     st.markdown(
         f'<div class="profile-wrap">'
         f'<div class="profile-heading">Your Cinema Profile</div>'
         f'<div class="profile-intro">A detailed showing of the preferences, viewing patterns, and recommendation signals iCinema has learned from your choices.</div>'
-        f'<div class="model-status-line"><span class="model-status-dot"></span><span>{model_text}</span><span>·</span><span>{signals} preference signals</span></div>'
+        f'<div class="model-status-line">'
+        f'<span class="model-status-dot"></span>'
+        f'<span class="model-status-primary">{model_primary}</span>'
+        f'<span class="model-status-separator">·</span>'
+        f'<span class="model-status-secondary">{model_secondary}</span>'
+        f'<span class="model-status-separator">·</span>'
+        f'<span class="model-status-secondary">{signal_text}</span>'
+        f'</div>'
         f'<div class="profile-grid">{section_html}</div>'
         f'<div class="profile-summary">{p["summary"]}</div>'
-        f'<div class="profile-insights"><div class="profile-insights-title">Your iCinema Insights</div>'
-        f'<div class="profile-insights-copy">A quiet look at how efficiently iCinema is learning your taste and helping narrow the search.</div>'
-        f'<div class="insight-grid">{insight_html}</div></div>'
+        f'{insights_section}'
         f'</div>', unsafe_allow_html=True
     )
 
@@ -2790,9 +3029,17 @@ def render_showroom_fragment(p):
             for i,(match,movie) in enumerate(choices):
                 with cols[i]:
                     st.markdown('<div class="showroom-top-controls">', unsafe_allow_html=True)
-                    match_col, skip_col = st.columns([2.15,1.35], gap="small")
+                    match_col, skip_col = st.columns([2.65,1.15], gap="small")
                     with match_col:
-                        st.markdown(f'<div class="match-pill">{match}% iCinema Match</div>', unsafe_allow_html=True)
+                        with st.popover(f"{match}% iCinema Match", use_container_width=True):
+                            reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
+                            st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                            for reason in reasons:
+                                st.markdown(f'<div class="why-reason">{html.escape(reason)}</div>',unsafe_allow_html=True)
+                            if learning_result.ready:
+                                st.caption(f"Personalized with the {learning_result.model_name} learning layer and the recommendation model.")
+                            else:
+                                st.caption("Personalized by the learning model while it gathers enough interaction history to train its supervised layer.")
                     with skip_col:
                         st.button(
                             "Skip",
@@ -2821,15 +3068,7 @@ def render_showroom_fragment(p):
                     availability_text = concise_availability_text(availability["text"])
                     st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
                     short_desc = concise_description(movie["why"])
-                    st.markdown(f'<div class="movie-description">{short_desc}</div>',unsafe_allow_html=True)
-                    with st.popover("Why this match?"):
-                        reasons=recommendation_explanation(movie,p,st.session_state.adventure,st.session_state.review_priority)
-                        for reason in reasons:
-                            st.markdown(f'<div class="why-reason">{html.escape(reason)}</div>',unsafe_allow_html=True)
-                        if learning_result.ready:
-                            st.caption(f"Personalized with the {learning_result.model_name} learning layer and the hybrid recommendation model.")
-                        else:
-                            st.caption("Based on the hybrid recommendation model. The supervised learning layer activates after enough labeled behavior is collected.")
+                    st.markdown(f'<div class="movie-description">{html.escape(short_desc)}</div>',unsafe_allow_html=True)
                     st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
                     a,b=st.columns(2, gap="small")
                     with a:
@@ -2916,7 +3155,7 @@ def render_showroom_fragment(p):
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        render_cinema_profile(p)
+        render_cinema_profile(p, include_insights=True)
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
         st.button("Reset Profile", key="reset_profile_tab", on_click=reset_profile_from_fragment)
 
