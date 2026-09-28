@@ -1,5 +1,14 @@
+"""TMDB catalog access and multi-source candidate retrieval for iCinema.
+
+The public function signatures are intentionally preserved so the finished UI does
+not need to change. The main upgrade is retrieval: candidate generation is no
+longer driven by one popularity-sorted stream. Instead, iCinema retrieves from
+several complementary candidate sources before the existing recommender ranks and
+reranks them.
+"""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+import math
 import time
 from threading import Lock
 from typing import Dict, Optional, Tuple
@@ -13,11 +22,6 @@ CACHE_SECONDS = 60 * 60 * 24 * 14
 SEARCH_CACHE_SECONDS = 60 * 60 * 24
 DISCOVERY_CACHE_SECONDS = 60 * 60 * 24
 
-# Process-local TTL cache for TMDB discovery pages. This intentionally avoids
-# wrapping the large multi-page discovery function with Streamlit cache_data;
-# the latter can fail the entire Showroom when signatures change between
-# cumulative deployments. Page-level caching keeps the network work cheap and
-# the recommendation pipeline resilient.
 _DISCOVERY_PAGE_CACHE = {}
 _DISCOVERY_PAGE_CACHE_LOCK = Lock()
 
@@ -42,52 +46,6 @@ GENRE_MAP = {
     37: "Adventure",
     10752: "Drama",
 }
-
-
-def _credentials():
-    bearer = st.secrets.get("TMDB_BEARER_TOKEN", "") if hasattr(st, "secrets") else ""
-    api_key = st.secrets.get("TMDB_API_KEY", "") if hasattr(st, "secrets") else ""
-    return str(bearer).strip(), str(api_key).strip()
-
-
-def tmdb_catalog_configured() -> bool:
-    bearer, api_key = _credentials()
-    return bool(bearer or api_key)
-
-
-def _request(path: str, params: Optional[dict] = None) -> Optional[dict]:
-    bearer, api_key = _credentials()
-    if not bearer and not api_key:
-        return None
-    headers = {"accept": "application/json"}
-    params = dict(params or {})
-    if bearer:
-        headers["Authorization"] = f"Bearer {bearer}"
-    else:
-        params["api_key"] = api_key
-    try:
-        response = requests.get(f"{TMDB_BASE}{path}", headers=headers, params=params, timeout=4.5)
-        response.raise_for_status()
-        return response.json()
-    except (requests.RequestException, ValueError):
-        return None
-
-
-def _poster_url(path):
-    return f"{TMDB_IMAGE_BASE}{path}" if path else None
-
-
-def _year(item):
-    release = str(item.get("release_date", ""))
-    return int(release[:4]) if len(release) >= 4 and release[:4].isdigit() else None
-
-
-def _canonical_genre(item):
-    genre_ids = item.get("genre_ids") or []
-    mapped = [GENRE_MAP[g] for g in genre_ids if g in GENRE_MAP]
-    if 16 in genre_ids and str(item.get("original_language", "")).lower() == "ja":
-        return "Anime"
-    return mapped[0] if mapped else "Drama"
 
 OVERVIEW_TRAIT_KEYWORDS = {
     "Suspenseful": ("murder", "missing", "investigation", "danger", "threat", "crime", "hunt"),
@@ -115,11 +73,66 @@ OVERVIEW_TRAIT_KEYWORDS = {
     "Moving": ("grief", "loss", "family", "love", "reunite"),
 }
 
+
+def _credentials():
+    bearer = st.secrets.get("TMDB_BEARER_TOKEN", "") if hasattr(st, "secrets") else ""
+    api_key = st.secrets.get("TMDB_API_KEY", "") if hasattr(st, "secrets") else ""
+    return str(bearer).strip(), str(api_key).strip()
+
+
+def tmdb_catalog_configured() -> bool:
+    bearer, api_key = _credentials()
+    return bool(bearer or api_key)
+
+
+def _request(path: str, params: Optional[dict] = None) -> Optional[dict]:
+    bearer, api_key = _credentials()
+    if not bearer and not api_key:
+        return None
+
+    headers = {"accept": "application/json"}
+    params = dict(params or {})
+    if bearer:
+        headers["Authorization"] = f"Bearer {bearer}"
+    else:
+        params["api_key"] = api_key
+
+    try:
+        response = requests.get(
+            f"{TMDB_BASE}{path}",
+            headers=headers,
+            params=params,
+            timeout=4.5,
+        )
+        response.raise_for_status()
+        return response.json()
+    except (requests.RequestException, ValueError):
+        return None
+
+
+def _poster_url(path):
+    return f"{TMDB_IMAGE_BASE}{path}" if path else None
+
+
+def _year(item):
+    release = str(item.get("release_date", ""))
+    return int(release[:4]) if len(release) >= 4 and release[:4].isdigit() else None
+
+
+def _canonical_genre(item):
+    genre_ids = item.get("genre_ids") or []
+    mapped = [GENRE_MAP[g] for g in genre_ids if g in GENRE_MAP]
+    if 16 in genre_ids and str(item.get("original_language", "")).lower() == "ja":
+        return "Anime"
+    return mapped[0] if mapped else "Drama"
+
+
 def _overview_traits(text):
     text = " ".join(str(text or "").lower().split())
     if not text:
         return []
-    out=[]
+
+    out = []
     for trait, keywords in OVERVIEW_TRAIT_KEYWORDS.items():
         if any(keyword in text for keyword in keywords):
             out.append(trait)
@@ -129,31 +142,38 @@ def _overview_traits(text):
 def _movie_tags(item):
     genre_ids = item.get("genre_ids") or []
     tags = []
+
     if 16 in genre_ids and str(item.get("original_language", "")).lower() == "ja":
         tags.extend(["Anime", "Animation"])
+
     for gid in genre_ids:
         genre = GENRE_MAP.get(gid)
         if genre and genre not in tags:
             tags.append(genre)
+
     if str(item.get("original_language", "")).lower() not in {"", "en"}:
         tags.append("International")
+
     year = _year(item)
     current_year = datetime.now().year
     if year and year >= current_year - 3:
         tags.append("Recent Release")
     if year and year <= 2000:
         tags.append("Classic")
+
     for trait in _overview_traits(item.get("overview")):
         if trait not in tags:
             tags.append(trait)
+
     return tags
 
 
-def _to_icinema_movie(item):
+def _to_icinema_movie(item, candidate_source=None):
     title = str(item.get("title") or item.get("original_title") or "Untitled").strip()
     year = _year(item) or 0
     overview = " ".join(str(item.get("overview") or "").split()).strip()
-    return {
+
+    movie = {
         "title": title,
         "year": year,
         "genre": _canonical_genre(item),
@@ -169,6 +189,9 @@ def _to_icinema_movie(item):
         "popularity": item.get("popularity"),
         "external": True,
     }
+    if candidate_source:
+        movie["candidate_source"] = str(candidate_source)
+    return movie
 
 
 @st.cache_data(ttl=SEARCH_CACHE_SECONDS, show_spinner=False)
@@ -176,17 +199,24 @@ def search_movies(query: str, limit: int = 8):
     query = " ".join(str(query).split()).strip()
     if len(query) < 2 or not tmdb_catalog_configured():
         return []
+
     payload = _request(
         "/search/movie",
-        {"query": query, "include_adult": "false", "language": "en-US", "page": 1},
+        {
+            "query": query,
+            "include_adult": "false",
+            "language": "en-US",
+            "page": 1,
+        },
     )
     if not payload:
         return []
+
     results = []
     for item in payload.get("results", []):
         if not item.get("title"):
             continue
-        results.append(_to_icinema_movie(item))
+        results.append(_to_icinema_movie(item, "search"))
         if len(results) >= limit:
             break
     return results
@@ -196,34 +226,60 @@ def search_movies(query: str, limit: int = 8):
 def find_movie(title: str, year: int = 0):
     if not tmdb_catalog_configured():
         return None
-    params = {"query": title, "include_adult": "false", "language": "en-US"}
+
+    params = {
+        "query": title,
+        "include_adult": "false",
+        "language": "en-US",
+    }
     if year:
         params["year"] = int(year)
+
     payload = _request("/search/movie", params)
     results = (payload or {}).get("results", [])
+
     if not results and year:
-        payload = _request("/search/movie", {"query": title, "include_adult": "false", "language": "en-US"})
+        payload = _request(
+            "/search/movie",
+            {
+                "query": title,
+                "include_adult": "false",
+                "language": "en-US",
+            },
+        )
         results = (payload or {}).get("results", [])
+
     if not results:
         return None
+
     title_folded = str(title).casefold()
     for item in results:
-        if str(item.get("title", "")).casefold() == title_folded and (_year(item) or 0) == int(year or 0):
-            return _to_icinema_movie(item)
+        if (
+            str(item.get("title", "")).casefold() == title_folded
+            and (_year(item) or 0) == int(year or 0)
+        ):
+            return _to_icinema_movie(item, "search")
+
     for item in results:
         if str(item.get("title", "")).casefold() == title_folded:
-            return _to_icinema_movie(item)
-    return _to_icinema_movie(results[0])
+            return _to_icinema_movie(item, "search")
+
+    return _to_icinema_movie(results[0], "search")
 
 
 @st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
 def get_poster_batch(movies: Tuple[Tuple[str, int], ...]) -> Dict[str, Optional[str]]:
     if not movies or not tmdb_catalog_configured():
         return {}
+
     result: Dict[str, Optional[str]] = {}
     workers = min(8, max(1, len(movies)))
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(find_movie, title, year): title for title, year in movies}
+        futures = {
+            pool.submit(find_movie, title, year): title
+            for title, year in movies
+        }
         for future in as_completed(futures):
             title = futures[future]
             try:
@@ -234,81 +290,210 @@ def get_poster_batch(movies: Tuple[Tuple[str, int], ...]) -> Dict[str, Optional[
     return result
 
 
-def discover_movies(limit: int = 120, start_page: int = 1, *_, **__):
-    """Return a broad TMDB candidate pool for resilient recommendation replenishment.
+def _discovery_strategies():
+    """Complementary retrieval channels.
 
-    start_page lets the showroom rotate through deeper TMDB inventory as a user
-    accumulates skips, while caching keeps repeated sessions fast.
+    The existing ranker still decides what is shown. These strategies only make
+    sure the ranker receives a less popularity-biased candidate set.
+    """
+    current_year = datetime.now().year
+    return [
+        (
+            "popular",
+            {
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 80,
+            },
+        ),
+        (
+            "quality",
+            {
+                "sort_by": "vote_average.desc",
+                "vote_count.gte": 500,
+            },
+        ),
+        (
+            "hidden_gem",
+            {
+                "sort_by": "vote_average.desc",
+                "vote_count.gte": 100,
+                "vote_count.lte": 5000,
+                "vote_average.gte": 6.7,
+            },
+        ),
+        (
+            "recent",
+            {
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 40,
+                "primary_release_date.gte": f"{current_year - 2}-01-01",
+            },
+        ),
+        (
+            "international_ko",
+            {
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 60,
+                "with_original_language": "ko",
+            },
+        ),
+        (
+            "international_ja",
+            {
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 60,
+                "with_original_language": "ja",
+            },
+        ),
+        (
+            "international_fr_es",
+            {
+                "sort_by": "vote_average.desc",
+                "vote_count.gte": 80,
+                "with_original_language": "fr|es",
+            },
+        ),
+        (
+            "classic",
+            {
+                "sort_by": "vote_average.desc",
+                "vote_count.gte": 300,
+                "primary_release_date.lte": "2005-12-31",
+            },
+        ),
+    ]
+
+
+def _fetch_discovery_page(source_name, source_params, page_number):
+    cache_key = (
+        source_name,
+        int(page_number),
+        tuple(sorted((str(k), str(v)) for k, v in source_params.items())),
+    )
+    now = time.time()
+
+    with _DISCOVERY_PAGE_CACHE_LOCK:
+        cached = _DISCOVERY_PAGE_CACHE.get(cache_key)
+        if cached and now - cached[0] < DISCOVERY_CACHE_SECONDS:
+            return source_name, page_number, cached[1]
+
+    params = {
+        "include_adult": "false",
+        "include_video": "false",
+        "language": "en-US",
+        "page": int(page_number),
+        **source_params,
+    }
+    payload = _request("/discover/movie", params)
+    items = (payload or {}).get("results", [])
+
+    if items:
+        with _DISCOVERY_PAGE_CACHE_LOCK:
+            _DISCOVERY_PAGE_CACHE[cache_key] = (now, items)
+
+    return source_name, page_number, items
+
+
+def discover_movies(limit: int = 120, start_page: int = 1, *_, **__):
+    """Return a diversified TMDB retrieval pool.
+
+    Compatibility is preserved with the existing app:
+        discover_movies(limit)
+        discover_movies(limit, start_page)
+
+    start_page still rotates into deeper inventory as a user accumulates Skips,
+    but each retrieval channel now advances independently.
     """
     if not tmdb_catalog_configured() or limit <= 0:
         return []
 
-    results = []
-    seen = set()
-    first_page = max(1, int(start_page or 1))
-    # TMDB returns 20 movies per discover page. Fetch one small buffer page so
-    # duplicates/missing entries do not shrink the effective candidate pool.
-    pages_needed = max(1, (int(limit) + 19) // 20 + 1)
-    final_page = min(500, first_page + pages_needed - 1)
-    pages = list(range(first_page, final_page + 1))
+    strategies = _discovery_strategies()
+    per_page = 20
+    pages_per_strategy = max(
+        1,
+        int(math.ceil(float(limit) / (per_page * len(strategies)))) + 1,
+    )
 
-    def fetch_page(page_number):
-        now = time.time()
-        with _DISCOVERY_PAGE_CACHE_LOCK:
-            cached = _DISCOVERY_PAGE_CACHE.get(page_number)
-            if cached and now - cached[0] < DISCOVERY_CACHE_SECONDS:
-                return page_number, cached[1]
+    # The app advances start_page in larger jumps. Compress that into a safe
+    # per-strategy page offset so all retrieval channels keep rotating without
+    # racing toward TMDB's 500-page ceiling.
+    rotation = max(0, int(start_page or 1) - 1)
+    base_page = 1 + (rotation % 80)
 
-        payload = _request(
-            "/discover/movie",
-            {
-                "include_adult": "false",
-                "include_video": "false",
-                "language": "en-US",
-                "page": page_number,
-                "sort_by": "popularity.desc",
-                "vote_count.gte": 80,
-            },
-        )
-        items = (payload or {}).get("results", [])
-        if items:
-            with _DISCOVERY_PAGE_CACHE_LOCK:
-                _DISCOVERY_PAGE_CACHE[page_number] = (now, items)
-        return page_number, items
+    tasks = []
+    for source_name, source_params in strategies:
+        for offset in range(pages_per_strategy):
+            page = min(500, base_page + offset)
+            tasks.append((source_name, source_params, page))
 
-    # A deeper pool is useful for repeated Skip actions, but fetching ~30 pages
-    # serially would make the first load feel slow. Fetch pages concurrently,
-    # then restore deterministic TMDB page order before feature scoring.
-    page_items = {}
-    workers = min(8, max(1, len(pages)))
+    fetched = {}
+    workers = min(8, max(1, len(tasks)))
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(fetch_page, page_number) for page_number in pages]
+        futures = [
+            pool.submit(
+                _fetch_discovery_page,
+                source_name,
+                source_params,
+                page,
+            )
+            for source_name, source_params, page in tasks
+        ]
         for future in as_completed(futures):
             try:
-                page_number, items = future.result()
-                page_items[page_number] = items
+                source_name, page, items = future.result()
+                fetched[(source_name, page)] = items
             except Exception:
                 continue
 
-    for page_number in pages:
-        for item in page_items.get(page_number, []):
-            movie = _to_icinema_movie(item)
-            key = (movie["title"].casefold(), int(movie.get("year") or 0))
-            if key in seen:
-                continue
-            seen.add(key)
-            results.append(movie)
-            if len(results) >= limit:
-                return results
+    # Round-robin the sources instead of letting one source fill the entire pool.
+    queues = {}
+    for source_name, _ in strategies:
+        combined = []
+        for offset in range(pages_per_strategy):
+            page = min(500, base_page + offset)
+            combined.extend(fetched.get((source_name, page), []))
+        queues[source_name] = combined
+
+    results = []
+    seen = set()
+    source_order = [name for name, _ in strategies]
+    cursor = {name: 0 for name in source_order}
+
+    while len(results) < int(limit):
+        added_this_round = False
+
+        for source_name in source_order:
+            items = queues.get(source_name, [])
+            while cursor[source_name] < len(items):
+                item = items[cursor[source_name]]
+                cursor[source_name] += 1
+
+                movie = _to_icinema_movie(item, source_name)
+                key = (
+                    movie["title"].casefold(),
+                    int(movie.get("year") or 0),
+                )
+                if key in seen:
+                    continue
+
+                seen.add(key)
+                results.append(movie)
+                added_this_round = True
+                break
+
+            if len(results) >= int(limit):
+                break
+
+        if not added_this_round:
+            break
+
     return results
+
 
 @st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
 def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
-    """Resolve a movie to canonical TMDB display metadata + stable IMDb ID.
-
-    Uses TMDB's movie details endpoint when an ID is known. Falls back to the
-    existing cached title/year resolver, then fetches details for the resolved ID.
-    """
+    """Resolve canonical TMDB display metadata + stable IMDb ID."""
     if not tmdb_catalog_configured():
         return None
 
@@ -317,6 +502,7 @@ def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
         resolved = find_movie(title, int(year or 0))
         if not resolved:
             return None
+
         resolved_id = int(resolved.get("tmdb_id") or 0)
         if not resolved_id:
             return {
@@ -331,9 +517,16 @@ def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
     if not payload:
         return None
 
-    canonical_title = str(payload.get("title") or payload.get("original_title") or title).strip()
+    canonical_title = str(
+        payload.get("title") or payload.get("original_title") or title
+    ).strip()
     release = str(payload.get("release_date") or "")
-    canonical_year = int(release[:4]) if len(release) >= 4 and release[:4].isdigit() else int(year or 0)
+    canonical_year = (
+        int(release[:4])
+        if len(release) >= 4 and release[:4].isdigit()
+        else int(year or 0)
+    )
+
     return {
         "display_title": canonical_title,
         "year": canonical_year,
@@ -344,16 +537,24 @@ def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
 
 
 @st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
-def get_movie_identity_batch(movies: Tuple[Tuple[str, int, int], ...]) -> Dict[str, dict]:
-    """Resolve visible movies concurrently without changing internal iCinema keys."""
+def get_movie_identity_batch(
+    movies: Tuple[Tuple[str, int, int], ...]
+) -> Dict[str, dict]:
+    """Resolve visible movies concurrently without changing internal keys."""
     if not movies or not tmdb_catalog_configured():
         return {}
 
     result: Dict[str, dict] = {}
     workers = min(8, max(1, len(movies)))
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(get_movie_identity, title, int(year or 0), int(tmdb_id or 0)): title
+            pool.submit(
+                get_movie_identity,
+                title,
+                int(year or 0),
+                int(tmdb_id or 0),
+            ): title
             for title, year, tmdb_id in movies
         }
         for future in as_completed(futures):
@@ -364,4 +565,5 @@ def get_movie_identity_batch(movies: Tuple[Tuple[str, int, int], ...]) -> Dict[s
                 identity = None
             if identity:
                 result[internal_title] = identity
+
     return result
