@@ -17,6 +17,8 @@ The system combines:
 
 The app works immediately with a cold-start analytical model. Once enough explicit feedback exists, the supervised ML layer begins learning from the user’s behavior.
 
+User feedback is stored locally in the browser, so recommendations can adapt over time without requiring an account or central user database.
+
 ## Technical Depth
 
 Bayesian quality adjustment · Decision Utility scoring · profile confidence · calibration tracking · position-bias protection · session analytics · candidate-source diversity · per-card recommendation updates
@@ -30,7 +32,7 @@ Bayesian quality adjustment · Decision Utility scoring · profile confidence ·
 - Streaming availability
 - IMDb and Rotten Tomatoes ratings
 - Hidden gems and controlled discovery
-- Browser-local persistence with no account required
+- Browser-local preference persistence with no account required
 
 ## Stack
 
