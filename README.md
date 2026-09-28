@@ -1,6 +1,6 @@
 # iCinema — ML Movie Recommendation System
 
-I kept finding myself spending too much time deciding what movie to watch next, so I built iCinema to try to make that choice a little easier. It’s an ML system that learns from what each user likes, saves, skips, and watches to personalize what they see over time. **Please feel free to try it out and share any feedback.**
+I kept finding myself spending too much time deciding what movie to watch next, so I built iCinema to try to make that choice a little easier. It’s an ML system that learns from what each user likes, saves, skips, and watches to personalize what they see over time. Please feel free to try it out and share any feedback.
 
 The system combines:
 - **Hybrid recommendation modeling** using behavioral, semantic, quality, and discovery signals
