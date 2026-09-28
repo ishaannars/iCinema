@@ -4289,6 +4289,90 @@ div[data-testid="stLoadingSpinner"],
     background:var(--ai) !important;
 }
 
+
+/* V5.165 — single, consistent iCinema camera loader.
+   Keep transient status away from the logo and anchor it to the top-right of
+   the centered product frame, where users expect passive system status. */
+div[data-testid="stStatusWidget"],
+.icinema-boot-loader{
+    position:fixed !important;
+    top:2.08rem !important;
+    left:auto !important;
+    right:max(1.25rem, calc((100vw - 1240px) / 2 + 1.25rem)) !important;
+    transform:none !important;
+    z-index:999999 !important;
+    width:1.62rem !important;
+    min-width:1.62rem !important;
+    max-width:1.62rem !important;
+    height:1.62rem !important;
+    min-height:1.62rem !important;
+    max-height:1.62rem !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:1px solid rgba(169,173,183,.28) !important;
+    border-radius:50% !important;
+    background:rgba(17,19,21,.96) !important;
+    background-image:none !important;
+    box-shadow:0 0 0 1px rgba(92,111,168,.06) !important;
+    overflow:visible !important;
+    backdrop-filter:blur(10px) !important;
+    animation:icinema-loader-ring 1.1s linear infinite !important;
+}
+div[data-testid="stStatusWidget"] > *{
+    display:none !important;
+}
+div[data-testid="stStatusWidget"]::before,
+.icinema-boot-loader::before{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.74rem !important;
+    height:.50rem !important;
+    transform:translate(-50%,-45%) !important;
+    border:1.25px solid rgba(243,240,234,.94) !important;
+    border-radius:3px !important;
+    background:transparent !important;
+    box-sizing:border-box !important;
+}
+div[data-testid="stStatusWidget"]::after,
+.icinema-boot-loader::after{
+    content:"" !important;
+    position:absolute !important;
+    left:50% !important;
+    top:50% !important;
+    width:.27rem !important;
+    height:.27rem !important;
+    transform:translate(-50%,-42%) !important;
+    border:1.15px solid rgba(243,240,234,.98) !important;
+    border-radius:50% !important;
+    background:rgba(92,111,168,.20) !important;
+    box-shadow:0 0 6px rgba(92,111,168,.65) !important;
+}
+/* Suppress competing Streamlit progress/spinner/skeleton visuals. */
+div[data-testid="stSpinner"],
+div[data-testid="stLoadingSpinner"],
+.stSpinner,
+[data-testid="stProgress"],
+[data-testid="stSkeleton"],
+[data-testid="stStatusWidget"] svg,
+[data-testid="stStatusWidget"] [role="progressbar"]{
+    display:none !important;
+}
+@media(max-width:700px){
+    div[data-testid="stStatusWidget"],
+    .icinema-boot-loader{
+        top:1.92rem !important;
+        right:1rem !important;
+        width:1.48rem !important;
+        min-width:1.48rem !important;
+        max-width:1.48rem !important;
+        height:1.48rem !important;
+        min-height:1.48rem !important;
+        max-height:1.48rem !important;
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4299,7 +4383,9 @@ defaults={
     "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
     "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
     "analytics_events":[],"showroom_session_id":None,"showroom_session_start":None,
-    "showroom_impression_keys":set(),"recommendation_context":{}
+    "showroom_impression_keys":set(),"recommendation_context":{},
+    "showroom_slots":{},"showroom_payloads":{},"showroom_row_queues":{},
+    "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{}
 }
 for k,v in defaults.items():
     if k not in st.session_state:
@@ -4322,7 +4408,7 @@ def profile_snapshot():
         "dismissed": sorted(st.session_state.dismissed),
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
-        "analytics_events": list(st.session_state.get("analytics_events", []))[-500:],
+        "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
     }
 
 def restore_profile(data):
@@ -4340,7 +4426,7 @@ def restore_profile(data):
         st.session_state.dismissed = set(data.get("dismissed") or [])
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
-        st.session_state.analytics_events = list(data.get("analytics_events") or [])[-500:]
+        st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
         st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
         if st.session_state.onboarding_complete:
             st.session_state.screen = "showroom"
@@ -4353,7 +4439,7 @@ def restore_profile(data):
 if not st.session_state.get("_storage_hydrated", False):
     _stored = browser_storage("get", PROFILE_STORAGE_KEY, key="icinema_profile_loader")
     if not (isinstance(_stored, dict) and _stored.get("loaded") is True):
-        logo_placeholder = '<div class="icinema-logo">iCinema</div><div style="color:#858B96;font-size:.86rem">Loading your cinema profile…</div>'
+        logo_placeholder = '<div class="icinema-logo">iCinema</div><div class="icinema-boot-loader" aria-label="Loading"></div>'
         st.markdown(logo_placeholder, unsafe_allow_html=True)
         st.stop()
     restored = restore_profile(_stored.get("value")) if _stored.get("value") else False
@@ -5031,15 +5117,15 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     methodology_html = (
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">Methodology &amp; Data</div>'
-        '<div class="profile-insights-copy">Two of the strongest signals behind your recommendations.</div>'
+        '<div class="profile-insights-copy">Two ways iCinema turns your activity into recommendations.</div>'
         '<div class="methodology-grid">'
         '<div class="methodology-card">'
         '<div class="methodology-value">20% · Theme &amp; tone fit</div>'
         '<div class="methodology-label">iCinema converts plot and metadata text into latent features using TF-IDF and SVD, then compares movies to your learned taste with cosine similarity.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">18% · Genre affinity</div>'
-        '<div class="methodology-label">Likes, favorites, saves, skips, and selected genres build a signed genre preference vector. Cosine similarity measures how closely each candidate lines up with it.</div>'
+        '<div class="methodology-value">Behavioral learning</div>'
+        '<div class="methodology-label">Save and Skip outcomes train the preference model once enough evidence exists. Recent behavior receives more weight, while display position is excluded so exposure does not masquerade as taste.</div>'
         '</div>'
         '</div>'
         '</div>'
@@ -5405,6 +5491,226 @@ def render_more_fragment():
     # fragment, which could briefly surface as a dark strip after a card click.
 
 
+def _showroom_slot_key(row_name, slot_index):
+    return f"{row_name}::{int(slot_index)}"
+
+def _advance_showroom_slot(row_name, slot_index):
+    """Replace only one visible showroom slot from its already-ranked queue."""
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    slots = dict(st.session_state.get("showroom_slots") or {})
+    queues = st.session_state.get("showroom_row_queues") or {}
+    payloads = st.session_state.get("showroom_payloads") or {}
+    current_titles = {title for title in slots.values() if title}
+    excluded = (
+        set(st.session_state.saved)
+        | set(st.session_state.seen)
+        | set(st.session_state.dismissed)
+    )
+
+    replacement = None
+    for title in queues.get(row_name, []):
+        if not title or title in current_titles or title in excluded:
+            continue
+        if title not in payloads:
+            continue
+        replacement = title
+        break
+
+    if replacement:
+        slots[slot_key] = replacement
+        st.session_state.showroom_slots = slots
+        return True
+    return False
+
+def skip_showroom_slot(row_name, slot_index):
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    movie = payload.get("movie")
+    if title:
+        skip_movie(title, movie)
+    if not _advance_showroom_slot(row_name, slot_index):
+        st.rerun(scope="app")
+
+def save_showroom_slot(row_name, slot_index):
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    movie = payload.get("movie")
+    if title:
+        save_movie(title, movie)
+    if not _advance_showroom_slot(row_name, slot_index):
+        st.rerun(scope="app")
+
+def seen_showroom_slot(row_name, slot_index):
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    movie = payload.get("movie")
+    if title:
+        mark_movie_seen(title, movie)
+    if not _advance_showroom_slot(row_name, slot_index):
+        st.rerun(scope="app")
+
+def _showroom_cached_metadata(movie):
+    """Use initial batch metadata; fetch only the replacement card on cache miss."""
+    title = movie["title"]
+    year = int(movie.get("year") or 0)
+    tmdb_id = int(movie.get("tmdb_id") or 0)
+
+    identity_cache = dict(st.session_state.get("showroom_identity_cache") or {})
+    identity = identity_cache.get(title)
+    if identity is None:
+        identity = (get_movie_identity_batch(((title, year, tmdb_id),)).get(title) or {})
+        identity_cache[title] = identity
+        st.session_state.showroom_identity_cache = identity_cache
+
+    watch_cache = dict(st.session_state.get("showroom_watch_cache") or {})
+    availability = watch_cache.get(title)
+    if availability is None:
+        availability = (get_watch_availability_batch(((title, year),), "US").get(title) or {
+            "status":"unknown",
+            "text":"Where to watch: availability unavailable",
+            "url":None,
+        })
+        watch_cache[title] = availability
+        st.session_state.showroom_watch_cache = watch_cache
+
+    rating_cache = dict(st.session_state.get("showroom_rating_cache") or {})
+    live_rating = rating_cache.get(title)
+    if live_rating is None:
+        imdb_id = (identity or {}).get("imdb_id") or ""
+        live_rating = (get_live_ratings_batch(((title, year, imdb_id),)).get(title) or {})
+        rating_cache[title] = live_rating
+        st.session_state.showroom_rating_cache = rating_cache
+
+    return identity or {}, availability or {}, live_rating or {}
+
+@st.fragment
+def render_showroom_card_fragment(row_name, row_index, slot_index):
+    """Render one independently-rerunnable card so Skip never refreshes its neighbors."""
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    movie = payload.get("movie")
+    if not title or not movie:
+        st.caption("Refreshing match…")
+        return
+
+    match = int(payload.get("match") or 0)
+    p = current_profile()
+    identity, availability, live_rating = _showroom_cached_metadata(movie)
+    availability_value = availability_utility(availability.get("status"))
+    comps = score_movie_components(
+        movie, p, st.session_state.adventure, st.session_state.review_priority,
+        semantic_similarity=float(payload.get("semantic_similarity", .5)),
+        availability_score=availability_value,
+    )
+    context = {
+        "row":row_name,
+        "position":int(slot_index)+1,
+        "match":match,
+        "model_score":round(float(comps.get("raw_score",0)),6),
+        "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
+        **{k:round(float(comps.get(k,.5)),6) for k in [
+            "genre_affinity","trait_affinity","semantic_similarity","quality_alignment",
+            "discovery_alignment","priority_alignment","availability_alignment",
+            "vote_confidence","profile_confidence"
+        ]},
+        "candidate_source":movie.get("candidate_source"),
+        "model_version":"v5.165",
+    }
+    recommendation_context = dict(st.session_state.get("recommendation_context") or {})
+    recommendation_context[title] = context
+    st.session_state.recommendation_context = recommendation_context
+    record_impressions(st.session_state, {title: context})
+
+    with st.container(key=f"showroom_controls_{row_index}_{slot_index}_{title}"):
+        match_col, skip_col = st.columns([3.35,0.90], gap="small")
+        with match_col:
+            with st.popover(f"{match}% iCinema Match", use_container_width=True):
+                reasons = recommendation_explanation(
+                    movie,p,st.session_state.adventure,st.session_state.review_priority,
+                    semantic_similarity=context.get("semantic_similarity"),
+                    availability_score=context.get("availability_alignment",0.5),
+                    components=context,
+                )
+                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                for reason in reasons:
+                    st.markdown(
+                        f'<div class="match-reason">'
+                        f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
+                        f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                st.markdown(
+                    '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
+                    unsafe_allow_html=True,
+                )
+        with skip_col:
+            st.button(
+                "Skip",
+                key=f"skip_{row_name}_{slot_index}_{title}",
+                use_container_width=True,
+                on_click=skip_showroom_slot,
+                args=(row_name, slot_index),
+            )
+
+    display_movie = dict(movie)
+    if identity.get("display_title"):
+        display_movie["title"] = identity["display_title"]
+    if identity.get("year"):
+        display_movie["year"] = identity["year"]
+    movie_thumb(display_movie, identity.get("poster_url") or movie.get("poster_url"))
+
+    imdb_value = live_rating.get("imdb")
+    rt_value = live_rating.get("rt")
+    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
+    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+    rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
+    st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
+
+    availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
+    availability_text = concise_availability_text(availability.get("text") or "Where to watch: availability unavailable")
+    st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
+
+    quick_desc = quick_card_description(movie)
+    expanded_desc = expanded_card_description(movie)
+    summary_id = f"movie-summary-{row_index}-{slot_index}"
+    st.markdown(
+        f'<div class="movie-summary-toggle">'
+        f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
+        f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
+        f'<div class="movie-full-description">'
+        f'<div class="movie-synopsis-label">Spoiler-free synopsis</div>'
+        f'<div class="movie-synopsis-copy">{html.escape(expanded_desc)}</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
+    a,b=st.columns(2, gap="small")
+    with a:
+        st.button(
+            "Save",
+            key=f"save_{row_name}_{slot_index}_{title}",
+            use_container_width=True,
+            on_click=save_showroom_slot,
+            args=(row_name, slot_index),
+        )
+    with b:
+        st.button(
+            "Seen",
+            key=f"seen_{row_name}_{slot_index}_{title}",
+            use_container_width=True,
+            on_click=seen_showroom_slot,
+            args=(row_name, slot_index),
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+    # Persist the action during this card-only rerun without creating a visible loader.
+    persist_profile_if_needed()
+
 @st.fragment
 def render_showroom_fragment(p):
     ensure_session(st.session_state)
@@ -5524,12 +5830,17 @@ def render_showroom_fragment(p):
     # migrating into another section during the same refresh and keeps every row populated.
     row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
     row_choices={name: [] for name in row_order}
+    row_candidate_queues={name: [] for name in row_order}
     reserved=set()
 
     # Pass 1: category-specific ordering with strict cross-row de-duplication.
+    # Keep the remaining ranked candidates as a replacement queue so one card can
+    # advance without rebuilding the entire Showroom.
     for row_name in row_order:
-        picks=_row_candidates(row_name,reserved)[:4]
+        ordered=_row_candidates(row_name,reserved)
+        picks=ordered[:4]
         row_choices[row_name].extend(picks)
+        row_candidate_queues[row_name].extend(ordered)
         reserved.update(movie["title"] for _,movie in picks)
 
     # Pass 2: if any category pool is thin, fill it with the next-best personalized
@@ -5544,8 +5855,18 @@ def render_showroom_fragment(p):
         reserved.update(movie["title"] for _,movie in extra)
 
     visible_movies=[movie for row_name in ["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"] for _,movie in row_choices.get(row_name,[])]
-    visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in visible_movies)
-    visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in visible_movies)
+    visible_titles={movie["title"] for movie in visible_movies}
+    warm_backups=[]
+    for row_name in row_order:
+        for _,candidate in row_candidate_queues.get(row_name,[]):
+            if candidate["title"] not in visible_titles:
+                warm_backups.append(candidate)
+                break
+    metadata_movies=visible_movies+warm_backups
+    # Deduplicate while preserving the ranked order.
+    metadata_movies=list({m["title"]:m for m in metadata_movies}.values())
+    visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in metadata_movies)
+    visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in metadata_movies)
     watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
     for row_name in row_order:
         row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*availability_utility((watch_by_title.get(item[1]["title"]) or {}).get("status")),reverse=True)
@@ -5563,14 +5884,54 @@ def render_showroom_fragment(p):
                 "row":row_name,"position":position,"match":match,
                 "model_score":round(float(comps.get("raw_score",0)),6),
                 "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
-                **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]}
+                **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
+                "candidate_source":movie.get("candidate_source"),
+                "model_version":"v5.165",
             }
     st.session_state.recommendation_context=recommendation_context
     record_impressions(st.session_state,recommendation_context)
     identity_by_title=get_movie_identity_batch(visible_identity_keys)
     showroom_poster_map={title: data.get("poster_url") for title, data in identity_by_title.items()}
-    live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in visible_movies)
+    live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in metadata_movies)
     live_ratings_by_title=get_live_ratings_batch(live_rating_keys)
+
+    # Persist the ranked queues and current slots. Card fragments use these to
+    # replace exactly one movie without rerunning the four-row Showroom.
+    payloads={}
+    queues={}
+    for row_name in row_order:
+        queue_titles=[]
+        for match,movie in row_candidate_queues.get(row_name,[])[:40]:
+            title=movie["title"]
+            queue_titles.append(title)
+            payloads.setdefault(title,{
+                "match":match,
+                "movie":movie,
+                "semantic_similarity":semantic_by_id.get(id(movie),.5),
+            })
+        queues[row_name]=queue_titles
+    slots={}
+    for row_name in row_order:
+        for slot_index,(match,movie) in enumerate(row_choices.get(row_name,[])):
+            title=movie["title"]
+            slots[_showroom_slot_key(row_name,slot_index)]=title
+            payloads.setdefault(title,{
+                "match":match,
+                "movie":movie,
+                "semantic_similarity":semantic_by_id.get(id(movie),.5),
+            })
+    st.session_state.showroom_payloads=payloads
+    st.session_state.showroom_row_queues=queues
+    st.session_state.showroom_slots=slots
+    identity_cache=dict(st.session_state.get("showroom_identity_cache") or {})
+    identity_cache.update(identity_by_title)
+    st.session_state.showroom_identity_cache=identity_cache
+    watch_cache=dict(st.session_state.get("showroom_watch_cache") or {})
+    watch_cache.update(watch_by_title)
+    st.session_state.showroom_watch_cache=watch_cache
+    rating_cache=dict(st.session_state.get("showroom_rating_cache") or {})
+    rating_cache.update(live_ratings_by_title)
+    st.session_state.showroom_rating_cache=rating_cache
 
     row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
 
@@ -5596,91 +5957,9 @@ def render_showroom_fragment(p):
                 st.caption("Refreshing personalized matches…")
                 continue
             cols=st.columns(len(choices))
-            for i,(match,movie) in enumerate(choices):
+            for i,_ in enumerate(choices):
                 with cols[i]:
-                    with st.container(key=f"showroom_controls_{row_index}_{i}"):
-                        match_col, skip_col = st.columns([3.35,0.90], gap="small")
-                        with match_col:
-                            with st.popover(f"{match}% iCinema Match", use_container_width=True):
-                                context = recommendation_context.get(movie["title"], {})
-                                reasons = recommendation_explanation(
-                                    movie,p,st.session_state.adventure,st.session_state.review_priority,
-                                    semantic_similarity=context.get("semantic_similarity"),
-                                    availability_score=context.get("availability_alignment",0.5),
-                                    components=context,
-                                )
-                                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
-                                for reason in reasons:
-                                    st.markdown(
-                                        f'<div class="match-reason">'
-                                        f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
-                                        f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
-                                        f'</div>',
-                                        unsafe_allow_html=True,
-                                    )
-                                st.markdown(
-                                    '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
-                                    unsafe_allow_html=True,
-                                )
-                        with skip_col:
-                            st.button(
-                                "Skip",
-                                key=f"skip_{row_name}_{movie['title']}",
-                                use_container_width=True,
-                                on_click=skip_movie,
-                                args=(movie["title"], movie),
-                            )
-                    identity = identity_by_title.get(movie["title"], {}) or {}
-                    display_movie = dict(movie)
-                    if identity.get("display_title"):
-                        display_movie["title"] = identity["display_title"]
-                    if identity.get("year"):
-                        display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, showroom_poster_map.get(movie["title"]) or movie.get("poster_url"))
-                    live_rating = live_ratings_by_title.get(movie["title"], {})
-                    imdb_value = live_rating.get("imdb")
-                    rt_value = live_rating.get("rt")
-                    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
-                    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
-                    rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
-                    st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
-                    availability = watch_by_title.get(movie["title"], {"status":"unknown","text":"Where to watch: availability unavailable","url":None})
-                    availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
-                    availability_text = concise_availability_text(availability["text"])
-                    st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
-                    quick_desc = quick_card_description(movie)
-                    expanded_desc = expanded_card_description(movie)
-                    summary_id = f"movie-summary-{row_index}-{i}"
-                    st.markdown(
-                        f'<div class="movie-summary-toggle">'
-                        f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
-                        f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
-                        f'<div class="movie-full-description">'
-                        f'<div class="movie-synopsis-label">Spoiler-free synopsis</div>'
-                        f'<div class="movie-synopsis-copy">{html.escape(expanded_desc)}</div>'
-                        f'</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
-                    a,b=st.columns(2, gap="small")
-                    with a:
-                        st.button(
-                            "Save",
-                            key=f"save_{row_name}_{movie['title']}",
-                            use_container_width=True,
-                            on_click=save_movie,
-                            args=(movie["title"], movie),
-                        )
-                    with b:
-                        st.button(
-                            "Seen",
-                            key=f"seen_{row_name}_{movie['title']}",
-                            use_container_width=True,
-                            on_click=mark_movie_seen,
-                            args=(movie["title"], movie),
-                        )
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    render_showroom_card_fragment(row_name,row_index,i)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
