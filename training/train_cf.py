@@ -161,6 +161,51 @@ def paired_bootstrap(model, baseline, stat, n_boot=2000, seed=11):
     return point, float(lo), float(hi), float(np.mean(diffs > 0))
 
 
+def compute_lifts(results):
+    """Relative lift of CF (3 likes) over popularity, from exact (unrounded) values.
+
+    Computed once and saved, so the README, model card, and app all show the same number.
+    """
+    pop = (results.get("full") or {}).get("popularity") or {}
+    cf3 = (results.get("three_likes") or {}).get("cf") or {}
+    return {k: round((cf3[k] / pop[k] - 1) * 100) for k in ("hit@1", "ndcg@10", "recall@10")
+            if pop.get(k) and cf3.get(k) is not None}
+
+
+def build_report(results):
+    """Markdown results block for README / MODEL_CARD, built from cf_results.json alone."""
+    full, cold = results["full"], results["three_likes"]
+    lifts = results.get("lifts_three_likes_vs_popularity") or compute_lifts(results)
+    rows = [
+        ("Popularity baseline", full["popularity"]),
+        ("Collaborative filtering (full history)", full["cf"]),
+        ("Collaborative filtering (only 3 likes, like onboarding)", cold["cf"]),
+    ]
+    def first_hit(m):
+        v = m["median_recs_to_first_hit"]
+        return f">{FIRST_HIT_DEPTH}" if v > FIRST_HIT_DEPTH else f"{v:.0f}"
+    table = ("| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |\n"
+             "|---|---|---|---|---|\n" + "\n".join(
+        f"| {name} | {m['recall@10']:.3f} | {m['ndcg@10']:.3f} | {m['hit@1']:.2%} | {first_hit(m)} |"
+        for name, m in rows))
+    boot = "\n".join(
+        f"| {b['metric']} | {b['difference']} | {b['ci95']} | {b['cf_win_share']:.0%} | {'Yes' if b['significant'] else 'No'} |"
+        for b in results["bootstrap_three_likes_vs_popularity"])
+    boot_table = ("| Metric | CF (3 likes) vs popularity | 95% CI | Resamples where CF wins | Significant |\n"
+                  "|---|---|---|---|---|\n" + boot)
+    headline = ""
+    if {"hit@1", "ndcg@10", "recall@10"} <= set(lifts):
+        lo, hi = sorted((lifts["ndcg@10"], lifts["recall@10"]))
+        headline = (f"**Headline:** from just 3 likes, Tonight's Show is **+{lifts['hit@1']}%** more likely to be a movie "
+                    f"the viewer loves than a popularity pick, and Showroom rows are **+{lo}–{hi}%** better "
+                    f"(relative lift, computed from unrounded values).\n\n")
+    return (f"**Offline evaluation** — MovieLens ({results['dataset']}), time-based split, "
+            f"{results['held_out_users']:,} held-out users, ratings ≥ 4 as positives.\n\n{headline}{table}\n\n"
+            f"**Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "
+            f"\"Significant\" means the 95% interval excludes zero. Differences are absolute "
+            f"(Hit@1 in percentage points).\n\n{boot_table}\n")
+
+
 def replace_between_markers(path, block):
     """Rewrite the section between RESULTS markers in README / model card, if present."""
     path = Path(path)
@@ -193,18 +238,6 @@ def main():
     full, n_users, raw_full = evaluate(train, test, emb, n_items)
     cold, _, raw_cold = evaluate(train, test, emb, n_items, seed_size=3)
 
-    rows = [
-        ("Popularity baseline", full["popularity"]),
-        ("Collaborative filtering (full history)", full["cf"]),
-        ("Collaborative filtering (only 3 likes, like onboarding)", cold["cf"]),
-    ]
-    def first_hit(m):
-        v = m["median_recs_to_first_hit"]
-        return f">{FIRST_HIT_DEPTH}" if v > FIRST_HIT_DEPTH else f"{v:.0f}"
-    table = ("| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |\n"
-             "|---|---|---|---|---|\n" + "\n".join(
-        f"| {name} | {m['recall@10']:.3f} | {m['ndcg@10']:.3f} | {m['hit@1']:.1%} | {first_hit(m)} |"
-        for name, m in rows))
     # Paired bootstrap: CF with only 3 likes vs popularity, on the same users.
     cf3, pop = raw_cold["cf"], raw_full["popularity"]
     ci_rows = []
@@ -215,15 +248,6 @@ def main():
     d, lo, hi, share = paired_bootstrap(pop[:, 3], cf3[:, 3], np.median)
     ci_rows.append(("Recs to first loved movie (median, fewer is better)", f"{d:.0f} fewer",
                     f"{lo:.0f} to {hi:.0f} fewer", share, lo > 0))
-    ci_table = ("| Metric | CF (3 likes) vs popularity | 95% CI | Resamples where CF wins | Significant |\n"
-                "|---|---|---|---|---|\n" + "\n".join(
-        f"| {m} | {d} | {ci} | {share:.0%} | {'Yes' if sig else 'No'} |" for m, d, ci, share, sig in ci_rows))
-    report = (f"**Offline evaluation** — MovieLens ({Path(args.data_dir).name}), "
-              f"time-based split, {n_users:,} held-out users, ratings ≥ 4 as positives.\n\n{table}\n\n"
-              f"**Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "
-              f"\"Significant\" means the 95% interval excludes zero.\n\n{ci_table}\n")
-    print("\n" + report)
-
     # Retrain on all data for the shipped model.
     emb_all = fit_embeddings(pos, n_items, args.dim)
     norm = [normalize_title(t) for t in meta["title"]]
@@ -237,14 +261,17 @@ def main():
         year=np.array([y or 0 for _, y in norm], dtype=np.int32),
         popularity=np.bincount(pos["item"], minlength=n_items).astype(np.int32),
     )
+    results = {"dataset": Path(args.data_dir).name, "held_out_users": n_users,
+               "train_users": int(pos["userId"].nunique()), "train_movies": int(n_items), "train_positives": int(len(pos)),
+               "full": full, "three_likes": cold,
+               "bootstrap_three_likes_vs_popularity": [
+                   {"metric": m, "difference": d, "ci95": ci, "cf_win_share": share, "significant": bool(sig)}
+                   for m, d, ci, share, sig in ci_rows]}
+    results["lifts_three_likes_vs_popularity"] = compute_lifts(results)
+    report = build_report(results)
+    print("\n" + report)
     (out / "cf_results.md").write_text(report)
-    (out / "cf_results.json").write_text(json.dumps(
-        {"dataset": Path(args.data_dir).name, "held_out_users": n_users,
-         "train_users": int(pos["userId"].nunique()), "train_movies": int(n_items), "train_positives": int(len(pos)),
-         "full": full, "three_likes": cold,
-         "bootstrap_three_likes_vs_popularity": [
-             {"metric": m, "difference": d, "ci95": ci, "cf_win_share": share, "significant": bool(sig)}
-             for m, d, ci, share, sig in ci_rows]}, indent=2))
+    (out / "cf_results.json").write_text(json.dumps(results, indent=2))
     for doc in ("README.md", "MODEL_CARD.md"):
         if replace_between_markers(doc, report.strip()):
             print(f"Updated results in {doc}")

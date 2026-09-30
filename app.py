@@ -4674,6 +4674,15 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-tonight_hero"]{margin-bottom:1.12rem !important;}
 .showroom-row-header.first{margin-top:0 !important;padding-top:0 !important;}
 
+/* V5.177 — consumer-friendly methodology; profile titles share the bubbles' left edge */
+.how-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+.proof-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+.how-grid .methodology-card{min-height:0 !important;}
+.model-card-link{margin:.85rem 0 0 !important;}
+.live-model-copy{margin:.85rem 0 0 !important;color:var(--ivory) !important;}
+@media(max-width:800px){.how-grid,.proof-grid{grid-template-columns:1fr !important;}}
+.profile-label{padding-left:0 !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4996,10 +5005,43 @@ def _on_service(provider, service):
     key = _provider_key(provider)
     return any(key.startswith(alias) for alias in STREAMING_SERVICES.get(service, ()))
 
+_NON_TONE_TAGS = {g.casefold() for g in GENRES} | {
+    "animation", "anime", "international", "critically acclaimed", "hidden gem", "hidden gems",
+    "classic", "classics", "recent", "recent release", "recent releases", "documentary", "documentaries",
+}
+
+
+def _tone_tags(movie):
+    return [t for t in ((movie or {}).get("tags") or []) if str(t).strip() and str(t).casefold() not in _NON_TONE_TAGS]
+
+
+def with_tone_detail(reasons, movie):
+    """Make the tone reason concrete: which tones it shares, and with which liked movie."""
+    liked = [m for m, action in _cf_signals() if action in ("favorite", "like", "save")
+             and m.get("title") != (movie or {}).get("title")]
+    tones = {t.casefold(): t for t in _tone_tags(movie)}
+    best, shared = None, []
+    for other in liked:
+        overlap = [tones[t.casefold()] for t in _tone_tags(other) if t.casefold() in tones]
+        if len(overlap) > len(shared):
+            best, shared = other.get("title"), overlap
+    if not best or not shared:
+        return reasons
+    words = [t.lower() if t[:1].isupper() and not t.isupper() else t for t in shared[:2]]
+    phrase = " and ".join(words)
+    detail = f"{phrase[:1].upper() + phrase[1:]}, like “{best}”."
+    out = []
+    for reason in reasons or []:
+        if reason.get("label") in ("Feels like your favorites", "Storytelling you like"):
+            reason = {**reason, "text": detail}
+        out.append(reason)
+    return out
+
+
 def with_cf_reason(reasons, payload, limit=3):
     """Surface the collaborative-filtering signal, naming the viewer's closest liked movie."""
     cf = (payload or {}).get("cf")
-    reasons = list(reasons or [])
+    reasons = with_tone_detail(list(reasons or []), (payload or {}).get("movie"))
     if isinstance(cf, (int, float)) and cf >= 0.65:
         anchor = closest_liked((payload or {}).get("movie"), _cf_signals())
         if anchor:
@@ -5088,25 +5130,40 @@ def watch_line_html(availability, title, services=None):
     more = " + more" if total > len(options) else ""
     return f"{verb}: {links}{more}"
 
-def _short_reason(reason, limit):
+# Pill-sized forms of long reason labels; the full wording stays in the popover.
+_PILL_SHORT = {
+    "Feels like your favorites": "Like your favorites",
+    "Storytelling you like": "Your kind of story",
+    "Critically acclaimed": "Critics' pick",
+    "Easy to watch tonight": "Streaming now",
+    "International pick": "International",
+    "Loved by viewers like you": "Fans like you",
+}
+PILL_BUDGET = 25  # characters, including "80% · ", that fit a card pill without clipping
+
+
+def _short_reason(reason, room):
     """Pill-sized version of a reason label, or None if it can't fit without cutting."""
     label = str((reason or {}).get("label") or "").strip()
     if label.startswith("Loved by fans of "):
-        label = "Fans of " + label[len("Loved by fans of "):]
-    elif label == "Loved by viewers like you":
-        label = "Viewers like you"
-    return label if label and len(label) <= limit else None
+        fans = "Fans of " + label[len("Loved by fans of "):]
+        label = fans if len(fans) <= room else "Fans like you"
+    label = _PILL_SHORT.get(label, label)
+    if label.startswith("Your kind of ") and len(label) > room:
+        label = label[len("Your kind of "):].strip().capitalize() + " pick"
+    return label if label and len(label) <= room else None
 
 
-def match_pill(match, reasons, limit=26, taken=()):
+def match_pill(match, reasons, limit=None, taken=()):
     """Percent plus this movie's strongest reason not already shown in its row.
 
     Returns (pill_text, label_used). Skipping labels other cards in the row already
     use keeps a row varied, e.g. one "Fans of “Spirited Away”" instead of four.
     """
     match = int(match or 0)
+    room = (limit if limit is not None else PILL_BUDGET) - len(f"{match}% · ")
     for reason in reasons or []:
-        label = _short_reason(reason, limit)
+        label = _short_reason(reason, room)
         if label and label not in taken:
             return f"{match}% · {label}", label
     return f"{match}% match", None
@@ -5615,87 +5672,77 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         return (f'<div class="insight-card"><div class="insight-value">{html.escape(str(value))}</div>'
                 f'<div class="insight-label">{html.escape(label)}</div></div>')
 
-    # Offline evidence (MovieLens) is always shown, so the section is never empty.
-    offline_html = ""
+    scale = training_scale()
+    # Consumer-facing: what it does and whether it works. Full detail lives in MODEL_CARD.md.
+    proof_html = ""
     if offline:
         pop = (offline.get("full") or {}).get("popularity") or {}
         cf3 = (offline.get("three_likes") or {}).get("cf") or {}
-        boot = {b.get("metric"): b for b in offline.get("bootstrap_three_likes_vs_popularity") or []}
+        stored = offline.get("lifts_three_likes_vs_popularity") or {}
         def _lift(key):
+            # Prefer the lift saved by training, so the app matches the README exactly.
+            if isinstance(stored.get(key), (int, float)):
+                return int(stored[key])
             a, b = cf3.get(key), pop.get(key)
-            return f"+{(a / b - 1) * 100:.0f}%" if a and b else "—"
-        def _sig(name):
-            b = boot.get(name) or {}
-            return f"95% CI {b.get('ci95', '—')}" + (" · significant" if b.get("significant") else "")
-        offline_cards = "".join([
-            _card(f"{cf3.get('hit@1', 0)*100:.1f}% vs {pop.get('hit@1', 0)*100:.1f}%",
-                  f"Tonight's Show hit rate vs. popularity ({_lift('hit@1')}) · {_sig('Hit@1')}"),
-            _card(_lift("ndcg@10"), f"Ranking quality, NDCG@10 · {_sig('NDCG@10')}"),
-            _card(_lift("recall@10"), f"Loved movies in the top 10, Recall@10 · {_sig('Recall@10')}"),
-        ])
+            return round((a / b - 1) * 100) if a and b else None
+        pick_lift, ndcg_lift, recall_lift = _lift("hit@1"), _lift("ndcg@10"), _lift("recall@10")
         users = offline.get("held_out_users")
-        offline_html = (
-            '<div class="diag-subhead">Offline evaluation · from 3 onboarding likes</div>'
-            f'<div class="profile-insights-copy">MovieLens {html.escape(str(offline.get("dataset", "")).replace("ml-", "").upper())}, '
-            f'time-based split, {users:,} held-out users, compared with a popularity baseline. '
-            'Paired bootstrap over users, 2,000 resamples.</div>'
-            f'<div class="insight-grid diag-grid">{offline_cards}</div>'
-        ) if isinstance(users, int) else ""
+        # Only claim significance the bootstrap actually found (read from the results file).
+        sig = {b.get("metric"): bool(b.get("significant")) for b in offline.get("bootstrap_three_likes_vs_popularity") or []}
+        if sig.get("Hit@1") and sig.get("NDCG@10") and sig.get("Recall@10"):
+            significance_note = "Both results are statistically significant."
+        elif any(sig.values()):
+            significance_note = "Some results are statistically significant; see the model card for details."
+        else:
+            significance_note = "See the model card for confidence intervals."
+        cards = []
+        if pick_lift is not None:
+            cards.append(_card(f"+{pick_lift}%", "more likely that Tonight’s Show is a movie you’ll love, vs. picking what’s popular"))
+        if ndcg_lift is not None and recall_lift is not None:
+            lo, hi = sorted((ndcg_lift, recall_lift))
+            cards.append(_card(f"+{lo}–{hi}%", "better Showroom rows, with more of the movies you’d love near the top"))
+        if cards and isinstance(users, int):
+            proof_html = (
+                '<div class="profile-methodology">'
+                '<div class="profile-insights-title">Does it work?</div>'
+                f'<div class="profile-insights-copy">Tested on {users:,} real movie fans starting from just 3 likes. '
+                f'{significance_note}</div>'
+                f'<div class="insight-grid proof-grid">{"".join(cards)}</div>'
+                '</div>'
+            )
 
-    saves_so_far = int((insights or {}).get("saves") or 0)
-    live_cards = "".join([
-        _card(learned.model_name if learned.ready else "Not active yet", "Behavioral model"),
-        _card(_fmt(lm.get("auc")) if learned.ready else "—", "Holdout ROC AUC (0.5 = chance)"),
-        _card(_fmt(lm.get("brier_score")) if learned.ready else "—", "Brier score, lower is better"),
-        _card(_fmt(ranking.get("ndcg_at_k")) if saves_so_far >= 5 else "Learning",
-              f"NDCG@{ranking.get('k', 4)} · ranking quality of your Saves in a row of {ranking.get('k', 4)}"),
-        _card(_fmt(ranking.get("mrr")) if saves_so_far >= 5 else "Learning", "MRR · how high your first Save ranked"),
-        _card(_fmt(calib.get("mae")) if int(calib.get("labeled") or 0) >= 20 else "Learning",
-              "Match calibration error · lower is better"),
-    ])
-    labeled = learned.samples or 0
-    live_copy = (
-        f"Trained on {labeled} of your Save/Skip outcomes, validated on a chronological holdout."
-        if learned.ready else
-        "Activates after 50 Save/Skip outcomes (12+ of each). Until then, collaborative filtering and content scoring personalize your picks. "
-        "Ranking metrics appear after 5 Saves, calibration after 20 Saves and Skips."
-    )
+    live_html = ""
+    if learned.ready:
+        auc = lm.get("auc")
+        live_html = (
+            '<div class="profile-insights-copy live-model-copy">'
+            f'Your personal model is active: {html.escape(learned.model_name)}, trained on {learned.samples} of your choices'
+            + (f', and it predicts your saves well above chance (AUC {auc:.2f}).' if isinstance(auc, (int, float)) else '.')
+            + '</div>'
+        )
 
-    scale = training_scale()
     methodology_html = (
         '<div class="profile-methodology">'
-        '<div class="profile-insights-title">Methodology &amp; Data</div>'
-        '<div class="profile-insights-copy">Four layers turn your choices into one ranked Showroom.</div>'
-        '<div class="methodology-grid">'
+        '<div class="profile-insights-title">How iCinema works</div>'
+        '<div class="methodology-grid how-grid">'
         '<div class="methodology-card">'
-        '<div class="methodology-value">1 · Collaborative filtering</div>'
-        f'<div class="methodology-label">Truncated SVD on {scale["positives"]} positive ratings (4★+) from {scale["users"]} MovieLens users learns 64-dimension embeddings for {scale["movies"]} movies. '
-        'Your likes and saves pull your taste vector toward similar movies; skips push it away. Cosine similarity scores every candidate.</div>'
+        f'<div class="methodology-value">Learns from {scale["users"]} movie fans</div>'
+        '<div class="methodology-label">Your likes are matched with people who share your taste, so good picks start right away.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">2 · Content model</div>'
-        '<div class="methodology-label">TF-IDF and Truncated SVD over plot and metadata measure theme and tone. '
-        'Genre, storytelling traits, Bayesian-adjusted ratings, discovery fit, and your Step 2–3 choices complete the content score.</div>'
+        '<div class="methodology-value">Reads every movie</div>'
+        '<div class="methodology-label">Tone, themes, genre, and ratings, weighed by what you told it during setup.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">3 · Hybrid ranking</div>'
-        '<div class="methodology-label">Score = 65% content + 35% collaborative. Each row adds its own goal (acclaim, obscurity, novelty), '
-        'MMR reranking removes near-duplicates, and titles on your services rank as easier to watch tonight.</div>'
-        '</div>'
-        '<div class="methodology-card">'
-        '<div class="methodology-value">4 · Behavioral learning</div>'
-        '<div class="methodology-label">Your Save/Skip outcomes train Logistic Regression, then Gradient Boosting at 100 labels, adding 22% to the score. '
-        'Recent choices weigh more (120-day half-life), rank position is excluded so exposure isn’t mistaken for taste, and Undo deletes a label.</div>'
+        '<div class="methodology-value">Gets more personal</div>'
+        '<div class="methodology-label">After 50 saves and skips, a model trained only on your choices joins in. Undo keeps mistakes out.</div>'
         '</div>'
         '</div>'
+        f'{live_html}'
+        '<div class="profile-insights-copy model-card-link">Want the full methodology? '
+        '<a class="watch-link" href="https://github.com/ishaannars/iCinema/blob/main/MODEL_CARD.md" target="_blank" rel="noopener">Read the model card</a></div>'
         '</div>'
-        '<div class="profile-methodology">'
-        '<div class="profile-insights-title">Model diagnostics</div>'
-        f'{offline_html}'
-        '<div class="diag-subhead">Your live model</div>'
-        f'<div class="profile-insights-copy">{html.escape(live_copy)}</div>'
-        f'<div class="insight-grid diag-grid">{live_cards}</div>'
-        '</div>'
+        f'{proof_html}'
     )
 
     insights_section = (

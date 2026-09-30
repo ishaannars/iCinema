@@ -58,5 +58,10 @@
       "cf_win_share": 0.8555,
       "significant": false
     }
-  ]
+  ],
+  "lifts_three_likes_vs_popularity": {
+    "hit@1": 58,
+    "ndcg@10": 27,
+    "recall@10": 24
+  }
 }
