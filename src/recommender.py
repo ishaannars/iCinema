@@ -590,8 +590,22 @@ def recommendation_explanation(
     genre_label = f"Your kind of {genre_detail.split(',')[0].strip().lower()}" if genre_detail else "Your kind of movie"
     theme_text = (f"Its tone is {', '.join(t.lower() for t in trait_overlap[:2])}, like the movies you liked."
                   if trait_overlap else "Its tone and themes are close to the movies you liked.")
-    priority_text = (f"You asked for more {priority_detail}, and this is one."
-                     if priority_overlap else "It fits the kinds of movies you asked to see more of.")
+    year = movie.get("year")
+    priority_reasons = {
+        "Critically Acclaimed": ("Critically acclaimed",
+            f"You asked for acclaimed films, and critics give it {critics}." if critics else
+            "You asked for acclaimed films, and critics rate it highly."),
+        "Hidden Gems": ("A hidden gem", "Rated well, but seen by far fewer people than the usual picks."),
+        "Recent Releases": ("Recent release", f"Released in {year}, one of the newer films you asked for." if year else
+            "One of the newer films you asked for."),
+        "International Films": ("International pick", "Made outside Hollywood, which you asked to see more of."),
+        "Classics": ("A classic", f"From {year}, one of the established favorites you asked for." if year else
+            "One of the established favorites you asked for."),
+        "Documentaries": ("Documentary", "A true story, which you asked to see more of."),
+    }
+    first_priority = priority_overlap[0] if priority_overlap else None
+    priority_label, priority_text = priority_reasons.get(
+        first_priority, ("What you asked for", "It fits the kinds of movies you asked to see more of."))
 
     candidates = [
         (0.18 * float(c.get("genre_affinity", 0.5)), genre_label,
@@ -601,8 +615,7 @@ def recommendation_explanation(
          "Its pacing and style match the movies you liked or favorited."),
         (0.18 * float(c.get("quality_alignment", 0.5)), quality_label, quality_text),
         (0.13 * float(c.get("discovery_alignment", 0.5)), discovery_label, discovery_text),
-        (0.15 * float(c.get("priority_alignment", 0.5)),
-         (priority_overlap[0] if priority_overlap else "What you asked for"), priority_text),
+        (0.15 * float(c.get("priority_alignment", 0.5)), priority_label, priority_text),
         (0.07 * float(c.get("availability_alignment", availability_score)), "Easy to watch tonight",
          "It's streaming now, so there's nothing to rent or buy."),
     ]
@@ -611,7 +624,11 @@ def recommendation_explanation(
     # stronger explanations are available, but always return three useful reasons.
     ranked = sorted(candidates, key=lambda item: item[0], reverse=True)
     strong = [item for item in ranked if item[0] >= 0.075]
-    chosen = (strong + [item for item in ranked if item not in strong])[:3]
+    ordered = strong + [item for item in ranked if item not in strong]
+    # "Critically acclaimed" already cites the critics, so don't repeat it as a quality reason.
+    if any(label == "Critically acclaimed" for _, label, _ in ordered[:3]):
+        ordered = [item for item in ordered if item[1] != quality_label]
+    chosen = ordered[:3]
 
     return [
         {"label": label, "text": text, "contribution": round(float(contribution), 4)}

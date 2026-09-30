@@ -4542,6 +4542,80 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
 .model-name{color:var(--muted) !important;font-size:.74rem !important;font-weight:680 !important;letter-spacing:-.006em !important;}
 .model-note{color:var(--muted) !important;font-size:.72rem !important;font-weight:500 !important;}
 
+/* V5.172 — visible camera loader (top bar stays hidden), popover rhythm, centered button labels, spacing */
+/* Loader: Streamlit marks the app while a run is in progress; draw the same camera ring top-right. */
+.stApp::before,.stApp::after{content:"";position:fixed;z-index:999999;display:none;pointer-events:none;}
+.stApp[data-test-script-state="running"]::before,.stApp:has([data-stale="true"])::before{
+    display:block;top:2.08rem;right:max(1.25rem, calc((100vw - 1240px) / 2 + 1.25rem));
+    width:1.62rem;height:1.62rem;border-radius:50%;box-sizing:border-box;
+    border:1px solid rgba(169,173,183,.28);background:rgba(17,19,21,.96);
+    animation:icinema-loader-ring 1.1s linear infinite;
+}
+.stApp[data-test-script-state="running"]::after,.stApp:has([data-stale="true"])::after{
+    display:block;top:calc(2.08rem + .56rem);right:calc(max(1.25rem, calc((100vw - 1240px) / 2 + 1.25rem)) + .44rem);
+    width:.74rem;height:.5rem;box-sizing:border-box;border:1.25px solid rgba(243,240,234,.94);border-radius:3px;
+    background:radial-gradient(circle at 50% 55%, rgba(92,111,168,.55) 0 .07rem, rgba(243,240,234,.95) .075rem .12rem, transparent .125rem);
+}
+@media(max-width:700px){
+    .stApp[data-test-script-state="running"]::before,.stApp:has([data-stale="true"])::before{top:1.92rem;right:1rem;}
+    .stApp[data-test-script-state="running"]::after,.stApp:has([data-stale="true"])::after{top:calc(1.92rem + .56rem);right:1.44rem;}
+}
+/* Match popover: percent, then "why", then well-spaced specific reasons. */
+.match-score{display:flex;align-items:baseline;gap:.45rem;margin:.35rem 0 .2rem;}
+.match-score-value{font-family:var(--ui-font);font-size:1.5rem;font-weight:800;letter-spacing:-.03em;color:var(--ivory);}
+.match-score-label{font-family:var(--ui-font);font-size:.7rem;font-weight:600;color:var(--muted);}
+.match-explain-title{margin:.1rem 0 .55rem !important;font-size:.78rem !important;}
+.match-reason{padding:.55rem 0 !important;}
+.match-reason-label{margin:0 0 .25rem !important;}
+/* A little more air between the one-line description and Save / Seen. */
+.movie-summary-toggle{margin-bottom:.62rem !important;}
+/* Button labels dead-center, vertically and horizontally. */
+[class*="st-key-save_"] button,[class*="st-key-seen_"] button,[class*="st-key-skip_"] button,[class*="st-key-undo_"] button,
+[class*="st-key-tonight_"] button,[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button,
+[class*="st-key-like_"] button,[class*="st-key-fav_"] button{
+    display:flex !important;align-items:center !important;justify-content:center !important;padding-top:0 !important;padding-bottom:0 !important;
+}
+[class*="st-key-save_"] button > div,[class*="st-key-seen_"] button > div,[class*="st-key-skip_"] button > div,[class*="st-key-undo_"] button > div,
+[class*="st-key-tonight_"] button > div,[class*="st-key-savedseen_"] button > div,[class*="st-key-unsave_"] button > div,
+[class*="st-key-like_"] button > div,[class*="st-key-fav_"] button > div{
+    display:flex !important;align-items:center !important;justify-content:center !important;margin:0 !important;height:100% !important;
+}
+[class*="st-key-save_"] button p,[class*="st-key-seen_"] button p,[class*="st-key-skip_"] button p,[class*="st-key-undo_"] button p,
+[class*="st-key-tonight_"] button p,[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p,
+[class*="st-key-like_"] button p,[class*="st-key-fav_"] button p{margin:0 !important;padding:0 !important;line-height:1 !important;}
+/* Landing: a touch more room, and the note in the profile's editorial serif. */
+.hero-subtitle{margin-bottom:1.85rem !important;}
+.adapt-note{margin:1.65rem 0 1.25rem !important;padding:1.2rem 1.3rem 1.15rem !important;}
+.adapt-note span{font-family:Georgia,"Times New Roman",serif !important;font-style:italic !important;font-size:1rem !important;line-height:1.55 !important;}
+/* Profile: more room under the heading; the same gap above and below every section title. */
+.profile-heading-gap{height:1rem !important;min-height:1rem !important;flex-basis:1rem !important;}
+.profile-block + .profile-block{margin-top:.8rem !important;}
+.profile-label{margin:0 0 .8rem !important;line-height:1 !important;}
+/* Showroom: Tonight's Pick → Top Matches matches tabs → Tonight's Pick; rows slightly closer. */
+[class*="st-key-tonight_hero"]{margin-bottom:.75rem !important;}
+.showroom-row-header.first{margin-top:0 !important;}
+.showroom-row-header:not(.tonight-row-header):not(.first){margin-top:1.2rem !important;}
+/* Services picker type matches the Tonight's Pick heading. */
+.st-key-services_picker div[data-testid="stPopover"] button p,
+.st-key-services_picker div[data-testid="stPopover"] button span{
+    font-family:var(--ui-font) !important;font-weight:760 !important;letter-spacing:-.02em !important;font-size:.78rem !important;
+}
+div[data-testid="stPopoverBody"] .services-help{font-family:var(--ui-font) !important;font-weight:450 !important;letter-spacing:-.01em !important;font-size:.8rem !important;}
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button p,
+div[data-testid="stPopoverBody"] [data-testid="stButtonGroup"] button p{
+    font-family:var(--ui-font) !important;font-weight:760 !important;letter-spacing:-.02em !important;
+}
+
+/* V5.173 — optical left alignment for large headings + a bit more heading→description room */
+/* Big bold glyphs carry left side-bearing; nudge so the letter edge lines up with the text below. */
+.hero-title,.showroom-heading,.showroom-row-title,.showroom-row-header .showroom-row-title,
+.tab-primary-heading,.page-top-heading,.step2-title,.profile-heading,.profile-wrap .profile-heading-aligned{
+    margin-left:-.045em !important;
+}
+.showroom-row-header .showroom-row-title{margin-bottom:.55rem !important;}
+.showroom-heading,.page-top-heading,.step2-title{margin-bottom:.55rem !important;}
+.hero-subtitle{margin-top:.95rem !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4954,6 +5028,17 @@ def watch_line_html(availability, title, services=None):
     total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
     more = " + more" if total > len(options) else ""
     return f"{verb}: {links}{more}"
+
+def match_pill(match, reasons, limit=20):
+    """Percent plus this movie's strongest reason, so every pill says something different."""
+    match = int(match or 0)
+    label = str((reasons or [{}])[0].get("label") or "").strip()
+    if label.startswith("Loved by fans of "):
+        label = "Fans of " + label[len("Loved by fans of "):]
+    elif label == "Loved by viewers like you":
+        label = "Viewers like you"
+    return f"{match}% · {label}" if label and len(label) <= limit else f"{match}% match"
+
 
 def match_label(match):
     """Plain-language fit instead of a bare percentage; the % stays in the explanation."""
@@ -6052,16 +6137,20 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                 )
         else:
             match_col, skip_col = st.columns([3.35,0.90], gap="small")
+        reasons = with_cf_reason(recommendation_explanation(
+            movie,p,st.session_state.adventure,st.session_state.review_priority,
+            semantic_similarity=context.get("semantic_similarity"),
+            availability_score=context.get("availability_alignment",0.5),
+            components=context,
+        ), payload)
         with match_col:
-            with st.popover(match_label(match), use_container_width=True):
-                reasons = recommendation_explanation(
-                    movie,p,st.session_state.adventure,st.session_state.review_priority,
-                    semantic_similarity=context.get("semantic_similarity"),
-                    availability_score=context.get("availability_alignment",0.5),
-                    components=context,
+            with st.popover(match_pill(match, reasons), use_container_width=True):
+                st.markdown(
+                    f'<div class="match-score"><span class="match-score-value">{match}%</span>'
+                    f'<span class="match-score-label">fit for you · {html.escape(match_label(match))}</span></div>'
+                    '<div class="match-explain-title">Why this matches you</div>',
+                    unsafe_allow_html=True,
                 )
-                reasons = with_cf_reason(reasons, payload)
-                st.markdown(f'<div class="match-explain-title">Why this matches you · {match}% fit</div>', unsafe_allow_html=True)
                 for reason in reasons:
                     st.markdown(
                         f'<div class="match-reason">'
@@ -6211,7 +6300,7 @@ def _render_services_picker(services):
     label = f"Your services · {len(services)}" if services else "Choose your services"
     if "tonight_services_picker" not in st.session_state:
         st.session_state.tonight_services_picker = list(services)
-    with st.popover(label, use_container_width=True):
+    with st.container(key="services_picker"), st.popover(label, use_container_width=True):
         st.markdown('<div class="services-help">Pick what you subscribe to. Tonight’s Pick updates as you tap.</div>',
                     unsafe_allow_html=True)
         options = list(STREAMING_SERVICES)
@@ -6332,7 +6421,7 @@ def render_tonight_pick_fragment():
                 '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
-                f'<div class="tonight-badges"><span class="tonight-match">{match_label(match)} · {match}%</span>{fit}</div>'
+                f'<div class="tonight-badges"><span class="tonight-match">{match}% match</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(quick_card_description(movie, limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
@@ -6440,7 +6529,12 @@ def render_showroom_fragment(p):
             language_novelty=1.0 if str(movie.get("original_language") or "en").lower() not in {"", "en"} else 0.0
             era_novelty=1.0 if year and (year<=2005 or year>=2023) else 0.35
             obscurity=1.0/(1.0+popularity/40.0) if popularity else 0.45
-            return max(0.0,min(1.0,0.52*genre_novelty+0.20*language_novelty+0.14*era_novelty+0.14*obscurity))
+            votes=_safe_num(movie.get("tmdb_vote_count"), -1.0)
+            if votes>=0:
+                import math
+                # ~25k votes (a blockbuster) scores near 0; a few hundred scores high.
+                obscurity=0.5*obscurity+0.5*max(0.0,1.0-math.log10(votes+1.0)/4.5)
+            return max(0.0,min(1.0,0.40*genre_novelty+0.18*language_novelty+0.10*era_novelty+0.32*obscurity))
 
         return 1.0
 
