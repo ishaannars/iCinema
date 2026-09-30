@@ -239,7 +239,9 @@ def main():
     )
     (out / "cf_results.md").write_text(report)
     (out / "cf_results.json").write_text(json.dumps(
-        {"dataset": Path(args.data_dir).name, "held_out_users": n_users, "full": full, "three_likes": cold,
+        {"dataset": Path(args.data_dir).name, "held_out_users": n_users,
+         "train_users": int(pos["userId"].nunique()), "train_movies": int(n_items), "train_positives": int(len(pos)),
+         "full": full, "three_likes": cold,
          "bootstrap_three_likes_vs_popularity": [
              {"metric": m, "difference": d, "ci95": ci, "cf_win_share": share, "significant": bool(sig)}
              for m, d, ci, share, sig in ci_rows]}, indent=2))

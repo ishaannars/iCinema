@@ -4507,6 +4507,41 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
     background:rgba(17,19,21,.96) !important;animation:icinema-loader-ring 1.1s linear infinite !important;
 }
 
+/* V5.170 — alignment, complete hooks, section breathing room, clear model status, profile rhythm */
+/* One left edge: titles, years, and metadata line up with the poster. */
+.poster-caption,.poster-caption:not(.library-poster-caption),.library-poster-caption{padding-left:0 !important;padding-right:0 !important;}
+.poster-caption-title,.poster-caption-year,.ratings,.watch-availability,.movie-summary-toggle,.movie-summary-label{margin-left:0 !important;padding-left:0 !important;}
+/* Hooks are complete sentences up to three lines; never clipped. */
+.movie-summary-label,[class*="st-key-showroom_body_"] .movie-summary-label{
+    -webkit-line-clamp:3 !important;max-height:none !important;min-height:0 !important;overflow:visible !important;
+    white-space:normal !important;text-overflow:clip !important;
+}
+/* A little more room between the four Showroom sections. */
+.showroom-row-header:not(.tonight-row-header){margin-top:1.55rem !important;}
+/* Model status: two short, readable rows instead of one long line. */
+.model-status-panel{display:flex;flex-direction:column;gap:.38rem;margin:.1rem 0 1.35rem;max-width:760px;}
+.model-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-family:var(--ui-font);font-size:.76rem;line-height:1.35;}
+.model-dot{width:.42rem;height:.42rem;border-radius:999px;border:1px solid var(--muted2);flex:0 0 auto;}
+.model-dot.on{background:var(--ai);border-color:var(--ai);box-shadow:0 0 8px rgba(92,111,168,.7);animation:icinema-learning-live 1.8s ease-in-out infinite;}
+.model-name{color:var(--ivory);font-weight:700;}
+.model-note{color:var(--muted);font-weight:500;}
+.model-progress{display:inline-block;width:5.5rem;height:.28rem;border-radius:999px;background:rgba(169,173,183,.18);overflow:hidden;}
+.model-progress span{display:block;height:100%;background:var(--ai);border-radius:999px;}
+/* Profile: heading → status → sections on one even rhythm. */
+.profile-heading-gap{height:.55rem !important;min-height:.55rem !important;flex-basis:.55rem !important;}
+.profile-wrap .profile-heading,.profile-wrap .profile-heading-aligned{margin-bottom:0 !important;}
+.profile-grid{padding-top:0 !important;}
+.profile-block + .profile-block{margin-top:1.05rem !important;}
+.profile-label{margin:0 0 .45rem !important;}
+.profile-chip-wrap{column-gap:.45rem !important;row-gap:.45rem !important;}
+.profile-summary{margin-top:1.35rem !important;padding-top:1.05rem !important;}
+.profile-methodology,.profile-insights{margin-top:1.35rem !important;padding-top:1.05rem !important;}
+
+/* V5.171 — model status uses the same type as the original status line */
+.model-row{font-size:.72rem !important;line-height:1.35 !important;}
+.model-name{color:var(--muted) !important;font-size:.74rem !important;font-weight:680 !important;letter-spacing:-.006em !important;}
+.model-note{color:var(--muted) !important;font-size:.72rem !important;font-weight:500 !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -5150,7 +5185,7 @@ _HOOK_SPLITS = ("; ", " — ", " – ", ": ", ", and ", ", but ", ", who ", ", w
                 ", while ", ", as ", ", until ", " until ", ", before ", ", after ", ", only to ", " in order to ", " after ", " before ", " while ")
 
 
-def _hook_is_complete(text, limit):
+def _hook_is_complete(text, limit, need_verb=True):
     text = clean_movie_copy(text, ensure_terminal=False)
     if not text or len(text) < 24 or len(text) > limit:
         return False
@@ -5160,16 +5195,47 @@ def _hook_is_complete(text, limit):
     if words[0] in {"in", "on", "at", "during", "after", "before", "while", "when", "with", "without",
                     "through", "across", "amid", "following"}:
         return False
-    return any(w in _HOOK_VERBS for w in words[1:])
+    return (not need_verb) or any(w in _HOOK_VERBS for w in words[1:])
 
 
-def quick_card_description(movie, limit=72):
-    """One real, specific line about the movie. Never generic filler.
+_HOOK_LEADS = (r"^(?:in|on|at|during|after|before|following|inside|across|amid|within|when|while|as|once|until|"
+               r"years after|decades after|set in|in the)\b[^,]{2,110},\s+(.+)$")
+_HOOK_PRONOUN_START = {"he", "she", "they", "it", "his", "her", "their", "its", "this", "these", "there", "but", "and", "then"}
 
-    Uses the catalog's hand-written hook when present; otherwise the most
-    informative complete clause from the movie's own synopsis. If no clean clause
-    fits, it trims the premise at a word boundary with an ellipsis, since the full
-    synopsis is one tap away.
+
+def _hook_variants(sentence):
+    """(text, is_whole_clause) options: the sentence, its main clause after up to two
+    leading setup phrases, and safe clause cuts. Whole clauses are grammatical by
+    construction; cuts must also pass the verb check."""
+    whole = [sentence]
+    current = sentence
+    for _ in range(2):
+        lead = re.match(_HOOK_LEADS, current, flags=re.IGNORECASE)
+        if lead:
+            current = lead.group(1).strip()
+        else:
+            # Short verbless opener such as "All unemployed," or "Years later,".
+            comma = current.find(", ")
+            opener = current[:comma].casefold().split() if 0 < comma <= 30 else None
+            if not opener or any(w in _HOOK_VERBS for w in opener):
+                break
+            current = current[comma + 2:].strip()
+        whole.append(current[:1].upper() + current[1:])
+    variants = [(w, True) for w in whole]
+    for source in whole:
+        for marker in _HOOK_SPLITS:
+            pos = source.find(marker)
+            if pos > 20 and not (marker.startswith(",") and "," in source[:pos]):
+                variants.append((source[:pos], False))
+    return variants
+
+
+def quick_card_description(movie, limit=110):
+    """One real, specific, complete line about the movie. Never cut mid-sentence.
+
+    Order: the catalog's hand-written hook; the best complete clause from the
+    opening sentence; a later self-contained sentence; the opening sentence whole
+    if it fits; otherwise a clean prompt to open the synopsis.
     """
     movie = movie or {}
     why = clean_movie_copy(movie.get("why"), ensure_terminal=True)
@@ -5178,33 +5244,19 @@ def quick_card_description(movie, limit=72):
     full = clean_movie_copy(movie.get("overview") or movie.get("why"), ensure_terminal=False)
     if not full:
         return "Tap for the spoiler-free synopsis."
-
     sentences = [s.strip().rstrip(".;:, ") for s in re.split(r"(?<=[.!?])\s+", full) if s.strip()]
-    # Only the opening sentence: later ones often start mid-story ("Twenty years later, they...").
-    for sentence in sentences[:1]:
-        candidates = [sentence]
-        intro = re.match(r"^(?:in|on|at|during|after|before|following|inside|across|amid|within|years after|decades after)[^,]{3,40},\s+(.+)$",
-                         sentence, flags=re.IGNORECASE)
-        if intro:
-            rest = intro.group(1).strip()
-            candidates.append(rest[:1].upper() + rest[1:])
-        for source in list(candidates):
-            for marker in _HOOK_SPLITS:
-                pos = source.find(marker)
-                # A comma-led split is only safe when the left side has no earlier
-                # comma; otherwise it can cut through an appositive ("daughter, Anna").
-                if pos > 20 and not (marker.startswith(",") and "," in source[:pos]):
-                    candidates.append(source[:pos])
-        complete = [c for c in candidates if _hook_is_complete(c, limit)]
+
+    for pos, sentence in enumerate(sentences[:4]):
+        if pos > 0 and sentence.split()[0].casefold().strip(",") in _HOOK_PRONOUN_START:
+            continue  # later sentences that lean on earlier context read as fragments
+        complete = [c for c, is_whole in _hook_variants(sentence) if _hook_is_complete(c, limit, need_verb=not is_whole)]
         if complete:
             return clean_movie_copy(max(complete, key=len), ensure_terminal=True)
 
-    premise = sentences[0] if sentences else full
-    cut = premise[:limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
-    words = cut.split()
-    while words and words[-1].casefold().strip(".,;:") in _HOOK_DANGLING_END:
-        words.pop()
-    return " ".join(words) + "…"
+    first = clean_movie_copy(sentences[0] if sentences else full, ensure_terminal=True)
+    if len(first) <= limit:
+        return first
+    return "Tap for the spoiler-free synopsis."
 
 
 def expanded_card_description(movie, max_chars=320):
@@ -5315,6 +5367,20 @@ def _format_seconds(value):
     return f"{value//60}m {value%60:02d}s"
 
 
+def training_scale():
+    """Human-readable MovieLens training size, read from the results file when available."""
+    data = load_offline_results() or {}
+    def fmt(n, fallback):
+        if isinstance(n, int):
+            return f"{n / 1e6:.1f} million" if n >= 1_000_000 else f"{n:,}"
+        return fallback
+    return {
+        "users": fmt(data.get("train_users"), "198,954"),
+        "movies": fmt(data.get("train_movies"), "14,407"),
+        "positives": fmt(data.get("train_positives"), "15.8 million"),
+    }
+
+
 @st.cache_data(show_spinner=False)
 def load_offline_results():
     """MovieLens evaluation written by training/train_cf.py (data/cf_results.json)."""
@@ -5326,14 +5392,18 @@ def load_offline_results():
 
 
 def render_cinema_profile(p, include_insights=False, show_heading=True, tab_heading=False):
+    # Plain-language labels; "Your mix" drops lines that repeat "How you choose".
+    matters_text = " ".join(p["matters"]).casefold()
+    mix = [b for b in p["balance"] if not ("review" in b.casefold() and "review" in matters_text)]
     sections = [
         ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
         ("Top genres", profile_chip_html(p["genres"]), "profile-chip-wrap"),
-        ("What matters most", profile_chip_html(p["matters"]), "profile-chip-wrap"),
-        ("What iCinema should prioritize", profile_chip_html(p["priorities"]), "profile-chip-wrap"),
-        ("Viewing patterns", profile_analysis_html(p["patterns"]), "profile-analysis"),
-        ("Recommendation balance", profile_analysis_html(p["balance"]), "profile-analysis"),
+        ("How you choose", profile_chip_html(p["matters"]), "profile-chip-wrap"),
+        ("Show me more", profile_chip_html(p["priorities"]), "profile-chip-wrap"),
+        ("Your patterns", profile_chip_html(p["patterns"]), "profile-chip-wrap"),
+        ("Your mix", profile_chip_html(mix), "profile-chip-wrap"),
     ]
+    sections = [s for s in sections if s[1]]
     section_html = "".join(
         f'<div class="profile-block full"><div class="profile-label">{label}</div><div class="{wrapper_class}">{content}</div></div>'
         for label, content, wrapper_class in sections
@@ -5343,13 +5413,29 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     learned=train_learning_model(events)
     conf=profile_confidence_label(p)
     signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
+    scale = training_scale()
+    # What is actually running right now. Collaborative filtering and the content
+    # model work from the first like; the personal model needs 50 Save/Skip labels.
+    decisions = int(insights.get("saves") or 0) + int(insights.get("skips") or 0)
     if learned.ready:
-        model_primary = "Learning model active"
-        model_secondary = "Adapting from your choices"
+        personal_html = (f'<div class="model-row"><span class="model-dot on"></span>'
+                         f'<span class="model-name">Your personal model</span>'
+                         f'<span class="model-note">Active · {html.escape(learned.model_name)} trained on {learned.samples} of your decisions</span></div>')
     else:
-        model_primary = "Personalized from your likes"
-        model_secondary = "Behavioral model activates after 50 Save/Skip actions"
-    signal_text = f"{signals} signal{'s' if signals != 1 else ''} shaping recommendations"
+        pct = min(100, round(decisions / 50 * 100))
+        personal_html = (f'<div class="model-row"><span class="model-dot"></span>'
+                         f'<span class="model-name">Your personal model</span>'
+                         f'<span class="model-note">Unlocks after 50 saves and skips (at least 12 of each) · {min(decisions, 50)} of 50</span>'
+                         f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
+    models_html = (
+        '<div class="model-status-panel">'
+        '<div class="model-row"><span class="model-dot on"></span>'
+        '<span class="model-name">Active now</span>'
+        f'<span class="model-note">Collaborative filtering ({scale["users"]} MovieLens viewers) + content model, '
+        f'using your {signals} signal{"s" if signals != 1 else ""}</span></div>'
+        f'{personal_html}'
+        '</div>'
+    )
 
     ttm=_format_seconds(insights.get("time_to_match_seconds"))
     skips="Learning" if insights.get("avg_skips_before_save") is None else f'{insights["avg_skips_before_save"]:.1f}'
@@ -5414,6 +5500,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         "Activates after 50 Save/Skip outcomes (12+ of each). Until then, collaborative filtering and content scoring personalize your picks."
     )
 
+    scale = training_scale()
     methodology_html = (
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">Methodology &amp; Data</div>'
@@ -5421,7 +5508,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="methodology-grid">'
         '<div class="methodology-card">'
         '<div class="methodology-value">1 · Collaborative filtering</div>'
-        '<div class="methodology-label">Truncated SVD on 15.8M positive ratings (4★+) from 199K MovieLens users learns 64-dimension movie embeddings. '
+        f'<div class="methodology-label">Truncated SVD on {scale["positives"]} positive ratings (4★+) from {scale["users"]} MovieLens users learns 64-dimension embeddings for {scale["movies"]} movies. '
         'Your likes and saves pull your taste vector toward similar movies; skips push it away. Cosine similarity scores every candidate.</div>'
         '</div>'
         '<div class="methodology-card">'
@@ -5465,14 +5552,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         f'<div class="profile-wrap">'
         f'{profile_heading_html}'
         f'<div class="profile-heading-gap"></div>'
-        f'<div class="model-status-line">'
-        f'<span class="model-status-dot"></span>'
-        f'<span class="model-status-primary">{model_primary}</span>'
-        f'<span class="model-status-separator">·</span>'
-        f'<span class="model-status-secondary">{model_secondary}</span>'
-        f'<span class="model-status-separator">·</span>'
-        f'<span class="model-status-secondary">{signal_text}</span>'
-        f'</div>'
+        f'{models_html}'
         f'<div class="profile-grid">{section_html}</div>'
         f'<div class="profile-summary">{p["summary"]}</div>'
         f'{insights_section}'
@@ -6254,7 +6334,7 @@ def render_tonight_pick_fragment():
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
                 f'<div class="tonight-badges"><span class="tonight-match">{match_label(match)} · {match}%</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
-                f'<div class="tonight-hook">{html.escape(quick_card_description(movie, limit=150))}</div>'
+                f'<div class="tonight-hook">{html.escape(quick_card_description(movie, limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
                 '</div>',
                 unsafe_allow_html=True,
@@ -6666,7 +6746,7 @@ if screen=="welcome":
         with col:
             st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
 
-    st.markdown('<div class="adapt-note"><strong>iCinema RESPONDS TO YOUR CHOICES</strong><br><span>Every save, skip, and seen title feeds iCinema’s learning model, updating your preference profile and shaping what appears next.</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="adapt-note"><strong>Good picks on day one. Yours over time.</strong><br><span>Two models are ready the moment you finish setup. A third learns from your saves and skips, so every return visit gets you to pressing play faster.</span></div>',unsafe_allow_html=True)
     st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
 
 elif screen=="shelf":
