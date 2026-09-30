@@ -19,6 +19,16 @@ FRESHNESS = ("- **Freshness for returning viewers.** Impression discounting lowe
              "The candidate pool also widens: each return visit starts deeper in TMDB's catalog, and dedicated "
              "channels pull the most popular and best-rated titles in the viewer's top two genres.")
 
+FEEDBACK = ("- **Explicit vs. implicit negatives.** Skip means \"not now\" and is a weak signal; \"Not for me\" "
+            "(in each card's explanation and beside Tonight's Show) is an explicit dislike. It pushes the content profile "
+            "and collaborative-filtering taste vector away about four times harder, counts as a double-weight negative "
+            "label for the behavioral model, and the title never returns. Undo reverses either one.")
+MODEL_CARD = README.parent / "MODEL_CARD.md"
+OLD_LIMIT = "- **Every Skip is treated as a dislike.**"
+NEW_LIMIT = ("- **Skip is ambiguous by design.** A Skip may mean \"already seen\" or \"not tonight,\" so it is only a weak "
+             "negative; the explicit \"Not for me\" signal carries strong dislikes. Skip reasons were considered and left out "
+             "to keep feedback to one tap.")
+
 DETAILS = """## Ranking Details
 
 The Profile tab keeps this short for viewers; here is the full picture.
@@ -51,6 +61,19 @@ def main():
         if anchor in text:
             text = text.replace(anchor, FRESHNESS + "\n" + anchor, 1)
             changed = True
+    if FEEDBACK not in text and "## Ranking Details" in text:
+        anchor = "- **Live metrics.**"
+        if anchor in text:
+            text = text.replace(anchor, FEEDBACK + "\n" + anchor, 1)
+            changed = True
+    if MODEL_CARD.exists():
+        card = MODEL_CARD.read_text()
+        if OLD_LIMIT in card:
+            start = card.index(OLD_LIMIT)
+            end = card.find("\n", start)
+            card = card[:start] + NEW_LIMIT + (card[end:] if end != -1 else "")
+            MODEL_CARD.write_text(card)
+            print("MODEL_CARD.md updated.")
     if changed:
         README.write_text(text)
         print("README.md updated.")

@@ -94,7 +94,9 @@ SIGNAL_WEIGHTS = {
     "selected_genre": 4.0,
     "saved": 2.5,
     "seen": 0.5,
-    "skip": -2.5,
+    # Skip now means "not now"; explicit "Not for me" carries the strong negative.
+    "skip": -1.25,
+    "dislike": -5.0,
 }
 
 
@@ -361,10 +363,11 @@ def semantic_similarity_scores(movies, profile):
 def build_profile(
     likes, favorites, selected_genres, review_priority, more_of,
     saved_titles=None, skipped_titles=None, adventure=50, extra_movies=None,
-    seen_titles=None,
+    seen_titles=None, disliked_titles=None,
 ):
     saved_titles=set(saved_titles or [])
     skipped_titles=set(skipped_titles or [])
+    disliked_titles=set(disliked_titles or [])
     seen_titles=set(seen_titles or [])
     extra_movies=extra_movies or {}
     likes=set(likes or [])
@@ -386,6 +389,7 @@ def build_profile(
     for title in saved_titles: add(title,SIGNAL_WEIGHTS["saved"])
     for title in seen_titles: add(title,SIGNAL_WEIGHTS["seen"])
     for title in skipped_titles: add(title,SIGNAL_WEIGHTS["skip"])
+    for title in disliked_titles: add(title,SIGNAL_WEIGHTS["dislike"])
 
     signed_trait_scores=dict(_nonzero_items(traits)); signed_genre_scores=dict(_nonzero_items(genres))
     trait_scores=sorted(_positive_items(traits),key=lambda x:(-x[1],x[0]))
@@ -434,7 +438,7 @@ def build_profile(
         "trait_scores":dict(trait_scores),"genre_scores":dict(genre_scores),
         "signed_trait_scores":signed_trait_scores,"signed_genre_scores":signed_genre_scores,
         "controls":{"review_priority":int(review_priority),"adventure":int(adventure),"selected_genres":list(selected_genres or []),"priorities":list(more_of or [])},
-        "behavior_counts":{"liked":len(likes-favorites),"favorited":len(favorites),"saved":len(saved_titles),"seen":len(seen_titles),"skipped":len(skipped_titles)},
+        "behavior_counts":{"liked":len(likes-favorites),"favorited":len(favorites),"saved":len(saved_titles),"seen":len(seen_titles),"skipped":len(skipped_titles),"disliked":len(disliked_titles)},
         "semantic_signals":semantic,
         "model_version":"v5-hybrid-lsa-bayesian-decision",
     }

@@ -68,7 +68,7 @@ Final ranking blends collaborative filtering (35%) with content scoring (65%). O
 ## Limitations
 
 - **One user's data per model.** Feedback stays in each browser, so the behavioral model never learns across users. It only activates after 50 labeled outcomes, which most visitors never reach; collaborative filtering covers personalization before that.
-- **Every Skip is treated as a dislike.** A skip might mean "already seen it" or "not tonight." Skip reasons were considered and left out to keep the interface to one tap.
+- **Skip is ambiguous by design.** A Skip may mean "already seen" or "not tonight," so it is only a weak negative; the explicit "Not for me" signal carries strong dislikes. Skip reasons were considered and left out to keep feedback to one tap.
 - **Coverage gaps.** Movies not in MovieLens, especially recent releases, get no collaborative-filtering score and rely on content signals.
 - **Popularity bias.** Movies with many ratings have more reliable embeddings, so well-known films can be favored.
 - **Offline metrics are not live outcomes.** MovieLens ratings approximate what a viewer would enjoy; they do not measure whether iCinema viewers pressed play.

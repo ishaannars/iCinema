@@ -123,13 +123,15 @@ def _joined_examples(events):
 
     for e in events:
         typ = str(e.get("event") or "").lower()
-        if typ not in {"save", "skip"}:
+        if typ not in {"save", "skip", "dislike"}:
             continue
         key = (e.get("session_id"), e.get("title"))
         if not all(key):
             continue
         labels[key] = {
             "label": 1 if typ == "save" else 0,
+            # An explicit "Not for me" is a more certain negative than a Skip.
+            "weight": 2.0 if typ == "dislike" else 1.0,
             "timestamp": _safe_float(e.get("timestamp"), 0.0),
         }
 
@@ -142,6 +144,7 @@ def _joined_examples(events):
             {
                 "x": _features_from_context(imp),
                 "y": int(info["label"]),
+                "w": float(info.get("weight", 1.0)),
                 "timestamp": float(info["timestamp"] or imp.get("timestamp") or 0.0),
                 "session_id": key[0],
                 "title": key[1],
@@ -272,7 +275,7 @@ def train_learning_model(events, min_samples=DEFAULT_MIN_SAMPLES):
     train_idx, test_idx, validation_method = split
     Xtr, Xte = X[train_idx], X[test_idx]
     ytr, yte = y[train_idx], y[test_idx]
-    weights = _recency_weights(timestamps)
+    weights = _recency_weights(timestamps) * np.asarray([r.get("w", 1.0) for r in rows], dtype=float)
     wtr = weights[train_idx]
 
     candidates = [
@@ -383,7 +386,7 @@ def ranking_metrics(events, k=4):
             )
         elif e.get("event") == "save":
             outcomes[(sid, title)] = 1
-        elif e.get("event") == "skip" and (sid, title) not in outcomes:
+        elif e.get("event") in ("skip", "dislike") and (sid, title) not in outcomes:
             outcomes[(sid, title)] = 0
 
     precisions, recalls, hits, ndcgs, rrs = [], [], [], [], []
@@ -456,7 +459,7 @@ def calibration_metrics(events):
             impressions[key] = e
         elif e.get("event") == "save":
             labels[key] = 1
-        elif e.get("event") == "skip" and key not in labels:
+        elif e.get("event") in ("skip", "dislike") and key not in labels:
             labels[key] = 0
 
     bins = {

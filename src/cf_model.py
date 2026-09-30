@@ -14,7 +14,7 @@ import numpy as np
 MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "cf_model.npz"
 
 # How strongly each action moves the user's taste vector.
-WEIGHTS = {"favorite": 2.0, "like": 1.0, "save": 1.0, "seen": 0.5, "skip": -0.4}
+WEIGHTS = {"favorite": 2.0, "like": 1.0, "save": 1.0, "seen": 0.5, "skip": -0.2, "dislike": -0.8}
 
 
 def _norm_title(title):

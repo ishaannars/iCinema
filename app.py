@@ -4715,12 +4715,20 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* V5.180 — ratings source note under "How iCinema works" */
 .ratings-note{margin-top:.7rem !important;font-size:.74rem !important;color:var(--muted2) !important;}
 
+/* V5.181 — "Not for me" controls, sized to sit quietly in existing space */
+[class*="st-key-dislike_"] button{min-height:1.9rem !important;height:1.9rem !important;border-radius:999px !important;
+    padding:0 .8rem !important;margin-top:.35rem !important;}
+[class*="st-key-dislike_"] button p{font-size:.7rem !important;font-weight:700 !important;margin:0 !important;}
+[class*="st-key-tonight_dislike_"] button{min-height:1.9rem !important;height:1.9rem !important;width:2.6rem !important;
+    padding:0 !important;border-radius:999px !important;display:flex !important;align-items:center !important;justify-content:center !important;}
+[class*="st-key-tonight_dislike_"] button p{font-size:.85rem !important;margin:0 !important;line-height:1 !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
 defaults={
     "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"selection_order":[],
+    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"selection_order":[],
     "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
     "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
     "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
@@ -4730,6 +4738,8 @@ defaults={
     "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{},
     "streaming_services":[]
 }
+# Module-level code runs only on full page runs, never on fragment-only reruns.
+st.session_state._in_full_run = True
 for k,v in defaults.items():
     if k not in st.session_state:
         st.session_state[k]=v.copy() if isinstance(v,(set,dict)) else (list(v) if isinstance(v,list) else v)
@@ -4749,6 +4759,7 @@ def profile_snapshot():
         "saved": sorted(st.session_state.saved),
         "seen": sorted(st.session_state.seen),
         "dismissed": sorted(st.session_state.dismissed),
+        "disliked": sorted(st.session_state.get("disliked") or set()),
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
@@ -4768,6 +4779,7 @@ def restore_profile(data):
         st.session_state.saved = set(data.get("saved") or [])
         st.session_state.seen = set(data.get("seen") or [])
         st.session_state.dismissed = set(data.get("dismissed") or [])
+        st.session_state.disliked = set(data.get("disliked") or [])
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
@@ -4786,6 +4798,7 @@ if not st.session_state.get("_storage_hydrated", False):
     if not (isinstance(_stored, dict) and _stored.get("loaded") is True):
         logo_placeholder = '<div class="icinema-logo">iCinema</div><div class="icinema-boot-loader" aria-label="Loading"></div>'
         st.markdown(logo_placeholder, unsafe_allow_html=True)
+        st.session_state._in_full_run = False
         st.stop()
     restored = restore_profile(_stored.get("value")) if _stored.get("value") else False
     st.session_state._storage_hydrated = True
@@ -4812,6 +4825,16 @@ def persist_profile_if_needed():
         browser_storage("set_silent", PROFILE_STORAGE_KEY, value=snapshot, key="icinema_profile_saver")
         st.session_state._last_persisted_profile = serialized
         st.session_state._pending_profile_save = None
+
+def persist_from_fragment():
+    """Save only during fragment-only reruns (e.g. Skip).
+
+    On a full page run the single save at the end of the script handles it, so the
+    hidden saver never appears mid-page and shifts the layout between runs.
+    """
+    if not st.session_state.get("_in_full_run"):
+        persist_profile_if_needed()
+
 
 def queue_profile_save():
     """Queue persistence without forcing an extra rerun.
@@ -5094,7 +5117,7 @@ def impression_fatigue():
     """
     events = st.session_state.get("analytics_events") or []
     current = st.session_state.get("showroom_session_id")
-    acted = {e.get("title") for e in events if e.get("event") in ("save", "seen", "skip")}
+    acted = {e.get("title") for e in events if e.get("event") in ("save", "seen", "skip", "dislike")}
     visits = {}
     for e in events:
         if e.get("event") != "impression":
@@ -5423,7 +5446,8 @@ def current_profile():
         st.session_state.likes, st.session_state.favorites, st.session_state.genres,
         st.session_state.review_priority, st.session_state.more_of,
         st.session_state.saved, st.session_state.dismissed, st.session_state.adventure,
-        st.session_state.external_movies, st.session_state.seen
+        st.session_state.external_movies, st.session_state.seen,
+        disliked_titles=st.session_state.get("disliked") or set(),
     )
 
 def _cf_signals():
@@ -5433,8 +5457,8 @@ def _cf_signals():
     for t in st.session_state.likes:
         m = get_movie(t, ext)
         if m: out.append((m, "favorite" if t in st.session_state.favorites else "like"))
-    for key, action in (("saved", "save"), ("seen", "seen"), ("dismissed", "skip")):
-        for t in st.session_state[key]:
+    for key, action in (("saved", "save"), ("seen", "seen"), ("dismissed", "skip"), ("disliked", "dislike")):
+        for t in st.session_state.get(key) or set():
             m = get_movie(t, ext)
             if m: out.append((m, action))
     return out
@@ -5695,6 +5719,21 @@ def _format_seconds(value):
     if value<60:
         return f"{value}s"
     return f"{value//60}m {value%60:02d}s"
+
+
+def cached_semantic_scores(movies, profile):
+    """TF-IDF + SVD theme similarity, recomputed only when inputs change."""
+    signals = tuple((s.get("title"), s.get("weight")) for s in (profile.get("semantic_signals") or []))
+    titles = tuple(m.get("title") for m in movies)
+    key = (signals, titles)
+    cache = st.session_state.get("_semantic_cache")
+    if cache and cache[0] == key:
+        by_title = cache[1]
+    else:
+        scores = semantic_similarity_scores(movies, profile)
+        by_title = {m.get("title"): scores.get(id(m), 0.5) for m in movies}
+        st.session_state._semantic_cache = (key, by_title)
+    return {id(m): by_title.get(m.get("title"), 0.5) for m in movies}
 
 
 def learning_model_for(events):
@@ -6125,7 +6164,7 @@ def render_shelf_fragment():
     st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", on_click=go_from_fragment, args=("taste",))
 
 
-    persist_profile_if_needed()
+    persist_from_fragment()
 
 @st.fragment
 def render_taste_fragment():
@@ -6228,7 +6267,7 @@ def render_taste_fragment():
     st.button("Continue →", type="primary", key="continue_taste", on_click=go_from_fragment, args=("more",))
 
 
-    persist_profile_if_needed()
+    persist_from_fragment()
 
 @st.fragment
 def render_more_fragment():
@@ -6286,6 +6325,7 @@ def _advance_showroom_slot(row_name, slot_index):
         set(st.session_state.saved)
         | set(st.session_state.seen)
         | set(st.session_state.dismissed)
+        | set(st.session_state.get("disliked") or set())
     )
 
     replacement = None
@@ -6302,6 +6342,29 @@ def _advance_showroom_slot(row_name, slot_index):
         st.session_state.showroom_slots = slots
         return True
     return False
+
+def dislike_movie(title, movie=None):
+    """Explicit negative feedback: stronger than Skip, and the title never returns."""
+    _remember_movie(movie)
+    record_event(st.session_state, "dislike", title, _current_recommendation_context(title))
+    disliked = set(st.session_state.get("disliked") or set())
+    disliked.add(title)
+    st.session_state.disliked = disliked
+    st.session_state.saved.discard(title)
+    queue_profile_save()
+
+
+def dislike_showroom_slot(row_name, slot_index):
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    if title:
+        dislike_movie(title, payload.get("movie"))
+        undo = dict(st.session_state.get("showroom_undo") or {})
+        undo[slot_key] = title
+        st.session_state.showroom_undo = undo
+    _advance_showroom_slot(row_name, slot_index)
+
 
 def skip_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -6326,9 +6389,7 @@ def save_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-        _request_showroom_refresh()
-    if not _advance_showroom_slot(row_name, slot_index):
-        st.rerun(scope="app")
+    _advance_showroom_slot(row_name, slot_index)
 
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -6340,9 +6401,7 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-        _request_showroom_refresh()
-    if not _advance_showroom_slot(row_name, slot_index):
-        st.rerun(scope="app")
+    _advance_showroom_slot(row_name, slot_index)
 
 def _showroom_cached_metadata(movie):
     """Use initial batch metadata; fetch only the replacement card on cache miss."""
@@ -6381,7 +6440,6 @@ def _showroom_cached_metadata(movie):
 @st.fragment
 def render_showroom_card_fragment(row_name, row_index, slot_index):
     """Render one independently-rerunnable card so Skip never refreshes its neighbors."""
-    _refresh_if_requested()
     slot_key = _showroom_slot_key(row_name, slot_index)
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
@@ -6467,6 +6525,13 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                     '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
                     unsafe_allow_html=True,
                 )
+                st.button(
+                    "👎 Not for me",
+                    key=f"dislike_{row_name}_{slot_index}_{title}",
+                    help="Hide this movie and show fewer like it. Undo brings it back.",
+                    on_click=dislike_showroom_slot,
+                    args=(row_name, slot_index),
+                )
         with skip_col:
             st.button(
                 "Skip",
@@ -6506,26 +6571,21 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         f'</div>',
         unsafe_allow_html=True,
     )
-    with st.container(key=f"movie_actions_{row_index}_{slot_index}_{title}"):
-      a,b=st.columns(2, gap="small")
-      with a:
-        st.button(
-            "Save",
-            key=f"save_{row_name}_{slot_index}_{title}",
-            use_container_width=True,
-            on_click=save_showroom_slot,
-            args=(row_name, slot_index),
-        )
-      with b:
-        st.button(
-            "Seen",
-            key=f"seen_{row_name}_{slot_index}_{title}",
-            use_container_width=True,
-            on_click=seen_showroom_slot,
-            args=(row_name, slot_index),
-        )
-    # Persist the action during this card-only rerun without creating a visible loader.
-    persist_profile_if_needed()
+    # Persist Skip / Undo during this card-only rerun without creating a visible loader.
+    persist_from_fragment()
+
+
+def render_card_actions(row_name, row_index, slot_index):
+    """Save / Seen sit outside the card fragment: a click runs the page once, directly,
+    so the Saved / Seen tabs update without a second rerun triggered from a fragment."""
+    with st.container(key=f"movie_actions_{row_index}_{slot_index}"):
+        a, b = st.columns(2, gap="small")
+        with a:
+            st.button("Save", key=f"save_{row_name}_{slot_index}", use_container_width=True,
+                      on_click=save_showroom_slot, args=(row_name, slot_index))
+        with b:
+            st.button("Seen", key=f"seen_{row_name}_{slot_index}", use_container_width=True,
+                      on_click=seen_showroom_slot, args=(row_name, slot_index))
 
 def _drop_last_event(title, event_type):
     """Remove the most recent event of a type for a title (used by Undo)."""
@@ -6538,11 +6598,17 @@ def _drop_last_event(title, event_type):
 
 
 def undo_skip(title):
-    """Reverse an accidental Skip so it neither hides the movie nor trains the model."""
+    """Reverse an accidental Skip or "Not for me" so it neither hides the movie nor trains the model."""
     if not title:
         return
-    st.session_state.dismissed.discard(title)
-    _drop_last_event(title, "skip")
+    disliked = set(st.session_state.get("disliked") or set())
+    if title in disliked:
+        disliked.discard(title)
+        st.session_state.disliked = disliked
+        _drop_last_event(title, "dislike")
+    else:
+        st.session_state.dismissed.discard(title)
+        _drop_last_event(title, "skip")
     queue_profile_save()
 
 
@@ -6566,6 +6632,11 @@ def _sync_services_from_picker():
 
 def tonight_skip(title, movie):
     skip_movie(title, movie)
+    st.session_state.tonight_last_skip = title
+
+
+def tonight_dislike(title, movie):
+    dislike_movie(title, movie)
     st.session_state.tonight_last_skip = title
 
 
@@ -6618,6 +6689,7 @@ def render_tonight_pick_fragment():
     payloads = st.session_state.get("showroom_payloads") or {}
     watch_cache = st.session_state.get("showroom_watch_cache") or {}
     blocked = (set(st.session_state.saved) | set(st.session_state.seen) | set(st.session_state.dismissed)
+               | set(st.session_state.get("disliked") or set())
                | {t for t in (st.session_state.get("showroom_slots") or {}).values() if t})
     pool = [t for t in (st.session_state.get("tonight_pool") or []) if t in payloads and t not in blocked]
     fits = [t for t in pool if movie_on_services(watch_cache.get(t), services)]
@@ -6730,15 +6802,20 @@ def render_tonight_pick_fragment():
                     if last_skip:
                         st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
                                   help=f"Bring back {last_skip}", on_click=tonight_undo)
-    persist_profile_if_needed()
+                with cols[4]:
+                    st.button("👎", key=f"tonight_dislike_{title}",
+                              help="Not for me: hide this movie and show fewer like it.",
+                              on_click=tonight_dislike, args=(title, movie))
+    persist_from_fragment()
 
 
-@st.fragment
 def render_showroom_fragment(p):
+    # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
+    # briefly draw the tabs twice after an app rerun.
     ensure_session(st.session_state)
     tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
 
-    excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed
+    excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed|set(st.session_state.get("disliked") or set())
 
     # Build a deep candidate pool, then rank every candidate with the same iCinema
     # personalization algorithm. TMDB discovery acts only as replenishment: it does not
@@ -6776,7 +6853,7 @@ def render_showroom_fragment(p):
     )
     learning_result=learning_model_for(st.session_state.get("analytics_events", []))
     ranked_movies=[movie for _,movie in ranked]
-    semantic_by_id=semantic_similarity_scores(ranked_movies,p)
+    semantic_by_id=cached_semantic_scores(ranked_movies,p)
     cf_user=user_vector(_cf_signals())
     cf_by_title={}
     model_match_by_title={}
@@ -7052,6 +7129,7 @@ def render_showroom_fragment(p):
             for i,_ in enumerate(choices):
                 with cols[i]:
                     render_showroom_card_fragment(row_name,row_index,i)
+                    render_card_actions(row_name,row_index,i)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
@@ -7126,7 +7204,7 @@ def render_showroom_fragment(p):
         st.button("Reset Profile", key="reset_profile_tab", on_click=reset_profile_from_fragment)
 
 
-    persist_profile_if_needed()
+    pass  # saved once at the end of the full run
 
 screen=st.session_state.screen
 
@@ -7179,6 +7257,7 @@ elif screen=="showroom":
 
 # Persist the latest profile/history after the page has processed this run.
 persist_profile_if_needed()
+st.session_state._in_full_run = False
 
 # V5.90 is implemented through CSS overrides injected above in the main style block.
 
