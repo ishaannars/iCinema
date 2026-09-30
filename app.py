@@ -4753,6 +4753,9 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-tonight_dislike_"] button p::before{align-self:center !important;margin-top:0 !important;margin-bottom:0 !important;
     background-position:center !important;background-repeat:no-repeat !important;background-size:contain !important;}
 
+/* V5.184 — no page flash on Save / Seen: keep content fully visible while it refreshes */
+[data-stale="true"],div[data-stale="true"],.stale-element{opacity:1 !important;transition:none !important;filter:none !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -6830,7 +6833,8 @@ def render_tonight_pick_fragment():
             )
             last_skip = st.session_state.get("tonight_last_skip")
             with st.container(key=f"tonight_actions_{title}"):
-                cols = st.columns([1, 1, 1, 1, 2.2], gap="small")
+                # Save · Seen · Skip · thumbs-down, then Undo when there is something to undo.
+                cols = st.columns([1, 1, 1, 0.42, 1, 1.78], gap="small")
                 with cols[0]:
                     st.button("Save", key=f"tonight_save_{title}", use_container_width=True,
                               on_click=tonight_save, args=(title, movie))
@@ -6841,13 +6845,13 @@ def render_tonight_pick_fragment():
                     st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
                               on_click=tonight_skip, args=(title, movie))
                 with cols[3]:
-                    if last_skip:
-                        st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
-                                  help=f"Bring back {last_skip}", on_click=tonight_undo)
-                with cols[4]:
                     st.button("Not for me", key=f"tonight_dislike_{title}",
                               help="Not for me: hide this movie and show fewer like it.",
                               on_click=tonight_dislike, args=(title, movie))
+                with cols[4]:
+                    if last_skip:
+                        st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
+                                  help=f"Bring back {last_skip}", on_click=tonight_undo)
     persist_from_fragment()
 
 

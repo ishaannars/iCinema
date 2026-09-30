@@ -29,6 +29,24 @@ NEW_LIMIT = ("- **Skip is ambiguous by design.** A Skip may mean \"already seen\
              "negative; the explicit \"Not for me\" signal carries strong dislikes. Skip reasons were considered and left out "
              "to keep feedback to one tap.")
 
+# Keep product text in step with the app (old phrase -> current phrase). Safe to re-run.
+PHRASE_FIXES = [
+    ("as one compact card with a one-tap **Watch on …** button,", "as one compact card with one-tap links to where it streams,"),
+    ("trained on each user's Save/Skip feedback", "trained on each user's Save, Skip, and \"Not for me\" feedback"),
+    ("- Save, Seen, and Skip feedback, with Undo for accidental skips",
+     "- Save, Seen, Skip, and \"Not for me\" feedback, with Undo for accidental taps\n"
+     "- Skip on the Step 1 shelf for movies you don't recognize\n"
+     "- Fresh picks on every visit, so returning viewers don't see the same ignored movies"),
+]
+
+COMING_NEXT = """## Coming Next
+
+- **Refine chips** that re-rank your personalized picks (Critics' favorites, Hidden gems, Under 2 hours) instead of plain filters.
+- **"Only my services" mode** so every row shows only what you can play tonight, with no repeats across rows.
+- **Rate what you've watched:** thumbs up or down on Seen movies, separating intent (Save) from post-watch satisfaction.
+
+"""
+
 DETAILS = """## Ranking Details
 
 The Profile tab keeps this short for viewers; here is the full picture.
@@ -74,6 +92,14 @@ def main():
             card = card[:start] + NEW_LIMIT + (card[end:] if end != -1 else "")
             MODEL_CARD.write_text(card)
             print("MODEL_CARD.md updated.")
+    for old, new in PHRASE_FIXES:
+        if old in text and new not in text:
+            text = text.replace(old, new, 1)
+            changed = True
+    if "## Coming Next" not in text and "## Retraining the Collaborative-Filtering Model" in text:
+        text = text.replace("## Retraining the Collaborative-Filtering Model",
+                            COMING_NEXT + "## Retraining the Collaborative-Filtering Model", 1)
+        changed = True
     if changed:
         README.write_text(text)
         print("README.md updated.")

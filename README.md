@@ -5,7 +5,7 @@ I kept finding myself spending too much time deciding what movie to watch next, 
 The system combines:
 - **Collaborative filtering pretrained on MovieLens** so recommendations are personalized from your first few likes, not weeks of history
 - **Hybrid recommendation modeling** using collaborative, behavioral, semantic, quality, and discovery signals
-- **Supervised ML** with Logistic Regression and Gradient Boosting trained on each user's Save/Skip feedback
+- **Supervised ML** with Logistic Regression and Gradient Boosting trained on each user's Save, Skip, and "Not for me" feedback
 - **TF-IDF + Truncated SVD** for movie theme and tone similarity
 - **Multi-source candidate retrieval** across popular titles, hidden gems, recent releases, international films, and classics
 - **MMR diversity reranking** to reduce repetitive recommendations
@@ -20,7 +20,7 @@ The system combines:
 
 **The supervised layer adds per-user learning.** After 50 Save/Skip outcomes (12+ of each), Logistic Regression starts learning from your behavior; after 100 (24+ of each), Gradient Boosting is compared and the better model on a chronological holdout is used. The collaborative-filtering score is one of its features, so it learns how much to trust that signal for you.
 
-**Tonight's Show** shows your single best match as one compact card with a one-tap **Watch on …** button, preferring the streaming services you choose and falling back to any service so there is always an answer. Your services also make titles you can watch tonight rank as more convenient across every row.
+**Tonight's Show** shows your single best match as one compact card with one-tap links to where it streams, preferring the streaming services you choose and falling back to any service so there is always an answer. Your services also make titles you can watch tonight rank as more convenient across every row.
 
 User feedback is stored locally in the browser, so recommendations adapt over time without an account or central user database.
 
@@ -82,11 +82,19 @@ Collaborative filtering (truncated SVD on implicit feedback) · cold-start fold-
 - Personalized movie Showroom
 - "Why this match?" explanations
 - Live Cinema Profile with model diagnostics
-- Save, Seen, and Skip feedback, with Undo for accidental skips
+- Save, Seen, Skip, and "Not for me" feedback, with Undo for accidental taps
+- Skip on the Step 1 shelf for movies you don't recognize
+- Fresh picks on every visit, so returning viewers don't see the same ignored movies
 - Streaming availability
 - IMDb and Rotten Tomatoes ratings
 - Hidden gems and controlled discovery
 - Browser-local preference persistence with no account required
+
+## Coming Next
+
+- **Refine chips** that re-rank your personalized picks (Critics' favorites, Hidden gems, Under 2 hours) instead of plain filters.
+- **"Only my services" mode** so every row shows only what you can play tonight, with no repeats across rows.
+- **Rate what you've watched:** thumbs up or down on Seen movies, separating intent (Save) from post-watch satisfaction.
 
 ## Retraining the Collaborative-Filtering Model
 
