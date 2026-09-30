@@ -4723,6 +4723,19 @@ div.element-container:has(iframe[title*="browser_storage"]){
     padding:0 !important;border-radius:999px !important;display:flex !important;align-items:center !important;justify-content:center !important;}
 [class*="st-key-tonight_dislike_"] button p{font-size:.85rem !important;margin:0 !important;line-height:1 !important;}
 
+/* V5.182 — professional outline thumbs-down icon instead of an emoji */
+[class*="st-key-dislike_"] button p::before,
+[class*="st-key-tonight_dislike_"] button p::before{
+    content:"";display:inline-block;flex:0 0 auto;width:.95rem;height:.95rem;
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F3F0EA' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 14V2'/><path d='M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z'/></svg>") center / contain no-repeat;opacity:.9;
+}
+[class*="st-key-dislike_"] button p::before{margin-right:.42rem;}
+/* Tonight's Show: icon only, the words stay for screen readers and the tooltip. */
+[class*="st-key-tonight_dislike_"] button p{font-size:0 !important;gap:0 !important;}
+[class*="st-key-tonight_dislike_"] button p::before{width:1rem;height:1rem;}
+[class*="st-key-dislike_"] button:hover p::before,
+[class*="st-key-tonight_dislike_"] button:hover p::before{opacity:1;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -6379,6 +6392,10 @@ def skip_showroom_slot(row_name, slot_index):
     if not _advance_showroom_slot(row_name, slot_index):
         st.rerun(scope="app")
 
+def _mark_showroom_fast():
+    st.session_state._showroom_fast = True
+
+
 def save_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
@@ -6390,6 +6407,7 @@ def save_showroom_slot(row_name, slot_index):
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
     _advance_showroom_slot(row_name, slot_index)
+    _mark_showroom_fast()
 
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -6402,6 +6420,7 @@ def seen_showroom_slot(row_name, slot_index):
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
     _advance_showroom_slot(row_name, slot_index)
+    _mark_showroom_fast()
 
 def _showroom_cached_metadata(movie):
     """Use initial batch metadata; fetch only the replacement card on cache miss."""
@@ -6442,9 +6461,13 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     """Render one independently-rerunnable card so Skip never refreshes its neighbors."""
     slot_key = _showroom_slot_key(row_name, slot_index)
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    acted = (set(st.session_state.saved) | set(st.session_state.seen) | set(st.session_state.dismissed)
+             | set(st.session_state.get("disliked") or set()))
+    if title in acted and _advance_showroom_slot(row_name, slot_index):
+        title = (st.session_state.get("showroom_slots") or {}).get(slot_key)  # never re-show an acted-on movie
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     movie = payload.get("movie")
-    if not title or not movie:
+    if not title or not movie or title in acted:
         st.caption("Refreshing match…")
         return
 
@@ -6526,7 +6549,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                     unsafe_allow_html=True,
                 )
                 st.button(
-                    "👎 Not for me",
+                    "Not for me",
                     key=f"dislike_{row_name}_{slot_index}_{title}",
                     help="Hide this movie and show fewer like it. Undo brings it back.",
                     on_click=dislike_showroom_slot,
@@ -6656,12 +6679,14 @@ def _refresh_if_requested():
 def tonight_save(title, movie):
     save_movie(title, movie)
     st.session_state.tonight_last_skip = None
+    _mark_showroom_fast()
     _request_showroom_refresh()
 
 
 def tonight_seen(title, movie):
     mark_movie_seen(title, movie)
     st.session_state.tonight_last_skip = None
+    _mark_showroom_fast()
     _request_showroom_refresh()
 
 
@@ -6699,7 +6724,7 @@ def render_tonight_pick_fragment():
         shown = ", ".join(services[:2]) + (f" +{len(services) - 2}" if len(services) > 2 else "")
         note = f"Your single best match right now on {shown}"
     else:
-        note = "Your single best match right now, on any streaming service"
+        note = "Your single best match right now"
     head, picker = st.columns([3.4, 1.1], gap="medium", vertical_alignment="bottom")
     with head:
         st.markdown(
@@ -6803,7 +6828,7 @@ def render_tonight_pick_fragment():
                         st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
                                   help=f"Bring back {last_skip}", on_click=tonight_undo)
                 with cols[4]:
-                    st.button("👎", key=f"tonight_dislike_{title}",
+                    st.button("Not for me", key=f"tonight_dislike_{title}",
                               help="Not for me: hide this movie and show fewer like it.",
                               on_click=tonight_dislike, args=(title, movie))
     persist_from_fragment()
@@ -6815,291 +6840,303 @@ def render_showroom_fragment(p):
     ensure_session(st.session_state)
     tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
 
-    excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed|set(st.session_state.get("disliked") or set())
+    # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
+    # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
+    # row) is skipped. The next navigation or visit re-ranks with the new feedback.
+    fast = st.session_state.pop("_showroom_fast", False) and bool(st.session_state.get("showroom_slots"))
+    if fast:
+        row_choices = {}
+        for key in (st.session_state.get("showroom_slots") or {}):
+            row, _, idx = key.rpartition("::")
+            row_choices.setdefault(row, [])
+            while len(row_choices[row]) <= int(idx):
+                row_choices[row].append(None)
+    else:
+        excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed|set(st.session_state.get("disliked") or set())
 
-    # Build a deep candidate pool, then rank every candidate with the same iCinema
-    # personalization algorithm. TMDB discovery acts only as replenishment: it does not
-    # bypass the user's profile, and excluded Save/Seen/Skip titles stay excluded.
-    # Rotate deeper into TMDB as a user skips more titles, so the showroom keeps
-    # replenishing instead of exhausting one fixed discovery slice.
-    # Each return visit starts a little deeper, so the candidate pool keeps changing.
-    _events = st.session_state.get("analytics_events") or []
-    _current = st.session_state.get("showroom_session_id")
-    past_visits = len({e.get("session_id") for e in _events if e.get("event") == "impression"
-                       and e.get("session_id") and e.get("session_id") != _current})
-    discovery_start_page = 1 + (len(st.session_state.dismissed) // 80) * 8 + (past_visits % 12) * 2
-    focus_genres = tuple((p.get("genres") or [])[:2])
-    external_pool = []
-    if tmdb_catalog_configured():
-        try:
-            external_pool = discover_movies(640, discovery_start_page, focus_genres=focus_genres)
-        except TypeError:
-            # Backward-compatible fallback if Streamlit is briefly serving an
-            # older cached module during a deployment. Never take down Showroom.
+        # Build a deep candidate pool, then rank every candidate with the same iCinema
+        # personalization algorithm. TMDB discovery acts only as replenishment: it does not
+        # bypass the user's profile, and excluded Save/Seen/Skip titles stay excluded.
+        # Rotate deeper into TMDB as a user skips more titles, so the showroom keeps
+        # replenishing instead of exhausting one fixed discovery slice.
+        # Each return visit starts a little deeper, so the candidate pool keeps changing.
+        _events = st.session_state.get("analytics_events") or []
+        _current = st.session_state.get("showroom_session_id")
+        past_visits = len({e.get("session_id") for e in _events if e.get("event") == "impression"
+                           and e.get("session_id") and e.get("session_id") != _current})
+        discovery_start_page = 1 + (len(st.session_state.dismissed) // 80) * 8 + (past_visits % 12) * 2
+        focus_genres = tuple((p.get("genres") or [])[:2])
+        external_pool = []
+        if tmdb_catalog_configured():
             try:
-                external_pool = discover_movies(640)
+                external_pool = discover_movies(640, discovery_start_page, focus_genres=focus_genres)
+            except TypeError:
+                # Backward-compatible fallback if Streamlit is briefly serving an
+                # older cached module during a deployment. Never take down Showroom.
+                try:
+                    external_pool = discover_movies(640)
+                except Exception:
+                    external_pool = []
             except Exception:
                 external_pool = []
-        except Exception:
-            external_pool = []
-    candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
-    ranked = rank_movies(
-        candidate_pool,
-        p,
-        st.session_state.adventure,
-        st.session_state.review_priority,
-        excluded,
-        None,
-    )
-    learning_result=learning_model_for(st.session_state.get("analytics_events", []))
-    ranked_movies=[movie for _,movie in ranked]
-    semantic_by_id=cached_semantic_scores(ranked_movies,p)
-    cf_user=user_vector(_cf_signals())
-    cf_by_title={}
-    model_match_by_title={}
+        candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
+        ranked = rank_movies(
+            candidate_pool,
+            p,
+            st.session_state.adventure,
+            st.session_state.review_priority,
+            excluded,
+            None,
+        )
+        learning_result=learning_model_for(st.session_state.get("analytics_events", []))
+        ranked_movies=[movie for _,movie in ranked]
+        semantic_by_id=cached_semantic_scores(ranked_movies,p)
+        cf_user=user_vector(_cf_signals())
+        cf_by_title={}
+        model_match_by_title={}
 
-    def _safe_num(value, default=0):
-        try:
-            return float(value) if value is not None else default
-        except (TypeError, ValueError):
-            return default
+        def _safe_num(value, default=0):
+            try:
+                return float(value) if value is not None else default
+            except (TypeError, ValueError):
+                return default
 
-    def _row_signal(row_name, movie):
-        """Section-specific signal layered on the same learned iCinema profile."""
-        tags=set(movie.get("tags", []))
-        popularity=max(0.0, _safe_num(movie.get("popularity"), 0.0))
-        rt=_safe_num(movie.get("rt"), -1.0)
-        imdb=_safe_num(movie.get("imdb"), -1.0)
-        tmdb_vote=_safe_num(movie.get("tmdb_vote"), -1.0)
-        year=int(_safe_num(movie.get("year"), 0))
+        def _row_signal(row_name, movie):
+            """Section-specific signal layered on the same learned iCinema profile."""
+            tags=set(movie.get("tags", []))
+            popularity=max(0.0, _safe_num(movie.get("popularity"), 0.0))
+            rt=_safe_num(movie.get("rt"), -1.0)
+            imdb=_safe_num(movie.get("imdb"), -1.0)
+            tmdb_vote=_safe_num(movie.get("tmdb_vote"), -1.0)
+            year=int(_safe_num(movie.get("year"), 0))
 
-        if row_name=="Critically Acclaimed":
-            critic=(rt/100.0) if rt>=0 else 0.5
-            audience_vals=[]
-            if imdb>=0: audience_vals.append(imdb/10.0)
-            if tmdb_vote>=0: audience_vals.append(tmdb_vote/10.0)
-            audience=sum(audience_vals)/len(audience_vals) if audience_vals else 0.5
-            tagged=1.0 if "Critically Acclaimed" in tags else 0.0
-            return max(0.0,min(1.0,0.50*critic+0.35*audience+0.15*tagged))
+            if row_name=="Critically Acclaimed":
+                critic=(rt/100.0) if rt>=0 else 0.5
+                audience_vals=[]
+                if imdb>=0: audience_vals.append(imdb/10.0)
+                if tmdb_vote>=0: audience_vals.append(tmdb_vote/10.0)
+                audience=sum(audience_vals)/len(audience_vals) if audience_vals else 0.5
+                tagged=1.0 if "Critically Acclaimed" in tags else 0.0
+                return max(0.0,min(1.0,0.50*critic+0.35*audience+0.15*tagged))
 
-        if row_name=="Hidden Gems":
-            # Prefer lower-popularity titles with discovery-oriented metadata, while
-            # keeping enough quality evidence to avoid rewarding obscurity by itself.
-            obscurity=1.0/(1.0+popularity/28.0) if popularity else 0.58
-            hidden=1.0 if "Hidden Gem" in tags else 0.0
-            discovery_tags={"International","Offbeat","Slow-burn","Psychological","Documentary","Grounded","Cerebral"}
-            discovery=min(1.0,len(discovery_tags.intersection(tags))/2.0)
-            quality=max(0.0,min(1.0,((rt/100.0) if rt>=0 else ((imdb/10.0) if imdb>=0 else 0.55))))
-            return max(0.0,min(1.0,0.42*obscurity+0.24*hidden+0.18*discovery+0.16*quality))
+            if row_name=="Hidden Gems":
+                # Prefer lower-popularity titles with discovery-oriented metadata, while
+                # keeping enough quality evidence to avoid rewarding obscurity by itself.
+                obscurity=1.0/(1.0+popularity/28.0) if popularity else 0.58
+                hidden=1.0 if "Hidden Gem" in tags else 0.0
+                discovery_tags={"International","Offbeat","Slow-burn","Psychological","Documentary","Grounded","Cerebral"}
+                discovery=min(1.0,len(discovery_tags.intersection(tags))/2.0)
+                quality=max(0.0,min(1.0,((rt/100.0) if rt>=0 else ((imdb/10.0) if imdb>=0 else 0.55))))
+                return max(0.0,min(1.0,0.42*obscurity+0.24*hidden+0.18*discovery+0.16*quality))
 
-        if row_name=="Something Different":
-            preferred=set(p.get("genres", []))
-            genre_novelty=0.0 if movie.get("genre") in preferred else 1.0
-            language_novelty=1.0 if str(movie.get("original_language") or "en").lower() not in {"", "en"} else 0.0
-            era_novelty=1.0 if year and (year<=2005 or year>=2023) else 0.35
-            obscurity=1.0/(1.0+popularity/40.0) if popularity else 0.45
-            votes=_safe_num(movie.get("tmdb_vote_count"), -1.0)
-            if votes>=0:
-                import math
-                # ~25k votes (a blockbuster) scores near 0; a few hundred scores high.
-                obscurity=0.5*obscurity+0.5*max(0.0,1.0-math.log10(votes+1.0)/4.5)
-            return max(0.0,min(1.0,0.40*genre_novelty+0.18*language_novelty+0.10*era_novelty+0.32*obscurity))
+            if row_name=="Something Different":
+                preferred=set(p.get("genres", []))
+                genre_novelty=0.0 if movie.get("genre") in preferred else 1.0
+                language_novelty=1.0 if str(movie.get("original_language") or "en").lower() not in {"", "en"} else 0.0
+                era_novelty=1.0 if year and (year<=2005 or year>=2023) else 0.35
+                obscurity=1.0/(1.0+popularity/40.0) if popularity else 0.45
+                votes=_safe_num(movie.get("tmdb_vote_count"), -1.0)
+                if votes>=0:
+                    import math
+                    # ~25k votes (a blockbuster) scores near 0; a few hundred scores high.
+                    obscurity=0.5*obscurity+0.5*max(0.0,1.0-math.log10(votes+1.0)/4.5)
+                return max(0.0,min(1.0,0.40*genre_novelty+0.18*language_novelty+0.10*era_novelty+0.32*obscurity))
 
-        return 1.0
+            return 1.0
 
-    base_memo={}
-    fatigue=impression_fatigue()
+        base_memo={}
+        fatigue=impression_fatigue()
 
-    def _row_candidates(row_name, already_used):
-        available=[item for item in ranked if item[1]["title"] not in already_used]
-        scored=[]
-        for display_match,movie in available:
-            memo=base_memo.get(id(movie))
-            if memo is not None:
-                # Same personalized score in every row; only the row objective differs.
-                base,display_match=memo
-            else:
-                components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority,semantic_similarity=semantic_by_id.get(id(movie),0.5))
-                base=components["raw_score"]
-                # Supervised features stay exactly as logged at training time (pre-CF),
-                # so the Save/Skip model never sees train/serve skew.
-                model_match_by_title[movie["title"]]=display_match
-                ml_context=dict(components)
-                ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
-                cf=cf_affinity(movie,cf_user)
-                ml_context["cf_affinity"]=cf if cf is not None else 0.5
-                if cf is not None:
-                    base=0.65*base+0.35*cf
-                    cf_by_title[movie["title"]]=cf
-                learned_probability=predict_success(learning_result,ml_context)
-                if learned_probability is not None:
-                    base=0.78*base+0.22*learned_probability
-                # The % shown to users reflects the final blended ranking score.
-                display_match=_calibrated_match_percent(base,p)
-                base_memo[id(movie)]=(base,display_match)
-            section=_row_signal(row_name,movie)
-            # The learned profile remains dominant in every row. The section signal
-            # changes the objective, not the underlying personalization system.
+        def _row_candidates(row_name, already_used):
+            available=[item for item in ranked if item[1]["title"] not in already_used]
+            scored=[]
+            for display_match,movie in available:
+                memo=base_memo.get(id(movie))
+                if memo is not None:
+                    # Same personalized score in every row; only the row objective differs.
+                    base,display_match=memo
+                else:
+                    components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority,semantic_similarity=semantic_by_id.get(id(movie),0.5))
+                    base=components["raw_score"]
+                    # Supervised features stay exactly as logged at training time (pre-CF),
+                    # so the Save/Skip model never sees train/serve skew.
+                    model_match_by_title[movie["title"]]=display_match
+                    ml_context=dict(components)
+                    ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
+                    cf=cf_affinity(movie,cf_user)
+                    ml_context["cf_affinity"]=cf if cf is not None else 0.5
+                    if cf is not None:
+                        base=0.65*base+0.35*cf
+                        cf_by_title[movie["title"]]=cf
+                    learned_probability=predict_success(learning_result,ml_context)
+                    if learned_probability is not None:
+                        base=0.78*base+0.22*learned_probability
+                    # The % shown to users reflects the final blended ranking score.
+                    display_match=_calibrated_match_percent(base,p)
+                    base_memo[id(movie)]=(base,display_match)
+                section=_row_signal(row_name,movie)
+                # The learned profile remains dominant in every row. The section signal
+                # changes the objective, not the underlying personalization system.
+                if row_name=="Top Matches for You":
+                    objective=base
+                elif row_name=="Critically Acclaimed":
+                    objective=0.70*base+0.30*section
+                elif row_name=="Hidden Gems":
+                    objective=0.72*base+0.28*section
+                else:  # Something Different
+                    objective=0.68*base+0.32*section
+                # Freshness for returning viewers: discount ignored repeats, lightly vary near-ties.
+                objective-=FATIGUE_STEP*min(fatigue.get(movie["title"],0),FATIGUE_CAP)
+                objective+=VARIETY_SPREAD*visit_variety(movie["title"])
+                scored.append((objective,base,display_match,movie))
+
+            # Section objective chooses membership. Within that objective, stronger core
+            # personalized fit breaks ties, so every row remains grounded in the same model.
+            scored.sort(key=lambda x:(x[0],x[1]),reverse=True)
+            diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.80 if row_name=="Top Matches for You" else 0.74)
+            chosen={item[3]["title"] for item in diversified}
+            ordered=diversified+[item for item in scored if item[3]["title"] not in chosen]
+            return [(display_match,movie) for _,_,display_match,movie in ordered]
+
+        # Reserve distinct movies for each row before rendering. This prevents a title from
+        # migrating into another section during the same refresh and keeps every row populated.
+        row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
+        row_choices={name: [] for name in row_order}
+        row_candidate_queues={name: [] for name in row_order}
+
+        # Tonight's Pick: the single best personalized match, preferring the viewer's
+        # own streaming services and falling back to any service when none are chosen.
+        top_all=_row_candidates("Top Matches for You",set())
+        tonight_pool=top_all[:40]
+        tonight_watch=get_watch_availability_batch(
+            tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
+        ) if tonight_pool else {}
+        my_services=list(st.session_state.get("streaming_services") or [])
+        fits=[item for item in tonight_pool if movie_on_services(tonight_watch.get(item[1]["title"]),my_services)]
+        fit_titles={m["title"] for _,m in fits}
+        tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
+        reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
+
+        # Pass 1: category-specific ordering with strict cross-row de-duplication.
+        # Keep the remaining ranked candidates as a replacement queue so one card can
+        # advance without rebuilding the entire Showroom.
+        for row_name in row_order:
             if row_name=="Top Matches for You":
-                objective=base
-            elif row_name=="Critically Acclaimed":
-                objective=0.70*base+0.30*section
-            elif row_name=="Hidden Gems":
-                objective=0.72*base+0.28*section
-            else:  # Something Different
-                objective=0.68*base+0.32*section
-            # Freshness for returning viewers: discount ignored repeats, lightly vary near-ties.
-            objective-=FATIGUE_STEP*min(fatigue.get(movie["title"],0),FATIGUE_CAP)
-            objective+=VARIETY_SPREAD*visit_variety(movie["title"])
-            scored.append((objective,base,display_match,movie))
+                ordered=[item for item in top_all if item[1]["title"] not in reserved]
+            else:
+                ordered=_row_candidates(row_name,reserved)
+            picks=ordered[:4]
+            row_choices[row_name].extend(picks)
+            row_candidate_queues[row_name].extend(ordered)
+            reserved.update(movie["title"] for _,movie in picks)
 
-        # Section objective chooses membership. Within that objective, stronger core
-        # personalized fit breaks ties, so every row remains grounded in the same model.
-        scored.sort(key=lambda x:(x[0],x[1]),reverse=True)
-        diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.80 if row_name=="Top Matches for You" else 0.74)
-        chosen={item[3]["title"] for item in diversified}
-        ordered=diversified+[item for item in scored if item[3]["title"] not in chosen]
-        return [(display_match,movie) for _,_,display_match,movie in ordered]
+        # Pass 2: if any category pool is thin, fill it with the next-best personalized
+        # candidates that have not appeared elsewhere. This keeps every section alive.
+        for row_name in row_order:
+            need=4-len(row_choices[row_name])
+            if need<=0:
+                continue
+            fallback=[item for item in ranked if item[1]["title"] not in reserved]
+            extra=fallback[:need]
+            row_choices[row_name].extend(extra)
+            reserved.update(movie["title"] for _,movie in extra)
 
-    # Reserve distinct movies for each row before rendering. This prevents a title from
-    # migrating into another section during the same refresh and keeps every row populated.
-    row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
-    row_choices={name: [] for name in row_order}
-    row_candidate_queues={name: [] for name in row_order}
+        visible_movies=[movie for row_name in ["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"] for _,movie in row_choices.get(row_name,[])]
+        visible_titles={movie["title"] for movie in visible_movies}
+        warm_backups=[]
+        for row_name in row_order:
+            for _,candidate in row_candidate_queues.get(row_name,[]):
+                if candidate["title"] not in visible_titles:
+                    warm_backups.append(candidate)
+                    break
+        metadata_movies=visible_movies+warm_backups
+        # Deduplicate while preserving the ranked order.
+        metadata_movies=list({m["title"]:m for m in metadata_movies}.values())
+        visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in metadata_movies)
+        visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in metadata_movies)
+        watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
+        for row_name in row_order:
+            row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*service_availability_utility(watch_by_title.get(item[1]["title"])),reverse=True)
 
-    # Tonight's Pick: the single best personalized match, preferring the viewer's
-    # own streaming services and falling back to any service when none are chosen.
-    top_all=_row_candidates("Top Matches for You",set())
-    tonight_pool=top_all[:40]
-    tonight_watch=get_watch_availability_batch(
-        tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
-    ) if tonight_pool else {}
-    my_services=list(st.session_state.get("streaming_services") or [])
-    fits=[item for item in tonight_pool if movie_on_services(tonight_watch.get(item[1]["title"]),my_services)]
-    fit_titles={m["title"] for _,m in fits}
-    tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
-    reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
+        recommendation_context={}
+        for row_name in row_order:
+            for position,(match,movie) in enumerate(row_choices.get(row_name,[]),start=1):
+                availability_value=service_availability_utility(watch_by_title.get(movie["title"]))
+                comps=score_movie_components(
+                    movie,p,st.session_state.adventure,st.session_state.review_priority,
+                    semantic_similarity=semantic_by_id.get(id(movie),0.5),
+                    availability_score=availability_value,
+                )
+                recommendation_context[movie["title"]]={
+                    "row":row_name,"position":position,"match":model_match_by_title.get(movie["title"],match),
+                    "model_score":round(float(comps.get("raw_score",0)),6),
+                    "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
+                    **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
+                    "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
+                    "candidate_source":movie.get("candidate_source"),
+                    "model_version":"v5.166",
+                }
+        st.session_state.recommendation_context=recommendation_context
+        record_impressions(st.session_state,recommendation_context)
+        identity_by_title=get_movie_identity_batch(visible_identity_keys)
+        showroom_poster_map={title: data.get("poster_url") for title, data in identity_by_title.items()}
+        live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in metadata_movies)
+        live_ratings_by_title=get_live_ratings_batch(live_rating_keys)
 
-    # Pass 1: category-specific ordering with strict cross-row de-duplication.
-    # Keep the remaining ranked candidates as a replacement queue so one card can
-    # advance without rebuilding the entire Showroom.
-    for row_name in row_order:
-        if row_name=="Top Matches for You":
-            ordered=[item for item in top_all if item[1]["title"] not in reserved]
-        else:
-            ordered=_row_candidates(row_name,reserved)
-        picks=ordered[:4]
-        row_choices[row_name].extend(picks)
-        row_candidate_queues[row_name].extend(ordered)
-        reserved.update(movie["title"] for _,movie in picks)
-
-    # Pass 2: if any category pool is thin, fill it with the next-best personalized
-    # candidates that have not appeared elsewhere. This keeps every section alive.
-    for row_name in row_order:
-        need=4-len(row_choices[row_name])
-        if need<=0:
-            continue
-        fallback=[item for item in ranked if item[1]["title"] not in reserved]
-        extra=fallback[:need]
-        row_choices[row_name].extend(extra)
-        reserved.update(movie["title"] for _,movie in extra)
-
-    visible_movies=[movie for row_name in ["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"] for _,movie in row_choices.get(row_name,[])]
-    visible_titles={movie["title"] for movie in visible_movies}
-    warm_backups=[]
-    for row_name in row_order:
-        for _,candidate in row_candidate_queues.get(row_name,[]):
-            if candidate["title"] not in visible_titles:
-                warm_backups.append(candidate)
-                break
-    metadata_movies=visible_movies+warm_backups
-    # Deduplicate while preserving the ranked order.
-    metadata_movies=list({m["title"]:m for m in metadata_movies}.values())
-    visible_movie_keys=tuple((movie["title"], int(movie.get("year") or 0)) for movie in metadata_movies)
-    visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in metadata_movies)
-    watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
-    for row_name in row_order:
-        row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*service_availability_utility(watch_by_title.get(item[1]["title"])),reverse=True)
-
-    recommendation_context={}
-    for row_name in row_order:
-        for position,(match,movie) in enumerate(row_choices.get(row_name,[]),start=1):
-            availability_value=service_availability_utility(watch_by_title.get(movie["title"]))
-            comps=score_movie_components(
-                movie,p,st.session_state.adventure,st.session_state.review_priority,
-                semantic_similarity=semantic_by_id.get(id(movie),0.5),
-                availability_score=availability_value,
-            )
-            recommendation_context[movie["title"]]={
-                "row":row_name,"position":position,"match":model_match_by_title.get(movie["title"],match),
-                "model_score":round(float(comps.get("raw_score",0)),6),
-                "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
-                **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
-                "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
-                "candidate_source":movie.get("candidate_source"),
-                "model_version":"v5.166",
-            }
-    st.session_state.recommendation_context=recommendation_context
-    record_impressions(st.session_state,recommendation_context)
-    identity_by_title=get_movie_identity_batch(visible_identity_keys)
-    showroom_poster_map={title: data.get("poster_url") for title, data in identity_by_title.items()}
-    live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in metadata_movies)
-    live_ratings_by_title=get_live_ratings_batch(live_rating_keys)
-
-    # Persist the ranked queues and current slots. Card fragments use these to
-    # replace exactly one movie without rerunning the four-row Showroom.
-    payloads={}
-    queues={}
-    for row_name in row_order:
-        queue_titles=[]
-        for match,movie in row_candidate_queues.get(row_name,[])[:40]:
-            title=movie["title"]
-            queue_titles.append(title)
-            payloads.setdefault(title,{
-                "match":match,
-                "movie":movie,
-                "semantic_similarity":semantic_by_id.get(id(movie),.5),
-                "cf":cf_by_title.get(movie["title"]),
-                "model_match":model_match_by_title.get(movie["title"],match),
-            })
-        queues[row_name]=queue_titles
-    slots={}
-    for row_name in row_order:
-        for slot_index,(match,movie) in enumerate(row_choices.get(row_name,[])):
-            title=movie["title"]
-            slots[_showroom_slot_key(row_name,slot_index)]=title
-            payloads.setdefault(title,{
-                "match":match,
-                "movie":movie,
-                "semantic_similarity":semantic_by_id.get(id(movie),.5),
-                "cf":cf_by_title.get(movie["title"]),
-                "model_match":model_match_by_title.get(movie["title"],match),
-            })
-    st.session_state.tonight_pool=[m["title"] for _,m in tonight_queue]
-    st.session_state.showroom_undo={}
-    st.session_state.showroom_pill_labels={}
-    if tonight_queue:
-        for match,movie in tonight_queue:
-            payloads.setdefault(movie["title"],{
-                "match":match,
-                "movie":movie,
-                "semantic_similarity":semantic_by_id.get(id(movie),.5),
-                "cf":cf_by_title.get(movie["title"]),
-                "model_match":model_match_by_title.get(movie["title"],match),
-            })
-    st.session_state.showroom_payloads=payloads
-    st.session_state.showroom_row_queues=queues
-    st.session_state.showroom_slots=slots
-    identity_cache=dict(st.session_state.get("showroom_identity_cache") or {})
-    identity_cache.update(identity_by_title)
-    st.session_state.showroom_identity_cache=identity_cache
-    watch_cache=dict(st.session_state.get("showroom_watch_cache") or {})
-    watch_cache.update(tonight_watch)
-    watch_cache.update(watch_by_title)
-    st.session_state.showroom_watch_cache=watch_cache
-    rating_cache=dict(st.session_state.get("showroom_rating_cache") or {})
-    rating_cache.update(live_ratings_by_title)
-    st.session_state.showroom_rating_cache=rating_cache
+        # Persist the ranked queues and current slots. Card fragments use these to
+        # replace exactly one movie without rerunning the four-row Showroom.
+        payloads={}
+        queues={}
+        for row_name in row_order:
+            queue_titles=[]
+            for match,movie in row_candidate_queues.get(row_name,[])[:40]:
+                title=movie["title"]
+                queue_titles.append(title)
+                payloads.setdefault(title,{
+                    "match":match,
+                    "movie":movie,
+                    "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                    "cf":cf_by_title.get(movie["title"]),
+                    "model_match":model_match_by_title.get(movie["title"],match),
+                })
+            queues[row_name]=queue_titles
+        slots={}
+        for row_name in row_order:
+            for slot_index,(match,movie) in enumerate(row_choices.get(row_name,[])):
+                title=movie["title"]
+                slots[_showroom_slot_key(row_name,slot_index)]=title
+                payloads.setdefault(title,{
+                    "match":match,
+                    "movie":movie,
+                    "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                    "cf":cf_by_title.get(movie["title"]),
+                    "model_match":model_match_by_title.get(movie["title"],match),
+                })
+        st.session_state.tonight_pool=[m["title"] for _,m in tonight_queue]
+        st.session_state.showroom_undo={}
+        st.session_state.showroom_pill_labels={}
+        if tonight_queue:
+            for match,movie in tonight_queue:
+                payloads.setdefault(movie["title"],{
+                    "match":match,
+                    "movie":movie,
+                    "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                    "cf":cf_by_title.get(movie["title"]),
+                    "model_match":model_match_by_title.get(movie["title"],match),
+                })
+        st.session_state.showroom_payloads=payloads
+        st.session_state.showroom_row_queues=queues
+        st.session_state.showroom_slots=slots
+        identity_cache=dict(st.session_state.get("showroom_identity_cache") or {})
+        identity_cache.update(identity_by_title)
+        st.session_state.showroom_identity_cache=identity_cache
+        watch_cache=dict(st.session_state.get("showroom_watch_cache") or {})
+        watch_cache.update(tonight_watch)
+        watch_cache.update(watch_by_title)
+        st.session_state.showroom_watch_cache=watch_cache
+        rating_cache=dict(st.session_state.get("showroom_rating_cache") or {})
+        rating_cache.update(live_ratings_by_title)
+        st.session_state.showroom_rating_cache=rating_cache
 
     row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
 
