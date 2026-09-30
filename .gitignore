@@ -1,0 +1,6 @@
+ml-latest-small/
+ml-32m/
+*.zip
+__pycache__/
+.streamlit/secrets.toml
+.DS_Store

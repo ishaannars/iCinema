@@ -15,6 +15,8 @@ from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
+from src.cf_model import user_vector, cf_affinity
+from src.recommender import _calibrated_match_percent
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
@@ -4373,6 +4375,71 @@ div[data-testid="stLoadingSpinner"],
     }
 }
 
+/* Model diagnostics: 3 x 2 grid */
+.diag-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+@media(max-width:800px){.diag-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}
+
+/* V5.166 — Tonight's Pick: one confident answer, tastefully spaced */
+@keyframes icinema-tonight-in{
+    from{opacity:0;transform:translateY(6px)}
+    to{opacity:1;transform:translateY(0)}
+}
+.tonight-header{margin:0 0 .9rem !important;}
+.tonight-kicker{
+    color:var(--muted2);font-family:var(--ui-font);font-size:.68rem;font-weight:760;
+    text-transform:uppercase;letter-spacing:.11em;margin:0 0 .3rem;
+}
+.tonight-heading{
+    color:var(--ivory);font-family:var(--ui-font);font-size:2rem;line-height:1.08;
+    font-weight:760;letter-spacing:-.03em;margin:0 0 .28rem;
+}
+.tonight-note{color:var(--muted);font-family:var(--ui-font);font-size:.8rem;line-height:1.4;margin:0;}
+[class*="st-key-tonight_hero"]{
+    border:1px solid var(--border) !important;
+    border-radius:22px !important;
+    background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.012)) !important;
+    padding:1.6rem 1.7rem !important;
+    margin:0 0 2.4rem !important;
+    animation:icinema-tonight-in .38s ease-out both;
+}
+[class*="st-key-tonight_hero"] .poster{max-width:280px;margin:0 auto;}
+.tonight-title{
+    color:var(--ivory);font-family:var(--ui-font);font-size:1.9rem;line-height:1.08;
+    font-weight:800;letter-spacing:-.035em;margin:.1rem 0 .3rem;
+}
+.tonight-meta{
+    color:var(--muted);font-family:var(--ui-font);font-size:.74rem;font-weight:700;
+    letter-spacing:.06em;text-transform:uppercase;margin:0 0 .95rem;
+}
+.tonight-match{
+    display:inline-flex;align-items:center;height:1.9rem;padding:0 .8rem;border-radius:999px;
+    border:1px solid rgba(92,111,168,.6);background:rgba(92,111,168,.12);color:var(--ivory);
+    font-family:var(--ui-font);font-size:.72rem;font-weight:720;margin:0 0 1rem;
+}
+.tonight-line{color:var(--muted);font-family:var(--ui-font);font-size:.8rem;line-height:1.45;font-weight:600;margin:0 0 .35rem;}
+.tonight-fit{color:var(--muted2);font-family:var(--ui-font);font-size:.72rem;font-weight:650;margin:0 0 1rem;}
+.tonight-fit.good{color:#9FB2E6;}
+.tonight-hook{color:var(--ivory);font-family:var(--ui-font);font-size:.95rem;line-height:1.45;font-weight:650;margin:0 0 .6rem;}
+.tonight-synopsis{color:var(--muted);font-family:var(--ui-font);font-size:.8rem;line-height:1.55;margin:0 0 1.1rem;max-width:560px;}
+.tonight-why-label{color:var(--muted2);font-family:var(--ui-font);font-size:.64rem;font-weight:760;text-transform:uppercase;letter-spacing:.1em;margin:0 0 .4rem;}
+.tonight-why{color:var(--muted);font-family:var(--ui-font);font-size:.76rem;line-height:1.45;margin:0 0 .3rem;}
+.tonight-why strong{color:var(--ivory);font-weight:700;}
+[class*="st-key-tonight_save_"] button,
+[class*="st-key-tonight_seen_"] button,
+[class*="st-key-tonight_skip_"] button{
+    min-height:2.3rem !important;height:2.3rem !important;border-radius:999px !important;
+}
+[class*="st-key-tonight_save_"] button p,
+[class*="st-key-tonight_seen_"] button p,
+[class*="st-key-tonight_skip_"] button p{font-size:.74rem !important;font-weight:690 !important;margin:0 !important;}
+[class*="st-key-service_"] button{min-height:2.1rem !important;border-radius:999px !important;}
+[class*="st-key-service_"] button p{font-size:.72rem !important;font-weight:680 !important;}
+@media(max-width:800px){
+    [class*="st-key-tonight_hero"]{padding:1.1rem 1rem !important;}
+    [class*="st-key-tonight_hero"] .poster{max-width:220px;}
+    .tonight-title{font-size:1.5rem;}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4385,7 +4452,8 @@ defaults={
     "analytics_events":[],"showroom_session_id":None,"showroom_session_start":None,
     "showroom_impression_keys":set(),"recommendation_context":{},
     "showroom_slots":{},"showroom_payloads":{},"showroom_row_queues":{},
-    "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{}
+    "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{},
+    "streaming_services":[]
 }
 for k,v in defaults.items():
     if k not in st.session_state:
@@ -4409,6 +4477,7 @@ def profile_snapshot():
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
+        "streaming_services": list(st.session_state.get("streaming_services") or []),
     }
 
 def restore_profile(data):
@@ -4427,6 +4496,7 @@ def restore_profile(data):
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
+        st.session_state.streaming_services = list(data.get("streaming_services") or [])
         st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
         if st.session_state.onboarding_complete:
             st.session_state.screen = "showroom"
@@ -4671,6 +4741,67 @@ def set_adventure_level(value):
     st.session_state.adventure = value
     queue_profile_save()
 
+# Streaming services a viewer can pick for Tonight's Pick. Aliases match TMDB/JustWatch
+# provider names, including ad tiers and channel variants (e.g. "Netflix basic with Ads").
+STREAMING_SERVICES = {
+    "Netflix": ("netflix",),
+    "Max": ("max", "hbomax"),
+    "Hulu": ("hulu",),
+    "Prime Video": ("amazonprime", "primevideo"),
+    "Disney+": ("disney",),
+    "Apple TV+": ("appletvplus",),
+    "Peacock": ("peacock",),
+    "Paramount+": ("paramount",),
+    "Free (Tubi, Pluto & more)": ("tubi", "pluto", "roku", "plex", "freevee", "kanopy", "hoopla"),
+}
+
+def _provider_key(name):
+    return re.sub(r"[^a-z0-9]", "", str(name).casefold().replace("+", "plus"))
+
+def _on_service(provider, service):
+    key = _provider_key(provider)
+    return any(key.startswith(alias) for alias in STREAMING_SERVICES.get(service, ()))
+
+def with_cf_reason(reasons, payload, limit=3):
+    """Surface the collaborative-filtering signal when it is a strong reason."""
+    cf = (payload or {}).get("cf")
+    reasons = list(reasons or [])
+    if isinstance(cf, (int, float)) and cf >= 0.65:
+        reasons = [{
+            "label": "Loved by viewers with your taste",
+            "text": "People who liked the same movies you did rated this highly (collaborative filtering trained on MovieLens ratings).",
+        }] + reasons
+    return reasons[:limit]
+
+def service_availability_utility(availability):
+    """Availability value that respects the viewer's chosen services.
+
+    A title streaming only on a service the viewer doesn't have is treated like a
+    paid rental: still watchable, but less convenient tonight.
+    """
+    availability = availability or {}
+    status = availability.get("status")
+    services = list(st.session_state.get("streaming_services") or [])
+    if services and status == "streaming" and not movie_on_services(availability, services):
+        return availability_utility("rent")
+    return availability_utility(status)
+
+def movie_on_services(availability, services):
+    """True when a movie streams on one of the viewer's services (or on any service if none chosen)."""
+    availability = availability or {}
+    if not services:
+        return availability.get("status") == "streaming"
+    return any(_on_service(p, s) for p in (availability.get("providers") or []) for s in services)
+
+def toggle_streaming_service(name):
+    services = list(st.session_state.get("streaming_services") or [])
+    if name in services:
+        services.remove(name)
+    else:
+        services.append(name)
+    st.session_state.streaming_services = services
+    queue_profile_save()
+
 def toggle_priority_choice(option):
     selected = set(st.session_state.more_of)
     if option in selected:
@@ -4780,6 +4911,19 @@ def current_profile():
         st.session_state.saved, st.session_state.dismissed, st.session_state.adventure,
         st.session_state.external_movies, st.session_state.seen
     )
+
+def _cf_signals():
+    """Collect browser-local actions for the MovieLens-pretrained CF layer."""
+    ext = st.session_state.external_movies
+    out = []
+    for t in st.session_state.likes:
+        m = get_movie(t, ext)
+        if m: out.append((m, "favorite" if t in st.session_state.favorites else "like"))
+    for key, action in (("saved", "save"), ("seen", "seen"), ("dismissed", "skip")):
+        for t in st.session_state[key]:
+            m = get_movie(t, ext)
+            if m: out.append((m, action))
+    return out
 
 def concise_description(text, limit=138):
     """Return a compact *complete-sounding* description for aligned movie cards.
@@ -5103,8 +5247,12 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     learned=train_learning_model(events)
     conf=profile_confidence_label(p)
     signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
-    model_primary = "Learning model active"
-    model_secondary = "Adapting from your choices" if learned.ready else "Learning from your choices"
+    if learned.ready:
+        model_primary = "Learning model active"
+        model_secondary = "Adapting from your choices"
+    else:
+        model_primary = "Personalized from your likes"
+        model_secondary = "Behavioral model activates after 50 Save/Skip actions"
     signal_text = f"{signals} signal{'s' if signals != 1 else ''} shaping recommendations"
 
     ttm=_format_seconds(insights.get("time_to_match_seconds"))
@@ -5114,20 +5262,56 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     cards=[(ttm,"Median Time to Match"),(skips,"Avg. Skips Before Save"),(conv,"Save → Seen Conversion"),(conf,"Profile Confidence")]
     insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
 
+    ranking=ranking_metrics(events)
+    calib=calibration_metrics(events)
+    lm=learned.metrics or {}
+    def _fmt(v, pct=False):
+        if v is None:
+            return "Learning"
+        return f"{v*100:.0f}%" if pct else f"{v:.2f}"
+    diag_cards=[
+        (learned.model_name if learned.ready else "Cold-start hybrid", "Active model"),
+        (_fmt(lm.get("auc")) if learned.ready else "Learning", "Holdout ROC AUC"),
+        (_fmt(lm.get("brier_score")) if learned.ready else "Learning", "Brier score (lower is better)"),
+        (_fmt(ranking.get("ndcg_at_k")), f"NDCG@{ranking.get('k', 4)} from your Saves"),
+        (_fmt(ranking.get("mrr")), "MRR · rank of first Save"),
+        (_fmt(calib.get("mae")), "Match calibration error"),
+    ]
+    diag_html="".join(f'<div class="insight-card"><div class="insight-value">{html.escape(str(v))}</div><div class="insight-label">{html.escape(l)}</div></div>' for v,l in diag_cards)
+    labeled=learned.samples or 0
+    diag_copy=(
+        f"Trained on {labeled} of your Save/Skip outcomes with a chronological holdout."
+        if learned.ready else
+        "Supervised model activates after 50 Save/Skip outcomes (12+ of each); Gradient Boosting is compared after 100. Metrics fill in as evidence builds."
+    )
+
     methodology_html = (
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">Methodology &amp; Data</div>'
-        '<div class="profile-insights-copy">Two ways iCinema turns your activity into recommendations.</div>'
+        '<div class="profile-insights-copy">How iCinema turns your activity into recommendations.</div>'
         '<div class="methodology-grid">'
         '<div class="methodology-card">'
-        '<div class="methodology-value">20% · Theme &amp; tone fit</div>'
-        '<div class="methodology-label">iCinema converts plot and metadata text into latent features using TF-IDF and SVD, then compares movies to your learned taste with cosine similarity.</div>'
+        '<div class="methodology-value">Collaborative filtering · MovieLens</div>'
+        '<div class="methodology-label">Movie embeddings learned from millions of real ratings. Your first few likes place you among viewers with similar taste, so personalization starts immediately. Skips push away from similar titles.</div>'
+        '</div>'
+        '<div class="methodology-card">'
+        '<div class="methodology-value">Theme &amp; tone fit</div>'
+        '<div class="methodology-label">Plot and metadata text become latent features with TF-IDF and Truncated SVD, compared to your taste with cosine similarity. It is 20% of the content score, alongside genre, traits, quality, discovery, and your priorities.</div>'
         '</div>'
         '<div class="methodology-card">'
         '<div class="methodology-value">Behavioral learning</div>'
-        '<div class="methodology-label">Save and Skip outcomes train the preference model once enough evidence exists. Recent behavior receives more weight, while display position is excluded so exposure does not masquerade as taste.</div>'
+        '<div class="methodology-label">Save and Skip outcomes train Logistic Regression, then Gradient Boosting with more evidence. Recent behavior counts more, and display position is excluded so exposure does not masquerade as taste.</div>'
+        '</div>'
+        '<div class="methodology-card">'
+        '<div class="methodology-value">Your streaming services</div>'
+        '<div class="methodology-label">Titles on services you have rank as more convenient across every row, and Tonight’s Pick prefers them first, falling back to any service so there is always an answer.</div>'
         '</div>'
         '</div>'
+        '</div>'
+        '<div class="profile-methodology">'
+        '<div class="profile-insights-title">Model diagnostics</div>'
+        f'<div class="profile-insights-copy">{html.escape(diag_copy)}</div>'
+        f'<div class="insight-grid diag-grid">{diag_html}</div>'
         '</div>'
     )
 
@@ -5600,7 +5784,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     match = int(payload.get("match") or 0)
     p = current_profile()
     identity, availability, live_rating = _showroom_cached_metadata(movie)
-    availability_value = availability_utility(availability.get("status"))
+    availability_value = service_availability_utility(availability)
     comps = score_movie_components(
         movie, p, st.session_state.adventure, st.session_state.review_priority,
         semantic_similarity=float(payload.get("semantic_similarity", .5)),
@@ -5609,7 +5793,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     context = {
         "row":row_name,
         "position":int(slot_index)+1,
-        "match":match,
+        "match":int(payload.get("model_match") or match),
         "model_score":round(float(comps.get("raw_score",0)),6),
         "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
         **{k:round(float(comps.get(k,.5)),6) for k in [
@@ -5617,8 +5801,9 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             "discovery_alignment","priority_alignment","availability_alignment",
             "vote_confidence","profile_confidence"
         ]},
+        "cf_affinity":round(float(payload.get("cf") if payload.get("cf") is not None else 0.5),6),
         "candidate_source":movie.get("candidate_source"),
-        "model_version":"v5.165",
+        "model_version":"v5.166",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -5635,6 +5820,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                     availability_score=context.get("availability_alignment",0.5),
                     components=context,
                 )
+                reasons = with_cf_reason(reasons, payload)
                 st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
                 for reason in reasons:
                     st.markdown(
@@ -5711,6 +5897,147 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     # Persist the action during this card-only rerun without creating a visible loader.
     persist_profile_if_needed()
 
+def render_tonight_header():
+    """Section title plus the one-tap service picker (reruns the Showroom to re-pick)."""
+    services = list(st.session_state.get("streaming_services") or [])
+    if services:
+        shown = ", ".join(services[:3]) + (f" +{len(services) - 3}" if len(services) > 3 else "")
+        note = f"Your single best match right now on {shown}"
+        label = f"Your services · {len(services)}"
+    else:
+        note = "Your single best match right now, on any streaming service"
+        label = "Choose your services"
+    head, picker = st.columns([3.2, 1.1], gap="medium")
+    with head:
+        st.markdown(
+            '<div class="tonight-header">'
+            '<div class="tonight-heading">Tonight’s Pick</div>'
+            f'<div class="tonight-note">{html.escape(note)}</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    with picker:
+        with st.popover(label, use_container_width=True):
+            st.caption("Tap the services you have. Tonight’s Pick updates instantly.")
+            cols = st.columns(2, gap="small")
+            for i, name in enumerate(STREAMING_SERVICES):
+                with cols[i % 2]:
+                    st.button(
+                        ("✓ " if name in services else "") + name,
+                        key=f"service_{i}",
+                        type="primary" if name in services else "secondary",
+                        use_container_width=True,
+                        on_click=toggle_streaming_service,
+                        args=(name,),
+                    )
+
+
+@st.fragment
+def render_tonight_pick_fragment():
+    """One large, independently-rerunnable pick. Skip swaps only this card."""
+    row_name = "Tonight's Pick"
+    slot_key = _showroom_slot_key(row_name, 0)
+    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    movie = payload.get("movie")
+    if not title or not movie:
+        return
+
+    match = int(payload.get("match") or 0)
+    p = current_profile()
+    identity, availability, live_rating = _showroom_cached_metadata(movie)
+    comps = score_movie_components(
+        movie, p, st.session_state.adventure, st.session_state.review_priority,
+        semantic_similarity=float(payload.get("semantic_similarity", .5)),
+        availability_score=service_availability_utility(availability),
+    )
+    context = {
+        "row": row_name, "position": 1, "match": int(payload.get("model_match") or match),
+        "model_score": round(float(comps.get("raw_score", 0)), 6),
+        "decision_utility": round(float(comps.get("decision_utility", comps.get("raw_score", 0))), 6),
+        **{k: round(float(comps.get(k, .5)), 6) for k in [
+            "genre_affinity", "trait_affinity", "semantic_similarity", "quality_alignment",
+            "discovery_alignment", "priority_alignment", "availability_alignment",
+            "vote_confidence", "profile_confidence"
+        ]},
+        "cf_affinity": round(float(payload.get("cf") if payload.get("cf") is not None else 0.5), 6),
+        "candidate_source": movie.get("candidate_source"),
+        "model_version": "v5.166",
+    }
+    recommendation_context = dict(st.session_state.get("recommendation_context") or {})
+    recommendation_context[title] = context
+    st.session_state.recommendation_context = recommendation_context
+    record_impressions(st.session_state, {title: context})
+
+    display_title = identity.get("display_title") or movie.get("title", "")
+    year = identity.get("year") or movie.get("year") or ""
+    genre = movie.get("genre") or ""
+    poster_url = identity.get("poster_url") or movie.get("poster_url")
+    if poster_url:
+        poster_html = (f'<div class="poster has-image"><img src="{html.escape(str(poster_url), quote=True)}" '
+                       f'alt="Poster for {html.escape(str(display_title))}"></div>')
+    else:
+        poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
+
+    imdb_value, rt_value = live_rating.get("imdb"), live_rating.get("rt")
+    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
+    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+
+    services = list(st.session_state.get("streaming_services") or [])
+    watch_text = concise_availability_text(availability.get("text") or "Where to watch: availability unavailable", 3)
+    if not services:
+        fit_html = '<div class="tonight-fit">On any service · choose yours above to narrow it</div>'
+    elif movie_on_services(availability, services):
+        fit_html = '<div class="tonight-fit good">✓ On your services</div>'
+    else:
+        rent = (availability.get("rent_providers") or [])[:1]
+        extra = f" · Rent on {html.escape(rent[0])}" if rent else ""
+        fit_html = f'<div class="tonight-fit">Not on your services{extra}</div>'
+
+    reasons = recommendation_explanation(
+        movie, p, st.session_state.adventure, st.session_state.review_priority,
+        semantic_similarity=context.get("semantic_similarity"),
+        availability_score=context.get("availability_alignment", 0.5),
+        components=context,
+    )
+    reasons = with_cf_reason(reasons, payload)
+    why_html = "".join(
+        f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong> — {html.escape(r["text"])}</div>'
+        for r in reasons
+    )
+
+    with st.container(key=f"tonight_hero_{title}"):
+        poster_col, info_col = st.columns([1, 1.55], gap="large")
+        with poster_col:
+            st.markdown(poster_html, unsafe_allow_html=True)
+        with info_col:
+            meta = " · ".join(str(x) for x in (year, genre) if x)
+            st.markdown(
+                f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
+                f'<div class="tonight-meta">{html.escape(meta)}</div>'
+                f'<div class="tonight-match">{match}% iCinema Match</div>'
+                f'<div class="tonight-line">IMDb {imdb_text} · RT {rt_text}</div>'
+                f'<div class="tonight-line">{html.escape(watch_text)}</div>'
+                f'{fit_html}'
+                f'<div class="tonight-hook">{html.escape(quick_card_description(movie))}</div>'
+                f'<div class="tonight-synopsis">{html.escape(expanded_card_description(movie))}</div>'
+                f'<div class="tonight-why-label">Why it’s tonight’s pick</div>{why_html}',
+                unsafe_allow_html=True,
+            )
+            st.markdown('<div style="height:.9rem"></div>', unsafe_allow_html=True)
+            a, b, c = st.columns(3, gap="small")
+            with a:
+                st.button("Save", key=f"tonight_save_{title}", type="primary", use_container_width=True,
+                          on_click=save_showroom_slot, args=(row_name, 0))
+            with b:
+                st.button("Seen", key=f"tonight_seen_{title}", use_container_width=True,
+                          on_click=seen_showroom_slot, args=(row_name, 0))
+            with c:
+                st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
+                          on_click=skip_showroom_slot, args=(row_name, 0))
+    persist_profile_if_needed()
+
+
 @st.fragment
 def render_showroom_fragment(p):
     ensure_session(st.session_state)
@@ -5749,6 +6076,9 @@ def render_showroom_fragment(p):
     learning_result=train_learning_model(st.session_state.get("analytics_events", []))
     ranked_movies=[movie for _,movie in ranked]
     semantic_by_id=semantic_similarity_scores(ranked_movies,p)
+    cf_user=user_vector(_cf_signals())
+    cf_by_title={}
+    model_match_by_title={}
 
     def _safe_num(value, default=0):
         try:
@@ -5800,11 +6130,21 @@ def render_showroom_fragment(p):
         for display_match,movie in available:
             components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority,semantic_similarity=semantic_by_id.get(id(movie),0.5))
             base=components["raw_score"]
+            # Supervised features stay exactly as logged at training time (pre-CF),
+            # so the Save/Skip model never sees train/serve skew.
+            model_match_by_title[movie["title"]]=display_match
             ml_context=dict(components)
             ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
+            cf=cf_affinity(movie,cf_user)
+            ml_context["cf_affinity"]=cf if cf is not None else 0.5
+            if cf is not None:
+                base=0.65*base+0.35*cf
+                cf_by_title[movie["title"]]=cf
             learned_probability=predict_success(learning_result,ml_context)
             if learned_probability is not None:
                 base=0.78*base+0.22*learned_probability
+            # The % shown to users reflects the final blended ranking score.
+            display_match=_calibrated_match_percent(base,p)
             section=_row_signal(row_name,movie)
             # The learned profile remains dominant in every row. The section signal
             # changes the objective, not the underlying personalization system.
@@ -5831,13 +6171,28 @@ def render_showroom_fragment(p):
     row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
     row_choices={name: [] for name in row_order}
     row_candidate_queues={name: [] for name in row_order}
-    reserved=set()
+
+    # Tonight's Pick: the single best personalized match, preferring the viewer's
+    # own streaming services and falling back to any service when none are chosen.
+    top_all=_row_candidates("Top Matches for You",set())
+    tonight_pool=top_all[:15]
+    tonight_watch=get_watch_availability_batch(
+        tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
+    ) if tonight_pool else {}
+    my_services=list(st.session_state.get("streaming_services") or [])
+    fits=[item for item in tonight_pool if movie_on_services(tonight_watch.get(item[1]["title"]),my_services)]
+    fit_titles={m["title"] for _,m in fits}
+    tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
+    reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
 
     # Pass 1: category-specific ordering with strict cross-row de-duplication.
     # Keep the remaining ranked candidates as a replacement queue so one card can
     # advance without rebuilding the entire Showroom.
     for row_name in row_order:
-        ordered=_row_candidates(row_name,reserved)
+        if row_name=="Top Matches for You":
+            ordered=[item for item in top_all if item[1]["title"] not in reserved]
+        else:
+            ordered=_row_candidates(row_name,reserved)
         picks=ordered[:4]
         row_choices[row_name].extend(picks)
         row_candidate_queues[row_name].extend(ordered)
@@ -5869,24 +6224,25 @@ def render_showroom_fragment(p):
     visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in metadata_movies)
     watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
     for row_name in row_order:
-        row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*availability_utility((watch_by_title.get(item[1]["title"]) or {}).get("status")),reverse=True)
+        row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*service_availability_utility(watch_by_title.get(item[1]["title"])),reverse=True)
 
     recommendation_context={}
     for row_name in row_order:
         for position,(match,movie) in enumerate(row_choices.get(row_name,[]),start=1):
-            availability_value=availability_utility((watch_by_title.get(movie["title"]) or {}).get("status"))
+            availability_value=service_availability_utility(watch_by_title.get(movie["title"]))
             comps=score_movie_components(
                 movie,p,st.session_state.adventure,st.session_state.review_priority,
                 semantic_similarity=semantic_by_id.get(id(movie),0.5),
                 availability_score=availability_value,
             )
             recommendation_context[movie["title"]]={
-                "row":row_name,"position":position,"match":match,
+                "row":row_name,"position":position,"match":model_match_by_title.get(movie["title"],match),
                 "model_score":round(float(comps.get("raw_score",0)),6),
                 "decision_utility":round(float(comps.get("decision_utility",comps.get("raw_score",0))),6),
                 **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
+                "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
                 "candidate_source":movie.get("candidate_source"),
-                "model_version":"v5.165",
+                "model_version":"v5.166",
             }
     st.session_state.recommendation_context=recommendation_context
     record_impressions(st.session_state,recommendation_context)
@@ -5908,6 +6264,8 @@ def render_showroom_fragment(p):
                 "match":match,
                 "movie":movie,
                 "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                "cf":cf_by_title.get(movie["title"]),
+                "model_match":model_match_by_title.get(movie["title"],match),
             })
         queues[row_name]=queue_titles
     slots={}
@@ -5919,6 +6277,19 @@ def render_showroom_fragment(p):
                 "match":match,
                 "movie":movie,
                 "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                "cf":cf_by_title.get(movie["title"]),
+                "model_match":model_match_by_title.get(movie["title"],match),
+            })
+    if tonight_queue:
+        queues["Tonight's Pick"]=[m["title"] for _,m in tonight_queue]
+        slots[_showroom_slot_key("Tonight's Pick",0)]=tonight_queue[0][1]["title"]
+        for match,movie in tonight_queue:
+            payloads.setdefault(movie["title"],{
+                "match":match,
+                "movie":movie,
+                "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                "cf":cf_by_title.get(movie["title"]),
+                "model_match":model_match_by_title.get(movie["title"],match),
             })
     st.session_state.showroom_payloads=payloads
     st.session_state.showroom_row_queues=queues
@@ -5927,6 +6298,7 @@ def render_showroom_fragment(p):
     identity_cache.update(identity_by_title)
     st.session_state.showroom_identity_cache=identity_cache
     watch_cache=dict(st.session_state.get("showroom_watch_cache") or {})
+    watch_cache.update(tonight_watch)
     watch_cache.update(watch_by_title)
     st.session_state.showroom_watch_cache=watch_cache
     rating_cache=dict(st.session_state.get("showroom_rating_cache") or {})
@@ -5937,6 +6309,8 @@ def render_showroom_fragment(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        render_tonight_header()
+        render_tonight_pick_fragment()
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"

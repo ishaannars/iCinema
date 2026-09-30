@@ -42,6 +42,7 @@ FEATURE_NAMES = [
     "model_score",
     "decision_utility",
     "match_scaled",
+    "cf_affinity",
 ]
 
 DEFAULT_MIN_SAMPLES = 50
@@ -94,6 +95,7 @@ def _features_from_context(ctx):
         f("model_score"),
         f("decision_utility"),
         f("match", 50.0) / 100.0,
+        f("cf_affinity"),  # MovieLens collaborative-filtering fit; 0.5 when unknown
     ]
 
 

@@ -106,11 +106,19 @@ def get_watch_availability(title: str, year: int, region: str = "US") -> dict:
     streaming = _provider_names(
         (region_data.get("flatrate") or []) + (region_data.get("free") or []) + (region_data.get("ads") or [])
     )
+    # Full provider lists (not just the 3 shown in text) power "Your services" filtering.
+    all_streaming = _provider_names(
+        (region_data.get("flatrate") or []) + (region_data.get("free") or []) + (region_data.get("ads") or []),
+        limit=50,
+    )
+    all_rent = _provider_names(region_data.get("rent"), limit=50)
     if streaming:
         return {
             "status": "streaming",
             "text": "Streaming: " + " · ".join(streaming),
             "url": tmdb_url,
+            "providers": all_streaming,
+            "rent_providers": all_rent,
         }
 
     rent = _provider_names(region_data.get("rent"))
@@ -119,6 +127,8 @@ def get_watch_availability(title: str, year: int, region: str = "US") -> dict:
             "status": "rent",
             "text": "Rent: " + " · ".join(rent),
             "url": tmdb_url,
+            "providers": [],
+            "rent_providers": all_rent,
         }
 
     buy = _provider_names(region_data.get("buy"))

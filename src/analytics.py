@@ -63,6 +63,7 @@ def record_event(state, event_type, title, context=None):
         "availability_alignment": context.get("availability_alignment"),
         "vote_confidence": context.get("vote_confidence"),
         "profile_confidence": context.get("profile_confidence"),
+        "cf_affinity": context.get("cf_affinity"),
         "candidate_source": context.get("candidate_source"),
         "model_version": context.get("model_version"),
     }
