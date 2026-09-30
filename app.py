@@ -4757,12 +4757,29 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* V5.184 — no page flash on Save / Seen: keep content fully visible while it refreshes */
 [data-stale="true"],div[data-stale="true"],.stale-element{opacity:1 !important;transition:none !important;filter:none !important;}
 
+/* V5.185 — library tabs: ratings, roomier rows, hover × to remove from Seen */
+[class*="st-key-savedcard_"],[class*="st-key-seencard_"]{margin-bottom:1.9rem !important;}
+[class*="st-key-seencard_"]{position:relative !important;}
+[class*="st-key-seencard_"] [class*="st-key-unseen_"]{
+    position:absolute !important;top:.6rem !important;right:.6rem !important;left:auto !important;
+    width:auto !important;z-index:6 !important;margin:0 !important;opacity:0;transition:opacity .15s ease;}
+[class*="st-key-seencard_"]:hover [class*="st-key-unseen_"],
+[class*="st-key-seencard_"] [class*="st-key-unseen_"]:focus-within{opacity:1;}
+@media (hover:none){[class*="st-key-seencard_"] [class*="st-key-unseen_"]{opacity:.85;}}
+[class*="st-key-unseen_"] button{
+    width:2rem !important;height:2rem !important;min-height:2rem !important;padding:0 !important;border-radius:999px !important;
+    background:rgba(17,19,21,.82) !important;border:1px solid rgba(243,240,234,.32) !important;backdrop-filter:blur(6px);
+    display:flex !important;align-items:center !important;justify-content:center !important;}
+[class*="st-key-unseen_"] button:hover{border-color:rgba(243,240,234,.7) !important;background:rgba(17,19,21,.95) !important;}
+[class*="st-key-unseen_"] button p{margin:0 !important;font-size:.8rem !important;line-height:1 !important;color:var(--ivory) !important;font-weight:600 !important;}
+.library-ratings{margin:.3rem 0 .35rem !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
 defaults={
     "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"selection_order":[],
+    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"seen_from_saved":set(),"selection_order":[],
     "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
     "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
     "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
@@ -4797,6 +4814,7 @@ def profile_snapshot():
         "seen": sorted(st.session_state.seen),
         "dismissed": sorted(st.session_state.dismissed),
         "disliked": sorted(st.session_state.get("disliked") or set()),
+        "seen_from_saved": sorted(st.session_state.get("seen_from_saved") or set()),
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
@@ -4817,6 +4835,7 @@ def restore_profile(data):
         st.session_state.seen = set(data.get("seen") or [])
         st.session_state.dismissed = set(data.get("dismissed") or [])
         st.session_state.disliked = set(data.get("disliked") or [])
+        st.session_state.seen_from_saved = set(data.get("seen_from_saved") or [])
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
@@ -5417,10 +5436,33 @@ def remove_saved_movie(title):
 def mark_movie_seen(title, movie=None):
     _remember_movie(movie)
     record_event(st.session_state, "seen", title, _current_recommendation_context(title))
+    if title in st.session_state.saved:
+        from_saved = set(st.session_state.get("seen_from_saved") or set())
+        from_saved.add(title)
+        st.session_state.seen_from_saved = from_saved
     st.session_state.seen.add(title)
     st.session_state.saved.discard(title)
     st.session_state.dismissed.discard(title)
     queue_profile_save()
+
+def remove_from_seen(title):
+    """Undo an accidental Seen: drop it and its model signal; restore it to Saved if it came from there."""
+    st.session_state.seen.discard(title)
+    from_saved = set(st.session_state.get("seen_from_saved") or set())
+    if title in from_saved:
+        from_saved.discard(title)
+        st.session_state.seen_from_saved = from_saved
+        st.session_state.saved.add(title)
+    _drop_last_event(title, "seen")
+    queue_profile_save()
+
+
+def library_ratings_html(movie, identity, live_map):
+    """Same ratings line as the Showroom cards (IMDb · RT, 'No RT', or viewer score)."""
+    parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
+    return (f'<div class="ratings library-ratings">{" · ".join(parts)}</div>' if parts
+            else '<div class="ratings library-ratings muted">Ratings unavailable</div>')
+
 
 def resolve_history_movie(title):
     movie = get_movie(title, st.session_state.external_movies)
@@ -6740,13 +6782,33 @@ def render_tonight_pick_fragment():
     blocked = (set(st.session_state.saved) | set(st.session_state.seen) | set(st.session_state.dismissed)
                | set(st.session_state.get("disliked") or set())
                | {t for t in (st.session_state.get("showroom_slots") or {}).values() if t})
+    in_rows = {t for t in (st.session_state.get("showroom_slots") or {}).values() if t}
+    acted = blocked - in_rows
     pool = [t for t in (st.session_state.get("tonight_pool") or []) if t in payloads and t not in blocked]
-    fits = [t for t in pool if movie_on_services(watch_cache.get(t), services)]
+    fits = []
+    if services:
+        # Look through up to the top 120 ranked movies for ones on the viewer's services,
+        # fetching any missing availability in one cached batch.
+        deep = [t for t in (st.session_state.get("tonight_deep_pool") or st.session_state.get("tonight_pool") or [])
+                if t in payloads and t not in acted]
+        missing = [t for t in deep if t not in watch_cache]
+        if missing:
+            keys = tuple((t, int((payloads[t].get("movie") or {}).get("year") or 0)) for t in missing)
+            try:
+                fetched = get_watch_availability_batch(keys, "US") or {}
+            except Exception:
+                fetched = {}
+            watch_cache = {**watch_cache, **fetched}
+            st.session_state.showroom_watch_cache = watch_cache
+        on_services = [t for t in deep if movie_on_services(watch_cache.get(t), services)]
+        # Prefer a match not already shown in a row; a row duplicate beats a wrong pick.
+        fits = [t for t in on_services if t not in in_rows] + [t for t in on_services if t in in_rows]
     ordered = fits + [t for t in pool if t not in fits]
 
     if services:
         shown = ", ".join(services[:2]) + (f" +{len(services) - 2}" if len(services) > 2 else "")
-        note = f"Your single best match right now on {shown}"
+        note = (f"Your single best match right now on {shown}" if fits else
+                f"None of your top matches stream on {shown} right now, so here’s your best overall match")
     else:
         note = "Your single best match right now"
     head, picker = st.columns([3.4, 1.1], gap="medium", vertical_alignment="bottom")
@@ -7138,6 +7200,17 @@ def render_showroom_fragment(p):
                     "model_match":model_match_by_title.get(movie["title"],match),
                 })
         st.session_state.tonight_pool=[m["title"] for _,m in tonight_queue]
+        # Deeper ranked list so a service filter (e.g. Netflix only) can reach past the top 40.
+        deep=top_all[:120]
+        st.session_state.tonight_deep_pool=[m["title"] for _,m in deep]
+        for match,movie in deep:
+            payloads.setdefault(movie["title"],{
+                "match":match,
+                "movie":movie,
+                "semantic_similarity":semantic_by_id.get(id(movie),.5),
+                "cf":cf_by_title.get(movie["title"]),
+                "model_match":model_match_by_title.get(movie["title"],match),
+            })
         st.session_state.showroom_undo={}
         st.session_state.showroom_pill_labels={}
         if tonight_queue:
@@ -7208,36 +7281,31 @@ def render_showroom_fragment(p):
         saved_identity_map = get_movie_identity_batch(saved_identity_keys)
         saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
         saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
+        saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
+                                                      (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
+                                                     for m in movies)) if movies else {}
         if not movies:st.caption("Nothing saved yet.")
         else:
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
-                    identity = saved_identity_map.get(m["title"], {}) or {}
-                    display_movie = dict(m)
-                    if identity.get("display_title"):
-                        display_movie["title"] = identity["display_title"]
-                    if identity.get("year"):
-                        display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
-                    st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
-                    saved_actions = st.columns(2, gap="small")
-                    with saved_actions[0]:
-                        st.button(
-                            "Mark Seen",
-                            key=f"savedseen_{m['title']}",
-                            use_container_width=True,
-                            on_click=mark_movie_seen,
-                            args=(m["title"], m),
-                        )
-                    with saved_actions[1]:
-                        st.button(
-                            "Remove",
-                            key=f"unsave_{m['title']}",
-                            use_container_width=True,
-                            on_click=remove_saved_movie,
-                            args=(m["title"],),
-                        )
+                    with st.container(key=f"savedcard_{i}"):
+                        identity = saved_identity_map.get(m["title"], {}) or {}
+                        display_movie = dict(m)
+                        if identity.get("display_title"):
+                            display_movie["title"] = identity["display_title"]
+                        if identity.get("year"):
+                            display_movie["year"] = identity["year"]
+                        movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
+                        st.markdown(library_ratings_html(m, identity, saved_live_map), unsafe_allow_html=True)
+                        st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
+                        saved_actions = st.columns(2, gap="small")
+                        with saved_actions[0]:
+                            st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
+                                      on_click=mark_movie_seen, args=(m["title"], m))
+                        with saved_actions[1]:
+                            st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
+                                      on_click=remove_saved_movie, args=(m["title"],))
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -7246,18 +7314,26 @@ def render_showroom_fragment(p):
         seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         seen_identity_map = get_movie_identity_batch(seen_identity_keys)
         seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+        seen_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
+                                                     (seen_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
+                                                    for m in movies)) if movies else {}
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
-                    identity = seen_identity_map.get(m["title"], {}) or {}
-                    display_movie = dict(m)
-                    if identity.get("display_title"):
-                        display_movie["title"] = identity["display_title"]
-                    if identity.get("year"):
-                        display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
+                    with st.container(key=f"seencard_{i}"):
+                        identity = seen_identity_map.get(m["title"], {}) or {}
+                        display_movie = dict(m)
+                        if identity.get("display_title"):
+                            display_movie["title"] = identity["display_title"]
+                        if identity.get("year"):
+                            display_movie["year"] = identity["year"]
+                        movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
+                        st.markdown(library_ratings_html(m, identity, seen_live_map), unsafe_allow_html=True)
+                        # Hover × in the poster's top-right corner: remove an accidental Seen.
+                        st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
+                                  on_click=remove_from_seen, args=(m["title"],))
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
