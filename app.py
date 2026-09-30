@@ -5457,6 +5457,44 @@ _HOOK_LEADS = (r"^(?:in|on|at|during|after|before|following|inside|across|amid|w
 _HOOK_PRONOUN_START = {"he", "she", "they", "it", "his", "her", "their", "its", "this", "these", "there", "but", "and", "then"}
 
 
+_HOOK_AUX = {"is", "are", "was", "were", "has", "have", "had", "must", "can", "could", "will",
+             "would", "should", "may", "might", "does", "did", "gets", "got"}
+
+
+# Words that start a setup phrase ("Years later,", "Meanwhile,", "All unemployed,").
+# A name can never be trimmed because it is never on this list.
+_SETUP_OPENERS = {
+    "years", "months", "weeks", "days", "decades", "centuries", "hours", "moments", "minutes",
+    "meanwhile", "now", "today", "tonight", "soon", "later", "once", "all", "after", "before",
+    "during", "following", "since", "still", "suddenly", "eventually", "finally", "together",
+    "alone", "newly", "recently", "long", "back", "far", "deep", "high", "just", "one", "two",
+    "desperate", "determined", "unemployed", "broke", "orphaned", "widowed", "haunted",
+    "estranged", "exiled", "stranded", "trapped", "armed", "fresh", "fed", "tired", "bored",
+    "lonely", "unable", "eager", "reluctant", "grieving", "struggling", "having", "faced",
+    "facing", "left", "raised", "born", "set",
+}
+
+
+def _is_setup_opener(words):
+    first = words[0].strip(".,;:!?\"'") if words else ""
+    return first in _SETUP_OPENERS
+
+
+def _starts_with_subject(text):
+    """False when a clause would begin with its verb, or is only an appositive
+    ("a young man, is ...") whose real subject was the name before it."""
+    words = [w.casefold().strip(".,;:!?\"'") for w in text.split()]
+    if not words or words[0] in _HOOK_AUX or words[0] in _HOOK_VERBS:
+        return False
+    if words[0] in {"a", "an", "the", "his", "her", "their", "its"}:
+        comma = text.find(", ")
+        if 0 < comma <= 60:
+            after = text[comma + 2:].split()
+            if after and (after[0].casefold() in _HOOK_AUX or after[0].casefold() in _HOOK_VERBS):
+                return False
+    return True
+
+
 def _hook_variants(sentence):
     """(text, is_whole_clause) options: the sentence, its main clause after up to two
     leading setup phrases, and safe clause cuts. Whole clauses are grammatical by
@@ -5466,14 +5504,20 @@ def _hook_variants(sentence):
     for _ in range(2):
         lead = re.match(_HOOK_LEADS, current, flags=re.IGNORECASE)
         if lead:
-            current = lead.group(1).strip()
+            rest = lead.group(1).strip()
+            if not _starts_with_subject(rest):
+                break  # never leave a clause that begins with its verb
+            current = rest
         else:
             # Short verbless opener such as "All unemployed," or "Years later,".
             comma = current.find(", ")
             opener = current[:comma].casefold().split() if 0 < comma <= 30 else None
-            if not opener or any(w in _HOOK_VERBS for w in opener):
-                break
-            current = current[comma + 2:].strip()
+            if not opener or any(w in _HOOK_VERBS for w in opener) or not _is_setup_opener(opener):
+                break  # only clear setup phrases are trimmed; names never are
+            rest = current[comma + 2:].strip()
+            if not _starts_with_subject(rest):
+                break  # "Hana, a young girl, is captured..." keeps its subject
+            current = rest
         whole.append(current[:1].upper() + current[1:])
     variants = [(w, True) for w in whole]
     for source in whole:
@@ -5514,76 +5558,30 @@ def quick_card_description(movie, limit=110):
 
 
 def expanded_card_description(movie, max_chars=320):
-    """Return a short premise (the opening of the TMDB overview), separate from the hook."""
+    """The premise: the opening of the TMDB overview, in complete sentences.
+
+    Always starts at the beginning, since later sentences ("Then, a man...") lean on
+    earlier ones. Adds whole sentences while they fit and never cuts one mid-way.
+    """
     full = clean_movie_copy(
         (movie or {}).get("overview") or (movie or {}).get("why"),
         ensure_terminal=False,
     )
     if not full:
         return "iCinema does not have a longer premise for this title yet."
-
-    quick = clean_movie_copy(
-        quick_card_description(movie),
-        ensure_terminal=False,
-    ).casefold()
-
     sentences = [
-        clean_movie_copy(s, ensure_terminal=True)
-        for s in re.split(r"(?<=[.!?])\s+", full)
-        if clean_movie_copy(s, ensure_terminal=False)
+        clean_movie_copy(part, ensure_terminal=True)
+        for part in re.split(r"(?<=[.!?])\s+", full)
+        if clean_movie_copy(part, ensure_terminal=False)
     ]
-
-    # If the first source sentence is essentially the same material used in the
-    # collapsed hook, start from later source material when available.
-    usable = list(sentences)
-    if len(usable) > 1:
-        first_words = " ".join(usable[0].casefold().split()[:6])
-        quick_words = " ".join(quick.split()[:6])
-        if first_words and quick_words and (
-            first_words in quick or quick_words in usable[0].casefold()
-        ):
-            usable = usable[1:]
-
-    chosen = []
-    total = 0
-    for sentence in usable:
+    chosen, total = [], 0
+    for sentence in sentences[:3]:
         projected = total + len(sentence) + (1 if chosen else 0)
         if chosen and projected > max_chars:
             break
-        chosen.append(sentence)
+        chosen.append(sentence)  # the first sentence is always kept whole
         total = projected
-        if len(chosen) >= 2:
-            break
-
-    # If the source only had one sentence, rewrite the framing so the expanded
-    # synopsis still reads as a separate block rather than a continuation.
-    if not chosen:
-        title = str((movie or {}).get("title") or "This film").strip()
-        genre = str((movie or {}).get("genre") or "film").strip().lower()
-        core = clean_movie_copy(full, ensure_terminal=False)
-        chosen = [
-            clean_movie_copy(
-                f"{title} is a {genre} centered on {core[0].lower() + core[1:] if core else 'its central characters and conflict'}",
-                ensure_terminal=True,
-            )
-        ]
-
-    expanded = " ".join(chosen).strip()
-
-    if len(expanded) > max_chars:
-        candidate = expanded[:max_chars]
-        boundary = max(
-            candidate.rfind(". "),
-            candidate.rfind(", "),
-            candidate.rfind("; "),
-        )
-        if boundary >= int(max_chars * 0.60):
-            candidate = candidate[:boundary + (1 if candidate[boundary] == "." else 0)]
-        else:
-            candidate = candidate.rsplit(" ", 1)[0]
-        expanded = clean_movie_copy(candidate, ensure_terminal=True)
-
-    return expanded
+    return " ".join(chosen).strip()
 
 
 def concise_availability_text(text, max_providers=2):
