@@ -85,3 +85,27 @@ def cf_affinity(movie, uvec):
         return None  # movie not in MovieLens: fall back to content signals
     cos = float(_load()[0][idx] @ uvec)
     return (cos + 1.0) / 2.0
+
+
+def closest_liked(movie, signals):
+    """Title of the viewer's liked/saved movie most similar to this one, or None.
+
+    Makes the collaborative-filtering reason concrete ("Loved by fans of Parasite")
+    instead of an abstract "viewers like you".
+    """
+    model = _load()
+    idx = _index(movie)
+    if model is None or idx is None:
+        return None
+    emb = model[0]
+    best, best_score = None, -2.0
+    for liked, action in signals or []:
+        if WEIGHTS.get(action, 0) <= 0:
+            continue
+        j = _index(liked)
+        if j is None or j == idx:
+            continue
+        score = float(emb[idx] @ emb[j])
+        if score > best_score:
+            best, best_score = liked.get("title"), score
+    return best

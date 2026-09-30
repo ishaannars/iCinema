@@ -1,5 +1,6 @@
 
 import html
+from pathlib import Path
 from urllib.parse import quote_plus
 import json
 import re
@@ -16,7 +17,7 @@ from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
-from src.cf_model import user_vector, cf_affinity
+from src.cf_model import user_vector, cf_affinity, closest_liked
 from src.recommender import _calibrated_match_percent
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
@@ -4377,6 +4378,8 @@ div[data-testid="stLoadingSpinner"],
 }
 
 /* Model diagnostics: 3 x 2 grid */
+.diag-subhead{font-family:var(--ui-font);font-size:.7rem;font-weight:760;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin:.9rem 0 .3rem;}
+.diag-subhead:first-of-type{margin-top:.2rem;}
 .diag-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
 @media(max-width:800px){.diag-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}
 
@@ -4441,100 +4444,68 @@ div[data-testid="stLoadingSpinner"],
     .tonight-title{font-size:1.5rem;}
 }
 
-/* V5.167 — one even spacing rhythm + compact Tonight's Pick */
-/* Section headers everywhere: title → subtitle .4rem, subtitle → content 1.1rem, section → section 2.2rem. */
-.showroom-row-header,
-.showroom-row-header.first{margin:2.2rem 0 0 !important;padding:0 0 1.1rem !important;transform:none !important;}
-.showroom-row-header .showroom-row-title{margin:0 0 .4rem !important;line-height:1.1 !important;}
-.showroom-row-header .row-model-note{margin:0 !important;line-height:1.45 !important;overflow:visible !important;}
-.tonight-row-header{margin-top:0 !important;padding-bottom:0 !important;}
-.page-top-heading,.step2-title,.showroom-heading,.tab-primary-heading{margin-bottom:.4rem !important;line-height:1.1 !important;}
-.page-top-subtitle,.step2-subtitle,.showroom-intro{margin-top:0 !important;line-height:1.45 !important;}
-.page-top-subtitle{margin-bottom:1.1rem !important;}
-.step2-header,.showroom-header{margin-bottom:1.1rem !important;}
-.step3-subtitle{margin-bottom:1.1rem !important;}
-.saved-tab-heading{margin-bottom:1.1rem !important;}
-
-/* Showroom cards: every block below the poster gets the same gap. */
-div .poster-caption:not(.library-poster-caption){margin:.6rem 0 .42rem !important;}
-div .poster-caption:not(.library-poster-caption) .poster-caption-year{margin-top:.22rem !important;}
-div .ratings{margin:0 0 .42rem !important;line-height:1.3 !important;}
-div .watch-availability{margin:0 0 .42rem !important;line-height:1.35 !important;}
-div .movie-summary-toggle{margin:0 0 .42rem !important;}
-div .movie-card-actions{margin:0 !important;}
-
-/* Compact Tonight's Pick. */
+/* V5.169 — original card spacing restored; compact Tonight's Pick; one loader */
+/* Tonight's Pick header uses the row-header style, with a tighter gap to its card. */
+.tonight-row-header{margin:0 !important;padding:0 !important;}
 [class*="st-key-tonight_hero"]{
-    margin:1.1rem 0 0 !important;padding:1rem 1.1rem !important;border-radius:18px !important;
+    margin:.55rem 0 .35rem !important;padding:.95rem 1.05rem !important;border-radius:18px !important;
     animation:icinema-tonight-in .3s ease-out both;
 }
-[class*="st-key-tonight_hero"] .poster{max-width:132px !important;margin:0 !important;border-radius:12px !important;}
+[class*="st-key-tonight_hero"] .poster{max-width:118px !important;margin:0 !important;border-radius:12px !important;}
 [class*="st-key-tonight_hero"] .poster.has-image img{border-radius:11px !important;}
-.tonight-stack{display:flex;flex-direction:column;gap:.42rem;margin:0 0 .7rem;}
+.tonight-stack{display:flex;flex-direction:column;gap:.38rem;margin:0 0 .6rem;}
 .tonight-stack > div{margin:0 !important;}
-.tonight-title{font-size:1.3rem !important;line-height:1.15 !important;margin:0 !important;}
-.tonight-meta{font-size:.68rem !important;margin:0 !important;}
+.tonight-title{font-size:1.25rem !important;line-height:1.15 !important;margin:0 !important;}
+.tonight-meta{font-size:.66rem !important;margin:0 !important;}
 .tonight-badges{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;}
-.tonight-match{height:1.6rem !important;font-size:.66rem !important;padding:0 .65rem !important;margin:0 !important;}
+.tonight-match{height:1.55rem !important;font-size:.66rem !important;padding:0 .65rem !important;margin:0 !important;}
 .tonight-fit{font-size:.68rem !important;margin:0 !important;}
 .tonight-line{font-size:.72rem !important;margin:0 !important;}
 .tonight-hook{font-size:.82rem !important;line-height:1.42 !important;margin:0 !important;}
-.tonight-whys{display:flex;flex-direction:column;gap:.22rem;}
+.tonight-whys{display:flex;flex-direction:column;gap:.2rem;}
 .tonight-why{font-size:.7rem !important;line-height:1.4 !important;margin:0 !important;}
 [class*="st-key-tonight_save_"] button,[class*="st-key-tonight_seen_"] button,
 [class*="st-key-tonight_skip_"] button,[class*="st-key-tonight_undo_"] button{
     min-height:1.9rem !important;height:1.9rem !important;padding:0 .5rem !important;border-radius:999px !important;
+    display:flex !important;align-items:center !important;justify-content:center !important;
 }
 [class*="st-key-tonight_save_"] button p,[class*="st-key-tonight_seen_"] button p,
-[class*="st-key-tonight_skip_"] button p,[class*="st-key-tonight_undo_"] button p{font-size:.68rem !important;margin:0 !important;}
+[class*="st-key-tonight_skip_"] button p,[class*="st-key-tonight_undo_"] button p{
+    font-size:.68rem !important;margin:0 !important;width:auto !important;text-align:center !important;line-height:1 !important;
+}
 .services-help{font-family:var(--ui-font);font-size:.72rem;color:var(--muted);line-height:1.4;margin:0 0 .6rem;}
 div[data-testid="stPills"] button{font-family:var(--ui-font) !important;}
 @media(max-width:800px){
-    [class*="st-key-tonight_hero"] .poster{max-width:110px !important;}
+    [class*="st-key-tonight_hero"] .poster{max-width:104px !important;}
     .tonight-title{font-size:1.1rem !important;}
 }
-/* Per-card Undo sits beside Skip with the same pill height. */
+/* Per-card Undo sits beside Skip at the same pill height. */
 [class*="st-key-undo_"] button{min-height:1.92rem !important;height:1.92rem !important;padding:0 !important;border-radius:999px !important;}
 [class*="st-key-undo_"] button p{font-size:.8rem !important;margin:0 !important;}
-
-/* V5.168 — centered, aligned button rows everywhere + one-tap watch links */
-/* Control and action rows span exactly the card width with the same gap. */
-[class*="st-key-showroom_controls_"]{width:100% !important;max-width:100% !important;margin:0 0 .5rem !important;}
-div[data-testid="stHorizontalBlock"]:has([class*="st-key-skip_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-skip_"])),
-div[data-testid="stHorizontalBlock"]:has([class*="st-key-save_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-save_"])),
-div[data-testid="stHorizontalBlock"]:has([class*="st-key-like_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-like_"])),
-div[data-testid="stHorizontalBlock"]:has([class*="st-key-savedseen_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-savedseen_"])),
-div[data-testid="stHorizontalBlock"]:has([class*="st-key-tonight_save_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-tonight_save_"])),
-div[data-testid="stHorizontalBlock"]:has([class*="st-key-search_add_like"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-search_add_like"])){
-    gap:.5rem !important;column-gap:.5rem !important;align-items:center !important;
-}
-/* Every pill button: same height per row, label truly centered. */
-[class*="st-key-save_"] button,[class*="st-key-seen_"] button,[class*="st-key-skip_"] button,
-[class*="st-key-undo_"] button,[class*="st-key-like_"] button,[class*="st-key-fav_"] button,
-[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button,[class*="st-key-tonight_"] button,
-[class*="st-key-search_add_"] button,div[data-testid="stPopover"] button,div[data-testid="stLinkButton"] a{
-    width:100% !important;display:flex !important;align-items:center !important;
-    justify-content:center !important;text-align:center !important;
-}
-[class*="st-key-save_"] button p,[class*="st-key-seen_"] button p,[class*="st-key-skip_"] button p,
-[class*="st-key-undo_"] button p,[class*="st-key-like_"] button p,[class*="st-key-fav_"] button p,
-[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p,[class*="st-key-tonight_"] button p,
-[class*="st-key-search_add_"] button p,div[data-testid="stLinkButton"] a p{
-    margin:0 !important;padding:0 !important;width:auto !important;text-align:center !important;line-height:1 !important;
-}
-[class*="st-key-save_"] button,[class*="st-key-seen_"] button{min-height:1.92rem !important;height:1.92rem !important;}
-/* Tonight's primary "Watch on …" link matches the other pills. */
-div[data-testid="stLinkButton"] a{
-    min-height:1.9rem !important;height:1.9rem !important;padding:0 .7rem !important;border-radius:999px !important;
-    font-family:var(--ui-font) !important;font-size:.68rem !important;font-weight:700 !important;white-space:nowrap !important;
-}
 /* Service names in the streaming line are one-tap links. */
 a.watch-link{
-    color:var(--ivory) !important;text-decoration:none !important;font-weight:700;
-    border-bottom:1px solid rgba(169,173,183,.45);padding-bottom:1px;transition:border-color .15s ease;
+    color:inherit !important;text-decoration:none !important;font-weight:inherit;
+    border-bottom:1px solid rgba(169,173,183,.45);transition:border-color .15s ease;
 }
-a.watch-link:hover{border-bottom-color:var(--ivory);}
-a.watch-link::after{content:" ↗";font-size:.8em;opacity:.65;}
+a.watch-link:hover{border-bottom-color:var(--ivory);color:var(--ivory) !important;}
+a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
+/* One loader everywhere: match the status widget regardless of element type and
+   hide every Streamlit running icon, label, and Stop button inside it. */
+[data-testid="stStatusWidget"] *,
+[data-testid="stStatusWidget"] img,
+[data-testid="stStatusWidget"] svg,
+[data-testid="stStatusWidget"] button,
+[data-testid*="RunningIcon"],
+[data-testid="stAppRunningIcon"]{display:none !important;}
+[data-testid="stStatusWidget"]{
+    position:fixed !important;top:2.08rem !important;left:auto !important;
+    right:max(1.25rem, calc((100vw - 1240px) / 2 + 1.25rem)) !important;
+    width:1.62rem !important;min-width:1.62rem !important;max-width:1.62rem !important;
+    height:1.62rem !important;min-height:1.62rem !important;max-height:1.62rem !important;
+    margin:0 !important;padding:0 !important;overflow:visible !important;z-index:999999 !important;
+    border:1px solid rgba(169,173,183,.28) !important;border-radius:50% !important;
+    background:rgba(17,19,21,.96) !important;animation:icinema-loader-ring 1.1s linear infinite !important;
+}
 
 </style>
 """, unsafe_allow_html=True)
@@ -4859,14 +4830,18 @@ def _on_service(provider, service):
     return any(key.startswith(alias) for alias in STREAMING_SERVICES.get(service, ()))
 
 def with_cf_reason(reasons, payload, limit=3):
-    """Surface the collaborative-filtering signal when it is a strong reason."""
+    """Surface the collaborative-filtering signal, naming the viewer's closest liked movie."""
     cf = (payload or {}).get("cf")
     reasons = list(reasons or [])
     if isinstance(cf, (int, float)) and cf >= 0.65:
-        reasons = [{
-            "label": "Loved by viewers with your taste",
-            "text": "People who liked the same movies you did rated this highly (collaborative filtering trained on MovieLens ratings).",
-        }] + reasons
+        anchor = closest_liked((payload or {}).get("movie"), _cf_signals())
+        if anchor:
+            reason = {"label": f"Loved by fans of {anchor}",
+                      "text": f"People who loved {anchor} rated this highly too."}
+        else:
+            reason = {"label": "Loved by viewers like you",
+                      "text": "People who liked the same movies you did rated this highly."}
+        reasons = [reason] + reasons
     return reasons[:limit]
 
 def service_availability_utility(availability):
@@ -4944,6 +4919,17 @@ def watch_line_html(availability, title, services=None):
     total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
     more = " + more" if total > len(options) else ""
     return f"{verb}: {links}{more}"
+
+def match_label(match):
+    """Plain-language fit instead of a bare percentage; the % stays in the explanation."""
+    match = int(match or 0)
+    if match >= 70:
+        return "Made for you"
+    if match >= 55:
+        return "Strong match"
+    if match >= 42:
+        return "Good match"
+    return "Worth a look"
 
 def movie_on_services(availability, services):
     """True when a movie streams on one of the viewer's services (or on any service if none chosen)."""
@@ -5177,7 +5163,7 @@ def _hook_is_complete(text, limit):
     return any(w in _HOOK_VERBS for w in words[1:])
 
 
-def quick_card_description(movie, limit=96):
+def quick_card_description(movie, limit=72):
     """One real, specific line about the movie. Never generic filler.
 
     Uses the catalog's hand-written hook when present; otherwise the most
@@ -5329,6 +5315,16 @@ def _format_seconds(value):
     return f"{value//60}m {value%60:02d}s"
 
 
+@st.cache_data(show_spinner=False)
+def load_offline_results():
+    """MovieLens evaluation written by training/train_cf.py (data/cf_results.json)."""
+    try:
+        path = Path(__file__).resolve().parent / "data" / "cf_results.json"
+        return json.loads(path.read_text())
+    except Exception:
+        return None
+
+
 def render_cinema_profile(p, include_insights=False, show_heading=True, tab_heading=False):
     sections = [
         ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
@@ -5365,53 +5361,92 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     ranking=ranking_metrics(events)
     calib=calibration_metrics(events)
     lm=learned.metrics or {}
+    offline=load_offline_results()
+
     def _fmt(v, pct=False):
         if v is None:
             return "Learning"
         return f"{v*100:.0f}%" if pct else f"{v:.2f}"
-    diag_cards=[
-        (learned.model_name if learned.ready else "Cold-start hybrid", "Active model"),
-        (_fmt(lm.get("auc")) if learned.ready else "Learning", "Holdout ROC AUC"),
-        (_fmt(lm.get("brier_score")) if learned.ready else "Learning", "Brier score (lower is better)"),
-        (_fmt(ranking.get("ndcg_at_k")), f"NDCG@{ranking.get('k', 4)} from your Saves"),
-        (_fmt(ranking.get("mrr")), "MRR · rank of first Save"),
-        (_fmt(calib.get("mae")), "Match calibration error"),
-    ]
-    diag_html="".join(f'<div class="insight-card"><div class="insight-value">{html.escape(str(v))}</div><div class="insight-label">{html.escape(l)}</div></div>' for v,l in diag_cards)
-    labeled=learned.samples or 0
-    diag_copy=(
-        f"Trained on {labeled} of your Save/Skip outcomes with a chronological holdout."
+
+    def _card(value, label):
+        return (f'<div class="insight-card"><div class="insight-value">{html.escape(str(value))}</div>'
+                f'<div class="insight-label">{html.escape(label)}</div></div>')
+
+    # Offline evidence (MovieLens) is always shown, so the section is never empty.
+    offline_html = ""
+    if offline:
+        pop = (offline.get("full") or {}).get("popularity") or {}
+        cf3 = (offline.get("three_likes") or {}).get("cf") or {}
+        boot = {b.get("metric"): b for b in offline.get("bootstrap_three_likes_vs_popularity") or []}
+        def _lift(key):
+            a, b = cf3.get(key), pop.get(key)
+            return f"+{(a / b - 1) * 100:.0f}%" if a and b else "—"
+        def _sig(name):
+            b = boot.get(name) or {}
+            return f"95% CI {b.get('ci95', '—')}" + (" · significant" if b.get("significant") else "")
+        offline_cards = "".join([
+            _card(f"{cf3.get('hit@1', 0)*100:.1f}% vs {pop.get('hit@1', 0)*100:.1f}%",
+                  f"Tonight's Pick hit rate vs. popularity ({_lift('hit@1')}) · {_sig('Hit@1')}"),
+            _card(_lift("ndcg@10"), f"Ranking quality, NDCG@10 · {_sig('NDCG@10')}"),
+            _card(_lift("recall@10"), f"Loved movies in the top 10, Recall@10 · {_sig('Recall@10')}"),
+        ])
+        users = offline.get("held_out_users")
+        offline_html = (
+            '<div class="diag-subhead">Offline evaluation · from 3 onboarding likes</div>'
+            f'<div class="profile-insights-copy">MovieLens {html.escape(str(offline.get("dataset", "")).replace("ml-", "").upper())}, '
+            f'time-based split, {users:,} held-out users, compared with a popularity baseline. '
+            'Paired bootstrap over users, 2,000 resamples.</div>'
+            f'<div class="insight-grid diag-grid">{offline_cards}</div>'
+        ) if isinstance(users, int) else ""
+
+    live_cards = "".join([
+        _card(learned.model_name if learned.ready else "Not active yet", "Behavioral model"),
+        _card(_fmt(lm.get("auc")) if learned.ready else "—", "Holdout ROC AUC (0.5 = chance)"),
+        _card(_fmt(lm.get("brier_score")) if learned.ready else "—", "Brier score, lower is better"),
+        _card(_fmt(ranking.get("ndcg_at_k")), f"NDCG@{ranking.get('k', 4)} of your Saves"),
+        _card(_fmt(ranking.get("mrr")), "MRR · how high your first Save ranked"),
+        _card(_fmt(calib.get("mae")), "Match calibration error"),
+    ])
+    labeled = learned.samples or 0
+    live_copy = (
+        f"Trained on {labeled} of your Save/Skip outcomes, validated on a chronological holdout."
         if learned.ready else
-        "Supervised model activates after 50 Save/Skip outcomes (12+ of each); Gradient Boosting is compared after 100. Metrics fill in as evidence builds."
+        "Activates after 50 Save/Skip outcomes (12+ of each). Until then, collaborative filtering and content scoring personalize your picks."
     )
 
     methodology_html = (
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">Methodology &amp; Data</div>'
-        '<div class="profile-insights-copy">How iCinema turns your activity into recommendations.</div>'
+        '<div class="profile-insights-copy">Four layers turn your choices into one ranked Showroom.</div>'
         '<div class="methodology-grid">'
         '<div class="methodology-card">'
-        '<div class="methodology-value">Collaborative filtering · MovieLens</div>'
-        '<div class="methodology-label">Movie embeddings learned from millions of real ratings. Your first few likes place you among viewers with similar taste, so personalization starts immediately. Skips push away from similar titles.</div>'
+        '<div class="methodology-value">1 · Collaborative filtering</div>'
+        '<div class="methodology-label">Truncated SVD on 15.8M positive ratings (4★+) from 199K MovieLens users learns 64-dimension movie embeddings. '
+        'Your likes and saves pull your taste vector toward similar movies; skips push it away. Cosine similarity scores every candidate.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">Theme &amp; tone fit</div>'
-        '<div class="methodology-label">Plot and metadata text become latent features with TF-IDF and Truncated SVD, compared to your taste with cosine similarity. It is 20% of the content score, alongside genre, traits, quality, discovery, and your priorities.</div>'
+        '<div class="methodology-value">2 · Content model</div>'
+        '<div class="methodology-label">TF-IDF and Truncated SVD over plot and metadata measure theme and tone. '
+        'Genre, storytelling traits, Bayesian-adjusted ratings, discovery fit, and your Step 2–3 choices complete the content score.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">Behavioral learning</div>'
-        '<div class="methodology-label">Save and Skip outcomes train Logistic Regression, then Gradient Boosting with more evidence. Recent behavior counts more, and display position is excluded so exposure does not masquerade as taste.</div>'
+        '<div class="methodology-value">3 · Hybrid ranking</div>'
+        '<div class="methodology-label">Score = 65% content + 35% collaborative. Each row adds its own goal (acclaim, obscurity, novelty), '
+        'MMR reranking removes near-duplicates, and titles on your services rank as easier to watch tonight.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">Your streaming services</div>'
-        '<div class="methodology-label">Titles on services you have rank as more convenient across every row, and Tonight’s Pick prefers them first, falling back to any service so there is always an answer.</div>'
+        '<div class="methodology-value">4 · Behavioral learning</div>'
+        '<div class="methodology-label">Your Save/Skip outcomes train Logistic Regression, then Gradient Boosting at 100 labels, adding 22% to the score. '
+        'Recent choices weigh more (120-day half-life), rank position is excluded so exposure isn’t mistaken for taste, and Undo deletes a label.</div>'
         '</div>'
         '</div>'
         '</div>'
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">Model diagnostics</div>'
-        f'<div class="profile-insights-copy">{html.escape(diag_copy)}</div>'
-        f'<div class="insight-grid diag-grid">{diag_html}</div>'
+        f'{offline_html}'
+        '<div class="diag-subhead">Your live model</div>'
+        f'<div class="profile-insights-copy">{html.escape(live_copy)}</div>'
+        f'<div class="insight-grid diag-grid">{live_cards}</div>'
         '</div>'
     )
 
@@ -5829,6 +5864,7 @@ def save_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
+        _request_showroom_refresh()
     if not _advance_showroom_slot(row_name, slot_index):
         st.rerun(scope="app")
 
@@ -5842,6 +5878,7 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
+        _request_showroom_refresh()
     if not _advance_showroom_slot(row_name, slot_index):
         st.rerun(scope="app")
 
@@ -5882,6 +5919,7 @@ def _showroom_cached_metadata(movie):
 @st.fragment
 def render_showroom_card_fragment(row_name, row_index, slot_index):
     """Render one independently-rerunnable card so Skip never refreshes its neighbors."""
+    _refresh_if_requested()
     slot_key = _showroom_slot_key(row_name, slot_index)
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
@@ -5935,7 +5973,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         else:
             match_col, skip_col = st.columns([3.35,0.90], gap="small")
         with match_col:
-            with st.popover(f"{match}% iCinema Match", use_container_width=True):
+            with st.popover(match_label(match), use_container_width=True):
                 reasons = recommendation_explanation(
                     movie,p,st.session_state.adventure,st.session_state.review_priority,
                     semantic_similarity=context.get("semantic_similarity"),
@@ -5943,7 +5981,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                     components=context,
                 )
                 reasons = with_cf_reason(reasons, payload)
-                st.markdown('<div class="match-explain-title">Why this matches you</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="match-explain-title">Why this matches you · {match}% fit</div>', unsafe_allow_html=True)
                 for reason in reasons:
                     st.markdown(
                         f'<div class="match-reason">'
@@ -6069,14 +6107,24 @@ def tonight_undo():
     st.session_state.tonight_last_skip = None
 
 
+def _request_showroom_refresh():
+    """Save/Seen change the Saved/Seen tabs and counts, which live outside the card."""
+    st.session_state._showroom_refresh = True
+
+def _refresh_if_requested():
+    if st.session_state.pop("_showroom_refresh", False):
+        st.rerun(scope="app")
+
 def tonight_save(title, movie):
     save_movie(title, movie)
     st.session_state.tonight_last_skip = None
+    _request_showroom_refresh()
 
 
 def tonight_seen(title, movie):
     mark_movie_seen(title, movie)
     st.session_state.tonight_last_skip = None
+    _request_showroom_refresh()
 
 
 def _render_services_picker(services):
@@ -6098,6 +6146,7 @@ def _render_services_picker(services):
 @st.fragment
 def render_tonight_pick_fragment():
     """Compact single best match. Services, Skip, and Undo rerun only this card."""
+    _refresh_if_requested()
     services = list(st.session_state.get("streaming_services") or [])
     payloads = st.session_state.get("showroom_payloads") or {}
     watch_cache = st.session_state.get("showroom_watch_cache") or {}
@@ -6195,7 +6244,7 @@ def render_tonight_pick_fragment():
                        for r in reasons)
 
     with st.container(key=f"tonight_hero_{title}"):
-        poster_col, info_col = st.columns([1, 3.6], gap="medium")
+        poster_col, info_col = st.columns([1, 6.2], gap="medium")
         with poster_col:
             st.markdown(poster_html, unsafe_allow_html=True)
         with info_col:
@@ -6203,7 +6252,7 @@ def render_tonight_pick_fragment():
                 '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
-                f'<div class="tonight-badges"><span class="tonight-match">{match}% iCinema Match</span>{fit}</div>'
+                f'<div class="tonight-badges"><span class="tonight-match">{match_label(match)} · {match}%</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(quick_card_description(movie, limit=150))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
@@ -6212,28 +6261,20 @@ def render_tonight_pick_fragment():
             )
             last_skip = st.session_state.get("tonight_last_skip")
             with st.container(key=f"tonight_actions_{title}"):
-              cols = st.columns([1.7, 1, 1, 1, 1], gap="small")
-              with cols[0]:
-                if options:
-                    label, _, url = options[0]
-                    st.link_button(f"▶ {label}", url, type="primary", use_container_width=True)
-                else:
-                    st.link_button("▶ Where to watch", availability.get("url") or
-                                   "https://www.justwatch.com/us/search?q=" + quote_plus(str(movie.get("title", ""))),
-                                   type="primary", use_container_width=True)
-              with cols[1]:
-                st.button("Save", key=f"tonight_save_{title}", use_container_width=True,
-                          on_click=tonight_save, args=(title, movie))
-              with cols[2]:
-                st.button("Seen", key=f"tonight_seen_{title}", use_container_width=True,
-                          on_click=tonight_seen, args=(title, movie))
-              with cols[3]:
-                st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
-                          on_click=tonight_skip, args=(title, movie))
-              with cols[4]:
-                if last_skip:
-                    st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
-                              help=f"Bring back {last_skip}", on_click=tonight_undo)
+                cols = st.columns([1, 1, 1, 1, 2.2], gap="small")
+                with cols[0]:
+                    st.button("Save", key=f"tonight_save_{title}", type="primary", use_container_width=True,
+                              on_click=tonight_save, args=(title, movie))
+                with cols[1]:
+                    st.button("Seen", key=f"tonight_seen_{title}", use_container_width=True,
+                              on_click=tonight_seen, args=(title, movie))
+                with cols[2]:
+                    st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
+                              on_click=tonight_skip, args=(title, movie))
+                with cols[3]:
+                    if last_skip:
+                        st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
+                                  help=f"Bring back {last_skip}", on_click=tonight_undo)
     persist_profile_if_needed()
 
 
@@ -6374,7 +6415,7 @@ def render_showroom_fragment(p):
     # Tonight's Pick: the single best personalized match, preferring the viewer's
     # own streaming services and falling back to any service when none are chosen.
     top_all=_row_candidates("Top Matches for You",set())
-    tonight_pool=top_all[:15]
+    tonight_pool=top_all[:40]
     tonight_watch=get_watch_availability_batch(
         tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
     ) if tonight_pool else {}

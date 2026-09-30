@@ -556,56 +556,55 @@ def recommendation_explanation(
     review_value = int(controls.get("review_priority", review_priority) or review_priority)
     adventure_value = int(controls.get("adventure", adventure) or adventure)
 
+    def _num(key):
+        try:
+            value = movie.get(key)
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    imdb, rt, tmdb_vote = _num("imdb"), _num("rt"), _num("tmdb_vote")
+    # IMDb and TMDB votes are audience scores; Rotten Tomatoes here is the critics score.
+    audience = (f"IMDb {imdb:.1f}" if imdb is not None and imdb > 0 else
+                (f"{tmdb_vote:.1f}/10 from viewers" if tmdb_vote is not None and tmdb_vote > 0 else ""))
+    critics = f"RT {rt:.0f}%" if rt is not None and rt > 0 else ""
+    scores = " · ".join(x for x in (audience, critics) if x)
+
     if review_value <= 35:
-        quality_text = "Its rating profile fits your stronger preference for critical quality."
+        quality_label = "Critics rate it highly"
+        quality_text = f"You lean toward acclaimed films, and critics agree ({critics or scores})." if (critics or scores) else "You lean toward acclaimed films, and this one is well reviewed."
     elif review_value >= 65:
-        quality_text = "Its rating profile fits your preference for audience-friendly enjoyment."
+        quality_label = "Easy to enjoy"
+        quality_text = f"Audiences love it ({audience}), which fits your preference for fun over prestige." if audience else "An audience favorite, which fits your preference for fun over prestige."
     else:
-        quality_text = "Its ratings fit your balanced quality-versus-enjoyment setting."
+        quality_label = "Well reviewed"
+        quality_text = f"Strong with both critics and audiences ({scores})." if scores else "Strong with both critics and audiences."
 
     if adventure_value >= 65:
-        discovery_text = "It lands inside your more adventurous discovery range without becoming random."
+        discovery_label, discovery_text = "Something new for you", "Outside your usual picks, which is what you asked for, but still close to your taste."
     elif adventure_value <= 35:
-        discovery_text = "It stays close to your familiar-taste range, which your discovery setting favors."
+        discovery_label, discovery_text = "Close to home", "Stays near the movies you already love, the way you like it."
     else:
-        discovery_text = "It sits near the middle of your familiarity-versus-discovery range."
+        discovery_label, discovery_text = "Familiar with a twist", "Close to your taste, with a little something new."
+
+    genre_label = f"Your kind of {genre_detail.split(',')[0].strip().lower()}" if genre_detail else "Your kind of movie"
+    theme_text = (f"Its tone is {', '.join(t.lower() for t in trait_overlap[:2])}, like the movies you liked."
+                  if trait_overlap else "Its tone and themes are close to the movies you liked.")
+    priority_text = (f"You asked for more {priority_detail}, and this is one."
+                     if priority_overlap else "It fits the kinds of movies you asked to see more of.")
 
     candidates = [
-        (
-            0.18 * float(c.get("genre_affinity", 0.5)),
-            "Genre affinity",
-            f"Strong overlap with {genre_detail}."
-        ),
-        (
-            0.20 * float(c.get("semantic_similarity", 0.5)),
-            "Theme & tone fit",
-            f"Its themes and tone sit close to {theme_detail}."
-        ),
-        (
-            0.16 * float(c.get("trait_affinity", 0.5)),
-            "Storytelling fit",
-            "Its pacing and storytelling traits line up with patterns in your positive movie signals."
-        ),
-        (
-            0.18 * float(c.get("quality_alignment", 0.5)),
-            "Quality alignment",
-            quality_text
-        ),
-        (
-            0.13 * float(c.get("discovery_alignment", 0.5)),
-            "Discovery fit",
-            discovery_text
-        ),
-        (
-            0.15 * float(c.get("priority_alignment", 0.5)),
-            "Priority alignment",
-            f"It lines up with {priority_detail}."
-        ),
-        (
-            0.07 * float(c.get("availability_alignment", availability_score)),
-            "Availability fit",
-            "Current streaming availability makes it a lower-friction option to watch."
-        ),
+        (0.18 * float(c.get("genre_affinity", 0.5)), genre_label,
+         f"{genre_detail.split(',')[0].strip()} is one of your strongest genres."),
+        (0.20 * float(c.get("semantic_similarity", 0.5)), "Feels like your favorites", theme_text),
+        (0.16 * float(c.get("trait_affinity", 0.5)), "Storytelling you like",
+         "Its pacing and style match the movies you liked or favorited."),
+        (0.18 * float(c.get("quality_alignment", 0.5)), quality_label, quality_text),
+        (0.13 * float(c.get("discovery_alignment", 0.5)), discovery_label, discovery_text),
+        (0.15 * float(c.get("priority_alignment", 0.5)),
+         (priority_overlap[0] if priority_overlap else "What you asked for"), priority_text),
+        (0.07 * float(c.get("availability_alignment", availability_score)), "Easy to watch tonight",
+         "It's streaming now, so there's nothing to rent or buy."),
     ]
 
     # Rank by actual weighted contribution. Suppress very weak/neutral signals when
