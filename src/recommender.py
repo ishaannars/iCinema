@@ -566,19 +566,34 @@ def recommendation_explanation(
     imdb, rt, tmdb_vote = _num("imdb"), _num("rt"), _num("tmdb_vote")
     # IMDb and TMDB votes are audience scores; Rotten Tomatoes here is the critics score.
     audience = (f"IMDb {imdb:.1f}" if imdb is not None and imdb > 0 else
-                (f"{tmdb_vote:.1f}/10 from viewers" if tmdb_vote is not None and tmdb_vote > 0 else ""))
+                (f"viewers {tmdb_vote:.1f}/10" if tmdb_vote is not None and tmdb_vote > 0 else ""))
     critics = f"RT {rt:.0f}%" if rt is not None and rt > 0 else ""
     scores = " · ".join(x for x in (audience, critics) if x)
 
+    # Never attribute a viewer score to critics: "critics" only ever cites Rotten Tomatoes.
     if review_value <= 35:
-        quality_label = "Critics rate it highly"
-        quality_text = f"You lean toward acclaimed films, and critics agree ({critics or scores})." if (critics or scores) else "You lean toward acclaimed films, and this one is well reviewed."
+        if critics:
+            quality_label = "Critics rate it highly"
+            quality_text = f"You lean toward acclaimed films, and critics agree ({critics})."
+        elif audience:
+            quality_label = "Highly rated"
+            quality_text = f"You lean toward acclaimed films, and audiences rate it highly ({audience})."
+        else:
+            quality_label = "Well reviewed"
+            quality_text = "You lean toward acclaimed films, and this one is well reviewed."
     elif review_value >= 65:
         quality_label = "Easy to enjoy"
         quality_text = f"Audiences love it ({audience}), which fits your preference for fun over prestige." if audience else "An audience favorite, which fits your preference for fun over prestige."
     else:
         quality_label = "Well reviewed"
-        quality_text = f"Strong with both critics and audiences ({scores})." if scores else "Strong with both critics and audiences."
+        if critics and audience:
+            quality_text = f"Strong with both critics and audiences ({scores})."
+        elif critics:
+            quality_text = f"Critics rate it highly ({critics})."
+        elif audience:
+            quality_text = f"Audiences rate it highly ({audience})."
+        else:
+            quality_text = "Well reviewed across the board."
 
     if adventure_value >= 65:
         discovery_label, discovery_text = "Something new for you", "Outside your usual picks, which is what you asked for, but still close to what you like."
@@ -594,7 +609,8 @@ def recommendation_explanation(
     priority_reasons = {
         "Critically Acclaimed": ("Critically acclaimed",
             f"You asked for acclaimed films, and critics give it {critics}." if critics else
-            "You asked for acclaimed films, and critics rate it highly."),
+            (f"You asked for acclaimed films, and it's highly rated ({audience})." if audience else
+             "You asked for acclaimed films, and it's highly rated.")),
         "Hidden Gems": ("A hidden gem", "Rated well, but seen by far fewer people than the usual picks."),
         "Recent Releases": ("Recent release", f"Released in {year}, one of the newer films you asked for." if year else
             "One of the newer films you asked for."),

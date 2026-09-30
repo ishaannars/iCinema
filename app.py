@@ -4712,6 +4712,9 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-skip_shelf_"] button{min-height:1.96rem !important;height:1.96rem !important;padding:0 .3rem !important;border-radius:999px !important;}
 [class*="st-key-skip_shelf_"] button p{font-size:.69rem !important;font-weight:690 !important;}
 
+/* V5.180 — ratings source note under "How iCinema works" */
+.ratings-note{margin-top:.7rem !important;font-size:.74rem !important;color:var(--muted2) !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -5076,6 +5079,81 @@ def with_tone_detail(reasons, movie):
             reason = {**reason, "text": detail}
         out.append(reason)
     return out
+
+
+FATIGUE_STEP = 0.04     # objective penalty per earlier visit a title was shown and ignored
+FATIGUE_CAP = 5         # stop penalizing after five ignored visits
+VARIETY_SPREAD = 0.03   # per-visit shuffle among near-ties (stable within a visit)
+
+
+def impression_fatigue():
+    """Earlier visits in which each title was shown but got no Save, Seen, or Skip.
+
+    Impression discounting: returning viewers see fresh options instead of the
+    same ignored cards, which shortens the path to something worth watching.
+    """
+    events = st.session_state.get("analytics_events") or []
+    current = st.session_state.get("showroom_session_id")
+    acted = {e.get("title") for e in events if e.get("event") in ("save", "seen", "skip")}
+    visits = {}
+    for e in events:
+        if e.get("event") != "impression":
+            continue
+        sid, title = e.get("session_id"), e.get("title")
+        if sid and title and sid != current and title not in acted:
+            visits.setdefault(title, set()).add(sid)
+    return {title: len(sids) for title, sids in visits.items()}
+
+
+def visit_variety(title):
+    """Deterministic value in [-0.5, 0.5] for this visit and title."""
+    import hashlib
+    key = f"{st.session_state.get('showroom_session_id')}::{title}".encode()
+    return int(hashlib.md5(key).hexdigest()[:8], 16) / 0xFFFFFFFF - 0.5
+
+
+def card_ratings(movie, live_rating):
+    """The one set of ratings a card shows and its explanations cite.
+
+    Live OMDb scores first, then the scores stored with the movie. TMDB's viewer
+    score is used only when neither IMDb nor Rotten Tomatoes is available.
+    """
+    movie, live = movie or {}, live_rating or {}
+    def pick(key):
+        for source in (live, movie):
+            value = source.get(key)
+            if isinstance(value, (int, float)) and value > 0:
+                return float(value)
+        return None
+    imdb, rt = pick("imdb"), pick("rt")
+    tmdb = None if imdb else pick("tmdb_vote")  # viewer score stands in only when IMDb is missing
+    return {"imdb": imdb, "rt": rt, "tmdb_vote": tmdb}
+
+
+def ratings_text(ratings):
+    """'IMDb 7.1 · RT 88%', 'IMDb 7.1 · No RT', or 'Viewers 7.9/10 · No RT'."""
+    audience = (f"IMDb {ratings['imdb']:.1f}" if ratings.get("imdb") else
+                (f"Viewers {ratings['tmdb_vote']:.1f}/10" if ratings.get("tmdb_vote") else None))
+    critics = f"RT {int(ratings['rt'])}%" if ratings.get("rt") else "No RT"
+    if not audience and critics == "No RT":
+        return []  # nothing to show; the card says "Ratings unavailable"
+    return [x for x in (audience, critics) if x]
+
+
+def with_live_ratings(movie, live_rating):
+    """Copy of the movie carrying exactly the ratings shown on its card."""
+    movie = dict(movie or {})
+    ratings = card_ratings(movie, live_rating)
+    for key in ("imdb", "rt"):
+        if ratings[key]:
+            movie[key] = ratings[key]
+        else:
+            movie.pop(key, None)
+    if ratings["tmdb_vote"]:
+        movie["tmdb_vote"] = ratings["tmdb_vote"]
+    else:
+        movie.pop("tmdb_vote", None)  # explanations cite only what the card shows
+    return movie
 
 
 def with_cf_reason(reasons, payload, limit=3):
@@ -5822,6 +5900,11 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="methodology-label">After 50 saves and skips, a third model trained only on your choices joins in. Undo keeps accidental taps out.</div>'
         '</div>'
         '</div>'
+        '<div class="profile-insights-copy ratings-note">About ratings: IMDb and Rotten Tomatoes scores come from OMDb. '
+        'When IMDb has no score, iCinema shows the viewer rating from TMDB, a large community movie database. '
+        '“No RT” means Rotten Tomatoes hasn’t reviewed the movie.</div>'
+        '<div class="profile-insights-copy ratings-note">Fresh every visit: movies you passed over step back, and iCinema '
+        'searches deeper into your favorite genres, so new picks keep surfacing.</div>'
         f'{live_html}'
         '</div>'
         f'{proof_html}'
@@ -6352,7 +6435,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         else:
             match_col, skip_col = st.columns([3.35,0.90], gap="small")
         reasons = with_cf_reason(recommendation_explanation(
-            movie,p,st.session_state.adventure,st.session_state.review_priority,
+            with_live_ratings(movie, live_rating),p,st.session_state.adventure,st.session_state.review_priority,
             semantic_similarity=context.get("semantic_similarity"),
             availability_score=context.get("availability_alignment",0.5),
             components=context,
@@ -6400,13 +6483,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         display_movie["year"] = identity["year"]
     movie_thumb(display_movie, identity.get("poster_url") or movie.get("poster_url"))
 
-    imdb_value = live_rating.get("imdb")
-    rt_value = live_rating.get("rt")
-    rating_parts = []
-    if isinstance(imdb_value, (int, float)):
-        rating_parts.append(f"IMDb {imdb_value:.1f}")
-    if isinstance(rt_value, (int, float)):
-        rating_parts.append(f"RT {int(rt_value)}%")
+    rating_parts = ratings_text(card_ratings(movie, live_rating))
     rating_class = "ratings" if rating_parts else "ratings muted"
     rating_text = " · ".join(rating_parts) or "Ratings unavailable"
     st.markdown(f'<div class="{rating_class}">{rating_text}</div>',unsafe_allow_html=True)
@@ -6605,12 +6682,7 @@ def render_tonight_pick_fragment():
         f'alt="Poster for {html.escape(str(display_title))}"></div>'
         if poster_url else '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
     )
-    imdb_value, rt_value = live_rating.get("imdb"), live_rating.get("rt")
-    ratings = []
-    if isinstance(imdb_value, (int, float)):
-        ratings.append(f"IMDb {imdb_value:.1f}")
-    if isinstance(rt_value, (int, float)):
-        ratings.append(f"RT {int(rt_value)}%")
+    ratings = ratings_text(card_ratings(movie, live_rating))
     meta = " · ".join(str(x) for x in [year, genre] + ratings if x)
 
     watch_html = watch_line_html(availability, movie.get("title", ""), services)
@@ -6618,7 +6690,7 @@ def render_tonight_pick_fragment():
     fit = ""  # the streaming line already lists the viewer's services first
 
     reasons = with_cf_reason(recommendation_explanation(
-        movie, p, st.session_state.adventure, st.session_state.review_priority,
+        with_live_ratings(movie, live_rating), p, st.session_state.adventure, st.session_state.review_priority,
         semantic_similarity=context.get("semantic_similarity"),
         availability_score=context.get("availability_alignment", 0.5),
         components=context,
@@ -6673,11 +6745,17 @@ def render_showroom_fragment(p):
     # bypass the user's profile, and excluded Save/Seen/Skip titles stay excluded.
     # Rotate deeper into TMDB as a user skips more titles, so the showroom keeps
     # replenishing instead of exhausting one fixed discovery slice.
-    discovery_start_page = 1 + (len(st.session_state.dismissed) // 80) * 8
+    # Each return visit starts a little deeper, so the candidate pool keeps changing.
+    _events = st.session_state.get("analytics_events") or []
+    _current = st.session_state.get("showroom_session_id")
+    past_visits = len({e.get("session_id") for e in _events if e.get("event") == "impression"
+                       and e.get("session_id") and e.get("session_id") != _current})
+    discovery_start_page = 1 + (len(st.session_state.dismissed) // 80) * 8 + (past_visits % 12) * 2
+    focus_genres = tuple((p.get("genres") or [])[:2])
     external_pool = []
     if tmdb_catalog_configured():
         try:
-            external_pool = discover_movies(640, discovery_start_page)
+            external_pool = discover_movies(640, discovery_start_page, focus_genres=focus_genres)
         except TypeError:
             # Backward-compatible fallback if Streamlit is briefly serving an
             # older cached module during a deployment. Never take down Showroom.
@@ -6753,6 +6831,7 @@ def render_showroom_fragment(p):
         return 1.0
 
     base_memo={}
+    fatigue=impression_fatigue()
 
     def _row_candidates(row_name, already_used):
         available=[item for item in ranked if item[1]["title"] not in already_used]
@@ -6792,6 +6871,9 @@ def render_showroom_fragment(p):
                 objective=0.72*base+0.28*section
             else:  # Something Different
                 objective=0.68*base+0.32*section
+            # Freshness for returning viewers: discount ignored repeats, lightly vary near-ties.
+            objective-=FATIGUE_STEP*min(fatigue.get(movie["title"],0),FATIGUE_CAP)
+            objective+=VARIETY_SPREAD*visit_variety(movie["title"])
             scored.append((objective,base,display_match,movie))
 
         # Section objective chooses membership. Within that objective, stronger core

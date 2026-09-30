@@ -13,6 +13,12 @@ LIMITATION = ("- Watch links open each service's search for the title, because p
               "inside Netflix or Hulu directly. Services without a dependable search link (Max, Peacock, "
               "Paramount+) open TMDB's watch page, which then links to the service.")
 
+FRESHNESS = ("- **Freshness for returning viewers.** Impression discounting lowers a title a little for each earlier "
+             "visit where it was shown but got no Save, Seen, or Skip (capped at five visits), and a small per-visit "
+             "shuffle varies near-ties. Both are stable within a visit, so rows never jump while browsing. "
+             "The candidate pool also widens: each return visit starts deeper in TMDB's catalog, and dedicated "
+             "channels pull the most popular and best-rated titles in the viewer's top two genres.")
+
 DETAILS = """## Ranking Details
 
 The Profile tab keeps this short for viewers; here is the full picture.
@@ -40,6 +46,11 @@ def main():
     if "## Ranking Details" not in text and "## Technical Depth" in text:
         text = text.replace("## Technical Depth", DETAILS + "## Technical Depth", 1)
         changed = True
+    if FRESHNESS not in text and "## Ranking Details" in text:
+        anchor = "- **Live metrics.**"
+        if anchor in text:
+            text = text.replace(anchor, FRESHNESS + "\n" + anchor, 1)
+            changed = True
     if changed:
         README.write_text(text)
         print("README.md updated.")

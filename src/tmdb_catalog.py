@@ -394,7 +394,30 @@ def _fetch_discovery_page(source_name, source_params, page_number):
     return source_name, page_number, items
 
 
-def discover_movies(limit: int = 120, start_page: int = 1, *_, **__):
+# The app's genre labels -> TMDB discover filters. "Anime" is Japanese-language animation.
+TMDB_GENRE_FILTERS = {
+    "Action": {"with_genres": "28"}, "Adventure": {"with_genres": "12"},
+    "Anime": {"with_genres": "16", "with_original_language": "ja"}, "Animation": {"with_genres": "16"},
+    "Comedy": {"with_genres": "35"}, "Documentary": {"with_genres": "99"}, "Drama": {"with_genres": "18"},
+    "Fantasy": {"with_genres": "14"}, "Horror": {"with_genres": "27"}, "Mystery": {"with_genres": "9648"},
+    "Romance": {"with_genres": "10749"}, "Sci-Fi": {"with_genres": "878"}, "Thriller": {"with_genres": "53"},
+}
+
+
+def _taste_strategies(focus_genres):
+    """Two extra channels per top genre: its most popular and its best-rated titles."""
+    channels = []
+    for genre in list(focus_genres or [])[:2]:
+        filters = TMDB_GENRE_FILTERS.get(str(genre))
+        if not filters:
+            continue
+        slug = str(genre).lower().replace(" ", "_").replace("-", "_")
+        channels.append((f"genre_{slug}_popular", {**filters, "sort_by": "popularity.desc", "vote_count.gte": 40}))
+        channels.append((f"genre_{slug}_best", {**filters, "sort_by": "vote_average.desc", "vote_count.gte": 150}))
+    return channels
+
+
+def discover_movies(limit: int = 120, start_page: int = 1, *_, focus_genres=None, **__):
     """Return a diversified TMDB retrieval pool.
 
     Compatibility is preserved with the existing app:
@@ -407,7 +430,8 @@ def discover_movies(limit: int = 120, start_page: int = 1, *_, **__):
     if not tmdb_catalog_configured() or limit <= 0:
         return []
 
-    strategies = _discovery_strategies()
+    # General channels plus channels for the viewer's own top genres.
+    strategies = _discovery_strategies() + _taste_strategies(focus_genres)
     per_page = 20
     pages_per_strategy = max(
         1,
