@@ -17,6 +17,7 @@ from src.watch_providers import get_watch_availability_batch, tmdb_configured
 from src.tmdb_catalog import search_movies, get_poster_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
+from src.scroll_keeper import scroll_keeper
 from src.cf_model import user_vector, cf_affinity, closest_liked
 from src.recommender import _calibrated_match_percent
 
@@ -4771,6 +4772,9 @@ defaults={
     "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{},
     "streaming_services":[]
 }
+# Always mounted at the same spot so its iframe (and listeners) persist across reruns.
+scroll_keeper()
+
 # Module-level code runs only on full page runs, never on fragment-only reruns.
 st.session_state._in_full_run = True
 for k,v in defaults.items():

@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;height:0;overflow:hidden;background:transparent}</style></head>
+<body>
+<script>
+(function () {
+  function send(type, data) {
+    window.parent.postMessage(Object.assign({isStreamlitMessage: true, type: type}, data || {}), "*");
+  }
+  send("streamlit:componentReady", {apiVersion: 1});
+  send("streamlit:setFrameHeight", {height: 0});
+  window.addEventListener("message", function (e) {
+    if (e.data && e.data.type === "streamlit:render") send("streamlit:setFrameHeight", {height: 0});
+  });
+
+  // Keep the viewer's place when a Save / Seen rerun redraws the page.
+  // Only jumps the viewer did not cause are reversed: wheel, touch, and key scrolling pass through.
+  try {
+    var doc = window.parent.document;
+    if (doc.__icinemaScrollKeeper) return;          // one keeper per page, across reruns
+    doc.__icinemaScrollKeeper = true;
+    var lastTop = 0, lastIntent = 0, lastClick = 0;
+    function scroller() {
+      return doc.querySelector('section[data-testid="stMain"]') ||
+             doc.querySelector('[data-testid="stAppViewContainer"]') ||
+             doc.scrollingElement || doc.documentElement;
+    }
+    function markIntent() { lastIntent = Date.now(); }
+    ["wheel", "touchmove", "keydown"].forEach(function (t) { doc.addEventListener(t, markIntent, {capture: true, passive: true}); });
+    doc.addEventListener("mousedown", function (e) {
+      var el = scroller();                            // dragging the scrollbar counts as intent
+      if (el && e.target === el) markIntent(); else lastClick = Date.now();
+    }, true);
+    var tops = new WeakMap();                         // last good position per scrolling element
+    doc.addEventListener("scroll", function (e) {
+      var el = (e.target === doc || !e.target || e.target.scrollTop === undefined) ? (doc.scrollingElement || scroller()) : e.target;
+      if (!el) return;
+      var now = Date.now(), top = el.scrollTop, prev = tops.has(el) ? tops.get(el) : top;
+      var afterClick = now - lastClick < 2500, intended = now - lastIntent < 900;
+      if (afterClick && !intended && Math.abs(top - prev) > 150) {
+        el.scrollTop = prev;                          // undo the unexpected jump
+        return;
+      }
+      tops.set(el, top);
+    }, true);
+  } catch (err) { /* keeper is optional; the app works without it */ }
+})();
+</script>
+</body>
+</html>
