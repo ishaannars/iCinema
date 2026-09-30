@@ -4683,6 +4683,28 @@ div.element-container:has(iframe[title*="browser_storage"]){
 @media(max-width:800px){.how-grid,.proof-grid{grid-template-columns:1fr !important;}}
 .profile-label{padding-left:0 !important;}
 
+/* V5.177 — profile as a clean two-column list: label left, bubbles right; proof cards in 3 */
+.profile-grid{display:flex !important;flex-direction:column !important;gap:.7rem !important;}
+.profile-block,.profile-block.full{
+    display:grid !important;grid-template-columns:10.5rem minmax(0,1fr) !important;
+    align-items:center !important;column-gap:1rem !important;margin:0 !important;padding:0 !important;
+}
+.profile-block + .profile-block{margin-top:0 !important;}
+.profile-label{margin:0 !important;padding:0 !important;line-height:1.3 !important;}
+.profile-chip-wrap{margin:0 !important;}
+@media(max-width:700px){
+    .profile-block,.profile-block.full{grid-template-columns:1fr !important;row-gap:.45rem !important;}
+}
+.proof-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+@media(max-width:800px){.proof-grid{grid-template-columns:1fr !important;}}
+
+/* V5.178 — insight cards: number → title → one sentence */
+.insight-title{font-family:var(--ui-font);font-size:.78rem;font-weight:700;color:var(--ivory);letter-spacing:-.01em;margin:.28rem 0 .18rem;line-height:1.25;}
+.insight-card .insight-label{margin-top:0 !important;}
+.stats-grid,.proof-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+.how-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+@media(max-width:800px){.stats-grid,.proof-grid,.how-grid{grid-template-columns:1fr !important;}}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -5651,12 +5673,29 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '</div>'
     )
 
-    ttm=_format_seconds(insights.get("time_to_match_seconds"))
-    skips="Learning" if insights.get("avg_skips_before_save") is None else f'{insights["avg_skips_before_save"]:.1f}'
-    conv="Learning" if insights.get("saved_to_seen_rate") is None else f'{insights["saved_to_seen_rate"]*100:.0f}%'
-    discovery="Learning" if insights.get("discovery_rate") is None else f'{insights["discovery_rate"]*100:.0f}%'
-    cards=[(ttm,"Median Time to Match"),(skips,"Avg. Skips Before Save"),(conv,"Save → Seen Conversion"),(conf,"Profile Confidence")]
-    insight_html="".join(f'<div class="insight-card"><div class="insight-value">{v}</div><div class="insight-label">{l}</div></div>' for v,l in cards)
+    def _stat(value, title, note):
+        return (f'<div class="insight-card"><div class="insight-value">{html.escape(str(value))}</div>'
+                f'<div class="insight-title">{html.escape(title)}</div>'
+                f'<div class="insight-label">{html.escape(note)}</div></div>')
+
+    def _or_learning(key, fmt):
+        v = insights.get(key)
+        return "Learning" if v is None else fmt(v)
+
+    insight_cards = [
+        _stat(_format_seconds(insights.get("time_to_match_seconds")), "Time to your first save",
+              "Median per visit. A visit ends after 30 idle minutes."),
+        _stat(_or_learning("avg_skips_before_save", lambda v: f"{v:.1f}"), "Skips before a save",
+              "Lower means the first picks are landing."),
+        _stat(_or_learning("avg_recommendations_examined_before_save", lambda v: f"{v:.0f}"), "Movies shown before a save",
+              "How many picks it took to find one you wanted."),
+        _stat(_or_learning("saved_to_seen_rate", lambda v: f"{v*100:.0f}%"), "Saved, then watched",
+              "Share of your saves you later marked Seen."),
+        _stat(_or_learning("discovery_rate", lambda v: f"{v*100:.0f}%"), "Saves beyond Top Matches",
+              "Finds from Critically Acclaimed, Hidden Gems, and Something Different."),
+        _stat(conf, "Profile strength", "Grows with every like, save, and skip."),
+    ]
+    insight_html = "".join(insight_cards)
 
     ranking=ranking_metrics(events)
     calib=calibration_metrics(events)
@@ -5697,15 +5736,27 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             significance_note = "See the model card for confidence intervals."
         cards = []
         if pick_lift is not None:
-            cards.append(_card(f"+{pick_lift}%", "more likely that Tonight’s Show is a movie you’ll love, vs. picking what’s popular"))
+            cf_hit, pop_hit = cf3.get("hit@1"), pop.get("hit@1")
+            hit_note = (f"Its one pick was a movie the viewer loved {cf_hit:.1%} of the time, vs. {pop_hit:.1%} for the most popular pick."
+                        if isinstance(cf_hit, (int, float)) and isinstance(pop_hit, (int, float))
+                        else "Its one pick is a movie you'll love more often than the most popular pick.")
+            cards.append(_stat(f"+{pick_lift}%", "More hits for Tonight’s Show", hit_note))
         if ndcg_lift is not None and recall_lift is not None:
             lo, hi = sorted((ndcg_lift, recall_lift))
-            cards.append(_card(f"+{lo}–{hi}%", "better Showroom rows, with more of the movies you’d love near the top"))
+            cards.append(_stat(f"+{lo}–{hi}%", "Better Showroom rows", "More of the movies you’d love, ranked closer to the top."))
+        hit_boot = next((b for b in offline.get("bootstrap_three_likes_vs_popularity") or []
+                         if b.get("metric") == "Hit@1"), {})
+        share = hit_boot.get("cf_win_share")
+        if isinstance(share, (int, float)):
+            wins = "all" if share >= 0.995 else f"{share:.0%} of"
+            cards.append(_stat(f"{share:.0%}", "Holds up under re-testing",
+                               f"iCinema won in {wins} 2,000 reshuffled re-tests, so the gain isn’t luck."))
         if cards and isinstance(users, int):
             proof_html = (
                 '<div class="profile-methodology">'
                 '<div class="profile-insights-title">Does it work?</div>'
-                f'<div class="profile-insights-copy">Tested on {users:,} real movie fans starting from just 3 likes. '
+                f'<div class="profile-insights-copy">We tested iCinema on {users:,} real MovieLens viewers. It saw only 3 movies '
+                'each person liked, then had to find the films they loved next, compared with simply recommending what’s popular. '
                 f'{significance_note}</div>'
                 f'<div class="insight-grid proof-grid">{"".join(cards)}</div>'
                 '</div>'
@@ -5726,29 +5777,32 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="profile-insights-title">How iCinema works</div>'
         '<div class="methodology-grid how-grid">'
         '<div class="methodology-card">'
-        f'<div class="methodology-value">Learns from {scale["users"]} movie fans</div>'
-        '<div class="methodology-label">Your likes are matched with people who share your taste, so good picks start right away.</div>'
+        f'<div class="methodology-value">Starts with {scale["users"]} movie fans</div>'
+        f'<div class="methodology-label">A model trained on how they rated {scale["movies"]} movies compares your first likes with theirs, '
+        'so your first picks are already personal.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">Reads every movie</div>'
-        '<div class="methodology-label">Tone, themes, genre, and ratings, weighed by what you told it during setup.</div>'
+        '<div class="methodology-value">Understands every movie</div>'
+        '<div class="methodology-label">A second model reads each film’s plot, tone, genre, and ratings, and weighs them by your setup answers.</div>'
         '</div>'
         '<div class="methodology-card">'
-        '<div class="methodology-value">Gets more personal</div>'
-        '<div class="methodology-label">After 50 saves and skips, a model trained only on your choices joins in. Undo keeps mistakes out.</div>'
+        '<div class="methodology-value">Gives every row a job</div>'
+        '<div class="methodology-label">Best fit, critics’ favorites, hidden gems, or something new, and no movie appears twice.</div>'
+        '</div>'
+        '<div class="methodology-card">'
+        '<div class="methodology-value">Learns you over time</div>'
+        '<div class="methodology-label">After 50 saves and skips, a third model trained only on your choices joins in. Undo keeps accidental taps out.</div>'
         '</div>'
         '</div>'
         f'{live_html}'
-        '<div class="profile-insights-copy model-card-link">Want the full methodology? '
-        '<a class="watch-link" href="https://github.com/ishaannars/iCinema/blob/main/MODEL_CARD.md" target="_blank" rel="noopener">Read the model card</a></div>'
         '</div>'
         f'{proof_html}'
     )
 
     insights_section = (
         f'<div class="profile-insights"><div class="profile-insights-title">iCinema’s Insights</div>'
-        f'<div class="profile-insights-copy">Your recent activity, summarized.</div>'
-        f'<div class="insight-grid">{insight_html}</div></div>'
+        f'<div class="profile-insights-copy">How fast iCinema gets you from browsing to a movie worth watching.</div>'
+        f'<div class="insight-grid stats-grid">{insight_html}</div></div>'
         f'{methodology_html}'
         if include_insights else ""
     )
@@ -6269,7 +6323,8 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         pill_labels = dict(st.session_state.get("showroom_pill_labels") or {})
         row_taken = {label for key, label in pill_labels.items()
                      if key.startswith(f"{row_name}::") and key != slot_key and label}
-        pill_text, pill_label = match_pill(match, reasons, taken=row_taken)
+        pill_text, pill_label = match_pill(match, reasons, taken=row_taken,
+                                           limit=19 if undo_title else None)
         pill_labels[slot_key] = pill_label
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
