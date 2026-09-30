@@ -4616,6 +4616,37 @@ div[data-testid="stPopoverBody"] [data-testid="stButtonGroup"] button p{
 .showroom-heading,.page-top-heading,.step2-title{margin-bottom:.55rem !important;}
 .hero-subtitle{margin-top:.95rem !important;}
 
+/* V5.174 — fixed card slots so every Save / Seen row lines up; nothing clipped */
+/* Title + year: two-line slot; year hugs the title, spare room sits below it. */
+div .poster-caption:not(.library-poster-caption){
+    height:3.95rem !important;min-height:3.95rem !important;max-height:3.95rem !important;
+    display:flex !important;flex-direction:column !important;justify-content:flex-start !important;
+    overflow:hidden !important;box-sizing:border-box !important;margin:.58rem 0 .2rem !important;
+}
+div .poster-caption:not(.library-poster-caption) .poster-caption-title{
+    display:-webkit-box !important;-webkit-box-orient:vertical !important;-webkit-line-clamp:2 !important;
+    overflow:hidden !important;min-height:0 !important;max-height:none !important;flex:0 0 auto !important;
+}
+/* Ratings: one line. Where to watch: two lines. */
+div .ratings{height:1.3rem !important;min-height:1.3rem !important;max-height:1.3rem !important;overflow:hidden !important;
+    margin:0 0 .2rem !important;display:flex !important;align-items:center !important;white-space:nowrap !important;}
+div .watch-availability{height:2.05rem !important;min-height:2.05rem !important;max-height:2.05rem !important;
+    overflow:hidden !important;margin:0 0 .35rem !important;line-height:1.02rem !important;
+    display:-webkit-box !important;-webkit-box-orient:vertical !important;-webkit-line-clamp:2 !important;}
+/* Description: exactly three lines of space; hooks are kept short enough to fit. */
+div .movie-summary-toggle{margin:0 0 .6rem !important;}
+div .movie-summary-label{
+    line-height:1.4em !important;height:4.2em !important;min-height:4.2em !important;max-height:4.2em !important;
+    display:-webkit-box !important;-webkit-box-orient:vertical !important;-webkit-line-clamp:3 !important;
+    overflow:hidden !important;
+}
+/* When the synopsis is opened, it expands below the fixed hook slot as before. */
+/* Tonight's Pick description uses the exact card-description type. */
+.tonight-hook{
+    font-family:var(--ui-font) !important;font-size:.66rem !important;font-weight:620 !important;
+    line-height:1.4 !important;letter-spacing:-.004em !important;color:var(--muted) !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -6194,7 +6225,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
 
-    quick_desc = quick_card_description(movie)
+    quick_desc = quick_card_description(movie, limit=92)
     expanded_desc = expanded_card_description(movie)
     summary_id = f"movie-summary-{row_index}-{slot_index}"
     st.markdown(
