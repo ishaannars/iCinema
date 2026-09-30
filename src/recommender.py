@@ -423,7 +423,7 @@ def build_profile(
     trait_text=", ".join(t.lower() for t in top_traits[:2]); genre_text=" and ".join(top_genres[:2]).lower()
     opening=f"You favor {trait_text} stories, especially {genre_text} titles." if top_traits and top_traits[0]!="Story-driven" else f"You show the strongest affinity for {genre_text} titles."
     review_clause="Strong critical reception plays a larger role in what iCinema surfaces." if review_priority<=35 else ("Entertainment value carries more weight than critical reception in your recommendations." if review_priority>=65 else "Your profile balances critical reception with entertainment value.")
-    discovery_clause="The model stays closer to familiar patterns in your taste." if adventure<=30 else ("The model has more room to surface unfamiliar genres, eras, languages, and styles." if adventure>=70 else "The model balances familiar choices with room for discovery.")
+    discovery_clause="The model stays close to the kinds of movies you already like." if adventure<=30 else ("The model has more room to surface unfamiliar genres, eras, languages, and styles." if adventure>=70 else "The model balances familiar choices with room for discovery.")
     selected_priorities=[x for x in (more_of or []) if x and x!="Balanced recommendations"]
     priority_clause=("It also leans toward " + ", ".join(x.lower() for x in selected_priorities) + " when those choices still fit your learned profile.") if selected_priorities else "No single showroom priority overrides the broader preference profile."
 
@@ -581,11 +581,11 @@ def recommendation_explanation(
         quality_text = f"Strong with both critics and audiences ({scores})." if scores else "Strong with both critics and audiences."
 
     if adventure_value >= 65:
-        discovery_label, discovery_text = "Something new for you", "Outside your usual picks, which is what you asked for, but still close to your taste."
+        discovery_label, discovery_text = "Something new for you", "Outside your usual picks, which is what you asked for, but still close to what you like."
     elif adventure_value <= 35:
         discovery_label, discovery_text = "Close to home", "Stays near the movies you already love, the way you like it."
     else:
-        discovery_label, discovery_text = "Familiar with a twist", "Close to your taste, with a little something new."
+        discovery_label, discovery_text = "Familiar with a twist", "Close to what you like, with a little something new."
 
     genre_label = f"Your kind of {genre_detail.split(',')[0].strip().lower()}" if genre_detail else "Your kind of movie"
     theme_text = (f"Its tone is {', '.join(t.lower() for t in trait_overlap[:2])}, like the movies you liked."

@@ -4705,6 +4705,13 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .how-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
 @media(max-width:800px){.stats-grid,.proof-grid,.how-grid{grid-template-columns:1fr !important;}}
 
+/* V5.178 — Undo label matches the other Tonight's Show buttons */
+[class*="st-key-tonight_undo_"] button p{font-weight:700 !important;}
+
+/* V5.179 — Step 1 Skip matches Like / Favorite */
+[class*="st-key-skip_shelf_"] button{min-height:1.96rem !important;height:1.96rem !important;padding:0 .3rem !important;border-radius:999px !important;}
+[class*="st-key-skip_shelf_"] button p{font-size:.69rem !important;font-weight:690 !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4903,6 +4910,17 @@ def ensure_rotating_shelf():
             break
         st.session_state.shelf_movies.append(replacement)
         st.session_state.shelf_seen_titles.add(_shelf_key(replacement))
+
+def skip_shelf_movie(slot_index):
+    """Swap one shelf card for the next recognizable title. Not a dislike, so nothing is logged."""
+    replacement = _next_shelf_movie()
+    if 0 <= slot_index < len(st.session_state.shelf_movies):
+        if replacement:
+            st.session_state.shelf_movies[slot_index] = replacement
+            st.session_state.shelf_seen_titles.add(_shelf_key(replacement))
+        else:
+            st.session_state.shelf_movies.pop(slot_index)
+
 
 def rate_shelf_movie(movie, kind, slot_index):
     movie = dict(movie)
@@ -5603,6 +5621,18 @@ def _format_seconds(value):
     return f"{value//60}m {value%60:02d}s"
 
 
+def learning_model_for(events):
+    """Train the Save/Skip model only when feedback changed since the last run."""
+    events = list(events or [])
+    signature = (len(events), events[-1].get("timestamp") if events else None)
+    cache = st.session_state.get("_learning_model_cache")
+    if cache and cache[0] == signature:
+        return cache[1]
+    result = train_learning_model(events)
+    st.session_state._learning_model_cache = (signature, result)
+    return result
+
+
 def training_scale():
     """Human-readable MovieLens training size, read from the results file when available."""
     data = load_offline_results() or {}
@@ -5646,7 +5676,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     )
     events=list(st.session_state.get("analytics_events") or [])
     insights=analytics_insights(events)
-    learned=train_learning_model(events)
+    learned=learning_model_for(events)
     conf=profile_confidence_label(p)
     signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
     scale = training_scale()
@@ -5844,7 +5874,7 @@ def render_shelf_fragment():
         with cols[i%4]:
             movie_thumb(movie, movie.get("poster_url") or shelf_poster_map.get(title))
             st.markdown('<div class="shelf-action-gap"></div>', unsafe_allow_html=True)
-            b1,b2=st.columns(2)
+            b1,b2,b3=st.columns([1,1.25,0.95], gap="small")
             with b1:
                 st.button(
                     "Like",
@@ -5860,6 +5890,15 @@ def render_shelf_fragment():
                     use_container_width=True,
                     on_click=rate_shelf_movie,
                     args=(movie, "favorite", i),
+                )
+            with b3:
+                st.button(
+                    "Skip",
+                    key=f"skip_shelf_{i}_{movie.get('tmdb_id') or title}",
+                    help="Don't know it? Show another movie.",
+                    use_container_width=True,
+                    on_click=skip_shelf_movie,
+                    args=(i,),
                 )
 
     st.markdown(
@@ -6075,7 +6114,7 @@ def render_taste_fragment():
     adventure_idx = min(range(5), key=lambda i: abs(adventure_scale_map[i] - st.session_state.adventure))
 
     adventure_label = [
-        "Stay very close to my taste",
+        "Stay very close to what I like",
         "Stay mostly familiar",
         "Balanced",
         "Explore a little more",
@@ -6084,7 +6123,7 @@ def render_taste_fragment():
 
     st.markdown(
         '<div class="pref-scale-wrap">'
-        '<div class="pref-scale-ends"><span>Stay close to my taste</span><span>Show me something different</span></div>'
+        '<div class="pref-scale-ends"><span>Stay close to what I like</span><span>Show me something different</span></div>'
         f'<div class="pref-scale-helper">{adventure_label}</div>'
         '</div>',
         unsafe_allow_html=True
@@ -6120,7 +6159,7 @@ def render_more_fragment():
     )
 
     descriptions = {
-        "Hidden Gems": "Less obvious titles that still fit your taste",
+        "Hidden Gems": "Less obvious titles that still fit what you like",
         "Critically Acclaimed": "Titles with especially strong critical reception",
         "Recent Releases": "Newer films and recent additions",
         "International Films": "Stories and filmmakers from around the world",
@@ -6578,14 +6617,7 @@ def render_tonight_pick_fragment():
 
     watch_html = watch_line_html(availability, movie.get("title", ""), services)
     options = watch_options(availability, movie.get("title", ""), services, limit=1)
-    if not services:
-        fit = '<span class="tonight-fit">Any service</span>'
-    elif movie_on_services(availability, services):
-        fit = '<span class="tonight-fit good">✓ On your services</span>'
-    else:
-        rent = (availability.get("rent_providers") or [])[:1]
-        fit = ('<span class="tonight-fit">Not on your services'
-               + (f' · Rent on {html.escape(rent[0])}' if rent else '') + '</span>')
+    fit = ""  # the streaming line already lists the viewer's services first
 
     reasons = with_cf_reason(recommendation_explanation(
         movie, p, st.session_state.adventure, st.session_state.review_priority,
@@ -6616,7 +6648,7 @@ def render_tonight_pick_fragment():
             with st.container(key=f"tonight_actions_{title}"):
                 cols = st.columns([1, 1, 1, 1, 2.2], gap="small")
                 with cols[0]:
-                    st.button("Save", key=f"tonight_save_{title}", type="primary", use_container_width=True,
+                    st.button("Save", key=f"tonight_save_{title}", use_container_width=True,
                               on_click=tonight_save, args=(title, movie))
                 with cols[1]:
                     st.button("Seen", key=f"tonight_seen_{title}", use_container_width=True,
@@ -6666,7 +6698,7 @@ def render_showroom_fragment(p):
         excluded,
         None,
     )
-    learning_result=train_learning_model(st.session_state.get("analytics_events", []))
+    learning_result=learning_model_for(st.session_state.get("analytics_events", []))
     ranked_movies=[movie for _,movie in ranked]
     semantic_by_id=semantic_similarity_scores(ranked_movies,p)
     cf_user=user_vector(_cf_signals())
@@ -6722,27 +6754,35 @@ def render_showroom_fragment(p):
 
         return 1.0
 
+    base_memo={}
+
     def _row_candidates(row_name, already_used):
         available=[item for item in ranked if item[1]["title"] not in already_used]
         scored=[]
         for display_match,movie in available:
-            components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority,semantic_similarity=semantic_by_id.get(id(movie),0.5))
-            base=components["raw_score"]
-            # Supervised features stay exactly as logged at training time (pre-CF),
-            # so the Save/Skip model never sees train/serve skew.
-            model_match_by_title[movie["title"]]=display_match
-            ml_context=dict(components)
-            ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
-            cf=cf_affinity(movie,cf_user)
-            ml_context["cf_affinity"]=cf if cf is not None else 0.5
-            if cf is not None:
-                base=0.65*base+0.35*cf
-                cf_by_title[movie["title"]]=cf
-            learned_probability=predict_success(learning_result,ml_context)
-            if learned_probability is not None:
-                base=0.78*base+0.22*learned_probability
-            # The % shown to users reflects the final blended ranking score.
-            display_match=_calibrated_match_percent(base,p)
+            memo=base_memo.get(id(movie))
+            if memo is not None:
+                # Same personalized score in every row; only the row objective differs.
+                base,display_match=memo
+            else:
+                components=score_movie_components(movie,p,st.session_state.adventure,st.session_state.review_priority,semantic_similarity=semantic_by_id.get(id(movie),0.5))
+                base=components["raw_score"]
+                # Supervised features stay exactly as logged at training time (pre-CF),
+                # so the Save/Skip model never sees train/serve skew.
+                model_match_by_title[movie["title"]]=display_match
+                ml_context=dict(components)
+                ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
+                cf=cf_affinity(movie,cf_user)
+                ml_context["cf_affinity"]=cf if cf is not None else 0.5
+                if cf is not None:
+                    base=0.65*base+0.35*cf
+                    cf_by_title[movie["title"]]=cf
+                learned_probability=predict_success(learning_result,ml_context)
+                if learned_probability is not None:
+                    base=0.78*base+0.22*learned_probability
+                # The % shown to users reflects the final blended ranking score.
+                display_match=_calibrated_match_percent(base,p)
+                base_memo[id(movie)]=(base,display_match)
             section=_row_signal(row_name,movie)
             # The learned profile remains dominant in every row. The section signal
             # changes the objective, not the underlying personalization system.
@@ -6914,9 +6954,9 @@ def render_showroom_fragment(p):
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             row_notes={
                 "Top Matches for You":"Best overall fits based on your full preference profile",
-                "Critically Acclaimed":"Highly rated films that still match your taste",
+                "Critically Acclaimed":"Highly rated films that still fit what you like",
                 "Hidden Gems":"Strong matches that are less obvious or widely promoted",
-                "Something Different":"A little outside your usual taste, but still likely to click",
+                "Something Different":"A little outside your usual picks, but still likely to click",
             }
             st.markdown(
                 f'<div class="{row_class} showroom-row-header">'
@@ -7050,7 +7090,7 @@ elif screen=="showroom":
     st.markdown(
         '<div class="showroom-header">'
         '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Personalized to your taste and refined with every save, skip, and title you mark</div>'
+        '<div class="showroom-intro">Picked for you and refined with every save, skip, and title you mark</div>'
         '</div>',
         unsafe_allow_html=True
     )
