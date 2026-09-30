@@ -4736,6 +4736,23 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-dislike_"] button:hover p::before,
 [class*="st-key-tonight_dislike_"] button:hover p::before{opacity:1;}
 
+/* V5.183 — "Not for me": icon and label share one vertical center */
+[class*="st-key-dislike_"] button,
+[class*="st-key-tonight_dislike_"] button{display:inline-flex !important;align-items:center !important;justify-content:center !important;
+    padding-top:0 !important;padding-bottom:0 !important;}
+[class*="st-key-dislike_"] button > div,
+[class*="st-key-dislike_"] button [data-testid="stMarkdownContainer"],
+[class*="st-key-tonight_dislike_"] button > div,
+[class*="st-key-tonight_dislike_"] button [data-testid="stMarkdownContainer"]{
+    display:flex !important;align-items:center !important;justify-content:center !important;height:100% !important;margin:0 !important;}
+[class*="st-key-dislike_"] button p,
+[class*="st-key-tonight_dislike_"] button p{
+    display:inline-flex !important;align-items:center !important;justify-content:center !important;
+    line-height:1 !important;margin:0 !important;padding:0 !important;}
+[class*="st-key-dislike_"] button p::before,
+[class*="st-key-tonight_dislike_"] button p::before{align-self:center !important;margin-top:0 !important;margin-bottom:0 !important;
+    background-position:center !important;background-repeat:no-repeat !important;background-size:contain !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
