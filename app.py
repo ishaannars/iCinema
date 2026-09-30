@@ -4663,6 +4663,17 @@ div .movie-summary-label{
 /* Section titles start where the bubble text starts (bubble border 1px + inner padding). */
 .profile-label{padding-left:calc(.66rem + 1px) !important;}
 
+/* V5.176 — the invisible profile-saver component no longer takes a layout row;
+   Tonight's Show → Top Matches equals tabs → Tonight's Show. */
+div[data-testid="stElementContainer"]:has(iframe[title*="browser_storage"]),
+div[data-testid="stElementContainer"]:has(div[data-testid="stCustomComponentV1"]),
+div.element-container:has(iframe[title*="browser_storage"]){
+    position:absolute !important;width:0 !important;height:0 !important;overflow:hidden !important;
+    margin:0 !important;padding:0 !important;pointer-events:none !important;
+}
+[class*="st-key-tonight_hero"]{margin-bottom:1.12rem !important;}
+.showroom-row-header.first{margin-top:0 !important;padding-top:0 !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -5077,15 +5088,28 @@ def watch_line_html(availability, title, services=None):
     more = " + more" if total > len(options) else ""
     return f"{verb}: {links}{more}"
 
-def match_pill(match, reasons, limit=20):
-    """Percent plus this movie's strongest reason, so every pill says something different."""
-    match = int(match or 0)
-    label = str((reasons or [{}])[0].get("label") or "").strip()
+def _short_reason(reason, limit):
+    """Pill-sized version of a reason label, or None if it can't fit without cutting."""
+    label = str((reason or {}).get("label") or "").strip()
     if label.startswith("Loved by fans of "):
         label = "Fans of " + label[len("Loved by fans of "):]
     elif label == "Loved by viewers like you":
         label = "Viewers like you"
-    return f"{match}% · {label}" if label and len(label) <= limit else f"{match}% match"
+    return label if label and len(label) <= limit else None
+
+
+def match_pill(match, reasons, limit=26, taken=()):
+    """Percent plus this movie's strongest reason not already shown in its row.
+
+    Returns (pill_text, label_used). Skipping labels other cards in the row already
+    use keeps a row varied, e.g. one "Fans of “Spirited Away”" instead of four.
+    """
+    match = int(match or 0)
+    for reason in reasons or []:
+        label = _short_reason(reason, limit)
+        if label and label not in taken:
+            return f"{match}% · {label}", label
+    return f"{match}% match", None
 
 
 def match_label(match):
@@ -5183,7 +5207,7 @@ def reset_profile_state():
     for k, v in defaults.items():
         st.session_state[k] = v.copy() if isinstance(v, (set, dict)) else (list(v) if isinstance(v, list) else v)
     st.session_state._last_persisted_profile = None
-    for key in ("tonight_services_picker", "tonight_last_skip", "tonight_pool", "showroom_undo"):
+    for key in ("tonight_services_picker", "tonight_last_skip", "tonight_pool", "showroom_undo", "showroom_pill_labels"):
         st.session_state.pop(key, None)
     queue_profile_save()
 
@@ -5376,7 +5400,7 @@ def quick_card_description(movie, limit=110):
         return why
     full = clean_movie_copy(movie.get("overview") or movie.get("why"), ensure_terminal=False)
     if not full:
-        return "Tap for the spoiler-free synopsis."
+        return "Tap for the premise."
     sentences = [s.strip().rstrip(".;:, ") for s in re.split(r"(?<=[.!?])\s+", full) if s.strip()]
 
     for pos, sentence in enumerate(sentences[:4]):
@@ -5389,17 +5413,17 @@ def quick_card_description(movie, limit=110):
     first = clean_movie_copy(sentences[0] if sentences else full, ensure_terminal=True)
     if len(first) <= limit:
         return first
-    return "Tap for the spoiler-free synopsis."
+    return "Tap for the premise."
 
 
 def expanded_card_description(movie, max_chars=320):
-    """Return a distinct spoiler-free synopsis, separate from the witty hook."""
+    """Return a short premise (the opening of the TMDB overview), separate from the hook."""
     full = clean_movie_copy(
         (movie or {}).get("overview") or (movie or {}).get("why"),
         ensure_terminal=False,
     )
     if not full:
-        return "iCinema does not have a longer spoiler-free overview for this title yet."
+        return "iCinema does not have a longer premise for this title yet."
 
     quick = clean_movie_copy(
         quick_card_description(movie),
@@ -5618,19 +5642,23 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             f'<div class="insight-grid diag-grid">{offline_cards}</div>'
         ) if isinstance(users, int) else ""
 
+    saves_so_far = int((insights or {}).get("saves") or 0)
     live_cards = "".join([
         _card(learned.model_name if learned.ready else "Not active yet", "Behavioral model"),
         _card(_fmt(lm.get("auc")) if learned.ready else "—", "Holdout ROC AUC (0.5 = chance)"),
         _card(_fmt(lm.get("brier_score")) if learned.ready else "—", "Brier score, lower is better"),
-        _card(_fmt(ranking.get("ndcg_at_k")), f"NDCG@{ranking.get('k', 4)} of your Saves"),
-        _card(_fmt(ranking.get("mrr")), "MRR · how high your first Save ranked"),
-        _card(_fmt(calib.get("mae")), "Match calibration error"),
+        _card(_fmt(ranking.get("ndcg_at_k")) if saves_so_far >= 5 else "Learning",
+              f"NDCG@{ranking.get('k', 4)} · ranking quality of your Saves in a row of {ranking.get('k', 4)}"),
+        _card(_fmt(ranking.get("mrr")) if saves_so_far >= 5 else "Learning", "MRR · how high your first Save ranked"),
+        _card(_fmt(calib.get("mae")) if int(calib.get("labeled") or 0) >= 20 else "Learning",
+              "Match calibration error · lower is better"),
     ])
     labeled = learned.samples or 0
     live_copy = (
         f"Trained on {labeled} of your Save/Skip outcomes, validated on a chronological holdout."
         if learned.ready else
-        "Activates after 50 Save/Skip outcomes (12+ of each). Until then, collaborative filtering and content scoring personalize your picks."
+        "Activates after 50 Save/Skip outcomes (12+ of each). Until then, collaborative filtering and content scoring personalize your picks. "
+        "Ranking metrics appear after 5 Saves, calibration after 20 Saves and Skips."
     )
 
     scale = training_scale()
@@ -6191,8 +6219,14 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             availability_score=context.get("availability_alignment",0.5),
             components=context,
         ), payload)
+        pill_labels = dict(st.session_state.get("showroom_pill_labels") or {})
+        row_taken = {label for key, label in pill_labels.items()
+                     if key.startswith(f"{row_name}::") and key != slot_key and label}
+        pill_text, pill_label = match_pill(match, reasons, taken=row_taken)
+        pill_labels[slot_key] = pill_label
+        st.session_state.showroom_pill_labels = pill_labels
         with match_col:
-            with st.popover(match_pill(match, reasons), use_container_width=True):
+            with st.popover(pill_text, use_container_width=True):
                 st.markdown(
                     f'<div class="match-score"><span class="match-score-value">{match}%</span>'
                     f'<span class="match-score-label">fit for you · {html.escape(match_label(match))}</span></div>'
@@ -6250,7 +6284,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
         f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
         f'<div class="movie-full-description">'
-        f'<div class="movie-synopsis-label">Spoiler-free synopsis</div>'
+        f'<div class="movie-synopsis-label">Premise</div>'
         f'<div class="movie-synopsis-copy">{html.escape(expanded_desc)}</div>'
         f'</div>'
         f'</div>',
@@ -6744,6 +6778,7 @@ def render_showroom_fragment(p):
             })
     st.session_state.tonight_pool=[m["title"] for _,m in tonight_queue]
     st.session_state.showroom_undo={}
+    st.session_state.showroom_pill_labels={}
     if tonight_queue:
         for match,movie in tonight_queue:
             payloads.setdefault(movie["title"],{

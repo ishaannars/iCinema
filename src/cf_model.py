@@ -87,7 +87,11 @@ def cf_affinity(movie, uvec):
     return (cos + 1.0) / 2.0
 
 
-def closest_liked(movie, signals):
+# Only explicit approval can be quoted as "you're a fan": Seen means watched, not loved.
+FAN_ACTIONS = ("favorite", "like", "save")
+
+
+def closest_liked(movie, signals, allowed=FAN_ACTIONS):
     """Title of the viewer's liked/saved movie most similar to this one, or None.
 
     Makes the collaborative-filtering reason concrete ("Loved by fans of Parasite")
@@ -100,7 +104,7 @@ def closest_liked(movie, signals):
     emb = model[0]
     best, best_score = None, -2.0
     for liked, action in signals or []:
-        if WEIGHTS.get(action, 0) <= 0:
+        if action not in allowed:
             continue
         j = _index(liked)
         if j is None or j == idx:
