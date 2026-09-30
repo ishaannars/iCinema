@@ -42,7 +42,9 @@ def normalize_title(title):
 
 def load(data_dir, min_count):
     d = Path(data_dir)
-    ratings = pd.read_csv(d / "ratings.csv")
+    # Compact dtypes keep ml-32m (32M ratings) comfortably inside laptop memory.
+    ratings = pd.read_csv(d / "ratings.csv", usecols=["userId", "movieId", "rating", "timestamp"],
+                          dtype={"userId": "int32", "movieId": "int32", "rating": "float32", "timestamp": "int64"})
     movies = pd.read_csv(d / "movies.csv")
     links = pd.read_csv(d / "links.csv")
 
@@ -133,11 +135,45 @@ def evaluate(train, test, emb, n_items, seed_size=None, max_users=3000, rng_seed
         cf_scores[list(seen)] = -np.inf
         out["cf"].append(metrics(np.argsort(-cf_scores)[:FIRST_HIT_DEPTH], truth))
 
-    return {m: {"recall@10": float(np.mean([x[0] for x in v])),
-                "ndcg@10": float(np.mean([x[1] for x in v])),
-                "hit@1": float(np.mean([x[2] for x in v])),
-                "median_recs_to_first_hit": float(np.median([x[3] for x in v]))}
-            for m, v in out.items()}, len(users)
+    summary = {m: {"recall@10": float(np.mean([x[0] for x in v])),
+                   "ndcg@10": float(np.mean([x[1] for x in v])),
+                   "hit@1": float(np.mean([x[2] for x in v])),
+                   "median_recs_to_first_hit": float(np.median([x[3] for x in v]))}
+               for m, v in out.items()}
+    # Per-user values (same users, same order for both models) for paired bootstrap CIs.
+    raw = {m: np.asarray(v, dtype=float) for m, v in out.items()}
+    return summary, len(users), raw
+
+
+def paired_bootstrap(model, baseline, stat, n_boot=2000, seed=11):
+    """Difference stat(model) - stat(baseline) with a 95% CI, resampling users with replacement.
+
+    Resampling users (not individual recommendations) keeps each person's results
+    together, so the interval reflects how much the result depends on which users
+    happened to be in the test set.
+    """
+    rng = np.random.default_rng(seed)
+    n = len(model)
+    idx = rng.integers(0, n, size=(n_boot, n))
+    diffs = stat(model[idx], axis=1) - stat(baseline[idx], axis=1)
+    point = float(stat(model) - stat(baseline))
+    lo, hi = np.percentile(diffs, [2.5, 97.5])
+    return point, float(lo), float(hi), float(np.mean(diffs > 0))
+
+
+def replace_between_markers(path, block):
+    """Rewrite the section between RESULTS markers in README / model card, if present."""
+    path = Path(path)
+    if not path.exists():
+        return False
+    text = path.read_text()
+    start, end = "<!-- RESULTS:START -->", "<!-- RESULTS:END -->"
+    if start not in text or end not in text:
+        return False
+    head, rest = text.split(start, 1)
+    _, tail = rest.split(end, 1)
+    path.write_text(f"{head}{start}\n{block}\n{end}{tail}")
+    return True
 
 
 def main():
@@ -154,8 +190,8 @@ def main():
 
     train, test = time_split(pos)
     emb = fit_embeddings(train, n_items, args.dim)
-    full, n_users = evaluate(train, test, emb, n_items)
-    cold, _ = evaluate(train, test, emb, n_items, seed_size=3)
+    full, n_users, raw_full = evaluate(train, test, emb, n_items)
+    cold, _, raw_cold = evaluate(train, test, emb, n_items, seed_size=3)
 
     rows = [
         ("Popularity baseline", full["popularity"]),
@@ -169,8 +205,23 @@ def main():
              "|---|---|---|---|---|\n" + "\n".join(
         f"| {name} | {m['recall@10']:.3f} | {m['ndcg@10']:.3f} | {m['hit@1']:.1%} | {first_hit(m)} |"
         for name, m in rows))
+    # Paired bootstrap: CF with only 3 likes vs popularity, on the same users.
+    cf3, pop = raw_cold["cf"], raw_full["popularity"]
+    ci_rows = []
+    for label, col, fmt in (("Recall@10", 0, "{:+.3f}"), ("NDCG@10", 1, "{:+.3f}"), ("Hit@1", 2, "{:+.1%}")):
+        d, lo, hi, share = paired_bootstrap(cf3[:, col], pop[:, col], np.mean)
+        ci_rows.append((label, fmt.format(d), f"{fmt.format(lo)} to {fmt.format(hi)}", share, lo > 0))
+    # Fewer recommendations is better, so report the reduction (popularity minus CF).
+    d, lo, hi, share = paired_bootstrap(pop[:, 3], cf3[:, 3], np.median)
+    ci_rows.append(("Recs to first loved movie (median, fewer is better)", f"{d:.0f} fewer",
+                    f"{lo:.0f} to {hi:.0f} fewer", share, lo > 0))
+    ci_table = ("| Metric | CF (3 likes) vs popularity | 95% CI | Resamples where CF wins | Significant |\n"
+                "|---|---|---|---|---|\n" + "\n".join(
+        f"| {m} | {d} | {ci} | {share:.0%} | {'Yes' if sig else 'No'} |" for m, d, ci, share, sig in ci_rows))
     report = (f"**Offline evaluation** — MovieLens ({Path(args.data_dir).name}), "
-              f"time-based split, {n_users:,} held-out users, ratings ≥ 4 as positives.\n\n{table}\n")
+              f"time-based split, {n_users:,} held-out users, ratings ≥ 4 as positives.\n\n{table}\n\n"
+              f"**Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "
+              f"\"Significant\" means the 95% interval excludes zero.\n\n{ci_table}\n")
     print("\n" + report)
 
     # Retrain on all data for the shipped model.
@@ -187,7 +238,14 @@ def main():
         popularity=np.bincount(pos["item"], minlength=n_items).astype(np.int32),
     )
     (out / "cf_results.md").write_text(report)
-    (out / "cf_results.json").write_text(json.dumps({"full": full, "three_likes": cold}, indent=2))
+    (out / "cf_results.json").write_text(json.dumps(
+        {"dataset": Path(args.data_dir).name, "held_out_users": n_users, "full": full, "three_likes": cold,
+         "bootstrap_three_likes_vs_popularity": [
+             {"metric": m, "difference": d, "ci95": ci, "cf_win_share": share, "significant": bool(sig)}
+             for m, d, ci, share, sig in ci_rows]}, indent=2))
+    for doc in ("README.md", "MODEL_CARD.md"):
+        if replace_between_markers(doc, report.strip()):
+            print(f"Updated results in {doc}")
     print(f"Saved {out / 'cf_model.npz'}")
 
 

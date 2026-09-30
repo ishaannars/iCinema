@@ -1,5 +1,6 @@
 
 import html
+from urllib.parse import quote_plus
 import json
 import re
 import streamlit as st
@@ -4440,6 +4441,101 @@ div[data-testid="stLoadingSpinner"],
     .tonight-title{font-size:1.5rem;}
 }
 
+/* V5.167 — one even spacing rhythm + compact Tonight's Pick */
+/* Section headers everywhere: title → subtitle .4rem, subtitle → content 1.1rem, section → section 2.2rem. */
+.showroom-row-header,
+.showroom-row-header.first{margin:2.2rem 0 0 !important;padding:0 0 1.1rem !important;transform:none !important;}
+.showroom-row-header .showroom-row-title{margin:0 0 .4rem !important;line-height:1.1 !important;}
+.showroom-row-header .row-model-note{margin:0 !important;line-height:1.45 !important;overflow:visible !important;}
+.tonight-row-header{margin-top:0 !important;padding-bottom:0 !important;}
+.page-top-heading,.step2-title,.showroom-heading,.tab-primary-heading{margin-bottom:.4rem !important;line-height:1.1 !important;}
+.page-top-subtitle,.step2-subtitle,.showroom-intro{margin-top:0 !important;line-height:1.45 !important;}
+.page-top-subtitle{margin-bottom:1.1rem !important;}
+.step2-header,.showroom-header{margin-bottom:1.1rem !important;}
+.step3-subtitle{margin-bottom:1.1rem !important;}
+.saved-tab-heading{margin-bottom:1.1rem !important;}
+
+/* Showroom cards: every block below the poster gets the same gap. */
+div .poster-caption:not(.library-poster-caption){margin:.6rem 0 .42rem !important;}
+div .poster-caption:not(.library-poster-caption) .poster-caption-year{margin-top:.22rem !important;}
+div .ratings{margin:0 0 .42rem !important;line-height:1.3 !important;}
+div .watch-availability{margin:0 0 .42rem !important;line-height:1.35 !important;}
+div .movie-summary-toggle{margin:0 0 .42rem !important;}
+div .movie-card-actions{margin:0 !important;}
+
+/* Compact Tonight's Pick. */
+[class*="st-key-tonight_hero"]{
+    margin:1.1rem 0 0 !important;padding:1rem 1.1rem !important;border-radius:18px !important;
+    animation:icinema-tonight-in .3s ease-out both;
+}
+[class*="st-key-tonight_hero"] .poster{max-width:132px !important;margin:0 !important;border-radius:12px !important;}
+[class*="st-key-tonight_hero"] .poster.has-image img{border-radius:11px !important;}
+.tonight-stack{display:flex;flex-direction:column;gap:.42rem;margin:0 0 .7rem;}
+.tonight-stack > div{margin:0 !important;}
+.tonight-title{font-size:1.3rem !important;line-height:1.15 !important;margin:0 !important;}
+.tonight-meta{font-size:.68rem !important;margin:0 !important;}
+.tonight-badges{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;}
+.tonight-match{height:1.6rem !important;font-size:.66rem !important;padding:0 .65rem !important;margin:0 !important;}
+.tonight-fit{font-size:.68rem !important;margin:0 !important;}
+.tonight-line{font-size:.72rem !important;margin:0 !important;}
+.tonight-hook{font-size:.82rem !important;line-height:1.42 !important;margin:0 !important;}
+.tonight-whys{display:flex;flex-direction:column;gap:.22rem;}
+.tonight-why{font-size:.7rem !important;line-height:1.4 !important;margin:0 !important;}
+[class*="st-key-tonight_save_"] button,[class*="st-key-tonight_seen_"] button,
+[class*="st-key-tonight_skip_"] button,[class*="st-key-tonight_undo_"] button{
+    min-height:1.9rem !important;height:1.9rem !important;padding:0 .5rem !important;border-radius:999px !important;
+}
+[class*="st-key-tonight_save_"] button p,[class*="st-key-tonight_seen_"] button p,
+[class*="st-key-tonight_skip_"] button p,[class*="st-key-tonight_undo_"] button p{font-size:.68rem !important;margin:0 !important;}
+.services-help{font-family:var(--ui-font);font-size:.72rem;color:var(--muted);line-height:1.4;margin:0 0 .6rem;}
+div[data-testid="stPills"] button{font-family:var(--ui-font) !important;}
+@media(max-width:800px){
+    [class*="st-key-tonight_hero"] .poster{max-width:110px !important;}
+    .tonight-title{font-size:1.1rem !important;}
+}
+/* Per-card Undo sits beside Skip with the same pill height. */
+[class*="st-key-undo_"] button{min-height:1.92rem !important;height:1.92rem !important;padding:0 !important;border-radius:999px !important;}
+[class*="st-key-undo_"] button p{font-size:.8rem !important;margin:0 !important;}
+
+/* V5.168 — centered, aligned button rows everywhere + one-tap watch links */
+/* Control and action rows span exactly the card width with the same gap. */
+[class*="st-key-showroom_controls_"]{width:100% !important;max-width:100% !important;margin:0 0 .5rem !important;}
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-skip_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-skip_"])),
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-save_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-save_"])),
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-like_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-like_"])),
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-savedseen_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-savedseen_"])),
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-tonight_save_"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-tonight_save_"])),
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-search_add_like"]):not(:has(div[data-testid="stHorizontalBlock"] [class*="st-key-search_add_like"])){
+    gap:.5rem !important;column-gap:.5rem !important;align-items:center !important;
+}
+/* Every pill button: same height per row, label truly centered. */
+[class*="st-key-save_"] button,[class*="st-key-seen_"] button,[class*="st-key-skip_"] button,
+[class*="st-key-undo_"] button,[class*="st-key-like_"] button,[class*="st-key-fav_"] button,
+[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button,[class*="st-key-tonight_"] button,
+[class*="st-key-search_add_"] button,div[data-testid="stPopover"] button,div[data-testid="stLinkButton"] a{
+    width:100% !important;display:flex !important;align-items:center !important;
+    justify-content:center !important;text-align:center !important;
+}
+[class*="st-key-save_"] button p,[class*="st-key-seen_"] button p,[class*="st-key-skip_"] button p,
+[class*="st-key-undo_"] button p,[class*="st-key-like_"] button p,[class*="st-key-fav_"] button p,
+[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p,[class*="st-key-tonight_"] button p,
+[class*="st-key-search_add_"] button p,div[data-testid="stLinkButton"] a p{
+    margin:0 !important;padding:0 !important;width:auto !important;text-align:center !important;line-height:1 !important;
+}
+[class*="st-key-save_"] button,[class*="st-key-seen_"] button{min-height:1.92rem !important;height:1.92rem !important;}
+/* Tonight's primary "Watch on …" link matches the other pills. */
+div[data-testid="stLinkButton"] a{
+    min-height:1.9rem !important;height:1.9rem !important;padding:0 .7rem !important;border-radius:999px !important;
+    font-family:var(--ui-font) !important;font-size:.68rem !important;font-weight:700 !important;white-space:nowrap !important;
+}
+/* Service names in the streaming line are one-tap links. */
+a.watch-link{
+    color:var(--ivory) !important;text-decoration:none !important;font-weight:700;
+    border-bottom:1px solid rgba(169,173,183,.45);padding-bottom:1px;transition:border-color .15s ease;
+}
+a.watch-link:hover{border-bottom-color:var(--ivory);}
+a.watch-link::after{content:" ↗";font-size:.8em;opacity:.65;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4786,6 +4882,69 @@ def service_availability_utility(availability):
         return availability_utility("rent")
     return availability_utility(status)
 
+# One tap from a recommendation to the service that plays it. Each link opens that
+# service's search for the exact title (the closest a public link can get to its
+# title page). Services without a dependable public search URL (Max, Peacock,
+# Paramount+, Fandango) open TMDB's JustWatch-powered page, which links to them.
+PROVIDER_LINKS = [
+    ("netflix", "https://www.netflix.com/search?q={q}"),
+    ("hulu", "https://www.hulu.com/search?q={q}"),
+    ("amazonprime", "https://www.amazon.com/s?k={q}&i=instant-video"),
+    ("primevideo", "https://www.amazon.com/s?k={q}&i=instant-video"),
+    ("amazonvideo", "https://www.amazon.com/s?k={q}&i=instant-video"),
+    ("disney", "https://www.disneyplus.com/search?q={q}"),
+    ("appletv", "https://tv.apple.com/search?term={q}"),
+    ("tubi", "https://tubitv.com/search/{q}"),
+    ("youtube", "https://www.youtube.com/results?search_query={q}"),
+    ("googleplay", "https://play.google.com/store/search?q={q}&c=movies"),
+]
+
+def provider_watch_url(provider, title, availability=None):
+    from urllib.parse import quote_plus
+    key = _provider_key(provider)
+    for prefix, template in PROVIDER_LINKS:
+        if key.startswith(prefix):
+            return template.format(q=quote_plus(str(title)))
+    fallback = (availability or {}).get("url")
+    return fallback or f"https://www.justwatch.com/us/search?q={quote_plus(str(title))}"
+
+def watch_options(availability, title, services=None, limit=2):
+    """[(label, provider, url)] for the best ways to watch, the viewer's services first."""
+    availability = availability or {}
+    services = list(services or [])
+    streaming = list(availability.get("providers") or [])
+    renting = list(availability.get("rent_providers") or [])
+    if services:
+        mine = [p for p in streaming if any(_on_service(p, sv) for sv in services)]
+        streaming = mine + [p for p in streaming if p not in mine]
+    chosen = [("Watch on", p) for p in streaming[:limit]]
+    if not chosen:
+        chosen = [("Rent on", p) for p in renting[:limit]]
+    seen, out = set(), []
+    for verb, provider in chosen:
+        name = re.sub(r"\s+(basic\s+)?with\s+ads$|\s+amazon\s+channel$|\s+standard\s+with\s+ads$", "", provider, flags=re.IGNORECASE).strip()
+        if name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        out.append((f"{verb} {name}", name, provider_watch_url(provider, title, availability)))
+    return out
+
+def watch_line_html(availability, title, services=None):
+    """Streaming line where each service name is a one-tap link to it."""
+    availability = availability or {}
+    options = watch_options(availability, title, services)
+    if not options:
+        text = concise_availability_text(availability.get("text") or "Where to watch: availability unavailable")
+        return html.escape(text)
+    verb = "Streaming" if options[0][0].startswith("Watch") else "Rent"
+    links = " · ".join(
+        f'<a class="watch-link" href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{html.escape(name)}</a>'
+        for _, name, url in options
+    )
+    total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
+    more = " + more" if total > len(options) else ""
+    return f"{verb}: {links}{more}"
+
 def movie_on_services(availability, services):
     """True when a movie streams on one of the viewer's services (or on any service if none chosen)."""
     availability = availability or {}
@@ -4870,6 +5029,8 @@ def reset_profile_state():
     for k, v in defaults.items():
         st.session_state[k] = v.copy() if isinstance(v, (set, dict)) else (list(v) if isinstance(v, list) else v)
     st.session_state._last_persisted_profile = None
+    for key in ("tonight_services_picker", "tonight_last_skip", "tonight_pool", "showroom_undo"):
+        st.session_state.pop(key, None)
     queue_profile_save()
 
 def reset_profile_from_fragment():
@@ -4983,142 +5144,81 @@ def clean_movie_copy(text, ensure_terminal=True):
     return value
 
 
-def quick_card_description(movie, limit=72):
-    """Create a short, complete witty hook without showing sentence fragments."""
+_HOOK_VERBS = set("""
+is are was were be becomes become finds find follows follow discovers discover tries try must has have
+gets get enters enter returns return meets meet faces face uncovers uncover struggles struggle begins begin
+turns turn joins join grows grow investigates investigate reconnects reconnect attempts attempt receives
+receive attends attend moves move prepares prepare realizes realize spends spend fights fight searches search
+takes take makes make lives live works work falls fall goes go comes come leads lead learns learn sets set
+plans plan hunts hunt runs run seeks seek wants want needs need loses lose wins win tells tell decides decide
+agrees agree forms form builds build hides hide escapes escape travels travel embarks embark stumbles stumble
+must wakes wake kills kill saves save protects protect helps help leaves leave arrives arrive teams team
+tracks track confronts confront battles battle pursues pursue sparks spark unravels unravel navigates navigate
+inherits inherit befriends befriend infiltrates infiltrate recruits recruit risks risk chases chase
+""".split())
+_HOOK_DANGLING_END = {
+    "a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by", "as", "at",
+    "into", "onto", "on", "its", "his", "her", "their", "who", "that", "which", "young", "whose", "when",
+}
+_HOOK_SPLITS = ("; ", " — ", " – ", ": ", ", and ", ", but ", ", who ", ", where ", ", when ", " when ",
+                ", while ", ", as ", ", until ", " until ", ", before ", ", after ", ", only to ", " in order to ", " after ", " before ", " while ")
+
+
+def _hook_is_complete(text, limit):
+    text = clean_movie_copy(text, ensure_terminal=False)
+    if not text or len(text) < 24 or len(text) > limit:
+        return False
+    words = [w.casefold().strip(".,;:!?()[]{}\"'") for w in text.split()]
+    if len(words) < 5 or words[-1] in _HOOK_DANGLING_END:
+        return False
+    if words[0] in {"in", "on", "at", "during", "after", "before", "while", "when", "with", "without",
+                    "through", "across", "amid", "following"}:
+        return False
+    return any(w in _HOOK_VERBS for w in words[1:])
+
+
+def quick_card_description(movie, limit=96):
+    """One real, specific line about the movie. Never generic filler.
+
+    Uses the catalog's hand-written hook when present; otherwise the most
+    informative complete clause from the movie's own synopsis. If no clean clause
+    fits, it trims the premise at a word boundary with an ellipsis, since the full
+    synopsis is one tap away.
+    """
     movie = movie or {}
-    full = clean_movie_copy(movie.get("why") or movie.get("overview"), ensure_terminal=False)
-    title = str(movie.get("title") or "This film").strip()
-    genre = str(movie.get("genre") or "movie").strip().lower()
-    tags = [str(tag).strip() for tag in (movie.get("tags") or []) if str(tag).strip()]
-
+    why = clean_movie_copy(movie.get("why"), ensure_terminal=True)
+    if why and len(why) <= limit + 30:
+        return why
+    full = clean_movie_copy(movie.get("overview") or movie.get("why"), ensure_terminal=False)
     if not full:
-        return f"{title} makes a strong case for one more movie night."
+        return "Tap for the spoiler-free synopsis."
 
-    # Work only from the first complete source sentence. Never finish a hook by
-    # chopping at an arbitrary word boundary; that was the source of fragments
-    # such as “In a near-future Britain, young Alexander DeLarge.”
-    first = re.split(r"(?<=[.!?])\s+", full)[0].strip().rstrip(".;:, ")
-
-    candidates = []
-    if first:
-        candidates.append(first)
-
-        # Drop a short introductory setup when the remainder is a complete,
-        # stronger subject-led thought: “In 1970s Boston, a reporter…” ->
-        # “A reporter…”. This avoids keeping only the setup phrase.
-        intro = re.match(
-            r"^(?:in|on|at|during|after|before|following|inside|outside|across|amid|within|years after|decades after)\b[^,]{3,34},\s+(.+)$",
-            first,
-            flags=re.IGNORECASE,
-        )
+    sentences = [s.strip().rstrip(".;:, ") for s in re.split(r"(?<=[.!?])\s+", full) if s.strip()]
+    # Only the opening sentence: later ones often start mid-story ("Twenty years later, they...").
+    for sentence in sentences[:1]:
+        candidates = [sentence]
+        intro = re.match(r"^(?:in|on|at|during|after|before|following|inside|across|amid|within|years after|decades after)[^,]{3,40},\s+(.+)$",
+                         sentence, flags=re.IGNORECASE)
         if intro:
-            candidates.append(intro.group(1).strip())
-
-        # Safe clause boundaries. The text before these boundaries is only used
-        # when it already reads as a complete independent thought.
+            rest = intro.group(1).strip()
+            candidates.append(rest[:1].upper() + rest[1:])
         for source in list(candidates):
-            for marker in ("; ", " — ", " – ", ": "):
-                if marker in source:
-                    candidates.append(source.split(marker, 1)[0].strip())
-            for marker in (" while ", " but ", " before ", " after ", " as "):
-                pos = source.lower().find(marker, 28)
-                if pos != -1:
-                    candidates.append(source[:pos].strip(" ,;:–—-"))
+            for marker in _HOOK_SPLITS:
+                pos = source.find(marker)
+                # A comma-led split is only safe when the left side has no earlier
+                # comma; otherwise it can cut through an appositive ("daughter, Anna").
+                if pos > 20 and not (marker.startswith(",") and "," in source[:pos]):
+                    candidates.append(source[:pos])
+        complete = [c for c in candidates if _hook_is_complete(c, limit)]
+        if complete:
+            return clean_movie_copy(max(complete, key=len), ensure_terminal=True)
 
-    dangling_starts = (
-        "in ", "on ", "at ", "during ", "after ", "before ", "while ",
-        "when ", "as ", "with ", "without ", "through ", "across ", "amid ",
-    )
-    dangling_ends = {
-        "a", "an", "the", "and", "or", "but", "with", "to", "of", "in",
-        "for", "from", "by", "as", "at", "into", "onto", "on", "its", "his",
-        "her", "their", "who", "that", "which", "young",
-    }
-
-    def usable(candidate):
-        candidate = clean_movie_copy(candidate, ensure_terminal=False)
-        if not candidate or len(candidate) < 24 or len(candidate) > limit:
-            return False
-        lower = candidate.casefold()
-        if lower.startswith(dangling_starts):
-            return False
-        last = candidate.split()[-1].casefold().strip(".,;:!?()[]{}\"'")
-        if last in dangling_ends:
-            return False
-        # A useful hook should contain at least a likely verb. This is a small,
-        # dependency-free guard against noun-phrase fragments.
-        verb_markers = (
-            " is ", " are ", " was ", " were ", " becomes ", " become ",
-            " finds ", " find ", " follows ", " follow ", " discovers ",
-            " discover ", " tries ", " try ", " must ", " has ", " have ",
-            " gets ", " get ", " enters ", " enter ", " returns ", " return ",
-            " meets ", " meet ", " faces ", " face ", " uncovers ", " uncover ",
-            " struggles ", " struggle ", " begins ", " begin ", " turns ", " turn ",
-            " joins ", " join ", " becomes ", " become ", " grows ", " grow ",
-            " investigates ", " investigate ", " reconnects ", " reconnect ",
-            " attempts ", " attempt ", " receives ", " receive ", " attends ", " attend ",
-            " moves ", " move ", " prepares ", " prepare ", " realizes ", " realize ",
-            " spends ", " spend ", " fight ", " fights ", " searches ", " search ",
-        )
-        padded = f" {lower} "
-        return any(v in padded for v in verb_markers)
-
-    valid = []
-    seen = set()
-    for candidate in candidates:
-        cleaned = clean_movie_copy(candidate, ensure_terminal=False)
-        key = cleaned.casefold()
-        if key not in seen and usable(cleaned):
-            valid.append(cleaned)
-            seen.add(key)
-
-    if valid:
-        # Prefer the most informative complete thought that still fits the card.
-        best = max(valid, key=len)
-        return clean_movie_copy(best, ensure_terminal=True)
-
-    # If the source sentence cannot be shortened cleanly, use a compact tonal
-    # line built from real movie metadata instead of displaying a broken plot
-    # fragment. Keyword themes keep these fallbacks specific when possible.
-    lower = full.casefold()
-    themed = [
-        (("surveillance", "spying", "monitored", "watching"), "Watching other people gets dangerously personal."),
-        (("artificial intelligence", "android", "robot", "replicant"), "Human behavior gets harder to define once technology pushes back."),
-        (("missing", "disappear", "kidnap", "abduct"), "A disappearance turns every new answer into another problem."),
-        (("trial", "court", "accused", "murder"), "The truth gets less comfortable each time the story is retold."),
-        (("space", "mars", "planet", "astronaut"), "A mission leaves almost no room for a second mistake."),
-        (("gang", "juvenile crime", "state", "procedure", "incarcerated"), "Violence, control, and free will collide in deeply uncomfortable ways."),
-        (("relationship", "romance", "love", "reconnect"), "Timing turns out to be just as important as chemistry."),
-        (("school", "teacher", "student"), "Normal school life does not stay normal for very long."),
-        (("conspiracy", "secret", "mystery", "identity"), "Every answer seems to create a better question."),
-        (("outbreak", "infected", "zombie"), "Survival gets complicated the moment panic starts moving faster."),
-    ]
-    for terms, line in themed:
-        if any(term in lower for term in terms) and len(line) <= limit:
-            return line
-
-    tone = None
-    tone_map = [
-        ("Dark", "dark"), ("Funny", "funny"), ("Emotional", "emotional"),
-        ("Intense", "intense"), ("Suspenseful", "tense"), ("Offbeat", "offbeat"),
-        ("Thought-provoking", "thoughtful"), ("Romantic", "romantic"),
-        ("Heartfelt", "heartfelt"), ("Stylish", "stylish"),
-    ]
-    tagset = {t.casefold(): t for t in tags}
-    for raw, adjective in tone_map:
-        if raw.casefold() in tagset:
-            tone = adjective
-            break
-
-    if tone:
-        line = f"A {tone} {genre} story that keeps its central conflict moving."
-    else:
-        article = "an" if genre[:1] in "aeiou" else "a"
-        line = f"{title} is {article} {genre} story built around a strong central conflict."
-
-    if len(line) > limit:
-        line = f"A {genre} story where the central conflict refuses to stay simple."
-    return clean_movie_copy(line, ensure_terminal=True)
+    premise = sentences[0] if sentences else full
+    cut = premise[:limit].rsplit(" ", 1)[0].rstrip(" ,;:–—-")
+    words = cut.split()
+    while words and words[-1].casefold().strip(".,;:") in _HOOK_DANGLING_END:
+        words.pop()
+    return " ".join(words) + "…"
 
 
 def expanded_card_description(movie, max_chars=320):
@@ -5713,6 +5813,9 @@ def skip_showroom_slot(row_name, slot_index):
     movie = payload.get("movie")
     if title:
         skip_movie(title, movie)
+        undo = dict(st.session_state.get("showroom_undo") or {})
+        undo[slot_key] = title
+        st.session_state.showroom_undo = undo
     if not _advance_showroom_slot(row_name, slot_index):
         st.rerun(scope="app")
 
@@ -5723,6 +5826,9 @@ def save_showroom_slot(row_name, slot_index):
     movie = payload.get("movie")
     if title:
         save_movie(title, movie)
+        undo = dict(st.session_state.get("showroom_undo") or {})
+        undo.pop(slot_key, None)
+        st.session_state.showroom_undo = undo
     if not _advance_showroom_slot(row_name, slot_index):
         st.rerun(scope="app")
 
@@ -5733,6 +5839,9 @@ def seen_showroom_slot(row_name, slot_index):
     movie = payload.get("movie")
     if title:
         mark_movie_seen(title, movie)
+        undo = dict(st.session_state.get("showroom_undo") or {})
+        undo.pop(slot_key, None)
+        st.session_state.showroom_undo = undo
     if not _advance_showroom_slot(row_name, slot_index):
         st.rerun(scope="app")
 
@@ -5811,7 +5920,20 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     record_impressions(st.session_state, {title: context})
 
     with st.container(key=f"showroom_controls_{row_index}_{slot_index}_{title}"):
-        match_col, skip_col = st.columns([3.35,0.90], gap="small")
+        undo_title = (st.session_state.get("showroom_undo") or {}).get(slot_key)
+        if undo_title:
+            match_col, undo_col, skip_col = st.columns([2.75,0.62,0.90], gap="small")
+            with undo_col:
+                st.button(
+                    "↶",
+                    key=f"undo_{row_name}_{slot_index}_{title}",
+                    help=f"Undo skip · bring back {undo_title}",
+                    use_container_width=True,
+                    on_click=undo_showroom_slot,
+                    args=(row_name, slot_index),
+                )
+        else:
+            match_col, skip_col = st.columns([3.35,0.90], gap="small")
         with match_col:
             with st.popover(f"{match}% iCinema Match", use_container_width=True):
                 reasons = recommendation_explanation(
@@ -5852,14 +5974,18 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
 
     imdb_value = live_rating.get("imdb")
     rt_value = live_rating.get("rt")
-    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
-    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
-    rating_class = "ratings" if live_rating and (isinstance(imdb_value, (int, float)) or isinstance(rt_value, (int, float))) else "ratings muted"
-    st.markdown(f'<div class="{rating_class}">IMDb {imdb_text} · RT {rt_text}</div>',unsafe_allow_html=True)
+    rating_parts = []
+    if isinstance(imdb_value, (int, float)):
+        rating_parts.append(f"IMDb {imdb_value:.1f}")
+    if isinstance(rt_value, (int, float)):
+        rating_parts.append(f"RT {int(rt_value)}%")
+    rating_class = "ratings" if rating_parts else "ratings muted"
+    rating_text = " · ".join(rating_parts) or "Ratings unavailable"
+    st.markdown(f'<div class="{rating_class}">{rating_text}</div>',unsafe_allow_html=True)
 
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
-    availability_text = concise_availability_text(availability.get("text") or "Where to watch: availability unavailable")
-    st.markdown(f'<div class="{availability_class}">{html.escape(availability_text)}</div>', unsafe_allow_html=True)
+    watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
+    st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
 
     quick_desc = quick_card_description(movie)
     expanded_desc = expanded_card_description(movie)
@@ -5875,9 +6001,9 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         f'</div>',
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="movie-card-actions">', unsafe_allow_html=True)
-    a,b=st.columns(2, gap="small")
-    with a:
+    with st.container(key=f"movie_actions_{row_index}_{slot_index}_{title}"):
+      a,b=st.columns(2, gap="small")
+      with a:
         st.button(
             "Save",
             key=f"save_{row_name}_{slot_index}_{title}",
@@ -5885,7 +6011,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             on_click=save_showroom_slot,
             args=(row_name, slot_index),
         )
-    with b:
+      with b:
         st.button(
             "Seen",
             key=f"seen_{row_name}_{slot_index}_{title}",
@@ -5893,56 +6019,118 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             on_click=seen_showroom_slot,
             args=(row_name, slot_index),
         )
-    st.markdown('</div>', unsafe_allow_html=True)
     # Persist the action during this card-only rerun without creating a visible loader.
     persist_profile_if_needed()
 
-def render_tonight_header():
-    """Section title plus the one-tap service picker (reruns the Showroom to re-pick)."""
-    services = list(st.session_state.get("streaming_services") or [])
-    if services:
-        shown = ", ".join(services[:3]) + (f" +{len(services) - 3}" if len(services) > 3 else "")
-        note = f"Your single best match right now on {shown}"
-        label = f"Your services · {len(services)}"
-    else:
-        note = "Your single best match right now, on any streaming service"
-        label = "Choose your services"
-    head, picker = st.columns([3.2, 1.1], gap="medium")
-    with head:
-        st.markdown(
-            '<div class="tonight-header">'
-            '<div class="tonight-heading">Tonight’s Pick</div>'
-            f'<div class="tonight-note">{html.escape(note)}</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-    with picker:
-        with st.popover(label, use_container_width=True):
-            st.caption("Tap the services you have. Tonight’s Pick updates instantly.")
-            cols = st.columns(2, gap="small")
-            for i, name in enumerate(STREAMING_SERVICES):
-                with cols[i % 2]:
-                    st.button(
-                        ("✓ " if name in services else "") + name,
-                        key=f"service_{i}",
-                        type="primary" if name in services else "secondary",
-                        use_container_width=True,
-                        on_click=toggle_streaming_service,
-                        args=(name,),
-                    )
+def _drop_last_event(title, event_type):
+    """Remove the most recent event of a type for a title (used by Undo)."""
+    events = list(st.session_state.get("analytics_events") or [])
+    for i in range(len(events) - 1, -1, -1):
+        if events[i].get("event") == event_type and events[i].get("title") == title:
+            del events[i]
+            break
+    st.session_state.analytics_events = events
+
+
+def undo_skip(title):
+    """Reverse an accidental Skip so it neither hides the movie nor trains the model."""
+    if not title:
+        return
+    st.session_state.dismissed.discard(title)
+    _drop_last_event(title, "skip")
+    queue_profile_save()
+
+
+def undo_showroom_slot(row_name, slot_index):
+    slot_key = _showroom_slot_key(row_name, slot_index)
+    undo = dict(st.session_state.get("showroom_undo") or {})
+    title = undo.pop(slot_key, None)
+    st.session_state.showroom_undo = undo
+    if not title:
+        return
+    undo_skip(title)
+    slots = dict(st.session_state.get("showroom_slots") or {})
+    slots[slot_key] = title
+    st.session_state.showroom_slots = slots
+
+
+def _sync_services_from_picker():
+    st.session_state.streaming_services = list(st.session_state.get("tonight_services_picker") or [])
+    queue_profile_save()
+
+
+def tonight_skip(title, movie):
+    skip_movie(title, movie)
+    st.session_state.tonight_last_skip = title
+
+
+def tonight_undo():
+    undo_skip(st.session_state.get("tonight_last_skip"))
+    st.session_state.tonight_last_skip = None
+
+
+def tonight_save(title, movie):
+    save_movie(title, movie)
+    st.session_state.tonight_last_skip = None
+
+
+def tonight_seen(title, movie):
+    mark_movie_seen(title, movie)
+    st.session_state.tonight_last_skip = None
+
+
+def _render_services_picker(services):
+    label = f"Your services · {len(services)}" if services else "Choose your services"
+    if "tonight_services_picker" not in st.session_state:
+        st.session_state.tonight_services_picker = list(services)
+    with st.popover(label, use_container_width=True):
+        st.markdown('<div class="services-help">Pick what you subscribe to. Tonight’s Pick updates as you tap.</div>',
+                    unsafe_allow_html=True)
+        options = list(STREAMING_SERVICES)
+        if hasattr(st, "pills"):
+            st.pills("Your services", options, selection_mode="multi", key="tonight_services_picker",
+                     on_change=_sync_services_from_picker, label_visibility="collapsed")
+        else:
+            st.multiselect("Your services", options, key="tonight_services_picker",
+                           on_change=_sync_services_from_picker, label_visibility="collapsed")
 
 
 @st.fragment
 def render_tonight_pick_fragment():
-    """One large, independently-rerunnable pick. Skip swaps only this card."""
-    row_name = "Tonight's Pick"
-    slot_key = _showroom_slot_key(row_name, 0)
-    title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
-    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
-    movie = payload.get("movie")
-    if not title or not movie:
+    """Compact single best match. Services, Skip, and Undo rerun only this card."""
+    services = list(st.session_state.get("streaming_services") or [])
+    payloads = st.session_state.get("showroom_payloads") or {}
+    watch_cache = st.session_state.get("showroom_watch_cache") or {}
+    blocked = (set(st.session_state.saved) | set(st.session_state.seen) | set(st.session_state.dismissed)
+               | {t for t in (st.session_state.get("showroom_slots") or {}).values() if t})
+    pool = [t for t in (st.session_state.get("tonight_pool") or []) if t in payloads and t not in blocked]
+    fits = [t for t in pool if movie_on_services(watch_cache.get(t), services)]
+    ordered = fits + [t for t in pool if t not in fits]
+
+    if services:
+        shown = ", ".join(services[:2]) + (f" +{len(services) - 2}" if len(services) > 2 else "")
+        note = f"Your single best match right now on {shown}"
+    else:
+        note = "Your single best match right now, on any streaming service"
+    head, picker = st.columns([3.4, 1.1], gap="medium", vertical_alignment="bottom")
+    with head:
+        st.markdown(
+            '<div class="showroom-row-header tonight-row-header">'
+            '<div class="showroom-row-title">Tonight’s Pick</div>'
+            f'<div class="row-model-note">{html.escape(note)}</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    with picker:
+        _render_services_picker(services)
+
+    if not ordered:
+        st.caption("No pick available right now. Try adding more services or refreshing.")
         return
 
+    title = ordered[0]
+    payload = payloads.get(title) or {}
+    movie = payload.get("movie") or {}
     match = int(payload.get("match") or 0)
     p = current_profile()
     identity, availability, live_rating = _showroom_cached_metadata(movie)
@@ -5952,7 +6140,7 @@ def render_tonight_pick_fragment():
         availability_score=service_availability_utility(availability),
     )
     context = {
-        "row": row_name, "position": 1, "match": int(payload.get("model_match") or match),
+        "row": "Tonight's Pick", "position": 1, "match": int(payload.get("model_match") or match),
         "model_score": round(float(comps.get("raw_score", 0)), 6),
         "decision_utility": round(float(comps.get("decision_utility", comps.get("raw_score", 0))), 6),
         **{k: round(float(comps.get(k, .5)), 6) for k in [
@@ -5962,7 +6150,7 @@ def render_tonight_pick_fragment():
         ]},
         "cf_affinity": round(float(payload.get("cf") if payload.get("cf") is not None else 0.5), 6),
         "candidate_source": movie.get("candidate_source"),
-        "model_version": "v5.166",
+        "model_version": "v5.167",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -5973,68 +6161,79 @@ def render_tonight_pick_fragment():
     year = identity.get("year") or movie.get("year") or ""
     genre = movie.get("genre") or ""
     poster_url = identity.get("poster_url") or movie.get("poster_url")
-    if poster_url:
-        poster_html = (f'<div class="poster has-image"><img src="{html.escape(str(poster_url), quote=True)}" '
-                       f'alt="Poster for {html.escape(str(display_title))}"></div>')
-    else:
-        poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
-
+    poster_html = (
+        f'<div class="poster has-image"><img src="{html.escape(str(poster_url), quote=True)}" '
+        f'alt="Poster for {html.escape(str(display_title))}"></div>'
+        if poster_url else '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
+    )
     imdb_value, rt_value = live_rating.get("imdb"), live_rating.get("rt")
-    imdb_text = f"{imdb_value:.1f}" if isinstance(imdb_value, (int, float)) else "Not available"
-    rt_text = f"{int(rt_value)}%" if isinstance(rt_value, (int, float)) else "Not available"
+    ratings = []
+    if isinstance(imdb_value, (int, float)):
+        ratings.append(f"IMDb {imdb_value:.1f}")
+    if isinstance(rt_value, (int, float)):
+        ratings.append(f"RT {int(rt_value)}%")
+    meta = " · ".join(str(x) for x in [year, genre] + ratings if x)
 
-    services = list(st.session_state.get("streaming_services") or [])
-    watch_text = concise_availability_text(availability.get("text") or "Where to watch: availability unavailable", 3)
+    watch_html = watch_line_html(availability, movie.get("title", ""), services)
+    options = watch_options(availability, movie.get("title", ""), services, limit=1)
     if not services:
-        fit_html = '<div class="tonight-fit">On any service · choose yours above to narrow it</div>'
+        fit = '<span class="tonight-fit">Any service</span>'
     elif movie_on_services(availability, services):
-        fit_html = '<div class="tonight-fit good">✓ On your services</div>'
+        fit = '<span class="tonight-fit good">✓ On your services</span>'
     else:
         rent = (availability.get("rent_providers") or [])[:1]
-        extra = f" · Rent on {html.escape(rent[0])}" if rent else ""
-        fit_html = f'<div class="tonight-fit">Not on your services{extra}</div>'
+        fit = ('<span class="tonight-fit">Not on your services'
+               + (f' · Rent on {html.escape(rent[0])}' if rent else '') + '</span>')
 
-    reasons = recommendation_explanation(
+    reasons = with_cf_reason(recommendation_explanation(
         movie, p, st.session_state.adventure, st.session_state.review_priority,
         semantic_similarity=context.get("semantic_similarity"),
         availability_score=context.get("availability_alignment", 0.5),
         components=context,
-    )
-    reasons = with_cf_reason(reasons, payload)
-    why_html = "".join(
-        f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong> — {html.escape(r["text"])}</div>'
-        for r in reasons
-    )
+    ), payload, limit=2)
+    why_html = "".join(f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong> · {html.escape(r["text"])}</div>'
+                       for r in reasons)
 
     with st.container(key=f"tonight_hero_{title}"):
-        poster_col, info_col = st.columns([1, 1.55], gap="large")
+        poster_col, info_col = st.columns([1, 3.6], gap="medium")
         with poster_col:
             st.markdown(poster_html, unsafe_allow_html=True)
         with info_col:
-            meta = " · ".join(str(x) for x in (year, genre) if x)
             st.markdown(
+                '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
-                f'<div class="tonight-match">{match}% iCinema Match</div>'
-                f'<div class="tonight-line">IMDb {imdb_text} · RT {rt_text}</div>'
-                f'<div class="tonight-line">{html.escape(watch_text)}</div>'
-                f'{fit_html}'
-                f'<div class="tonight-hook">{html.escape(quick_card_description(movie))}</div>'
-                f'<div class="tonight-synopsis">{html.escape(expanded_card_description(movie))}</div>'
-                f'<div class="tonight-why-label">Why it’s tonight’s pick</div>{why_html}',
+                f'<div class="tonight-badges"><span class="tonight-match">{match}% iCinema Match</span>{fit}</div>'
+                f'<div class="tonight-line">{watch_html}</div>'
+                f'<div class="tonight-hook">{html.escape(quick_card_description(movie, limit=150))}</div>'
+                f'<div class="tonight-whys">{why_html}</div>'
+                '</div>',
                 unsafe_allow_html=True,
             )
-            st.markdown('<div style="height:.9rem"></div>', unsafe_allow_html=True)
-            a, b, c = st.columns(3, gap="small")
-            with a:
-                st.button("Save", key=f"tonight_save_{title}", type="primary", use_container_width=True,
-                          on_click=save_showroom_slot, args=(row_name, 0))
-            with b:
+            last_skip = st.session_state.get("tonight_last_skip")
+            with st.container(key=f"tonight_actions_{title}"):
+              cols = st.columns([1.7, 1, 1, 1, 1], gap="small")
+              with cols[0]:
+                if options:
+                    label, _, url = options[0]
+                    st.link_button(f"▶ {label}", url, type="primary", use_container_width=True)
+                else:
+                    st.link_button("▶ Where to watch", availability.get("url") or
+                                   "https://www.justwatch.com/us/search?q=" + quote_plus(str(movie.get("title", ""))),
+                                   type="primary", use_container_width=True)
+              with cols[1]:
+                st.button("Save", key=f"tonight_save_{title}", use_container_width=True,
+                          on_click=tonight_save, args=(title, movie))
+              with cols[2]:
                 st.button("Seen", key=f"tonight_seen_{title}", use_container_width=True,
-                          on_click=seen_showroom_slot, args=(row_name, 0))
-            with c:
+                          on_click=tonight_seen, args=(title, movie))
+              with cols[3]:
                 st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
-                          on_click=skip_showroom_slot, args=(row_name, 0))
+                          on_click=tonight_skip, args=(title, movie))
+              with cols[4]:
+                if last_skip:
+                    st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
+                              help=f"Bring back {last_skip}", on_click=tonight_undo)
     persist_profile_if_needed()
 
 
@@ -6280,9 +6479,9 @@ def render_showroom_fragment(p):
                 "cf":cf_by_title.get(movie["title"]),
                 "model_match":model_match_by_title.get(movie["title"],match),
             })
+    st.session_state.tonight_pool=[m["title"] for _,m in tonight_queue]
+    st.session_state.showroom_undo={}
     if tonight_queue:
-        queues["Tonight's Pick"]=[m["title"] for _,m in tonight_queue]
-        slots[_showroom_slot_key("Tonight's Pick",0)]=tonight_queue[0][1]["title"]
         for match,movie in tonight_queue:
             payloads.setdefault(movie["title"],{
                 "match":match,
@@ -6309,7 +6508,6 @@ def render_showroom_fragment(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        render_tonight_header()
         render_tonight_pick_fragment()
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
@@ -6349,6 +6547,7 @@ def render_showroom_fragment(p):
         saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         saved_identity_map = get_movie_identity_batch(saved_identity_keys)
         saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+        saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
         if not movies:st.caption("Nothing saved yet.")
         else:
             cols=st.columns(4, gap="medium")
@@ -6361,6 +6560,7 @@ def render_showroom_fragment(p):
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
                     movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
+                    st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
                         st.button(

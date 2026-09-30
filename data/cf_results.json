@@ -1,30 +1,62 @@
 {
+  "dataset": "ml-32m",
+  "held_out_users": 3000,
   "full": {
     "popularity": {
-      "recall@10": 0.06654253492855823,
-      "ndcg@10": 0.06246712059004996,
-      "hit@1": 0.07487520798668885,
-      "median_recs_to_first_hit": 33.0
+      "recall@10": 0.06599074074074074,
+      "ndcg@10": 0.059572154734571746,
+      "hit@1": 0.056666666666666664,
+      "median_recs_to_first_hit": 31.5
     },
     "cf": {
-      "recall@10": 0.07916765707947072,
-      "ndcg@10": 0.0655845130678149,
-      "hit@1": 0.051580698835274545,
-      "median_recs_to_first_hit": 21.0
+      "recall@10": 0.07126309523809524,
+      "ndcg@10": 0.06070104301795777,
+      "hit@1": 0.057666666666666665,
+      "median_recs_to_first_hit": 27.0
     }
   },
   "three_likes": {
     "popularity": {
-      "recall@10": 0.06654253492855823,
-      "ndcg@10": 0.06246712059004996,
-      "hit@1": 0.07487520798668885,
-      "median_recs_to_first_hit": 33.0
+      "recall@10": 0.06599074074074074,
+      "ndcg@10": 0.059572154734571746,
+      "hit@1": 0.056666666666666664,
+      "median_recs_to_first_hit": 31.5
     },
     "cf": {
-      "recall@10": 0.08938673639172807,
-      "ndcg@10": 0.08104357340521146,
-      "hit@1": 0.09151414309484193,
-      "median_recs_to_first_hit": 22.0
+      "recall@10": 0.08202883597883598,
+      "ndcg@10": 0.07552535867189754,
+      "hit@1": 0.08933333333333333,
+      "median_recs_to_first_hit": 29.0
     }
-  }
+  },
+  "bootstrap_three_likes_vs_popularity": [
+    {
+      "metric": "Recall@10",
+      "difference": "+0.016",
+      "ci95": "+0.008 to +0.023",
+      "cf_win_share": 1.0,
+      "significant": true
+    },
+    {
+      "metric": "NDCG@10",
+      "difference": "+0.016",
+      "ci95": "+0.009 to +0.023",
+      "cf_win_share": 1.0,
+      "significant": true
+    },
+    {
+      "metric": "Hit@1",
+      "difference": "+3.3%",
+      "ci95": "+2.0% to +4.6%",
+      "cf_win_share": 1.0,
+      "significant": true
+    },
+    {
+      "metric": "Recs to first loved movie (median, fewer is better)",
+      "difference": "2 fewer",
+      "ci95": "-2 to 7 fewer",
+      "cf_win_share": 0.8555,
+      "significant": false
+    }
+  ]
 }
