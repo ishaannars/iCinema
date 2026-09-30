@@ -201,7 +201,7 @@ def main():
     def first_hit(m):
         v = m["median_recs_to_first_hit"]
         return f">{FIRST_HIT_DEPTH}" if v > FIRST_HIT_DEPTH else f"{v:.0f}"
-    table = ("| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Pick) | Median recs to first loved movie |\n"
+    table = ("| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |\n"
              "|---|---|---|---|---|\n" + "\n".join(
         f"| {name} | {m['recall@10']:.3f} | {m['ndcg@10']:.3f} | {m['hit@1']:.1%} | {first_hit(m)} |"
         for name, m in rows))

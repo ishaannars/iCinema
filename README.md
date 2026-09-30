@@ -1,6 +1,6 @@
 # iCinema — ML Movie Recommendation System
 
-I kept finding myself spending too much time deciding what movie to watch next, so I built iCinema to shorten the path from "what should I watch?" to pressing play. It personalizes from your first few likes, keeps learning from what you save, skip, and watch, gives you one confident Tonight's Pick on the services you already have, and takes you to that service in one tap. Please feel free to try it out and share any feedback.
+I kept finding myself spending too much time deciding what movie to watch next, so I built iCinema to shorten the path from "what should I watch?" to pressing play. It personalizes from your first few likes, keeps learning from what you save, skip, and watch, gives you one confident Tonight's Show on the services you already have, and takes you to that service in one tap. Please feel free to try it out and share any feedback.
 
 The system combines:
 - **Collaborative filtering pretrained on MovieLens** so recommendations are personalized from your first few likes, not weeks of history
@@ -20,7 +20,7 @@ The system combines:
 
 **The supervised layer adds per-user learning.** After 50 Save/Skip outcomes (12+ of each), Logistic Regression starts learning from your behavior; after 100 (24+ of each), Gradient Boosting is compared and the better model on a chronological holdout is used. The collaborative-filtering score is one of its features, so it learns how much to trust that signal for you.
 
-**Tonight's Pick** shows your single best match as one compact card with a one-tap **Watch on …** button, preferring the streaming services you choose and falling back to any service so there is always an answer. Your services also make titles you can watch tonight rank as more convenient across every row.
+**Tonight's Show** shows your single best match as one compact card with a one-tap **Watch on …** button, preferring the streaming services you choose and falling back to any service so there is always an answer. Your services also make titles you can watch tonight rank as more convenient across every row.
 
 User feedback is stored locally in the browser, so recommendations adapt over time without an account or central user database.
 
@@ -29,7 +29,7 @@ User feedback is stored locally in the browser, so recommendations adapt over ti
 <!-- RESULTS:START -->
 **Offline evaluation** — MovieLens (ml-32m), time-based split, 3,000 held-out users, ratings ≥ 4 as positives.
 
-| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Pick) | Median recs to first loved movie |
+| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
 | Popularity baseline | 0.066 | 0.060 | 5.7% | 32 |
 | Collaborative filtering (full history) | 0.071 | 0.061 | 5.8% | 27 |
@@ -61,7 +61,7 @@ Collaborative filtering (truncated SVD on implicit feedback) · cold-start fold-
 
 ## Product Features
 
-- Tonight's Pick with your streaming services
+- Tonight's Show with your streaming services
 - One-tap links from any recommendation to the service that streams it
 - Personalized movie Showroom
 - "Why this match?" explanations

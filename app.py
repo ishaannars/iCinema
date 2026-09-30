@@ -4596,8 +4596,7 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
 .showroom-row-header.first{margin-top:0 !important;}
 .showroom-row-header:not(.tonight-row-header):not(.first){margin-top:1.2rem !important;}
 /* Services picker type matches the Tonight's Pick heading. */
-.st-key-services_picker div[data-testid="stPopover"] button p,
-.st-key-services_picker div[data-testid="stPopover"] button span{
+.st-key-services_picker div[data-testid="stPopover"] button p{
     font-family:var(--ui-font) !important;font-weight:760 !important;letter-spacing:-.02em !important;font-size:.78rem !important;
 }
 div[data-testid="stPopoverBody"] .services-help{font-family:var(--ui-font) !important;font-weight:450 !important;letter-spacing:-.01em !important;font-size:.8rem !important;}
@@ -4646,6 +4645,23 @@ div .movie-summary-label{
     font-family:var(--ui-font) !important;font-size:.66rem !important;font-weight:620 !important;
     line-height:1.4 !important;letter-spacing:-.004em !important;color:var(--muted) !important;
 }
+
+/* V5.175 — every action button label dead-center (same rule that already centered card Skip),
+   profile titles aligned with the text inside the bubbles. */
+[class*="st-key-save_"] button,[class*="st-key-seen_"] button,[class*="st-key-skip_"] button,
+[class*="st-key-undo_"] button,[class*="st-key-tonight_"] button,[class*="st-key-savedseen_"] button,
+[class*="st-key-unsave_"] button,[class*="st-key-like_"] button,[class*="st-key-fav_"] button{
+    display:flex !important;align-items:center !important;justify-content:center !important;
+    padding-top:0 !important;padding-bottom:0 !important;line-height:1 !important;
+}
+[class*="st-key-save_"] button *,[class*="st-key-seen_"] button *,[class*="st-key-skip_"] button *,
+[class*="st-key-undo_"] button *,[class*="st-key-tonight_"] button *,[class*="st-key-savedseen_"] button *,
+[class*="st-key-unsave_"] button *,[class*="st-key-like_"] button *,[class*="st-key-fav_"] button *{
+    display:flex !important;align-items:center !important;justify-content:center !important;
+    margin:0 !important;padding:0 !important;line-height:1 !important;text-align:center !important;
+}
+/* Section titles start where the bubble text starts (bubble border 1px + inner padding). */
+.profile-label{padding-left:calc(.66rem + 1px) !important;}
 
 </style>
 """, unsafe_allow_html=True)
@@ -4976,11 +4992,12 @@ def with_cf_reason(reasons, payload, limit=3):
     if isinstance(cf, (int, float)) and cf >= 0.65:
         anchor = closest_liked((payload or {}).get("movie"), _cf_signals())
         if anchor:
-            reason = {"label": f"Loved by fans of {anchor}",
-                      "text": f"People who loved {anchor} rated this highly too."}
+            # Embedding similarity means the two movies are loved by the same kinds of viewers.
+            reason = {"label": f"Loved by fans of “{anchor}”",
+                      "text": f"Viewers who loved “{anchor}” tend to love this too."}
         else:
             reason = {"label": "Loved by viewers like you",
-                      "text": "People who liked the same movies you did rated this highly."}
+                      "text": "Viewers who liked the movies you liked tend to love this too."}
         reasons = [reason] + reasons
     return reasons[:limit]
 
@@ -5588,7 +5605,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             return f"95% CI {b.get('ci95', '—')}" + (" · significant" if b.get("significant") else "")
         offline_cards = "".join([
             _card(f"{cf3.get('hit@1', 0)*100:.1f}% vs {pop.get('hit@1', 0)*100:.1f}%",
-                  f"Tonight's Pick hit rate vs. popularity ({_lift('hit@1')}) · {_sig('Hit@1')}"),
+                  f"Tonight's Show hit rate vs. popularity ({_lift('hit@1')}) · {_sig('Hit@1')}"),
             _card(_lift("ndcg@10"), f"Ranking quality, NDCG@10 · {_sig('NDCG@10')}"),
             _card(_lift("recall@10"), f"Loved movies in the top 10, Recall@10 · {_sig('Recall@10')}"),
         ])
@@ -6332,7 +6349,7 @@ def _render_services_picker(services):
     if "tonight_services_picker" not in st.session_state:
         st.session_state.tonight_services_picker = list(services)
     with st.container(key="services_picker"), st.popover(label, use_container_width=True):
-        st.markdown('<div class="services-help">Pick what you subscribe to. Tonight’s Pick updates as you tap.</div>',
+        st.markdown('<div class="services-help">Pick what you subscribe to. Tonight’s Show updates as you tap.</div>',
                     unsafe_allow_html=True)
         options = list(STREAMING_SERVICES)
         if hasattr(st, "pills"):
@@ -6365,7 +6382,7 @@ def render_tonight_pick_fragment():
     with head:
         st.markdown(
             '<div class="showroom-row-header tonight-row-header">'
-            '<div class="showroom-row-title">Tonight’s Pick</div>'
+            '<div class="showroom-row-title">Tonight’s Show</div>'
             f'<div class="row-model-note">{html.escape(note)}</div>'
             '</div>',
             unsafe_allow_html=True,

@@ -31,14 +31,14 @@ Final ranking blends collaborative filtering (35%) with content scoring (65%). O
 
 **Method.** Ratings are split by time for each user: earlier positives are used for training, the most recent 20% are held out as the test. This mirrors real use, where the model must predict what someone wants *next*. The key scenario gives the model only a user's 3 most recent training likes, matching iCinema's onboarding, and compares it with a popularity baseline that recommends the most-loved movies to everyone.
 
-**Metrics.** Recall@10 and NDCG@10 measure the top 10 recommendations. Hit@1 measures whether the single top recommendation (Tonight's Pick) was loved. "Recommendations to first loved movie" measures decision effort.
+**Metrics.** Recall@10 and NDCG@10 measure the top 10 recommendations. Hit@1 measures whether the single top recommendation (Tonight's Show) was loved. "Recommendations to first loved movie" measures decision effort.
 
 **Uncertainty.** A paired bootstrap resamples held-out users 2,000 times. A difference is marked significant when its 95% interval excludes zero.
 
 <!-- RESULTS:START -->
 **Offline evaluation** — MovieLens (ml-32m), time-based split, 3,000 held-out users, ratings ≥ 4 as positives.
 
-| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Pick) | Median recs to first loved movie |
+| Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
 | Popularity baseline | 0.066 | 0.060 | 5.7% | 32 |
 | Collaborative filtering (full history) | 0.071 | 0.061 | 5.8% | 27 |
