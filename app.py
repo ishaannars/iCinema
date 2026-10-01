@@ -4782,6 +4782,34 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-back_"] button p{font-size:.76rem !important;font-weight:650 !important;}
 .st-key-edit_preferences button,.st-key-reset_profile_tab button{min-height:2.4rem !important;border-radius:999px !important;}
 
+/* V5.187 — tighter Step 1 shelf; one shared nav-button style and spacing on every page */
+/* Step 1: title/year hug the poster, actions hug the year, roomier gap before the next poster. */
+.st-key-step1_shelf [data-testid="stVerticalBlock"]{gap:.45rem !important;}
+.st-key-step1_shelf div .poster-caption:not(.library-poster-caption){
+    height:auto !important;min-height:0 !important;max-height:none !important;margin:.5rem 0 0 !important;
+}
+.st-key-step1_shelf [data-testid="stColumn"] [data-testid="stHorizontalBlock"],
+.st-key-step1_shelf [data-testid="column"] [data-testid="stHorizontalBlock"]{margin-bottom:.95rem !important;}
+/* Nav rows (Back / Continue / Build / Enter): same height, shape, and type everywhere. */
+[class*="st-key-nav_row_"] [class*="st-key-"]{margin:0 !important;padding:0 !important;}
+[class*="st-key-nav_row_"] [data-testid="stHorizontalBlock"]{align-items:center !important;}
+[class*="st-key-nav_row_"] button{
+    width:100% !important;height:3.1rem !important;min-height:3.1rem !important;max-height:3.1rem !important;
+    padding:0 1rem !important;border-radius:16px !important;
+    display:flex !important;align-items:center !important;justify-content:center !important;
+}
+[class*="st-key-nav_row_"] button *{
+    display:flex !important;align-items:center !important;justify-content:center !important;
+    margin:0 !important;padding:0 !important;width:auto !important;line-height:1 !important;
+    text-align:center !important;white-space:nowrap !important;
+    font-size:.78rem !important;font-weight:650 !important;letter-spacing:-.004em !important;
+}
+/* Same visual gap (~1.25rem) between each page's last element and its nav row. */
+.st-key-nav_row_rate{margin-top:-.4rem !important;}
+.st-key-nav_row_taste{margin-top:.25rem !important;}
+.st-key-nav_row_more{margin-top:-.9rem !important;}
+.st-key-nav_row_profile{margin-top:-.8rem !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -6087,12 +6115,12 @@ def render_shelf_fragment():
         for m in shelf_movies if not m.get("poster_url")
     )
     shelf_poster_map = get_poster_batch(missing_posters) if missing_posters else {}
-    cols=st.columns(4)
+    shelf_box = st.container(key="step1_shelf")
+    cols=shelf_box.columns(4)
     for i,movie in enumerate(shelf_movies):
         title=movie["title"]
         with cols[i%4]:
             movie_thumb(movie, movie.get("poster_url") or shelf_poster_map.get(title))
-            st.markdown('<div class="shelf-action-gap"></div>', unsafe_allow_html=True)
             b1,b2,b3=st.columns([1,1.25,0.95], gap="small")
             with b1:
                 st.button(
@@ -6255,7 +6283,10 @@ def render_shelf_fragment():
                     )
 
     st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
-    st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", on_click=go_from_fragment, args=("taste",))
+    with st.container(key="nav_row_rate"):
+        cont, _ = st.columns([1.25, 6], gap="small")
+        with cont:
+            st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", use_container_width=True, on_click=go_from_fragment, args=("taste",))
 
 
     persist_from_fragment()
@@ -6356,13 +6387,12 @@ def render_taste_fragment():
                 on_click=set_adventure_level,
                 args=(value,),
             )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    back, cont, _ = st.columns([1, 1.25, 5], gap="small")
-    with back:
-        st.button("← Back", key="back_taste", use_container_width=True, on_click=go_from_fragment, args=("shelf",))
-    with cont:
-        st.button("Continue →", type="primary", key="continue_taste", use_container_width=True, on_click=go_from_fragment, args=("more",))
+    with st.container(key="nav_row_taste"):
+        back, cont, _ = st.columns([1, 1.25, 5], gap="small")
+        with back:
+            st.button("← Back", key="back_taste", use_container_width=True, on_click=go_from_fragment, args=("shelf",))
+        with cont:
+            st.button("Continue →", type="primary", key="continue_taste", use_container_width=True, on_click=go_from_fragment, args=("more",))
 
 
     persist_from_fragment()
@@ -6402,11 +6432,12 @@ def render_more_fragment():
 
     st.session_state.more_of = list(selected)
 
-    back, cont, _ = st.columns([1, 2.2, 4], gap="small")
-    with back:
-        st.button("← Back", key="back_more", use_container_width=True, on_click=go_from_fragment, args=("taste",))
-    with cont:
-        st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True, on_click=go_from_fragment, args=("profile",))
+    with st.container(key="nav_row_more"):
+        back, cont, _ = st.columns([1, 2.2, 4], gap="small")
+        with back:
+            st.button("← Back", key="back_more", use_container_width=True, on_click=go_from_fragment, args=("taste",))
+        with cont:
+            st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True, on_click=go_from_fragment, args=("profile",))
 
     # Step 3 selections are queued in session state and persisted on the page-level
     # transition to Profile. Avoid rendering the localStorage bridge inside this
@@ -6582,7 +6613,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         ]},
         "cf_affinity":round(float(payload.get("cf") if payload.get("cf") is not None else 0.5),6),
         "candidate_source":movie.get("candidate_source"),
-        "model_version":"v5.166",
+        "model_version":"v5.187",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -6862,7 +6893,7 @@ def render_tonight_pick_fragment():
         availability_score=service_availability_utility(availability),
     )
     context = {
-        "row": "Tonight's Pick", "position": 1, "match": int(payload.get("model_match") or match),
+        "row": "Tonight's Show", "position": 1, "match": int(payload.get("model_match") or match),
         "model_score": round(float(comps.get("raw_score", 0)), 6),
         "decision_utility": round(float(comps.get("decision_utility", comps.get("raw_score", 0))), 6),
         **{k: round(float(comps.get(k, .5)), 6) for k in [
@@ -7184,7 +7215,7 @@ def render_showroom_fragment(p):
                     **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
                     "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
                     "candidate_source":movie.get("candidate_source"),
-                    "model_version":"v5.166",
+                    "model_version":"v5.187",
                 }
         st.session_state.recommendation_context=recommendation_context
         record_impressions(st.session_state,recommendation_context)
@@ -7406,11 +7437,12 @@ elif screen=="profile":
     p=current_profile()
     render_cinema_profile(p)
 
-    back, cont, _ = st.columns([1, 2, 4], gap="small")
-    with back:
-        st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
-    with cont:
-        st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
+    with st.container(key="nav_row_profile"):
+        back, cont, _ = st.columns([1, 2, 4], gap="small")
+        with back:
+            st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
+        with cont:
+            st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
 
 elif screen=="showroom":
     logo()
