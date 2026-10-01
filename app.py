@@ -18,7 +18,7 @@ from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batc
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 from src.scroll_keeper import scroll_keeper
-from src.cf_model import user_vector, cf_affinity, closest_liked
+from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity
 from src.recommender import _calibrated_match_percent
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
@@ -4891,6 +4891,19 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-step1_selections [class*="st-key-selection_card_"]{margin:0 !important;}
 .st-key-step1_selections div[data-testid="stCaptionContainer"]{margin:0 !important;}
 
+/* V5.192 — Seen tab "What's next" bubble */
+[class*="st-key-whatsnext_"]{margin-top:.15rem !important;}
+.whatsnext-kicker{font-family:var(--ui-font);color:var(--muted2);font-size:.62rem;font-weight:760;
+    letter-spacing:.08em;text-transform:uppercase;margin:0 0 .6rem;}
+.whatsnext-pick{display:flex;gap:.75rem;align-items:flex-start;margin:0 0 .7rem;min-width:15rem;}
+.whatsnext-poster{flex:0 0 4.2rem;width:4.2rem;aspect-ratio:2 / 3;border-radius:10px;overflow:hidden;
+    border:1px solid var(--border);background:#0F1114;display:flex;align-items:center;justify-content:center;}
+.whatsnext-poster img{width:100%;height:100%;object-fit:cover;display:block;}
+.whatsnext-noimg{font-family:var(--ui-font);font-size:.5rem;font-weight:700;letter-spacing:.08em;color:rgba(243,240,234,.34);}
+.whatsnext-title{font-family:var(--ui-font);color:var(--ivory);font-size:.92rem;font-weight:780;letter-spacing:-.015em;line-height:1.2;}
+.whatsnext-meta{font-family:var(--ui-font);color:var(--muted);font-size:.68rem;font-weight:650;margin:.2rem 0 .4rem;}
+.whatsnext-why{font-family:var(--ui-font);color:var(--muted);font-size:.7rem;line-height:1.42;font-weight:500;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -5380,6 +5393,46 @@ def with_cf_reason(reasons, payload, limit=3):
         reasons = [reason] + reasons
     return reasons[:limit]
 
+def _tag_overlap(a, b):
+    ta = {str(t).casefold() for t in (a or {}).get("tags") or []}
+    tb = {str(t).casefold() for t in (b or {}).get("tags") or []}
+    return len(ta & tb) / len(ta | tb) if ta and tb else 0.0
+
+
+def whats_next_ranking(source, payloads, blocked):
+    """Candidates ranked by how well they follow `source`, the movie just watched.
+
+    60% similarity to that movie and 40% the viewer's own personalized match, so each
+    pick follows what they watched AND fits their taste. Similarity comes from the
+    MovieLens CF embeddings (the same viewers loved both movies). When the watched movie
+    is in MovieLens, only candidates with an embedding are compared, so CF and content
+    scores are never mixed; otherwise genre and tag overlap stand in.
+    Returns [(title, used_cf), ...], best first.
+    """
+    scored = []
+    for t, payload in (payloads or {}).items():
+        movie = (payload or {}).get("movie")
+        if not movie or t in blocked or t == (source or {}).get("title"):
+            continue
+        sim = item_similarity(movie, source)
+        used_cf = sim is not None
+        if sim is None:
+            same_genre = 1.0 if movie.get("genre") and movie.get("genre") == (source or {}).get("genre") else 0.0
+            sim = 0.5 * same_genre + 0.5 * _tag_overlap(movie, source)
+        score = 0.6 * sim + 0.4 * (float(payload.get("match") or 0) / 100.0)
+        scored.append((score, t, used_cf))
+    if any(cf for _, _, cf in scored):
+        scored = [x for x in scored if x[2]]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [(t, cf) for _, t, cf in scored]
+
+
+def whats_next_another(source_title):
+    offsets = dict(st.session_state.get("whats_next_offset") or {})
+    offsets[source_title] = int(offsets.get(source_title, 0)) + 1
+    st.session_state.whats_next_offset = offsets
+
+
 def service_availability_utility(availability):
     """Availability value that respects the viewer's chosen services.
 
@@ -5838,6 +5891,25 @@ def _hook_variants(sentence):
     return variants
 
 
+_SCENE_SETTING = re.compile(
+    r"^(?:it['’]s|it is|it was)\s+(?:the\s+)?(?:\d{4}s?|year|summer|winter|spring|fall|autumn|"
+    r"early|late|mid|eve|night|day|end|dawn|future|era|age)\b"
+    r"|^the year is\b|^set (?:in|during|against)\b|^welcome to\b|^once upon a time\b",
+    re.IGNORECASE,
+)
+
+
+def _is_scene_setting(sentence):
+    """Opening narration ("It's the 1940s, and ...") sets a scene but says nothing about the story."""
+    return bool(_SCENE_SETTING.match(str(sentence or "").strip()))
+
+
+def _ends_on_bare_infinitive(text):
+    """Cuts like "... hope to join" drop the object and read as unfinished."""
+    words = [w.casefold().strip(".,;:!?\"'") for w in str(text or "").split()]
+    return len(words) >= 2 and words[-2] == "to"
+
+
 def quick_card_description(movie, limit=110):
     """One real, specific, complete line about the movie. Never cut mid-sentence.
 
@@ -5857,14 +5929,54 @@ def quick_card_description(movie, limit=110):
     for pos, sentence in enumerate(sentences[:4]):
         if pos > 0 and sentence.split()[0].casefold().strip(",") in _HOOK_PRONOUN_START:
             continue  # later sentences that lean on earlier context read as fragments
-        complete = [c for c, is_whole in _hook_variants(sentence) if _hook_is_complete(c, limit, need_verb=not is_whole)]
+        if _is_scene_setting(sentence):
+            continue  # scene-setting narration is a last resort, not a hook
+        complete = [
+            c for c, is_whole in _hook_variants(sentence)
+            if _hook_is_complete(c, limit, need_verb=not is_whole)
+            and (is_whole or not _ends_on_bare_infinitive(c))
+        ]
         if complete:
             return clean_movie_copy(max(complete, key=len), ensure_terminal=True)
+
+    # TMDB's own tagline (fetched with the movie details we already request) beats narration.
+    tagline = clean_movie_copy(movie.get("tagline"), ensure_terminal=True)
+    if tagline and 12 <= len(tagline) <= limit:
+        return tagline
 
     first = clean_movie_copy(sentences[0] if sentences else full, ensure_terminal=True)
     if len(first) <= limit:
         return first
     return "Tap for the premise."
+
+
+def tonight_description(movie, limit=160):
+    """Tonight's Show line: the one-line hook when it says something about the story,
+    otherwise the opening premise in complete sentences (the hero card has room).
+
+    Fixes lines like "It's the 1940s, and the notorious Axe Gang terrorizes Shanghai.",
+    scene-setting narration that the hook logic only uses as a last resort.
+    """
+    hook = quick_card_description(movie, limit=limit)
+    full = clean_movie_copy((movie or {}).get("overview"), ensure_terminal=False)
+    if not full:
+        return hook
+    sentences = [x.strip().rstrip(".;:, ") for x in re.split(r"(?<=[.!?])\s+", full) if x.strip()]
+    if len(sentences) < 2:
+        return hook
+    first = clean_movie_copy(sentences[0], ensure_terminal=True)
+    weak = hook == "Tap for the premise." or (hook == first and _is_scene_setting(sentences[0]))
+    if not weak:
+        return hook
+    second = sentences[1]
+    if len(first) + len(second) > 260:
+        # Keep the second sentence's opening clause: after the scene, "...hope to join" reads fine.
+        m = re.search(r",\s+(?:but|and|while|until|when|as|only)\b|;\s+|\s+[–—]\s+", second)
+        if m and len(second[:m.start()].split()) >= 4:
+            second = second[:m.start()]
+        else:
+            return first
+    return f"{first} {clean_movie_copy(second, ensure_terminal=True)}"
 
 
 def expanded_card_description(movie, max_chars=320):
@@ -6786,7 +6898,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
 
-    quick_desc = quick_card_description(movie, limit=92)
+    quick_desc = quick_card_description(dict(movie, tagline=identity.get("tagline")), limit=92)
     expanded_desc = expanded_card_description(movie)
     summary_id = f"movie-summary-{row_index}-{slot_index}"
     st.markdown(
@@ -7032,7 +7144,7 @@ def render_tonight_pick_fragment():
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
                 f'<div class="tonight-badges"><span class="tonight-match">{match}% match</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
-                f'<div class="tonight-hook">{html.escape(quick_card_description(movie, limit=160))}</div>'
+                f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline")), limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
                 '</div>',
                 unsafe_allow_html=True,
@@ -7459,6 +7571,20 @@ def render_showroom_fragment(p):
                                                     for m in movies)) if movies else {}
         if not movies:st.caption("Nothing marked as seen yet.")
         else:
+            # What's next: one personalized follow-up per Seen movie, never the same pick
+            # twice on this tab, never something already saved, seen, skipped or disliked.
+            wn_payloads = st.session_state.get("showroom_payloads") or {}
+            wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
+                          | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()))
+            wn_offsets = st.session_state.get("whats_next_offset") or {}
+            wn_taken, wn_picks = set(), {}
+            for m in movies:
+                ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
+                if ranked:
+                    pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
+                    wn_picks[m["title"]] = pick
+                    wn_taken.add(pick[0])
+            wn_identity = st.session_state.get("showroom_identity_cache") or {}
             cols=st.columns(4, gap="medium")
             for i,m in enumerate(movies):
                 with cols[i % 4]:
@@ -7474,6 +7600,39 @@ def render_showroom_fragment(p):
                         # Hover × in the poster's top-right corner: remove an accidental Seen.
                         st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
                                   on_click=remove_from_seen, args=(m["title"],))
+                        pick = wn_picks.get(m["title"])
+                        if pick:
+                            nt, used_cf = pick
+                            npay = wn_payloads.get(nt) or {}
+                            nmovie = npay.get("movie") or {}
+                            nid = wn_identity.get(nt) or {}
+                            nposter = nid.get("poster_url") or nmovie.get("poster_url")
+                            ntitle = nid.get("display_title") or nmovie.get("title") or nt
+                            nyear = nid.get("year") or nmovie.get("year") or ""
+                            why = (f"Viewers who loved “{m['title']}” tend to love this too."
+                                   if used_cf else f"Shares the genre and tone of “{m['title']}”.")
+                            with st.container(key=f"whatsnext_{i}"):
+                                with st.popover("What’s next", use_container_width=True):
+                                    img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
+                                           if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
+                                    st.markdown(
+                                        f'<div class="whatsnext-kicker">Watch next after “{html.escape(m["title"])}”</div>'
+                                        f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
+                                        f'<div class="whatsnext-info">'
+                                        f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
+                                        f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
+                                        f' · {int(npay.get("match") or 0)}% match</div>'
+                                        f'<div class="whatsnext-why">{html.escape(why)} It also fits your taste profile.</div>'
+                                        f'</div></div>',
+                                        unsafe_allow_html=True,
+                                    )
+                                    a, b = st.columns(2, gap="small")
+                                    with a:
+                                        st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
+                                                  on_click=save_movie, args=(nt, nmovie))
+                                    with b:
+                                        st.button("Another pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
+                                                  on_click=whats_next_another, args=(m["title"],))
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)

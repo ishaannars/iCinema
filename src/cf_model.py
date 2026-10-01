@@ -113,3 +113,19 @@ def closest_liked(movie, signals, allowed=FAN_ACTIONS):
         if score > best_score:
             best, best_score = liked.get("title"), score
     return best
+
+
+def item_similarity(a, b):
+    """0–1 cosine similarity between two movies' embeddings, or None if either is unknown.
+
+    Used by Watch next: a high score means the same viewers tend to love both movies.
+    """
+    model = _load()
+    i, j = _index(a), _index(b)
+    if model is None or i is None or j is None or i == j:
+        return None
+    emb = model[0]
+    denom = float(np.linalg.norm(emb[i]) * np.linalg.norm(emb[j]))
+    if denom <= 0:
+        return None
+    return (float(emb[i] @ emb[j]) / denom + 1.0) / 2.0
