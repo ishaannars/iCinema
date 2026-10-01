@@ -4817,11 +4817,26 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-step1_shelf [data-testid="stMarkdownContainer"],
 .st-key-step1_shelf [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]){margin-bottom:0 !important;}
 .st-key-step1_shelf div .poster-caption:not(.library-poster-caption){margin:.5rem 0 .1rem !important;}
-/* Each card is 84% of its column, left-aligned so the first card lines up with the heading. */
-.st-key-step1_shelf .poster{width:84% !important;}
-.st-key-step1_shelf div .poster-caption:not(.library-poster-caption){width:84% !important;}
+/* V5.189 — five cards per row, full column width, close together; even action row. */
+.st-key-step1_shelf > div > [data-testid="stHorizontalBlock"]{column-gap:.8rem !important;}
 .st-key-step1_shelf [data-testid="stColumn"] [data-testid="stHorizontalBlock"],
-.st-key-step1_shelf [data-testid="column"] [data-testid="stHorizontalBlock"]{width:84% !important;max-width:84% !important;}
+.st-key-step1_shelf [data-testid="column"] [data-testid="stHorizontalBlock"]{
+    width:100% !important;max-width:100% !important;column-gap:.32rem !important;gap:.32rem !important;
+}
+.st-key-step1_shelf [data-testid="stColumn"] [data-testid="stColumn"],
+.st-key-step1_shelf [data-testid="column"] [data-testid="column"]{min-width:0 !important;}
+.st-key-step1_shelf [class*="st-key-like_"] button,
+.st-key-step1_shelf [class*="st-key-fav_"] button,
+.st-key-step1_shelf [class*="st-key-skip_shelf_"] button{
+    width:100% !important;min-width:0 !important;height:1.9rem !important;min-height:1.9rem !important;
+    padding:0 .15rem !important;border-radius:999px !important;
+}
+.st-key-step1_shelf [class*="st-key-like_"] button *,
+.st-key-step1_shelf [class*="st-key-fav_"] button *,
+.st-key-step1_shelf [class*="st-key-skip_shelf_"] button *{
+    font-size:.64rem !important;font-weight:690 !important;white-space:nowrap !important;
+}
+.st-key-step1_shelf .poster-caption-title{font-size:1rem !important;}
 
 </style>
 """, unsafe_allow_html=True)
@@ -5035,7 +5050,7 @@ def ensure_rotating_shelf():
     else:
         st.session_state.shelf_movies = [m for m in st.session_state.shelf_movies if m.get("title") not in selected]
 
-    while len(st.session_state.shelf_movies) < 12:
+    while len(st.session_state.shelf_movies) < 15:
         replacement = _next_shelf_movie()
         if not replacement:
             break
@@ -6129,12 +6144,12 @@ def render_shelf_fragment():
     )
     shelf_poster_map = get_poster_batch(missing_posters) if missing_posters else {}
     shelf_box = st.container(key="step1_shelf")
-    cols=shelf_box.columns(4)
+    cols=shelf_box.columns(5, gap="small")
     for i,movie in enumerate(shelf_movies):
         title=movie["title"]
-        with cols[i%4]:
+        with cols[i%5]:
             movie_thumb(movie, movie.get("poster_url") or shelf_poster_map.get(title))
-            b1,b2,b3=st.columns([1,1.25,0.95], gap="small")
+            b1,b2,b3=st.columns([1,1.3,1], gap="small")
             with b1:
                 st.button(
                     "Like",
