@@ -41,11 +41,24 @@ PHRASE_FIXES = [
 
 COMING_NEXT = """## Coming Next
 
-- **Refine chips** that re-rank your personalized picks (Critics' favorites, Hidden gems, Under 2 hours) instead of plain filters.
+- **For Critics tab:** search the full catalog and narrow it by IMDb, Rotten Tomatoes, Metacritic, and runtime. Refine chips (Critics' favorites, Hidden gems, Under 2 hours) re-rank results with your taste profile instead of acting as plain filters.
 - **"Only my services" mode** so every row shows only what you can play tonight, with no repeats across rows.
 - **Rate what you've watched:** thumbs up or down on Seen movies, separating intent (Save) from post-watch satisfaction.
+- **Add likes from the Showroom:** search for movies you already love and add them anytime, not just during onboarding.
+
+### Evaluation and code quality
+
+- **Stronger offline baseline.** The collaborative-filtering results are compared only with a popularity baseline. Next is adding item-kNN and ALS comparisons so the lift is measured against standard recommenders.
+- **Refactor.** `app.py` is about 7,000 lines with layered CSS from rapid iteration. Next is splitting it into modules and consolidating the styles.
 
 """
+
+WHATS_NEXT_FEATURE = "- \"What's next\" under every Seen movie: a personalized follow-up pick, with Save and Another pick"
+WHATS_NEXT_DETAIL = ("- **What's next.** For each Seen movie, candidates are scored 60% on collaborative-filtering similarity "
+                     "to that movie (the same MovieLens viewers loved both) and 40% on the viewer's personalized match. When the "
+                     "watched movie isn't in MovieLens, genre and tag overlap stand in. Each Seen movie gets a different pick, and "
+                     "nothing already saved, seen, skipped, or disliked is suggested. What's next has not been evaluated offline; "
+                     "the reported results cover the collaborative-filtering ranking only.")
 
 DETAILS = """## Ranking Details
 
@@ -96,9 +109,23 @@ def main():
         if old in text and new not in text:
             text = text.replace(old, new, 1)
             changed = True
-    if "## Coming Next" not in text and "## Retraining the Collaborative-Filtering Model" in text:
+    if "## Coming Next" in text and COMING_NEXT not in text:
+        # Replace the whole section (up to the next top-level heading) with the current list.
+        start = text.index("## Coming Next")
+        nxt = text.find("\n## ", start + 1)
+        text = text[:start] + COMING_NEXT + (text[nxt + 1:] if nxt != -1 else "")
+        changed = True
+    elif "## Coming Next" not in text and "## Retraining the Collaborative-Filtering Model" in text:
         text = text.replace("## Retraining the Collaborative-Filtering Model",
                             COMING_NEXT + "## Retraining the Collaborative-Filtering Model", 1)
+        changed = True
+    if WHATS_NEXT_FEATURE not in text:
+        anchor = "- Browser-local preference persistence with no account required"
+        if anchor in text:
+            text = text.replace(anchor, WHATS_NEXT_FEATURE + "\n" + anchor, 1)
+            changed = True
+    if WHATS_NEXT_DETAIL not in text and "- **Live metrics.**" in text:
+        text = text.replace("- **Live metrics.**", WHATS_NEXT_DETAIL + "\n- **Live metrics.**", 1)
         changed = True
     if changed:
         README.write_text(text)

@@ -68,6 +68,7 @@ The Profile tab keeps this short for viewers; here is the full picture.
 - **Behavioral model.** After 50 Save/Skip outcomes (12+ of each), Logistic Regression trains on the viewer's own feedback; Gradient Boosting is compared at 100 and the better model on a chronological holdout is used. It contributes 22% of the score. Recent choices weigh more (120-day half-life), display position is excluded so exposure isn't mistaken for taste, and Undo removes a skip from training data.
 - **Freshness for returning viewers.** Impression discounting lowers a title a little for each earlier visit where it was shown but got no Save, Seen, or Skip (capped at five visits), and a small per-visit shuffle varies near-ties. Both are stable within a visit, so rows never jump while browsing. The candidate pool also widens: each return visit starts deeper in TMDB's catalog, and dedicated channels pull the most popular and best-rated titles in the viewer's top two genres.
 - **Explicit vs. implicit negatives.** Skip means "not now" and is a weak signal; "Not for me" (in each card's explanation and beside Tonight's Show) is an explicit dislike. It pushes the content profile and collaborative-filtering taste vector away about four times harder, counts as a double-weight negative label for the behavioral model, and the title never returns. Undo reverses either one.
+- **What's next.** For each Seen movie, candidates are scored 60% on collaborative-filtering similarity to that movie (the same MovieLens viewers loved both) and 40% on the viewer's personalized match. When the watched movie isn't in MovieLens, genre and tag overlap stand in. Each Seen movie gets a different pick, and nothing already saved, seen, skipped, or disliked is suggested. What's next has not been evaluated offline; the reported results cover the collaborative-filtering ranking only.
 - **Live metrics.** NDCG@4 and MRR appear after 5 Saves; calibration error after 20 Saves and Skips, so a handful of clicks never shows a misleading "perfect" score.
 - **Explanations.** Each card's reasons are the components that contributed most to that movie's score. "Loved by fans of …" names only movies the viewer liked, favorited, or saved, never ones merely marked Seen.
 
@@ -88,13 +89,20 @@ Collaborative filtering (truncated SVD on implicit feedback) · cold-start fold-
 - Streaming availability
 - IMDb and Rotten Tomatoes ratings
 - Hidden gems and controlled discovery
+- "What's next" under every Seen movie: a personalized follow-up pick, with Save and Another pick
 - Browser-local preference persistence with no account required
 
 ## Coming Next
 
-- **Refine chips** that re-rank your personalized picks (Critics' favorites, Hidden gems, Under 2 hours) instead of plain filters.
+- **For Critics tab:** search the full catalog and narrow it by IMDb, Rotten Tomatoes, Metacritic, and runtime. Refine chips (Critics' favorites, Hidden gems, Under 2 hours) re-rank results with your taste profile instead of acting as plain filters.
 - **"Only my services" mode** so every row shows only what you can play tonight, with no repeats across rows.
 - **Rate what you've watched:** thumbs up or down on Seen movies, separating intent (Save) from post-watch satisfaction.
+- **Add likes from the Showroom:** search for movies you already love and add them anytime, not just during onboarding.
+
+### Evaluation and code quality
+
+- **Stronger offline baseline.** The collaborative-filtering results are compared only with a popularity baseline. Next is adding item-kNN and ALS comparisons so the lift is measured against standard recommenders.
+- **Refactor.** `app.py` is about 7,000 lines with layered CSS from rapid iteration. Next is splitting it into modules and consolidating the styles.
 
 ## Retraining the Collaborative-Filtering Model
 

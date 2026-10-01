@@ -4904,6 +4904,13 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .whatsnext-meta{font-family:var(--ui-font);color:var(--muted);font-size:.68rem;font-weight:650;margin:.2rem 0 .4rem;}
 .whatsnext-why{font-family:var(--ui-font);color:var(--muted);font-size:.7rem;line-height:1.42;font-weight:500;}
 
+/* V5.193 — What's next buttons: small pills scaled to the poster. */
+[class*="st-key-whatsnext_save_"] button,[class*="st-key-whatsnext_more_"] button{
+    height:1.75rem !important;min-height:1.75rem !important;padding:0 .7rem !important;border-radius:999px !important;
+    display:flex !important;align-items:center !important;justify-content:center !important;}
+[class*="st-key-whatsnext_save_"] button *,[class*="st-key-whatsnext_more_"] button *{
+    font-size:.68rem !important;font-weight:690 !important;line-height:1 !important;margin:0 !important;white-space:nowrap !important;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -7626,7 +7633,8 @@ def render_showroom_fragment(p):
                                         f'</div></div>',
                                         unsafe_allow_html=True,
                                     )
-                                    a, b = st.columns(2, gap="small")
+                                    # Compact pills, about the poster's width, aligned under the poster.
+                                    a, b, _ = st.columns([1, 1.35, 4.2], gap="small")
                                     with a:
                                         st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
                                                   on_click=save_movie, args=(nt, nmovie))
