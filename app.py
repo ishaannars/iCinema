@@ -4808,7 +4808,20 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-nav_row_rate{margin-top:-.4rem !important;}
 .st-key-nav_row_taste{margin-top:.25rem !important;}
 .st-key-nav_row_more{margin-top:-.9rem !important;}
-.st-key-nav_row_profile{margin-top:-.8rem !important;}
+.st-key-nav_row_profile{margin-top:.15rem !important;}
+
+/* V5.188 — Step 1: smaller posters, and no overlap between the year and the action row.
+   Streamlit gives every markdown block a -1rem bottom margin; the old spacer element used to
+   absorb it, so without it the buttons slid up over the year. */
+.st-key-step1_shelf [data-testid="stMarkdown"],
+.st-key-step1_shelf [data-testid="stMarkdownContainer"],
+.st-key-step1_shelf [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]){margin-bottom:0 !important;}
+.st-key-step1_shelf div .poster-caption:not(.library-poster-caption){margin:.5rem 0 .1rem !important;}
+/* Each card is 84% of its column, left-aligned so the first card lines up with the heading. */
+.st-key-step1_shelf .poster{width:84% !important;}
+.st-key-step1_shelf div .poster-caption:not(.library-poster-caption){width:84% !important;}
+.st-key-step1_shelf [data-testid="stColumn"] [data-testid="stHorizontalBlock"],
+.st-key-step1_shelf [data-testid="column"] [data-testid="stHorizontalBlock"]{width:84% !important;max-width:84% !important;}
 
 </style>
 """, unsafe_allow_html=True)
