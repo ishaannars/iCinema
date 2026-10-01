@@ -4667,7 +4667,7 @@ div .movie-summary-label{
 /* V5.176 — the invisible profile-saver component no longer takes a layout row;
    Tonight's Show → Top Matches equals tabs → Tonight's Show. */
 div[data-testid="stElementContainer"]:has(iframe[title*="browser_storage"]),
-div[data-testid="stElementContainer"]:has(div[data-testid="stCustomComponentV1"]),
+div[data-testid="stElementContainer"]:has(iframe[title*="icinema_"]),
 div.element-container:has(iframe[title*="browser_storage"]){
     position:absolute !important;width:0 !important;height:0 !important;overflow:hidden !important;
     margin:0 !important;padding:0 !important;pointer-events:none !important;
@@ -4773,6 +4773,14 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-unseen_"] button:hover{border-color:rgba(243,240,234,.7) !important;background:rgba(17,19,21,.95) !important;}
 [class*="st-key-unseen_"] button p{margin:0 !important;font-size:.8rem !important;line-height:1 !important;color:var(--ivory) !important;font-weight:600 !important;}
 .library-ratings{margin:.3rem 0 .35rem !important;}
+
+/* V5.186 — Step 2: same heading style and spacing for all three questions; Back buttons match */
+.step2-question-next{margin-top:2.1rem !important;}
+.step2-question{margin-bottom:.55rem !important;}
+.pref-scale-clicks{margin-bottom:0 !important;}
+[class*="st-key-back_"] button{min-height:3.55rem !important;border-radius:18px !important;}
+[class*="st-key-back_"] button p{font-size:.76rem !important;font-weight:650 !important;}
+.st-key-edit_preferences button,.st-key-reset_profile_tab button{min-height:2.4rem !important;border-radius:999px !important;}
 
 </style>
 """, unsafe_allow_html=True)
@@ -5049,6 +5057,18 @@ def add_search_choice(kind):
     st.session_state.search_selected_movie = None
     st.session_state.search_selected_title = None
     queue_profile_save()
+
+def live_search_box():
+    """Results update as you type (debounced ~0.3s), like a search engine.
+    Falls back to the standard text box if the keyup component is unavailable."""
+    try:
+        from st_keyup import st_keyup
+        return st_keyup("Search movies", placeholder="Search by title", debounce=300,
+                        label_visibility="collapsed", key="movie_search_live") or ""
+    except Exception:
+        return st.text_input("Search movies", placeholder="Search by title",
+                             label_visibility="collapsed", key="movie_search_query")
+
 
 def remove_step1_selection(title):
     """Remove a Like/Favorite signal from Step 1 and persist the updated profile."""
@@ -6108,12 +6128,7 @@ def render_shelf_fragment():
         unsafe_allow_html=True
     )
 
-    search_query = st.text_input(
-        "Search movies",
-        placeholder="Search by title",
-        label_visibility="collapsed",
-        key="movie_search_query"
-    )
+    search_query = live_search_box()
 
     matches = []
     already_selected_matches = []
@@ -6291,7 +6306,7 @@ def render_taste_fragment():
             )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("#### What do you like to watch?")
+    st.markdown('<div class="step2-question step2-question-next">What do you like to watch?</div>', unsafe_allow_html=True)
     st.markdown('<div class="genre-helper">Select up to five genres</div>', unsafe_allow_html=True)
     selected=set(st.session_state.genres)
     genre_cols=st.columns(7, gap="small")
@@ -6307,7 +6322,7 @@ def render_taste_fragment():
                 args=(genre,),
             )
 
-    st.markdown("### How open are you to something different?")
+    st.markdown('<div class="step2-question step2-question-next">How open are you to something different?</div>', unsafe_allow_html=True)
 
     adventure_scale_map = [15, 32, 50, 68, 85]
     adventure_idx = min(range(5), key=lambda i: abs(adventure_scale_map[i] - st.session_state.adventure))
@@ -6343,7 +6358,11 @@ def render_taste_fragment():
             )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.button("Continue →", type="primary", key="continue_taste", on_click=go_from_fragment, args=("more",))
+    back, cont, _ = st.columns([1, 1.25, 5], gap="small")
+    with back:
+        st.button("← Back", key="back_taste", use_container_width=True, on_click=go_from_fragment, args=("shelf",))
+    with cont:
+        st.button("Continue →", type="primary", key="continue_taste", use_container_width=True, on_click=go_from_fragment, args=("more",))
 
 
     persist_from_fragment()
@@ -6383,7 +6402,11 @@ def render_more_fragment():
 
     st.session_state.more_of = list(selected)
 
-    st.button("Build My Cinema Profile →", type="primary", key="build_profile", on_click=go_from_fragment, args=("profile",))
+    back, cont, _ = st.columns([1, 2.2, 4], gap="small")
+    with back:
+        st.button("← Back", key="back_more", use_container_width=True, on_click=go_from_fragment, args=("taste",))
+    with cont:
+        st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True, on_click=go_from_fragment, args=("profile",))
 
     # Step 3 selections are queued in session state and persisted on the page-level
     # transition to Profile. Avoid rendering the localStorage bridge inside this
@@ -7339,7 +7362,12 @@ def render_showroom_fragment(p):
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         render_cinema_profile(p, include_insights=True, show_heading=True, tab_heading=True)
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
-        st.button("Reset Profile", key="reset_profile_tab", on_click=reset_profile_from_fragment)
+        edit, reset, _ = st.columns([1.5, 1.2, 4], gap="small")
+        with edit:
+            # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
+            st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
+        with reset:
+            st.button("Reset Profile", key="reset_profile_tab", use_container_width=True, on_click=reset_profile_from_fragment)
 
 
     pass  # saved once at the end of the full run
@@ -7378,7 +7406,11 @@ elif screen=="profile":
     p=current_profile()
     render_cinema_profile(p)
 
-    st.button("Enter My Showroom →", type="primary", key="enter_showroom", on_click=go, args=("showroom",))
+    back, cont, _ = st.columns([1, 2, 4], gap="small")
+    with back:
+        st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
+    with cont:
+        st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
 
 elif screen=="showroom":
     logo()
