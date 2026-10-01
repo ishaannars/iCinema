@@ -4710,8 +4710,8 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-tonight_undo_"] button p{font-weight:700 !important;}
 
 /* V5.179 — Step 1 Skip matches Like / Favorite */
-[class*="st-key-skip_shelf_"] button{min-height:1.96rem !important;height:1.96rem !important;padding:0 .3rem !important;border-radius:999px !important;}
-[class*="st-key-skip_shelf_"] button p{font-size:.69rem !important;font-weight:690 !important;}
+[class*="st-key-shelfskip_"] button{min-height:1.96rem !important;height:1.96rem !important;padding:0 .3rem !important;border-radius:999px !important;}
+[class*="st-key-shelfskip_"] button p{font-size:.69rem !important;font-weight:690 !important;}
 
 /* V5.180 — ratings source note under "How iCinema works" */
 .ratings-note{margin-top:.7rem !important;font-size:.74rem !important;color:var(--muted2) !important;}
@@ -4827,16 +4827,48 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-step1_shelf [data-testid="column"] [data-testid="column"]{min-width:0 !important;}
 .st-key-step1_shelf [class*="st-key-like_"] button,
 .st-key-step1_shelf [class*="st-key-fav_"] button,
-.st-key-step1_shelf [class*="st-key-skip_shelf_"] button{
+.st-key-step1_shelf [class*="st-key-shelfskip_"] button{
     width:100% !important;min-width:0 !important;height:1.9rem !important;min-height:1.9rem !important;
     padding:0 .15rem !important;border-radius:999px !important;
 }
 .st-key-step1_shelf [class*="st-key-like_"] button *,
 .st-key-step1_shelf [class*="st-key-fav_"] button *,
-.st-key-step1_shelf [class*="st-key-skip_shelf_"] button *{
+.st-key-step1_shelf [class*="st-key-shelfskip_"] button *{
     font-size:.64rem !important;font-weight:690 !important;white-space:nowrap !important;
 }
 .st-key-step1_shelf .poster-caption-title{font-size:1rem !important;}
+
+/* V5.190 — Step 1 "hamburger" cards: half-height poster crop, one-line titles,
+   and three identical action-button slots so every row lines up exactly. */
+.st-key-step1_shelf .poster{aspect-ratio:4 / 3 !important;border-radius:14px !important;}
+.st-key-step1_shelf .poster.has-image img{
+    object-fit:cover !important;object-position:center 30% !important;border-radius:13px !important;
+}
+.st-key-step1_shelf .poster-caption-title{
+    display:block !important;white-space:nowrap !important;overflow:hidden !important;
+    text-overflow:ellipsis !important;-webkit-line-clamp:unset !important;
+}
+.st-key-step1_shelf [class*="st-key-like_"],
+.st-key-step1_shelf [class*="st-key-fav_"],
+.st-key-step1_shelf [class*="st-key-shelfskip_"]{
+    margin:0 !important;padding:0 !important;height:1.9rem !important;min-height:1.9rem !important;
+    display:block !important;
+}
+.st-key-step1_shelf [data-testid="stColumn"] [data-testid="stHorizontalBlock"],
+.st-key-step1_shelf [data-testid="column"] [data-testid="stHorizontalBlock"]{align-items:flex-start !important;}
+.st-key-step1_shelf [data-testid="stColumn"] [data-testid="stColumn"] [data-testid="stVerticalBlock"],
+.st-key-step1_shelf [data-testid="column"] [data-testid="column"] [data-testid="stVerticalBlock"]{gap:0 !important;}
+.st-key-step1_shelf [class*="st-key-like_"] button,
+.st-key-step1_shelf [class*="st-key-fav_"] button,
+.st-key-step1_shelf [class*="st-key-shelfskip_"] button{
+    margin:0 !important;box-sizing:border-box !important;line-height:1 !important;
+}
+.st-key-step1_shelf [class*="st-key-like_"] button *,
+.st-key-step1_shelf [class*="st-key-fav_"] button *,
+.st-key-step1_shelf [class*="st-key-shelfskip_"] button *{
+    display:flex !important;align-items:center !important;justify-content:center !important;
+    margin:0 !important;padding:0 !important;line-height:1 !important;
+}
 
 </style>
 """, unsafe_allow_html=True)
@@ -5592,7 +5624,7 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None):
         caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
     st.markdown(
         poster_html
-        + f'<div class="{caption_class}"><div class="poster-caption-title">{title}</div>{year_html}</div>',
+        + f'<div class="{caption_class}"><div class="poster-caption-title" title="{title}">{title}</div>{year_html}</div>',
         unsafe_allow_html=True
     )
 
@@ -6132,7 +6164,7 @@ def render_shelf_fragment():
     logo()
     st.markdown(
         '<div class="page-top-heading">Step 1 of 3 — Rate the Shelf</div>'
-        '<div class="page-top-subtitle">Choose a few titles you already like. If none fit, search for one you know you enjoy.</div>',
+        '<div class="page-top-subtitle">Choose a few titles you already like. Skip any you don’t know, or search for one you enjoy.</div>',
         unsafe_allow_html=True,
     )
 
@@ -6169,8 +6201,7 @@ def render_shelf_fragment():
             with b3:
                 st.button(
                     "Skip",
-                    key=f"skip_shelf_{i}_{movie.get('tmdb_id') or title}",
-                    help="Don't know it? Show another movie.",
+                    key=f"shelfskip_{i}_{movie.get('tmdb_id') or title}",
                     use_container_width=True,
                     on_click=skip_shelf_movie,
                     args=(i,),
@@ -6641,7 +6672,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         ]},
         "cf_affinity":round(float(payload.get("cf") if payload.get("cf") is not None else 0.5),6),
         "candidate_source":movie.get("candidate_source"),
-        "model_version":"v5.187",
+        "model_version":"v5.190",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -6931,7 +6962,7 @@ def render_tonight_pick_fragment():
         ]},
         "cf_affinity": round(float(payload.get("cf") if payload.get("cf") is not None else 0.5), 6),
         "candidate_source": movie.get("candidate_source"),
-        "model_version": "v5.167",
+        "model_version":"v5.190",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -7243,7 +7274,7 @@ def render_showroom_fragment(p):
                     **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
                     "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
                     "candidate_source":movie.get("candidate_source"),
-                    "model_version":"v5.187",
+                    "model_version":"v5.190",
                 }
         st.session_state.recommendation_context=recommendation_context
         record_impressions(st.session_state,recommendation_context)
