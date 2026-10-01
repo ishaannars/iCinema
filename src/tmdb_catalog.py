@@ -591,3 +591,58 @@ def get_movie_identity_batch(
                 result[internal_title] = identity
 
     return result
+
+
+# --- Landscape artwork for the Step 1 shelf -------------------------------------------
+TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780"
+
+
+def _best_landscape(images):
+    """Prefer titled English landscape key art, then the best textless still."""
+    backdrops = list((images or {}).get("backdrops") or [])
+    if not backdrops:
+        return None
+
+    def rank(img):
+        return (float(img.get("vote_average") or 0), int(img.get("vote_count") or 0))
+
+    titled = [b for b in backdrops if b.get("iso_639_1") == "en"]
+    textless = [b for b in backdrops if not b.get("iso_639_1")]
+    pool = titled or textless or backdrops
+    best = max(pool, key=rank)
+    path = best.get("file_path")
+    return f"{TMDB_BACKDROP_BASE}{path}" if path else None
+
+
+@st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
+def get_landscape_art(title: str, year: int = 0, tmdb_id: int = 0) -> Optional[str]:
+    """Landscape (16:9) artwork for one movie, or None so the UI can fall back to the poster."""
+    if not tmdb_catalog_configured():
+        return None
+    movie_id = int(tmdb_id or 0)
+    if not movie_id:
+        found = find_movie(title, int(year or 0))
+        movie_id = int((found or {}).get("tmdb_id") or 0)
+    if not movie_id:
+        return None
+    images = _request(f"/movie/{movie_id}/images", {"include_image_language": "en,null"})
+    return _best_landscape(images)
+
+
+@st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)
+def get_landscape_batch(movies: Tuple[Tuple[str, int, int], ...]) -> Dict[str, Optional[str]]:
+    """{title: landscape_url_or_None} for (title, year, tmdb_id) tuples, fetched concurrently."""
+    if not movies or not tmdb_catalog_configured():
+        return {}
+    result: Dict[str, Optional[str]] = {}
+    with ThreadPoolExecutor(max_workers=min(8, len(movies))) as pool:
+        futures = {
+            pool.submit(get_landscape_art, title, int(year or 0), int(tmdb_id or 0)): title
+            for title, year, tmdb_id in movies
+        }
+        for future in as_completed(futures):
+            try:
+                result[futures[future]] = future.result()
+            except Exception:
+                result[futures[future]] = None
+    return result

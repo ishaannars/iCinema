@@ -14,7 +14,7 @@ from src.recommender import (
 from src.analytics import ensure_session, start_new_session, record_event, record_impressions, analytics_insights
 from src.ml_engine import train_learning_model, predict_success, ranking_metrics, calibration_metrics
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
-from src.tmdb_catalog import search_movies, get_poster_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
+from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 from src.scroll_keeper import scroll_keeper
@@ -4805,7 +4805,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
     font-size:.78rem !important;font-weight:650 !important;letter-spacing:-.004em !important;
 }
 /* Same visual gap (~1.25rem) between each page's last element and its nav row. */
-.st-key-nav_row_rate{margin-top:-.4rem !important;}
+.st-key-nav_row_rate{margin-top:1rem !important;}
 .st-key-nav_row_taste{margin-top:.25rem !important;}
 .st-key-nav_row_more{margin-top:-.9rem !important;}
 .st-key-nav_row_profile{margin-top:.15rem !important;}
@@ -4840,7 +4840,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 
 /* V5.190 — Step 1 "hamburger" cards: half-height poster crop, one-line titles,
    and three identical action-button slots so every row lines up exactly. */
-.st-key-step1_shelf .poster{aspect-ratio:4 / 3 !important;border-radius:14px !important;}
+.st-key-step1_shelf .poster{aspect-ratio:16 / 9 !important;border-radius:14px !important;}
 .st-key-step1_shelf .poster.has-image img{
     object-fit:cover !important;object-position:center 30% !important;border-radius:13px !important;
 }
@@ -4869,6 +4869,27 @@ div.element-container:has(iframe[title*="browser_storage"]){
     display:flex !important;align-items:center !important;justify-content:center !important;
     margin:0 !important;padding:0 !important;line-height:1 !important;
 }
+
+/* V5.191 — Step 1 landscape art (16:9) and even section rhythm.
+   Every section boundary (shelf → search → selections → Continue) = 1rem flex gap + 1rem. */
+.st-key-step1_shelf{margin-bottom:-.95rem !important;}
+.st-key-step1_search,.st-key-step1_selections{margin-top:1rem !important;}
+.st-key-step1_search [data-testid="stVerticalBlock"],
+.st-key-step1_selections [data-testid="stVerticalBlock"]{gap:.6rem !important;}
+.st-key-step1_search [data-testid="stMarkdown"],
+.st-key-step1_search [data-testid="stMarkdownContainer"],
+.st-key-step1_search [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]),
+.st-key-step1_selections [data-testid="stMarkdown"],
+.st-key-step1_selections [data-testid="stMarkdownContainer"],
+.st-key-step1_selections [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]){margin-bottom:0 !important;}
+.st-key-step1_search .search-shell{margin:0 !important;}
+.st-key-step1_search div[data-testid="stTextInput"]{margin:0 !important;}
+.st-key-step1_search .search-results-label{margin:.2rem 0 0 !important;}
+.st-key-step1_search .search-selected-card{margin:.2rem 0 0 !important;}
+.st-key-step1_selections .selection-area-heading,
+.st-key-step1_selections .selection-heading{margin:0 !important;}
+.st-key-step1_selections [class*="st-key-selection_card_"]{margin:0 !important;}
+.st-key-step1_selections div[data-testid="stCaptionContainer"]{margin:0 !important;}
 
 </style>
 """, unsafe_allow_html=True)
@@ -6175,12 +6196,16 @@ def render_shelf_fragment():
         for m in shelf_movies if not m.get("poster_url")
     )
     shelf_poster_map = get_poster_batch(missing_posters) if missing_posters else {}
+    # Landscape key art fits the short shelf cards without cropping; posters are the fallback.
+    shelf_landscape_map = get_landscape_batch(tuple(
+        (m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in shelf_movies
+    ))
     shelf_box = st.container(key="step1_shelf")
     cols=shelf_box.columns(5, gap="small")
     for i,movie in enumerate(shelf_movies):
         title=movie["title"]
         with cols[i%5]:
-            movie_thumb(movie, movie.get("poster_url") or shelf_poster_map.get(title))
+            movie_thumb(movie, shelf_landscape_map.get(title) or movie.get("poster_url") or shelf_poster_map.get(title))
             b1,b2,b3=st.columns([1,1.3,1], gap="small")
             with b1:
                 st.button(
@@ -6207,141 +6232,143 @@ def render_shelf_fragment():
                     args=(i,),
                 )
 
-    st.markdown(
-        '<div class="search-shell">'
-        '<div class="search-shell-title">Don’t see one you like?</div>'
-        '<div class="search-shell-copy">Search for a movie you already enjoy</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    with st.container(key="step1_search"):
+        st.markdown(
+            '<div class="search-shell">'
+            '<div class="search-shell-title">Don’t see one you like?</div>'
+            '<div class="search-shell-copy">Search for a movie you already enjoy</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
-    search_query = live_search_box()
+        search_query = live_search_box()
 
-    matches = []
-    already_selected_matches = []
-    if search_query.strip():
-        if tmdb_catalog_configured():
-            matches = search_movies(search_query.strip(), 8)
-        else:
-            q = search_query.strip().lower()
-            local_titles = [title for title in searchable_titles() if q in title.lower()][:8]
-            matches = [get_movie(title) for title in local_titles if get_movie(title)]
+        matches = []
+        already_selected_matches = []
+        if search_query.strip():
+            if tmdb_catalog_configured():
+                matches = search_movies(search_query.strip(), 8)
+            else:
+                q = search_query.strip().lower()
+                local_titles = [title for title in searchable_titles() if q in title.lower()][:8]
+                matches = [get_movie(title) for title in local_titles if get_movie(title)]
 
-        selected_titles = st.session_state.likes | st.session_state.favorites
-        already_selected_matches = [m for m in matches if m["title"] in selected_titles]
-        matches = [m for m in matches if m["title"] not in selected_titles]
+            selected_titles = st.session_state.likes | st.session_state.favorites
+            already_selected_matches = [m for m in matches if m["title"] in selected_titles]
+            matches = [m for m in matches if m["title"] not in selected_titles]
 
-    selected_movie = st.session_state.search_selected_movie
-    valid_ids = {m.get("tmdb_id") for m in matches if m.get("tmdb_id") is not None}
-    valid_titles = {m["title"] for m in matches}
-    if selected_movie:
-        selected_valid = (selected_movie.get("tmdb_id") in valid_ids) if selected_movie.get("tmdb_id") is not None else (selected_movie.get("title") in valid_titles)
-        if not selected_valid:
-            st.session_state.search_selected_movie = None
-            st.session_state.search_selected_title = None
+        selected_movie = st.session_state.search_selected_movie
+        valid_ids = {m.get("tmdb_id") for m in matches if m.get("tmdb_id") is not None}
+        valid_titles = {m["title"] for m in matches}
+        if selected_movie:
+            selected_valid = (selected_movie.get("tmdb_id") in valid_ids) if selected_movie.get("tmdb_id") is not None else (selected_movie.get("title") in valid_titles)
+            if not selected_valid:
+                st.session_state.search_selected_movie = None
+                st.session_state.search_selected_title = None
 
-    if search_query.strip():
-        if matches:
-            st.markdown('<div class="search-results-label">Matching titles</div>', unsafe_allow_html=True)
-            result_cols = st.columns(2)
-            for j, movie in enumerate(matches):
-                title = movie["title"]
-                year_label = f" ({movie['year']})" if movie.get("year") else ""
-                selected_movie = st.session_state.search_selected_movie
-                selected = bool(selected_movie and selected_movie.get("tmdb_id") == movie.get("tmdb_id") and movie.get("tmdb_id") is not None)
-                with result_cols[j % 2]:
-                    st.button(
-                        f"{title}{year_label}",
-                        key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
-                        type="primary" if selected else "secondary",
-                        use_container_width=True,
-                        on_click=select_search_result,
-                        args=(movie,),
-                    )
+        if search_query.strip():
+            if matches:
+                st.markdown('<div class="search-results-label">Matching titles</div>', unsafe_allow_html=True)
+                result_cols = st.columns(2)
+                for j, movie in enumerate(matches):
+                    title = movie["title"]
+                    year_label = f" ({movie['year']})" if movie.get("year") else ""
+                    selected_movie = st.session_state.search_selected_movie
+                    selected = bool(selected_movie and selected_movie.get("tmdb_id") == movie.get("tmdb_id") and movie.get("tmdb_id") is not None)
+                    with result_cols[j % 2]:
+                        st.button(
+                            f"{title}{year_label}",
+                            key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
+                            type="primary" if selected else "secondary",
+                            use_container_width=True,
+                            on_click=select_search_result,
+                            args=(movie,),
+                        )
 
-        if already_selected_matches:
-            selected_name = already_selected_matches[0]["title"]
-            state = "Favorite" if selected_name in st.session_state.favorites else "Liked"
+            if already_selected_matches:
+                selected_name = already_selected_matches[0]["title"]
+                state = "Favorite" if selected_name in st.session_state.favorites else "Liked"
+                st.markdown(
+                    f'<div class="search-already-selected">'
+                    f'<strong>{html.escape(selected_name)}</strong> is already in your selections as {state.lower()}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+            if not matches and not already_selected_matches:
+                if tmdb_catalog_configured():
+                    st.caption("No movie matches found")
+                else:
+                    st.caption("TMDB search is unavailable, showing matches from the current iCinema catalog only")
+
+        choice_movie = st.session_state.search_selected_movie
+        if choice_movie:
+            choice = choice_movie["title"]
             st.markdown(
-                f'<div class="search-already-selected">'
-                f'<strong>{html.escape(selected_name)}</strong> is already in your selections as {state.lower()}'
+                f'<div class="search-selected-card">'
+                f'<div class="search-selected-kicker">Selected title</div>'
+                f'<div class="search-selected-title">{html.escape(choice)}{f" ({choice_movie.get("year")})" if choice_movie.get("year") else ""}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
-
-        if not matches and not already_selected_matches:
-            if tmdb_catalog_configured():
-                st.caption("No movie matches found")
-            else:
-                st.caption("TMDB search is unavailable, showing matches from the current iCinema catalog only")
-
-    choice_movie = st.session_state.search_selected_movie
-    if choice_movie:
-        choice = choice_movie["title"]
-        st.markdown(
-            f'<div class="search-selected-card">'
-            f'<div class="search-selected-kicker">Selected title</div>'
-            f'<div class="search-selected-title">{html.escape(choice)}{f" ({choice_movie.get("year")})" if choice_movie.get("year") else ""}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        preview_cols = st.columns([1, 3])
-        with preview_cols[0]:
-            movie_thumb(choice_movie)
-        with preview_cols[1]:
-            a,b=st.columns([1,1])
-            with a:
-                st.button(
-                    "Add as Like",
-                    key="search_add_like",
-                    use_container_width=True,
-                    on_click=add_search_choice,
-                    args=("like",),
-                )
-            with b:
-                st.button(
-                    "Add as Favorite",
-                    key="search_add_favorite",
-                    use_container_width=True,
-                    on_click=add_search_choice,
-                    args=("favorite",),
-                )
-
-    _selected_set = st.session_state.likes | st.session_state.favorites
-    chosen_titles = [t for t in st.session_state.get("selection_order", []) if t in _selected_set]
-    chosen_titles += sorted(_selected_set - set(chosen_titles))
-    chosen_count = len(chosen_titles)
-
-    if chosen_titles:
-        st.markdown(
-            '<div class="selection-area-heading">'
-            '<div class="selection-heading">Your selections</div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-        # Keep the familiar compact chip layout while making every item removable.
-        selection_cols = st.columns(min(4, len(chosen_titles)), gap="small")
-        for idx, title in enumerate(chosen_titles):
-            state = "Favorite" if title in st.session_state.favorites else "Liked"
-            with selection_cols[idx % len(selection_cols)]:
-                with st.container(key=f"selection_card_{idx}"):
-                    st.markdown(
-                        f'<div class="selection-card-copy">'
-                        f'<div class="selection-title">{html.escape(title)}</div>'
-                        f'<div class="selection-state">{html.escape(state)}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
+            preview_cols = st.columns([1, 3])
+            with preview_cols[0]:
+                movie_thumb(choice_movie)
+            with preview_cols[1]:
+                a,b=st.columns([1,1])
+                with a:
                     st.button(
-                        "×",
-                        key=f"remove_selection_{idx}",
-                        help=f"Remove {title}",
-                        on_click=remove_step1_selection,
-                        args=(title,),
+                        "Add as Like",
+                        key="search_add_like",
+                        use_container_width=True,
+                        on_click=add_search_choice,
+                        args=("like",),
+                    )
+                with b:
+                    st.button(
+                        "Add as Favorite",
+                        key="search_add_favorite",
+                        use_container_width=True,
+                        on_click=add_search_choice,
+                        args=("favorite",),
                     )
 
-    st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
+    with st.container(key="step1_selections"):
+        _selected_set = st.session_state.likes | st.session_state.favorites
+        chosen_titles = [t for t in st.session_state.get("selection_order", []) if t in _selected_set]
+        chosen_titles += sorted(_selected_set - set(chosen_titles))
+        chosen_count = len(chosen_titles)
+
+        if chosen_titles:
+            st.markdown(
+                '<div class="selection-area-heading">'
+                '<div class="selection-heading">Your selections</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Keep the familiar compact chip layout while making every item removable.
+            selection_cols = st.columns(min(4, len(chosen_titles)), gap="small")
+            for idx, title in enumerate(chosen_titles):
+                state = "Favorite" if title in st.session_state.favorites else "Liked"
+                with selection_cols[idx % len(selection_cols)]:
+                    with st.container(key=f"selection_card_{idx}"):
+                        st.markdown(
+                            f'<div class="selection-card-copy">'
+                            f'<div class="selection-title">{html.escape(title)}</div>'
+                            f'<div class="selection-state">{html.escape(state)}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                        st.button(
+                            "×",
+                            key=f"remove_selection_{idx}",
+                            help=f"Remove {title}",
+                            on_click=remove_step1_selection,
+                            args=(title,),
+                        )
+
+        st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
     with st.container(key="nav_row_rate"):
         cont, _ = st.columns([1.25, 6], gap="small")
         with cont:
@@ -6672,7 +6699,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         ]},
         "cf_affinity":round(float(payload.get("cf") if payload.get("cf") is not None else 0.5),6),
         "candidate_source":movie.get("candidate_source"),
-        "model_version":"v5.190",
+        "model_version":"v5.191",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -6962,7 +6989,7 @@ def render_tonight_pick_fragment():
         ]},
         "cf_affinity": round(float(payload.get("cf") if payload.get("cf") is not None else 0.5), 6),
         "candidate_source": movie.get("candidate_source"),
-        "model_version":"v5.190",
+        "model_version":"v5.191",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -7274,7 +7301,7 @@ def render_showroom_fragment(p):
                     **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
                     "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
                     "candidate_source":movie.get("candidate_source"),
-                    "model_version":"v5.190",
+                    "model_version":"v5.191",
                 }
         st.session_state.recommendation_context=recommendation_context
         record_impressions(st.session_state,recommendation_context)
