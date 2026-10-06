@@ -4948,6 +4948,20 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-section_nav [data-testid="stButtonGroup"] button:last-of-type{margin-right:0 !important}
 .st-key-section_nav{margin-bottom:-.35rem !important}
 [class*="st-key-section_on_"] .showroom-tab-start{height:0 !important;margin:0 !important}
+/* Section bar alignment + equal gap (tabs5) */
+.st-key-section_nav, .st-key-section_nav [data-testid="stButtonGroup"], .st-key-section_nav [data-testid="stButtonGroup"] > div{
+  margin-left:0 !important;padding-left:0 !important;justify-content:flex-start !important}
+.st-key-section_nav [data-testid="stButtonGroup"] button{padding:.35rem 0 !important;margin:0 1.6rem 0 0 !important}
+.st-key-section_nav [data-testid="stButtonGroup"] button:last-of-type{margin-right:0 !important}
+.st-key-section_nav{margin-bottom:0 !important}
+/* Remove old st.tabs spacers so they can't add uneven space */
+[class*="st-key-section_on_"] [data-testid="stElementContainer"]:has(.showroom-tab-start),
+[class*="st-key-section_on_"] .element-container:has(.showroom-tab-start){display:none !important}
+/* One identical gap above every section */
+[class*="st-key-section_on_"]{padding-top:1.5rem !important;margin-top:0 !important}
+[class*="st-key-section_on_"] :is(.showroom-row-header,.showroom-row.first,.showroom-row-title,.tab-primary-heading,
+  .saved-tab-heading,.profile-wrap,.profile-heading,.profile-heading-aligned,[class*="tonight"]){
+  margin-top:0 !important;padding-top:0 !important;transform:none !important}
 </style>
 """, unsafe_allow_html=True)
 
