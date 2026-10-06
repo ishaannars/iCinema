@@ -4936,6 +4936,13 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* Smooth reload: delayed loader + one-time page fade-in */
 @keyframes icn-appear{from{opacity:0}to{opacity:1}}
 .icinema-boot-loader{animation:icinema-loader-ring 1.1s linear infinite, icn-appear .25s ease .4s both !important;}
+/* Section bar: looks like tabs, remembers the open section */
+[class*="st-key-section_off_"]{display:none !important;}
+.st-key-section_nav [data-testid="stButtonGroup"]:has(button){gap:1.6rem;border-bottom:1px solid var(--border);margin-bottom:.6rem}
+.st-key-section_nav [data-testid="stButtonGroup"] button{background:transparent !important;border:none !important;border-radius:0 !important;
+  border-bottom:2px solid transparent !important;padding:.35rem .1rem !important;color:var(--ivory) !important;box-shadow:none !important}
+.st-key-section_nav [data-testid="stButtonGroup"] button[kind*="Active"], .st-key-section_nav [data-testid="stButtonGroup"] button[aria-checked="true"]{
+  border-bottom-color:var(--ai) !important;color:var(--ai) !important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -5030,15 +5037,7 @@ if not st.session_state.get("_storage_hydrated", False):
 # the end of the render writes the exact same snapshot silently.
 if st.session_state.pop("_fade_in_once", False):
     st.markdown('<style>.stApp [data-testid="stMainBlockContainer"], .stApp .block-container'
-                '{animation:icn-appear .25s ease both}
-/* Section bar: looks like tabs, remembers the open section */
-[class*="st-key-section_off_"]{display:none !important;}
-.st-key-section_nav [data-testid="stButtonGroup"]:has(button){gap:1.6rem;border-bottom:1px solid var(--border);margin-bottom:.6rem}
-.st-key-section_nav [data-testid="stButtonGroup"] button{background:transparent !important;border:none !important;border-radius:0 !important;
-  border-bottom:2px solid transparent !important;padding:.35rem .1rem !important;color:var(--ivory) !important;box-shadow:none !important}
-.st-key-section_nav [data-testid="stButtonGroup"] button[kind*="Active"], .st-key-section_nav [data-testid="stButtonGroup"] button[aria-checked="true"]{
-  border-bottom-color:var(--ai) !important;color:var(--ai) !important}
-</style>', unsafe_allow_html=True)
+                '{animation:icn-appear .25s ease both}</style>', unsafe_allow_html=True)
 
 _pending_profile = st.session_state.get("_pending_profile_save")
 
