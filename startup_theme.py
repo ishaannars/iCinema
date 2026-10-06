@@ -16,7 +16,8 @@ _installed = False
 _PREPAINT = b"""
 <style id="icinema-startup-theme">
 html,body,#root,[data-testid="stApp"],[data-testid="stAppViewContainer"],
-[data-testid="stHeader"]{background:#111315!important;color-scheme:dark}
+[data-testid="stHeader"],[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],[data-testid="stAppViewBlockContainer"]{background:#111315!important;color-scheme:dark}
 [data-testid="stAppSkeleton"],[data-testid="stSkeleton"]{display:none!important}
 </style>
 """

@@ -9,6 +9,25 @@ from startup_theme import install_startup_theme
 
 install_startup_theme()
 
+# Render before model imports, custom components, or the profile-restore stop.
+st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
+st.markdown("""
+<style id="icinema-first-frame">
+html,body,#root,.stApp,[data-testid="stApp"],
+[data-testid="stAppViewContainer"],[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],[data-testid="stAppViewBlockContainer"],
+[data-testid="stHeader"] {
+    background:#111315 !important;
+    color-scheme:dark;
+}
+[data-testid="stCustomComponentV1"] iframe,iframe[title^="icinema_"] {
+    background:#111315 !important;
+    color-scheme:dark;
+}
+.icinema-boot-screen {background:#111315;color:#F3F0EA;min-height:100vh}
+</style>
+""", unsafe_allow_html=True)
+
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
     build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG,
@@ -25,7 +44,6 @@ from src.scroll_keeper import scroll_keeper
 from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity
 from src.recommender import _calibrated_match_percent
 
-st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -5014,7 +5032,9 @@ def restore_profile(data):
 if not st.session_state.get("_storage_hydrated", False):
     _stored = browser_storage("get", PROFILE_STORAGE_KEY, key="icinema_profile_loader")
     if not (isinstance(_stored, dict) and _stored.get("loaded") is True):
-        logo_placeholder = '<div class="icinema-logo">iCinema</div><div class="icinema-boot-loader" aria-label="Loading"></div>'
+        logo_placeholder = ('<div class="icinema-boot-screen" style="background:#111315;color:#F3F0EA;min-height:100vh">'
+                            '<div class="icinema-logo">iCinema</div>'
+                            '<div class="icinema-boot-loader" style="background:#111315" aria-label="Loading"></div></div>')
         st.markdown(logo_placeholder, unsafe_allow_html=True)
         st.session_state._in_full_run = False
         st.stop()
