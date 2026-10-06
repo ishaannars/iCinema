@@ -6775,6 +6775,7 @@ def _advance_showroom_slot(row_name, slot_index):
         | set(st.session_state.seen)
         | set(st.session_state.dismissed)
         | set(st.session_state.get("disliked") or set())
+        | set(st.session_state.likes) | set(st.session_state.favorites)  # tabs9
     )
 
     replacement = None
@@ -6899,7 +6900,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     acted = (set(st.session_state.saved) | set(st.session_state.seen) | set(st.session_state.dismissed)
-             | set(st.session_state.get("disliked") or set()))
+             | set(st.session_state.get("disliked") or set()) | set(st.session_state.likes) | set(st.session_state.favorites))  # tabs9
     if title in acted and _advance_showroom_slot(row_name, slot_index):
         title = (st.session_state.get("showroom_slots") or {}).get(slot_key)  # never re-show an acted-on movie
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
@@ -7155,7 +7156,7 @@ def render_tonight_pick_fragment():
     payloads = st.session_state.get("showroom_payloads") or {}
     watch_cache = st.session_state.get("showroom_watch_cache") or {}
     blocked = (set(st.session_state.saved) | set(st.session_state.seen) | set(st.session_state.dismissed)
-               | set(st.session_state.get("disliked") or set())
+               | set(st.session_state.get("disliked") or set()) | set(st.session_state.likes) | set(st.session_state.favorites)  # tabs9
                | {t for t in (st.session_state.get("showroom_slots") or {}).values() if t})
     in_rows = {t for t in (st.session_state.get("showroom_slots") or {}).values() if t}
     acted = blocked - in_rows
@@ -7316,7 +7317,7 @@ def render_showroom_fragment(p):
             while len(row_choices[row]) <= int(idx):
                 row_choices[row].append(None)
     else:
-        excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed|set(st.session_state.get("disliked") or set())
+        excluded=st.session_state.saved|st.session_state.seen|st.session_state.dismissed|set(st.session_state.get("disliked") or set())|set(st.session_state.likes)|set(st.session_state.favorites)  # tabs9
 
         # Build a deep candidate pool, then rank every candidate with the same iCinema
         # personalization algorithm. TMDB discovery acts only as replenishment: it does not
@@ -7713,7 +7714,7 @@ def render_showroom_fragment(p):
             # twice on this tab, never something already saved, seen, skipped or disliked.
             wn_payloads = st.session_state.get("showroom_payloads") or {}
             wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
-                          | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()))
+                          | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()) | set(st.session_state.likes) | set(st.session_state.favorites))  # tabs9
             wn_offsets = st.session_state.get("whats_next_offset") or {}
             wn_taken, wn_picks = set(), {}
             for m in movies:
@@ -7787,10 +7788,16 @@ def render_showroom_fragment(p):
                 st.rerun(scope="app")
 
 
-    # tabs8: counts beside the fixed tab labels (labels never change, so the open tab stays).
+    # tabs9: counts beside the fixed tab labels, found by tab id (labels never change, so
+    # the open tab stays), and a short fade so switching tabs feels smooth.
     st.markdown(
-        '<style>div[data-testid="stTabs"] button[role="tab"]:nth-of-type(2) p::after{content:" (%d)"}'
-        'div[data-testid="stTabs"] button[role="tab"]:nth-of-type(3) p::after{content:" (%d)"}</style>'
+        '<style>'
+        '[data-testid="stTabs"] [role="tab"][id$="-tab-1"] p::after,'
+        '[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type(2) p::after{content:" (%d)"}'
+        '[data-testid="stTabs"] [role="tab"][id$="-tab-2"] p::after,'
+        '[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type(3) p::after{content:" (%d)"}'
+        '[data-testid="stTabs"] [role="tabpanel"]{animation:icn-appear .18s ease both}'
+        '</style>'
         % (len(st.session_state.saved), len(st.session_state.seen)),
         unsafe_allow_html=True,
     )
