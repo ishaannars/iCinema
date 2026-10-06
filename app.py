@@ -5030,7 +5030,15 @@ if not st.session_state.get("_storage_hydrated", False):
 # the end of the render writes the exact same snapshot silently.
 if st.session_state.pop("_fade_in_once", False):
     st.markdown('<style>.stApp [data-testid="stMainBlockContainer"], .stApp .block-container'
-                '{animation:icn-appear .25s ease both}</style>', unsafe_allow_html=True)
+                '{animation:icn-appear .25s ease both}
+/* Section bar: looks like tabs, remembers the open section */
+[class*="st-key-section_off_"]{display:none !important;}
+.st-key-section_nav [data-testid="stButtonGroup"]:has(button){gap:1.6rem;border-bottom:1px solid var(--border);margin-bottom:.6rem}
+.st-key-section_nav [data-testid="stButtonGroup"] button{background:transparent !important;border:none !important;border-radius:0 !important;
+  border-bottom:2px solid transparent !important;padding:.35rem .1rem !important;color:var(--ivory) !important;box-shadow:none !important}
+.st-key-section_nav [data-testid="stButtonGroup"] button[kind*="Active"], .st-key-section_nav [data-testid="stButtonGroup"] button[aria-checked="true"]{
+  border-bottom-color:var(--ai) !important;color:var(--ai) !important}
+</style>', unsafe_allow_html=True)
 
 _pending_profile = st.session_state.get("_pending_profile_save")
 
@@ -7302,7 +7310,15 @@ def render_showroom_fragment(p):
     # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
     # briefly draw the tabs twice after an app rerun.
     ensure_session(st.session_state)
-    tabs=st.tabs(["Showroom","Saved","Seen","Profile"])
+    with st.container(key="section_nav"):
+        _section = st.segmented_control(
+            "Section", ["Showroom", "Saved", "Seen", "Profile"], default="Showroom", key="showroom_section",
+            label_visibility="collapsed",
+            format_func=lambda v: (f"Saved ({len(st.session_state.saved)})" if v == "Saved" else
+                                   f"Seen ({len(st.session_state.seen)})" if v == "Seen" else v),
+        ) or "Showroom"
+    tabs = [st.container(key=("section_on_" if _section == name else "section_off_") + name.lower())
+            for name in ("Showroom", "Saved", "Seen", "Profile")]
 
     # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
     # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
@@ -7665,7 +7681,7 @@ def render_showroom_fragment(p):
 
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="tab-primary-heading saved-tab-heading">Saved · {len(st.session_state.saved)}</div>', unsafe_allow_html=True)
+        st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
         saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         saved_identity_map = get_movie_identity_batch(saved_identity_keys)
@@ -7699,7 +7715,7 @@ def render_showroom_fragment(p):
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="tab-primary-heading">Seen · {len(st.session_state.seen)}</div>', unsafe_allow_html=True)
+        st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
         seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         seen_identity_map = get_movie_identity_batch(seen_identity_keys)
