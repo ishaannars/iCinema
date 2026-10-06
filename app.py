@@ -4911,6 +4911,14 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-whatsnext_save_"] button *,[class*="st-key-whatsnext_more_"] button *{
     font-size:.68rem !important;font-weight:690 !important;line-height:1 !important;margin:0 !important;white-space:nowrap !important;}
 
+
+/* Home proof strip: the tested 3-like edge, front and center */
+.proof-strip{display:flex;align-items:center;gap:1rem;border:1px solid var(--border);border-left:3px solid var(--ai);
+  border-radius:14px;background:rgba(255,255,255,.03);padding:.85rem 1.1rem;margin:-1rem 0 1.6rem;max-width:760px}
+.proof-big{font-size:1.65rem;font-weight:800;letter-spacing:-.03em;color:var(--ivory);white-space:nowrap}
+.proof-copy{color:var(--muted);font-size:.92rem;line-height:1.45}
+.proof-copy b{color:var(--ivory);font-weight:650}
+@media(max-width:700px){.proof-strip{flex-direction:column;align-items:flex-start;gap:.3rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -6201,7 +6209,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         # Only claim significance the bootstrap actually found (read from the results file).
         sig = {b.get("metric"): bool(b.get("significant")) for b in offline.get("bootstrap_three_likes_vs_popularity") or []}
         if sig.get("Hit@1") and sig.get("NDCG@10") and sig.get("Recall@10"):
-            significance_note = "Both results are statistically significant."
+            significance_note = "All three results are statistically significant."
         elif any(sig.values()):
             significance_note = "Some results are statistically significant; see the model card for details."
         else:
@@ -6209,27 +6217,37 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         cards = []
         if pick_lift is not None:
             cf_hit, pop_hit = cf3.get("hit@1"), pop.get("hit@1")
-            hit_note = (f"Its one pick was a movie the viewer loved {cf_hit:.1%} of the time, vs. {pop_hit:.1%} for the most popular pick."
+            hit_note = (f"Its one pick was a movie the viewer rated 4+ stars {cf_hit:.2%} of the time, vs. {pop_hit:.2%} for the most popular pick."
                         if isinstance(cf_hit, (int, float)) and isinstance(pop_hit, (int, float))
                         else "Its one pick is a movie you'll love more often than the most popular pick.")
             cards.append(_stat(f"+{pick_lift}%", "More hits for Tonight’s Show", hit_note))
         if ndcg_lift is not None and recall_lift is not None:
             lo, hi = sorted((ndcg_lift, recall_lift))
-            cards.append(_stat(f"+{lo}–{hi}%", "Better Showroom rows", "More of the movies you’d love, ranked closer to the top."))
+            cards.append(_stat(f"+{lo}–{hi}%", "Better Showroom rows",
+                               f"More movies you’d love in the top 10 (+{recall_lift}%, Recall@10), ranked closer to the top (+{ndcg_lift}%, NDCG@10)."))
         hit_boot = next((b for b in offline.get("bootstrap_three_likes_vs_popularity") or []
                          if b.get("metric") == "Hit@1"), {})
         share = hit_boot.get("cf_win_share")
         if isinstance(share, (int, float)):
-            wins = "all" if share >= 0.995 else f"{share:.0%} of"
-            cards.append(_stat(f"{share:.0%}", "Holds up under re-testing",
-                               f"iCinema won in {wins} 2,000 reshuffled re-tests, so the gain isn’t luck."))
+            # Share of bootstrap resamples where iCinema wins -> one-sided bootstrap p-value.
+            p_txt = "p < 0.001" if share >= 0.9995 else f"p ≈ {max(1 - share, 0.0005):.3f}"
+            wins = "all 2,000" if share >= 0.9995 else f"{share:.0%} of 2,000"
+            cards.append(_stat(p_txt, "Not a fluke",
+                               f"iCinema beat the popularity pick in {wins} bootstrap resamples of the test viewers."))
+        cf_full = (offline.get("full") or {}).get("cf") or {}
+        full_note = ""
+        if isinstance(cf_full.get("hit@1"), (int, float)) and isinstance(cf3.get("hit@1"), (int, float)) and cf3["hit@1"] > cf_full["hit@1"]:
+            full_note = (" Personalizing from just 3 likes is where most recommenders struggle; iCinema’s 3-like picks even beat "
+                         "the same model given each viewer’s full history. Stronger comparisons (item-kNN, ALS) are next.")
+        else:
+            full_note = " Stronger comparisons (item-kNN, ALS) are next."
         if cards and isinstance(users, int):
             proof_html = (
                 '<div class="profile-methodology">'
-                '<div class="profile-insights-title">Does it work?</div>'
-                f'<div class="profile-insights-copy">We tested iCinema on {users:,} real MovieLens viewers. It saw only 3 movies '
-                'each person liked, then had to find the films they loved next, compared with simply recommending what’s popular. '
-                f'{significance_note}</div>'
+                f'<div class="profile-insights-title">Tested on {users:,} real viewers</div>'
+                f'<div class="profile-insights-copy">iCinema saw only 3 movies each MovieLens viewer liked, then predicted the films '
+                'they’d rate 4+ stars later, compared with simply recommending what’s popular. '
+                f'{significance_note}{full_note}</div>'
                 f'<div class="insight-grid proof-grid">{"".join(cards)}</div>'
                 '</div>'
             )
@@ -7662,6 +7680,17 @@ if screen=="welcome":
     logo()
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
     st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences</div>',unsafe_allow_html=True)
+
+    # Lead with the tested edge: strong picks from just 3 likes. Numbers come from the offline results file.
+    _off = load_offline_results() or {}
+    _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
+    _users = _off.get("held_out_users")
+    if isinstance(_lift, (int, float)) and isinstance(_users, int):
+        st.markdown(
+            f'<div class="proof-strip"><span class="proof-big">+{int(_lift)}%</span>'
+            f'<span class="proof-copy"><b>From just 3 likes, iCinema’s one pick is a movie you’d rate 4+ stars {int(_lift)}% more often '
+            f'than “what’s popular.”</b> Tested on {_users:,} real MovieLens viewers.</span></div>',
+            unsafe_allow_html=True)
 
     c1,c2,c3=st.columns(3)
     steps=[
