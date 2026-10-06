@@ -5316,16 +5316,20 @@ def _tone_tags(movie):
     return [t for t in ((movie or {}).get("tags") or []) if str(t).strip() and str(t).casefold() not in _NON_TONE_TAGS]
 
 
-def with_tone_detail(reasons, movie):
+def with_tone_detail(reasons, movie, avoid=None):
     """Make the tone reason concrete: which tones it shares, and with which liked movie."""
     liked = [m for m, action in _cf_signals() if action in ("favorite", "like", "save")
              and m.get("title") != (movie or {}).get("title")]
     tones = {t.casefold(): t for t in _tone_tags(movie)}
-    best, shared = None, []
+    best, shared, best_key = None, [], None
     for other in liked:
         overlap = [tones[t.casefold()] for t in _tone_tags(other) if t.casefold() in tones]
-        if len(overlap) > len(shared):
-            best, shared = other.get("title"), overlap
+        if not overlap:
+            continue
+        sim = item_similarity(movie, other) or 0.0
+        key = (len(overlap), other.get("title") != avoid, sim)   # most shared tones, then a different movie, then closest fans
+        if best_key is None or key > best_key:
+            best, shared, best_key = other.get("title"), overlap, key
     if not best or not shared:
         return reasons
     words = [t.lower() if t[:1].isupper() and not t.isupper() else t for t in shared[:2]]
@@ -5417,9 +5421,10 @@ def with_live_ratings(movie, live_rating):
 def with_cf_reason(reasons, payload, limit=3):
     """Surface the collaborative-filtering signal, naming the viewer's closest liked movie."""
     cf = (payload or {}).get("cf")
-    reasons = with_tone_detail(list(reasons or []), (payload or {}).get("movie"))
+    anchor = (closest_liked((payload or {}).get("movie"), _cf_signals())
+              if isinstance(cf, (int, float)) and cf >= 0.65 else None)
+    reasons = with_tone_detail(list(reasons or []), (payload or {}).get("movie"), avoid=anchor)
     if isinstance(cf, (int, float)) and cf >= 0.65:
-        anchor = closest_liked((payload or {}).get("movie"), _cf_signals())
         if anchor:
             # Embedding similarity means the two movies are loved by the same kinds of viewers.
             reason = {"label": f"Loved by fans of “{anchor}”",
