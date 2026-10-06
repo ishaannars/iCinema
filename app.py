@@ -6203,7 +6203,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         pct = min(100, round(decisions / 50 * 100))
         personal_html = (f'<div class="model-row"><span class="model-dot"></span>'
                          f'<span class="model-name">Your personal model</span>'
-                         f'<span class="model-note">Learns only from saves and skips: unlocks at 50 (at least 12 of each) · {min(decisions, 50)} of 50</span>'
+                         f'<span class="model-note">Learns from your saves and skips: {min(decisions, 50)} of 50 · '
+                         f'{int(insights.get("saves") or 0)} saves, {int(insights.get("skips") or 0)} skips (needs 12+ of each; Seen doesn\'t count)</span>'
                          f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
     models_html = (
         '<div class="model-status-panel">'
@@ -7301,7 +7302,7 @@ def render_showroom_fragment(p):
     # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
     # briefly draw the tabs twice after an app rerun.
     ensure_session(st.session_state)
-    tabs=st.tabs(["Showroom",f"Saved ({len(st.session_state.saved)})",f"Seen ({len(st.session_state.seen)})","Profile"])
+    tabs=st.tabs(["Showroom","Saved","Seen","Profile"])
 
     # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
     # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
@@ -7664,7 +7665,7 @@ def render_showroom_fragment(p):
 
     with tabs[1]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="tab-primary-heading saved-tab-heading">Saved</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tab-primary-heading saved-tab-heading">Saved · {len(st.session_state.saved)}</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
         saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         saved_identity_map = get_movie_identity_batch(saved_identity_keys)
@@ -7698,7 +7699,7 @@ def render_showroom_fragment(p):
 
     with tabs[2]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="tab-primary-heading">Seen</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tab-primary-heading">Seen · {len(st.session_state.seen)}</div>', unsafe_allow_html=True)
         movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
         seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
         seen_identity_map = get_movie_identity_batch(seen_identity_keys)
