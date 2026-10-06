@@ -5262,7 +5262,7 @@ def go_from_fragment(screen):
     Profile → Showroom transitions wait on the browser component first.
     """
     go(screen)
-    st.rerun(scope="app")
+    st.session_state._app_rerun = True
 
 def select_search_result(movie):
     st.session_state.search_selected_movie = movie
@@ -5739,8 +5739,7 @@ def reset_profile_state():
 
 def reset_profile_from_fragment():
     reset_profile_state()
-    persist_profile_if_needed()
-    st.rerun(scope="app")
+    st.session_state._app_rerun = True
 
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
@@ -6376,7 +6375,22 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     )
 
 
+
+import functools as _functools
+
+
+def _with_app_rerun(fn):
+    """Run a full-app rerun requested by a button callback (callbacks themselves can't)."""
+    @_functools.wraps(fn)
+    def inner(*args, **kwargs):
+        if st.session_state.pop("_app_rerun", False):
+            st.rerun(scope="app")
+        return fn(*args, **kwargs)
+    return inner
+
+
 @st.fragment(run_every="4s")
+@_with_app_rerun
 def render_live_profile():
     """Profile tab, refreshed every few seconds.
 
@@ -6388,6 +6402,7 @@ def render_live_profile():
 
 
 @st.fragment
+@_with_app_rerun
 def render_shelf_fragment():
     logo()
     st.markdown(
@@ -6585,6 +6600,7 @@ def render_shelf_fragment():
     persist_from_fragment()
 
 @st.fragment
+@_with_app_rerun
 def render_taste_fragment():
     logo()
     st.markdown(
@@ -6691,6 +6707,7 @@ def render_taste_fragment():
     persist_from_fragment()
 
 @st.fragment
+@_with_app_rerun
 def render_more_fragment():
     logo()
     st.markdown(
@@ -6803,7 +6820,7 @@ def skip_showroom_slot(row_name, slot_index):
         undo[slot_key] = title
         st.session_state.showroom_undo = undo
     if not _advance_showroom_slot(row_name, slot_index):
-        st.rerun(scope="app")
+        st.session_state._app_rerun = True
 
 def _mark_showroom_fast():
     st.session_state._showroom_fast = True
@@ -6870,6 +6887,7 @@ def _showroom_cached_metadata(movie):
     return identity or {}, availability or {}, live_rating or {}
 
 @st.fragment
+@_with_app_rerun
 def render_showroom_card_fragment(row_name, row_index, slot_index):
     """Render one independently-rerunnable card so Skip never refreshes its neighbors."""
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -7123,6 +7141,7 @@ def _render_services_picker(services):
 
 
 @st.fragment
+@_with_app_rerun
 def render_tonight_pick_fragment():
     """Compact single best match. Services, Skip, and Undo rerun only this card."""
     _refresh_if_requested()
