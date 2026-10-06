@@ -4936,32 +4936,6 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* Smooth reload: delayed loader + one-time page fade-in */
 @keyframes icn-appear{from{opacity:0}to{opacity:1}}
 .icinema-boot-loader{animation:icinema-loader-ring 1.1s linear infinite, icn-appear .25s ease .4s both !important;}
-/* Section bar: looks like tabs, remembers the open section */
-[class*="st-key-section_off_"]{display:none !important;}
-.st-key-section_nav [data-testid="stButtonGroup"]:has(button){gap:1.6rem;border-bottom:1px solid var(--border);margin-bottom:.6rem}
-.st-key-section_nav [data-testid="stButtonGroup"] button{background:transparent !important;border:none !important;border-radius:0 !important;
-  border-bottom:2px solid transparent !important;padding:.35rem .1rem !important;color:var(--ivory) !important;box-shadow:none !important}
-.st-key-section_nav [data-testid="stButtonGroup"] button[kind*="Active"], .st-key-section_nav [data-testid="stButtonGroup"] button[aria-checked="true"]{
-  border-bottom-color:var(--ai) !important;color:var(--ai) !important}
-/* Section bar spacing (tabs4) */
-.st-key-section_nav [data-testid="stButtonGroup"] button{margin:0 1.5rem 0 0 !important;padding:.35rem .15rem !important}
-.st-key-section_nav [data-testid="stButtonGroup"] button:last-of-type{margin-right:0 !important}
-.st-key-section_nav{margin-bottom:-.35rem !important}
-[class*="st-key-section_on_"] .showroom-tab-start{height:0 !important;margin:0 !important}
-/* Section bar alignment + equal gap (tabs5) */
-.st-key-section_nav, .st-key-section_nav [data-testid="stButtonGroup"], .st-key-section_nav [data-testid="stButtonGroup"] > div{
-  margin-left:0 !important;padding-left:0 !important;justify-content:flex-start !important}
-.st-key-section_nav [data-testid="stButtonGroup"] button{padding:.35rem 0 !important;margin:0 1.6rem 0 0 !important}
-.st-key-section_nav [data-testid="stButtonGroup"] button:last-of-type{margin-right:0 !important}
-.st-key-section_nav{margin-bottom:0 !important}
-/* Remove old st.tabs spacers so they can't add uneven space */
-[class*="st-key-section_on_"] [data-testid="stElementContainer"]:has(.showroom-tab-start),
-[class*="st-key-section_on_"] .element-container:has(.showroom-tab-start){display:none !important}
-/* One identical gap above every section */
-[class*="st-key-section_on_"]{padding-top:1.5rem !important;margin-top:0 !important}
-[class*="st-key-section_on_"] :is(.showroom-row-header,.showroom-row.first,.showroom-row-title,.tab-primary-heading,
-  .saved-tab-heading,.profile-wrap,.profile-heading,.profile-heading-aligned,[class*="tonight"]){
-  margin-top:0 !important;padding-top:0 !important;transform:none !important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -7328,15 +7302,7 @@ def render_showroom_fragment(p):
     # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
     # briefly draw the tabs twice after an app rerun.
     ensure_session(st.session_state)
-    with st.container(key="section_nav"):
-        _section = st.segmented_control(
-            "Section", ["Showroom", "Saved", "Seen", "Profile"], default="Showroom", key="showroom_section",
-            label_visibility="collapsed",
-            format_func=lambda v: (f"Saved ({len(st.session_state.saved)})" if v == "Saved" else
-                                   f"Seen ({len(st.session_state.seen)})" if v == "Seen" else v),
-        ) or "Showroom"
-    tabs = [st.container(key=("section_on_" if _section == name else "section_off_") + name.lower())
-            for name in ("Showroom", "Saved", "Seen", "Profile")]
+    tabs = st.tabs(["Showroom", "Saved", "Seen", "Profile"])  # tabs8: fixed labels keep the open tab
 
     # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
     # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
@@ -7820,6 +7786,14 @@ def render_showroom_fragment(p):
                 reset_profile_state()
                 st.rerun(scope="app")
 
+
+    # tabs8: counts beside the fixed tab labels (labels never change, so the open tab stays).
+    st.markdown(
+        '<style>div[data-testid="stTabs"] button[role="tab"]:nth-of-type(2) p::after{content:" (%d)"}'
+        'div[data-testid="stTabs"] button[role="tab"]:nth-of-type(3) p::after{content:" (%d)"}</style>'
+        % (len(st.session_state.saved), len(st.session_state.seen)),
+        unsafe_allow_html=True,
+    )
 
     pass  # saved once at the end of the full run
 
