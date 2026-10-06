@@ -4919,6 +4919,14 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .proof-copy{color:var(--muted);font-size:.92rem;line-height:1.45}
 .proof-copy b{color:var(--ivory);font-weight:650}
 @media(max-width:700px){.proof-strip{flex-direction:column;align-items:flex-start;gap:.3rem}}
+.proof-copy b{display:block;font-size:1rem;margin-bottom:.15rem}
+.proof-sub{display:block;font-size:.82rem;color:var(--muted)}
+.proof-strip{padding:.75rem 1.05rem !important}
+.proof-note{display:flex !important;align-items:center;gap:1.2rem}
+.proof-note .proof-big{font-size:2rem;font-weight:800;letter-spacing:-.035em;color:var(--ivory);white-space:nowrap;line-height:1}
+.proof-note strong{display:block !important;margin-bottom:.3rem !important}
+.proof-note span{display:block}
+@media(max-width:700px){.proof-note{flex-direction:column;align-items:flex-start;gap:.4rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -7669,7 +7677,9 @@ def render_showroom_fragment(p):
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
             st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
         with reset:
-            st.button("Reset Profile", key="reset_profile_tab", use_container_width=True, on_click=reset_profile_from_fragment)
+            if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True):
+                reset_profile_state()
+                st.rerun(scope="app")
 
 
     pass  # saved once at the end of the full run
@@ -7681,17 +7691,6 @@ if screen=="welcome":
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
     st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences</div>',unsafe_allow_html=True)
 
-    # Lead with the tested edge: strong picks from just 3 likes. Numbers come from the offline results file.
-    _off = load_offline_results() or {}
-    _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
-    _users = _off.get("held_out_users")
-    if isinstance(_lift, (int, float)) and isinstance(_users, int):
-        st.markdown(
-            f'<div class="proof-strip"><span class="proof-big">+{int(_lift)}%</span>'
-            f'<span class="proof-copy"><b>From just 3 likes, iCinema’s one pick is a movie you’d rate 4+ stars {int(_lift)}% more often '
-            f'than “what’s popular.”</b> Tested on {_users:,} real MovieLens viewers.</span></div>',
-            unsafe_allow_html=True)
-
     c1,c2,c3=st.columns(3)
     steps=[
         ("01","Rate the Shelf","Choose titles you already enjoy, or search for one you like"),
@@ -7702,7 +7701,19 @@ if screen=="welcome":
         with col:
             st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
 
-    st.markdown('<div class="adapt-note"><strong>Good picks on day one. Yours over time.</strong><br><span>Two models are ready the moment you finish setup. A third learns from your saves and skips, so every return visit gets you to pressing play faster.</span></div>',unsafe_allow_html=True)
+    _off = load_offline_results() or {}
+    _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
+    _fans = training_scale()["users"]
+    if isinstance(_lift, (int, float)):
+        st.markdown(
+            '<div class="adapt-note proof-note">'
+            f'<div class="proof-big">+{int(_lift)}%</div>'
+            '<div><strong>Good picks from your first 3 likes. Yours over time.</strong>'
+            f'<span>A model trained on {_fans} movie fans finds a first pick you’ll love {int(_lift)}% more often than '
+            'just recommending what’s popular. A second model reads every film’s plot and tone, and a third learns from your saves and skips.</span></div>'
+            '</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="adapt-note"><strong>Good picks on day one. Yours over time.</strong><br><span>Two models are ready the moment you finish setup. A third learns from your saves and skips, so every return visit gets you to pressing play faster.</span></div>',unsafe_allow_html=True)
     st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
 
 elif screen=="shelf":
