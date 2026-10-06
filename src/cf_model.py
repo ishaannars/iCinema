@@ -109,7 +109,8 @@ def closest_liked(movie, signals, allowed=FAN_ACTIONS):
         j = _index(liked)
         if j is None or j == idx:
             continue
-        score = float(emb[idx] @ emb[j])
+        denom = float(np.linalg.norm(emb[idx]) * np.linalg.norm(emb[j]))
+        score = float(emb[idx] @ emb[j]) / denom if denom > 0 else -2.0   # cosine, not raw dot product
         if score > best_score:
             best, best_score = liked.get("title"), score
     return best
