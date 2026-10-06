@@ -5,10 +5,6 @@ from urllib.parse import quote_plus
 import json
 import re
 import streamlit as st
-from startup_theme import install_startup_theme
-
-install_startup_theme()
-
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
     build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG,
