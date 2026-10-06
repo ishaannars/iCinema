@@ -4931,6 +4931,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .adapt-note.proof-note span{font-family:var(--ui-font) !important;font-style:normal !important;font-size:.95rem !important;color:var(--muted) !important;line-height:1.5 !important}
 .adapt-note.proof-note strong{font-family:var(--ui-font) !important}
 .adapt-note.proof-note .proof-big{font-family:var(--ui-font) !important}
+.match-rank-note{font-family:var(--ui-font);font-size:.72rem;color:var(--muted);margin:-.2rem 0 .55rem}
 </style>
 """, unsafe_allow_html=True)
 
@@ -5560,19 +5561,37 @@ def _short_reason(reason, room):
     return label if label and len(label) <= room else None
 
 
-def match_pill(match, reasons, limit=None, taken=()):
+def fit_head(payload, match):
+    """Rank-based fit: where this movie ranks among every movie iCinema scored for you.
+
+    Accurate by construction (it is a rank, not a probability), and it spreads out
+    even when the raw scores of top picks sit close together.
+    """
+    top = (payload or {}).get("fit_top_pct")
+    return f"Top {int(top)}%" if isinstance(top, (int, float)) else f"{int(match or 0)}%"
+
+
+def fit_label(payload, match):
+    top = (payload or {}).get("fit_top_pct")
+    if not isinstance(top, (int, float)):
+        return match_label(match)
+    return "Made for you" if top <= 2 else "Strong match" if top <= 10 else "Good match" if top <= 25 else "Worth a look"
+
+
+def match_pill(match, reasons, limit=None, taken=(), head=None):
     """Percent plus this movie's strongest reason not already shown in its row.
 
     Returns (pill_text, label_used). Skipping labels other cards in the row already
     use keeps a row varied, e.g. one "Fans of “Spirited Away”" instead of four.
     """
     match = int(match or 0)
-    room = (limit if limit is not None else PILL_BUDGET) - len(f"{match}% · ")
+    head = head or f"{match}%"
+    room = (limit if limit is not None else PILL_BUDGET) - len(f"{head} · ")
     for reason in reasons or []:
         label = _short_reason(reason, room)
         if label and label not in taken:
-            return f"{match}% · {label}", label
-    return f"{match}% match", None
+            return f"{head} · {label}", label
+    return f"{head} for you", None
 
 
 def match_label(match):
@@ -6141,6 +6160,12 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     learned=learning_model_for(events)
     conf=profile_confidence_label(p)
     signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
+    _bc = p.get("behavior_counts") or {}
+    _ctl = p.get("controls") or {}
+    _parts = [(_bc.get("liked", 0) + _bc.get("favorited", 0), "like"), (_bc.get("saved", 0), "save"),
+              (_bc.get("seen", 0), "seen"), (_bc.get("skipped", 0), "skip"), (_bc.get("disliked", 0), "not for me"),
+              (len(_ctl.get("selected_genres") or []), "genre pick"), (len(_ctl.get("priorities") or []), "row preference")]
+    signal_parts = " · ".join(f"{n} {lbl}{'' if n == 1 or lbl in ('seen', 'not for me') else 's'}" for n, lbl in _parts if n)
     scale = training_scale()
     # What is actually running right now. Collaborative filtering and the content
     # model work from the first like; the personal model needs 50 Save/Skip labels.
@@ -6153,14 +6178,15 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         pct = min(100, round(decisions / 50 * 100))
         personal_html = (f'<div class="model-row"><span class="model-dot"></span>'
                          f'<span class="model-name">Your personal model</span>'
-                         f'<span class="model-note">Unlocks after 50 saves and skips (at least 12 of each) · {min(decisions, 50)} of 50</span>'
+                         f'<span class="model-note">Learns only from saves and skips: unlocks at 50 (at least 12 of each) · {min(decisions, 50)} of 50</span>'
                          f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
     models_html = (
         '<div class="model-status-panel">'
         '<div class="model-row"><span class="model-dot on"></span>'
         '<span class="model-name">Active now</span>'
         f'<span class="model-note">Collaborative filtering ({scale["users"]} MovieLens viewers) + content model, '
-        f'using your {signals} signal{"s" if signals != 1 else ""}</span></div>'
+        f'using your {signals} signal{"s" if signals != 1 else ""}'
+        + (f' ({html.escape(signal_parts)})' if signal_parts else '') + '</span></div>'
         f'{personal_html}'
         '</div>'
     )
@@ -6327,6 +6353,17 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         f'{insights_section}'
         f'</div>', unsafe_allow_html=True
     )
+
+
+@st.fragment(run_every="4s")
+def render_live_profile():
+    """Profile tab, refreshed every few seconds.
+
+    Showroom cards rerun on their own (so Skip/Save stay fast), which used to leave this
+    tab showing counts from when the Showroom was built. Rebuilding it from current state
+    keeps the signals and the "x of 50" progress matching what you just did.
+    """
+    render_cinema_profile(current_profile(), include_insights=True, show_heading=True, tab_heading=True)
 
 
 @st.fragment
@@ -6879,15 +6916,18 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         pill_labels = dict(st.session_state.get("showroom_pill_labels") or {})
         row_taken = {label for key, label in pill_labels.items()
                      if key.startswith(f"{row_name}::") and key != slot_key and label}
-        pill_text, pill_label = match_pill(match, reasons, taken=row_taken,
+        pill_text, pill_label = match_pill(match, reasons, taken=row_taken, head=fit_head(payload, match),
                                            limit=19 if undo_title else None)
         pill_labels[slot_key] = pill_label
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
             with st.popover(pill_text, use_container_width=True):
                 st.markdown(
-                    f'<div class="match-score"><span class="match-score-value">{match}%</span>'
-                    f'<span class="match-score-label">fit for you · {html.escape(match_label(match))}</span></div>'
+                    f'<div class="match-score"><span class="match-score-value">{fit_head(payload, match)}</span>'
+                    f'<span class="match-score-label">for you · {html.escape(fit_label(payload, match))}</span></div>'
+                    + (f'<div class="match-rank-note">Ranks in your top {int(payload["fit_top_pct"])}% of '
+                       f'{int(payload.get("fit_pool") or 0):,} movies iCinema scored for you.</div>'
+                       if isinstance(payload.get("fit_top_pct"), (int, float)) else "") +
                     '<div class="match-explain-title">Why this matches you</div>',
                     unsafe_allow_html=True,
                 )
@@ -7179,7 +7219,7 @@ def render_tonight_pick_fragment():
                 '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
-                f'<div class="tonight-badges"><span class="tonight-match">{match}% match</span>{fit}</div>'
+                f'<div class="tonight-badges"><span class="tonight-match">{fit_head(payload, match)} for you</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline")), limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
@@ -7511,6 +7551,19 @@ def render_showroom_fragment(p):
                     "cf":cf_by_title.get(movie["title"]),
                     "model_match":model_match_by_title.get(movie["title"],match),
                 })
+        # Rank every scored movie by its final blended score, so "Top N%" is exact.
+        _bases = sorted((b for b, _ in base_memo.values()), reverse=True)
+        _pool = len(_bases)
+        if _pool:
+            import bisect
+            _asc = sorted(_bases)
+            for _pl in payloads.values():
+                _memo = base_memo.get(id(_pl.get("movie")))
+                if _memo is None:
+                    continue
+                _above = _pool - bisect.bisect_right(_asc, _memo[0])   # movies scored strictly higher
+                _pl["fit_top_pct"] = max(1, -(-100 * (_above + 1) // _pool))
+                _pl["fit_pool"] = _pool
         st.session_state.showroom_payloads=payloads
         st.session_state.showroom_row_queues=queues
         st.session_state.showroom_slots=slots
@@ -7658,7 +7711,7 @@ def render_showroom_fragment(p):
                                         f'<div class="whatsnext-info">'
                                         f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
                                         f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
-                                        f' · {int(npay.get("match") or 0)}% match</div>'
+                                        f' · {fit_head(npay, npay.get("match"))} for you</div>'
                                         f'<div class="whatsnext-why">{html.escape(why)} It also fits your taste profile.</div>'
                                         f'</div></div>',
                                         unsafe_allow_html=True,
@@ -7674,7 +7727,7 @@ def render_showroom_fragment(p):
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        render_cinema_profile(p, include_insights=True, show_heading=True, tab_heading=True)
+        render_live_profile()
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
         edit, reset, _ = st.columns([1.5, 1.2, 4], gap="small")
         with edit:
