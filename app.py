@@ -4927,6 +4927,10 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .proof-note strong{display:block !important;margin-bottom:.3rem !important}
 .proof-note span{display:block}
 @media(max-width:700px){.proof-note{flex-direction:column;align-items:flex-start;gap:.4rem}}
+/* Proof note: same UI font as the rest of the app, no italics for data */
+.adapt-note.proof-note span{font-family:var(--ui-font) !important;font-style:normal !important;font-size:.95rem !important;color:var(--muted) !important;line-height:1.5 !important}
+.adapt-note.proof-note strong{font-family:var(--ui-font) !important}
+.adapt-note.proof-note .proof-big{font-family:var(--ui-font) !important}
 </style>
 """, unsafe_allow_html=True)
 
