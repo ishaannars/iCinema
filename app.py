@@ -4932,6 +4932,10 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .adapt-note.proof-note strong{font-family:var(--ui-font) !important}
 .adapt-note.proof-note .proof-big{font-family:var(--ui-font) !important}
 .match-rank-note{font-family:var(--ui-font);font-size:.72rem;color:var(--muted);margin:-.2rem 0 .55rem}
+
+/* Smooth reload: delayed loader + one-time page fade-in */
+@keyframes icn-appear{from{opacity:0}to{opacity:1}}
+.icinema-boot-loader{animation:icinema-loader-ring 1.1s linear infinite, icn-appear .25s ease .4s both !important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -5016,6 +5020,7 @@ if not st.session_state.get("_storage_hydrated", False):
         st.stop()
     restored = restore_profile(_stored.get("value")) if _stored.get("value") else False
     st.session_state._storage_hydrated = True
+    st.session_state._fade_in_once = True
     st.session_state._last_persisted_profile = json.dumps(profile_snapshot(), sort_keys=True, default=str) if restored else None
 
 # Profile-changing actions queue a snapshot, but we deliberately do NOT mount
@@ -5023,6 +5028,10 @@ if not st.session_state.get("_storage_hydrated", False):
 # that component at the top of a page transition can briefly expose its iframe
 # background as a black strip. The normal persist_profile_if_needed() call at
 # the end of the render writes the exact same snapshot silently.
+if st.session_state.pop("_fade_in_once", False):
+    st.markdown('<style>.stApp [data-testid="stMainBlockContainer"], .stApp .block-container'
+                '{animation:icn-appear .25s ease both}</style>', unsafe_allow_html=True)
+
 _pending_profile = st.session_state.get("_pending_profile_save")
 
 def _snapshot_signature(snapshot):
