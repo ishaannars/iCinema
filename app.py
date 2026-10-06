@@ -5529,13 +5529,25 @@ def watch_line_html(availability, title, services=None):
         text = concise_availability_text(availability.get("text") or "Where to watch: availability unavailable")
         return html.escape(text)
     verb = "Streaming" if options[0][0].startswith("Watch") else "Rent"
-    links = " · ".join(
-        f'<a class="watch-link" href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{html.escape(name)}</a>'
-        for _, name, url in options
-    )
+
+    def _label(name):
+        key = _provider_key(name)
+        return f"{name} (free with a library card)" if key.startswith(("kanopy", "hoopla")) else name
+
+    def _links(opts):
+        return " · ".join(
+            f'<a class="watch-link" href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{html.escape(_label(name))}</a>'
+            for _, name, url in opts
+        )
     total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
     more = " + more" if total > len(options) else ""
-    return f"{verb}: {links}{more}"
+    picked = [sv for sv in (services or []) if sv in STREAMING_SERVICES]
+    if picked and verb == "Streaming":
+        mine = [o for o in options if any(_on_service(o[1], sv) for sv in picked)]
+        rest = [o for o in options if o not in mine]
+        if mine:
+            return f"On your services: {_links(mine)}" + (f" · Also on: {_links(rest)}" if rest else "") + more
+    return f"{verb}: {_links(options)}{more}"
 
 # Pill-sized forms of long reason labels; the full wording stays in the popover.
 _PILL_SHORT = {
@@ -7210,6 +7222,8 @@ def render_tonight_pick_fragment():
     why_html = "".join(f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong> · {html.escape(r["text"])}</div>'
                        for r in reasons)
 
+    tonight_badge = (f"Best on your services · {fit_head(payload, match)} overall" if services
+                     else f"{fit_head(payload, match)} for you")
     with st.container(key=f"tonight_hero_{title}"):
         poster_col, info_col = st.columns([1, 6.2], gap="medium")
         with poster_col:
@@ -7219,7 +7233,7 @@ def render_tonight_pick_fragment():
                 '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
-                f'<div class="tonight-badges"><span class="tonight-match">{fit_head(payload, match)} for you</span>{fit}</div>'
+                f'<div class="tonight-badges"><span class="tonight-match">{tonight_badge}</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline")), limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
