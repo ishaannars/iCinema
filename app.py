@@ -4943,6 +4943,11 @@ div.element-container:has(iframe[title*="browser_storage"]){
   border-bottom:2px solid transparent !important;padding:.35rem .1rem !important;color:var(--ivory) !important;box-shadow:none !important}
 .st-key-section_nav [data-testid="stButtonGroup"] button[kind*="Active"], .st-key-section_nav [data-testid="stButtonGroup"] button[aria-checked="true"]{
   border-bottom-color:var(--ai) !important;color:var(--ai) !important}
+/* Section bar spacing (tabs4) */
+.st-key-section_nav [data-testid="stButtonGroup"] button{margin:0 1.5rem 0 0 !important;padding:.35rem .15rem !important}
+.st-key-section_nav [data-testid="stButtonGroup"] button:last-of-type{margin-right:0 !important}
+.st-key-section_nav{margin-bottom:-.35rem !important}
+[class*="st-key-section_on_"] .showroom-tab-start{height:0 !important;margin:0 !important}
 </style>
 """, unsafe_allow_html=True)
 
