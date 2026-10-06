@@ -4962,11 +4962,6 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-section_on_"] :is(.showroom-row-header,.showroom-row.first,.showroom-row-title,.tab-primary-heading,
   .saved-tab-heading,.profile-wrap,.profile-heading,.profile-heading-aligned,[class*="tonight"]){
   margin-top:0 !important;padding-top:0 !important;transform:none !important}
-/* tabs6: full-width line like st.tabs; first label on the headings' left edge */
-.st-key-section_nav{border-bottom:1px solid var(--border) !important;}
-.st-key-section_nav [data-testid="stButtonGroup"],
-.st-key-section_nav [data-testid="stButtonGroup"]:has(button){border-bottom:none !important;margin-bottom:-1px !important;}
-.st-key-section_nav [data-testid="stButtonGroup"] button:first-of-type{margin-left:-.09rem !important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -7329,17 +7324,6 @@ def render_tonight_pick_fragment():
     persist_from_fragment()
 
 
-from contextlib import contextmanager as _contextmanager
-
-@_contextmanager
-def _tonight_frame():
-    """Same wrapper Tonight's Show's heading sits in, so every section starts at one height."""
-    with st.container():
-        (_col,) = st.columns(1)
-        with _col:
-            yield
-
-
 def render_showroom_fragment(p):
     # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
     # briefly draw the tabs twice after an app rerun.
@@ -7351,8 +7335,8 @@ def render_showroom_fragment(p):
             format_func=lambda v: (f"Saved ({len(st.session_state.saved)})" if v == "Saved" else
                                    f"Seen ({len(st.session_state.seen)})" if v == "Seen" else v),
         ) or "Showroom"
-    _section_box = st.container(key="section_on_view")  # tabs6: fixed name
-    tabs = [_section_box] * 4
+    tabs = [st.container(key=("section_on_" if _section == name else "section_off_") + name.lower())
+            for name in ("Showroom", "Saved", "Seen", "Profile")]
 
     # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
     # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
@@ -7678,170 +7662,163 @@ def render_showroom_fragment(p):
 
     row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
 
-    if _section == "Showroom":
-        with tabs[0]:
-            st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-            render_tonight_pick_fragment()
-            for row_index,row_name in enumerate(row_specs):
-                choices=row_choices.get(row_name,[])
-                row_class = "showroom-row first" if row_index == 0 else "showroom-row"
-                row_notes={
-                    "Top Matches for You":"Best overall fits based on your full preference profile",
-                    "Critically Acclaimed":"Highly rated films that still fit what you like",
-                    "Hidden Gems":"Strong matches that are less obvious or widely promoted",
-                    "Something Different":"A little outside your usual picks, but still likely to click",
-                }
-                st.markdown(
-                    f'<div class="{row_class} showroom-row-header">'
-                    f'<div class="showroom-row-title">{row_name}</div>'
-                    f'<div class="row-model-note">{row_notes[row_name]}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                if not choices:
-                    st.caption("Refreshing personalized matches…")
-                    continue
-                cols=st.columns(len(choices))
-                for i,_ in enumerate(choices):
-                    with cols[i]:
-                        render_showroom_card_fragment(row_name,row_index,i)
-                        render_card_actions(row_name,row_index,i)
-            rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
+    with tabs[0]:
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        render_tonight_pick_fragment()
+        for row_index,row_name in enumerate(row_specs):
+            choices=row_choices.get(row_name,[])
+            row_class = "showroom-row first" if row_index == 0 else "showroom-row"
+            row_notes={
+                "Top Matches for You":"Best overall fits based on your full preference profile",
+                "Critically Acclaimed":"Highly rated films that still fit what you like",
+                "Hidden Gems":"Strong matches that are less obvious or widely promoted",
+                "Something Different":"A little outside your usual picks, but still likely to click",
+            }
             st.markdown(
-                '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
-                'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
-                'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
-                unsafe_allow_html=True
+                f'<div class="{row_class} showroom-row-header">'
+                f'<div class="showroom-row-title">{row_name}</div>'
+                f'<div class="row-model-note">{row_notes[row_name]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
             )
+            if not choices:
+                st.caption("Refreshing personalized matches…")
+                continue
+            cols=st.columns(len(choices))
+            for i,_ in enumerate(choices):
+                with cols[i]:
+                    render_showroom_card_fragment(row_name,row_index,i)
+                    render_card_actions(row_name,row_index,i)
+        rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
+        st.markdown(
+            '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
+            'IMDb and Rotten Tomatoes ratings are retrieved through OMDb and cached for 14 days. '
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.' + rating_note + '</div>',
+            unsafe_allow_html=True
+        )
 
-    if _section == "Saved":
-        with tabs[1]:
-            st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-            with _tonight_frame():
-                st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
-            movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
-            saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
-            saved_identity_map = get_movie_identity_batch(saved_identity_keys)
-            saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
-            saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
-            saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
-                                                          (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
-                                                         for m in movies)) if movies else {}
-            if not movies:st.caption("Nothing saved yet.")
-            else:
-                cols=st.columns(4, gap="medium")
-                for i,m in enumerate(movies):
-                    with cols[i % 4]:
-                        with st.container(key=f"savedcard_{i}"):
-                            identity = saved_identity_map.get(m["title"], {}) or {}
-                            display_movie = dict(m)
-                            if identity.get("display_title"):
-                                display_movie["title"] = identity["display_title"]
-                            if identity.get("year"):
-                                display_movie["year"] = identity["year"]
-                            movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
-                            st.markdown(library_ratings_html(m, identity, saved_live_map), unsafe_allow_html=True)
-                            st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
-                            saved_actions = st.columns(2, gap="small")
-                            with saved_actions[0]:
-                                st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
-                                          on_click=mark_movie_seen, args=(m["title"], m))
-                            with saved_actions[1]:
-                                st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
-                                          on_click=remove_saved_movie, args=(m["title"],))
+    with tabs[1]:
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
+        movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
+        saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+        saved_identity_map = get_movie_identity_batch(saved_identity_keys)
+        saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+        saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
+        saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
+                                                      (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
+                                                     for m in movies)) if movies else {}
+        if not movies:st.caption("Nothing saved yet.")
+        else:
+            cols=st.columns(4, gap="medium")
+            for i,m in enumerate(movies):
+                with cols[i % 4]:
+                    with st.container(key=f"savedcard_{i}"):
+                        identity = saved_identity_map.get(m["title"], {}) or {}
+                        display_movie = dict(m)
+                        if identity.get("display_title"):
+                            display_movie["title"] = identity["display_title"]
+                        if identity.get("year"):
+                            display_movie["year"] = identity["year"]
+                        movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
+                        st.markdown(library_ratings_html(m, identity, saved_live_map), unsafe_allow_html=True)
+                        st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
+                        saved_actions = st.columns(2, gap="small")
+                        with saved_actions[0]:
+                            st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
+                                      on_click=mark_movie_seen, args=(m["title"], m))
+                        with saved_actions[1]:
+                            st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
+                                      on_click=remove_saved_movie, args=(m["title"],))
 
-    if _section == "Seen":
-        with tabs[2]:
-            st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-            with _tonight_frame():
-                st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
-            movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
-            seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
-            seen_identity_map = get_movie_identity_batch(seen_identity_keys)
-            seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
-            seen_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
-                                                         (seen_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
-                                                        for m in movies)) if movies else {}
-            if not movies:st.caption("Nothing marked as seen yet.")
-            else:
-                # What's next: one personalized follow-up per Seen movie, never the same pick
-                # twice on this tab, never something already saved, seen, skipped or disliked.
-                wn_payloads = st.session_state.get("showroom_payloads") or {}
-                wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
-                              | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()))
-                wn_offsets = st.session_state.get("whats_next_offset") or {}
-                wn_taken, wn_picks = set(), {}
-                for m in movies:
-                    ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
-                    if ranked:
-                        pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
-                        wn_picks[m["title"]] = pick
-                        wn_taken.add(pick[0])
-                wn_identity = st.session_state.get("showroom_identity_cache") or {}
-                cols=st.columns(4, gap="medium")
-                for i,m in enumerate(movies):
-                    with cols[i % 4]:
-                        with st.container(key=f"seencard_{i}"):
-                            identity = seen_identity_map.get(m["title"], {}) or {}
-                            display_movie = dict(m)
-                            if identity.get("display_title"):
-                                display_movie["title"] = identity["display_title"]
-                            if identity.get("year"):
-                                display_movie["year"] = identity["year"]
-                            movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
-                            st.markdown(library_ratings_html(m, identity, seen_live_map), unsafe_allow_html=True)
-                            # Hover × in the poster's top-right corner: remove an accidental Seen.
-                            st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
-                                      on_click=remove_from_seen, args=(m["title"],))
-                            pick = wn_picks.get(m["title"])
-                            if pick:
-                                nt, used_cf = pick
-                                npay = wn_payloads.get(nt) or {}
-                                nmovie = npay.get("movie") or {}
-                                nid = wn_identity.get(nt) or {}
-                                nposter = nid.get("poster_url") or nmovie.get("poster_url")
-                                ntitle = nid.get("display_title") or nmovie.get("title") or nt
-                                nyear = nid.get("year") or nmovie.get("year") or ""
-                                why = (f"Viewers who loved “{m['title']}” tend to love this too."
-                                       if used_cf else f"Shares the genre and tone of “{m['title']}”.")
-                                with st.container(key=f"whatsnext_{i}"):
-                                    with st.popover("What’s next", use_container_width=True):
-                                        img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
-                                               if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
-                                        st.markdown(
-                                            f'<div class="whatsnext-kicker">Watch next after “{html.escape(m["title"])}”</div>'
-                                            f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
-                                            f'<div class="whatsnext-info">'
-                                            f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
-                                            f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
-                                            f' · {fit_head(npay, npay.get("match"))} for you</div>'
-                                            f'<div class="whatsnext-why">{html.escape(why)} It also fits your taste profile.</div>'
-                                            f'</div></div>',
-                                            unsafe_allow_html=True,
-                                        )
-                                        # Compact pills, about the poster's width, aligned under the poster.
-                                        a, b, _ = st.columns([1, 1.35, 4.2], gap="small")
-                                        with a:
-                                            st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
-                                                      on_click=save_movie, args=(nt, nmovie))
-                                        with b:
-                                            st.button("Another pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
-                                                      on_click=whats_next_another, args=(m["title"],))
+    with tabs[2]:
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
+        movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
+        seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+        seen_identity_map = get_movie_identity_batch(seen_identity_keys)
+        seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+        seen_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
+                                                     (seen_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
+                                                    for m in movies)) if movies else {}
+        if not movies:st.caption("Nothing marked as seen yet.")
+        else:
+            # What's next: one personalized follow-up per Seen movie, never the same pick
+            # twice on this tab, never something already saved, seen, skipped or disliked.
+            wn_payloads = st.session_state.get("showroom_payloads") or {}
+            wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
+                          | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()))
+            wn_offsets = st.session_state.get("whats_next_offset") or {}
+            wn_taken, wn_picks = set(), {}
+            for m in movies:
+                ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
+                if ranked:
+                    pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
+                    wn_picks[m["title"]] = pick
+                    wn_taken.add(pick[0])
+            wn_identity = st.session_state.get("showroom_identity_cache") or {}
+            cols=st.columns(4, gap="medium")
+            for i,m in enumerate(movies):
+                with cols[i % 4]:
+                    with st.container(key=f"seencard_{i}"):
+                        identity = seen_identity_map.get(m["title"], {}) or {}
+                        display_movie = dict(m)
+                        if identity.get("display_title"):
+                            display_movie["title"] = identity["display_title"]
+                        if identity.get("year"):
+                            display_movie["year"] = identity["year"]
+                        movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
+                        st.markdown(library_ratings_html(m, identity, seen_live_map), unsafe_allow_html=True)
+                        # Hover × in the poster's top-right corner: remove an accidental Seen.
+                        st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
+                                  on_click=remove_from_seen, args=(m["title"],))
+                        pick = wn_picks.get(m["title"])
+                        if pick:
+                            nt, used_cf = pick
+                            npay = wn_payloads.get(nt) or {}
+                            nmovie = npay.get("movie") or {}
+                            nid = wn_identity.get(nt) or {}
+                            nposter = nid.get("poster_url") or nmovie.get("poster_url")
+                            ntitle = nid.get("display_title") or nmovie.get("title") or nt
+                            nyear = nid.get("year") or nmovie.get("year") or ""
+                            why = (f"Viewers who loved “{m['title']}” tend to love this too."
+                                   if used_cf else f"Shares the genre and tone of “{m['title']}”.")
+                            with st.container(key=f"whatsnext_{i}"):
+                                with st.popover("What’s next", use_container_width=True):
+                                    img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
+                                           if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
+                                    st.markdown(
+                                        f'<div class="whatsnext-kicker">Watch next after “{html.escape(m["title"])}”</div>'
+                                        f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
+                                        f'<div class="whatsnext-info">'
+                                        f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
+                                        f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
+                                        f' · {fit_head(npay, npay.get("match"))} for you</div>'
+                                        f'<div class="whatsnext-why">{html.escape(why)} It also fits your taste profile.</div>'
+                                        f'</div></div>',
+                                        unsafe_allow_html=True,
+                                    )
+                                    # Compact pills, about the poster's width, aligned under the poster.
+                                    a, b, _ = st.columns([1, 1.35, 4.2], gap="small")
+                                    with a:
+                                        st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
+                                                  on_click=save_movie, args=(nt, nmovie))
+                                    with b:
+                                        st.button("Another pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
+                                                  on_click=whats_next_another, args=(m["title"],))
 
-    if _section == "Profile":
-        with tabs[3]:
-            st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-            with _tonight_frame():
-                render_live_profile()
-            st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
-            edit, reset, _ = st.columns([1.5, 1.2, 4], gap="small")
-            with edit:
-                # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
-                st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
-            with reset:
-                if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True):
-                    reset_profile_state()
-                    st.rerun(scope="app")
+    with tabs[3]:
+        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        render_live_profile()
+        st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
+        edit, reset, _ = st.columns([1.5, 1.2, 4], gap="small")
+        with edit:
+            # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
+            st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
+        with reset:
+            if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True):
+                reset_profile_state()
+                st.rerun(scope="app")
 
 
     pass  # saved once at the end of the full run
