@@ -4936,6 +4936,15 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* Smooth reload: delayed loader + one-time page fade-in */
 @keyframes icn-appear{from{opacity:0}to{opacity:1}}
 .icinema-boot-loader{animation:icinema-loader-ring 1.1s linear infinite, icn-appear .25s ease .4s both !important;}
+/* v1: phone swipe rows (desktop unchanged) + hide faded leftovers on first load */
+@media (max-width: 640px){
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]{flex-wrap:nowrap !important;overflow-x:auto !important;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:.8rem !important;padding-bottom:.4rem}
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"] > [data-testid="column"]{
+    min-width:72vw !important;flex:0 0 72vw !important;scroll-snap-align:start}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -5030,7 +5039,7 @@ if not st.session_state.get("_storage_hydrated", False):
 # the end of the render writes the exact same snapshot silently.
 if st.session_state.pop("_fade_in_once", False):
     st.markdown('<style>.stApp [data-testid="stMainBlockContainer"], .stApp .block-container'
-                '{animation:icn-appear .25s ease both}</style>', unsafe_allow_html=True)
+                '{animation:icn-appear .25s ease both}.stApp [data-stale="true"]{display:none !important}</style>', unsafe_allow_html=True)
 
 _pending_profile = st.session_state.get("_pending_profile_save")
 
@@ -5099,7 +5108,7 @@ def _load_tmdb_shelf_pool():
     if st.session_state.shelf_tmdb_loaded or not tmdb_catalog_configured():
         return
     try:
-        candidates = discover_movies(100)
+        candidates = discover_movies(300)
     except Exception:
         candidates = []
     # Keep the shelf broadly recognizable: prioritize popularity and substantial voting.
@@ -7411,6 +7420,30 @@ def render_showroom_fragment(p):
         base_memo={}
         fatigue=impression_fatigue()
 
+        # Popularity right now, as a 0-1 percentile within this candidate pool.
+        _pops=sorted(_safe_num(m.get("popularity"),0.0) for _,m in ranked)
+        def _pop_now(movie):
+            if not _pops:
+                return 0.0
+            import bisect
+            return bisect.bisect_left(_pops,_safe_num(movie.get("popularity"),0.0))/max(1,len(_pops)-1)
+
+        def _qualifies(row_name, movie):
+            """Hard rule each section must meet before personal fit ranks it (true to its name)."""
+            rt=_safe_num(movie.get("rt"),-1.0); imdb=_safe_num(movie.get("imdb"),-1.0)
+            tv=_safe_num(movie.get("tmdb_vote"),-1.0); votes=_safe_num(movie.get("tmdb_vote_count"),-1.0)
+            tags=set(movie.get("tags",[]))
+            if row_name=="Critically Acclaimed":
+                return rt>=85 or imdb>=7.8 or (tv>=7.6 and votes>=1500) or "Critically Acclaimed" in tags
+            if row_name=="Hidden Gems":
+                quality=rt>=75 or imdb>=7.0 or (tv>=7.0 and votes>=150) or "Hidden Gem" in tags
+                little_known=(0<=votes<4000) or (votes<0 and _pop_now(movie)<0.35) or "Hidden Gem" in tags
+                return quality and little_known
+            if row_name=="Something Different":
+                return movie.get("genre") not in set(p.get("genres",[]))
+            return True
+
+
         def _row_candidates(row_name, already_used):
             available=[item for item in ranked if item[1]["title"] not in already_used]
             scored=[]
@@ -7442,13 +7475,16 @@ def render_showroom_fragment(p):
                 # The learned profile remains dominant in every row. The section signal
                 # changes the objective, not the underlying personalization system.
                 if row_name=="Top Matches for You":
-                    objective=base
+                    objective=base+0.06*_pop_now(movie)   # current movies surface; fit still dominates
                 elif row_name=="Critically Acclaimed":
                     objective=0.70*base+0.30*section
                 elif row_name=="Hidden Gems":
                     objective=0.72*base+0.28*section
-                else:  # Something Different
-                    objective=0.68*base+0.32*section
+                else:  # Something Different: serendipity = fans-like-you love it, but it's unlike your usual picks
+                    cf_v=cf_by_title.get(movie["title"])
+                    sem=semantic_by_id.get(id(movie),0.5)
+                    seren=max(0.0,min(1.0,((cf_v if cf_v is not None else 0.5)-sem+1.0)/2.0))
+                    objective=0.55*base+0.25*seren+0.20*section
                 # Freshness for returning viewers: discount ignored repeats, lightly vary near-ties.
                 objective-=FATIGUE_STEP*min(fatigue.get(movie["title"],0),FATIGUE_CAP)
                 objective+=VARIETY_SPREAD*visit_variety(movie["title"])
@@ -7456,7 +7492,12 @@ def render_showroom_fragment(p):
 
             # Section objective chooses membership. Within that objective, stronger core
             # personalized fit breaks ties, so every row remains grounded in the same model.
-            scored.sort(key=lambda x:(x[0],x[1]),reverse=True)
+            # Qualifying movies always come first, so each section is true to its name;
+            # non-qualifiers only backfill if the section would otherwise be empty.
+            scored.sort(key=lambda x:(_qualifies(row_name,x[3]),x[0],x[1]),reverse=True)
+            n_ok=sum(1 for x in scored if _qualifies(row_name,x[3]))
+            if n_ok>=4:
+                scored=[x for x in scored if _qualifies(row_name,x[3])]
             diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.80 if row_name=="Top Matches for You" else 0.74)
             chosen={item[3]["title"] for item in diversified}
             ordered=diversified+[item for item in scored if item[3]["title"] not in chosen]
@@ -7650,11 +7691,12 @@ def render_showroom_fragment(p):
             if not choices:
                 st.caption("Refreshing personalized matches…")
                 continue
-            cols=st.columns(len(choices))
-            for i,_ in enumerate(choices):
-                with cols[i]:
-                    render_showroom_card_fragment(row_name,row_index,i)
-                    render_card_actions(row_name,row_index,i)
+            with st.container(key=f"showroom_swipe_{row_index}"):
+                cols=st.columns(len(choices))
+                for i,_ in enumerate(choices):
+                    with cols[i]:
+                        render_showroom_card_fragment(row_name,row_index,i)
+                        render_card_actions(row_name,row_index,i)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
