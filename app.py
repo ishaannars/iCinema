@@ -6147,9 +6147,9 @@ def training_scale():
             return f"{n / 1e6:.1f} million" if n >= 1_000_000 else f"{n:,}"
         return fallback
     return {
-        "users": fmt(data.get("train_users"), "198,954"),
-        "movies": fmt(data.get("train_movies"), "14,407"),
-        "positives": fmt(data.get("train_positives"), "15.8 million"),
+        "users": fmt(data.get("train_users"), None),
+        "movies": fmt(data.get("train_movies"), None),
+        "positives": fmt(data.get("train_positives"), None),
     }
 
 
@@ -6210,7 +6210,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="model-status-panel">'
         '<div class="model-row"><span class="model-dot on"></span>'
         '<span class="model-name">Active now</span>'
-        f'<span class="model-note">Collaborative filtering ({scale["users"]} MovieLens viewers) + content model, '
+        f'<span class="model-note">Collaborative filtering ({(scale["users"] + " ") if scale["users"] else ""}MovieLens viewers) + content model, '
         f'using your {signals} signal{"s" if signals != 1 else ""}'
         + (f' ({html.escape(signal_parts)})' if signal_parts else '') + '</span></div>'
         f'{personal_html}'
@@ -6294,10 +6294,9 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         share = hit_boot.get("cf_win_share")
         if isinstance(share, (int, float)):
             # Share of bootstrap resamples where iCinema wins -> one-sided bootstrap p-value.
-            p_txt = "p < 0.001" if share >= 0.9995 else f"p ≈ {max(1 - share, 0.0005):.3f}"
-            wins = "all 2,000" if share >= 0.9995 else f"{share:.0%} of 2,000"
-            cards.append(_stat(p_txt, "Not a fluke",
-                               f"iCinema beat the popularity pick in {wins} bootstrap resamples of the test viewers."))
+            n_win = int(round(share * 2000))
+            cards.append(_stat(f"{n_win:,} / 2,000", "Not a fluke",
+                               "Bootstrap resamples of the 3,000 test viewers in which iCinema beat the popularity pick."))
         cf_full = (offline.get("full") or {}).get("cf") or {}
         full_note = ""
         if isinstance(cf_full.get("hit@1"), (int, float)) and isinstance(cf3.get("hit@1"), (int, float)) and cf3["hit@1"] > cf_full["hit@1"]:
@@ -6331,8 +6330,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="profile-insights-title">How iCinema works</div>'
         '<div class="methodology-grid how-grid">'
         '<div class="methodology-card">'
-        f'<div class="methodology-value">Starts with {scale["users"]} movie fans</div>'
-        f'<div class="methodology-label">A model trained on how they rated {scale["movies"]} movies compares your first likes with theirs, '
+        f'<div class="methodology-value">Starts with {scale["users"] or "MovieLens"} movie fans</div>'
+        f'<div class="methodology-label">A model trained on how they rated {scale["movies"] or "thousands of"} movies compares your first likes with theirs, '
         'so your first picks are already personal.</div>'
         '</div>'
         '<div class="methodology-card">'
@@ -7829,7 +7828,7 @@ if screen=="welcome":
             '<div class="adapt-note proof-note">'
             f'<div class="proof-big">+{int(_lift)}%</div>'
             '<div><strong>Good picks from your first 3 likes. Yours over time.</strong>'
-            f'<span>A model trained on {_fans} movie fans finds a first pick you’ll love {int(_lift)}% more often than '
+            f'<span>A model trained on {(_fans + ' ') if _fans else 'MovieLens '}movie fans finds a first pick you’ll love {int(_lift)}% more often than '
             'just recommending what’s popular. A second model reads every film’s plot and tone, and a third learns from your saves and skips.</span></div>'
             '</div>', unsafe_allow_html=True)
     else:

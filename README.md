@@ -2,6 +2,13 @@
 
 I kept finding myself spending too much time deciding what movie to watch next, so I built iCinema to shorten the path from "what should I watch?" to pressing play. It personalizes from your first few likes, keeps learning from what you save, skip, and watch, gives you one confident Tonight's Show on the services you already have, and takes you to that service in one tap. Please feel free to try it out and share any feedback.
 
+<!-- RECRUITER-TOP -->
+**[Try iCinema →](https://icinema.streamlit.app/)**
+
+**From just 3 likes:** first pick rated 4+ stars **8.93% vs 5.67%** for “what’s popular” (+58%) · **+24%** Recall@10 · **+27%** NDCG@10 — tested on 3,000 real MovieLens viewers (time-based split).
+
+
+
 The system combines:
 - **Collaborative filtering pretrained on MovieLens** so recommendations are personalized from your first few likes, not weeks of history
 - **Hybrid recommendation modeling** using collaborative, behavioral, semantic, quality, and discovery signals
@@ -41,9 +48,9 @@ User feedback is stored locally in the browser, so recommendations adapt over ti
 
 | Metric | CF (3 likes) vs popularity | 95% CI | Resamples where CF wins | Significant |
 |---|---|---|---|---|
-| Recall@10 | +0.016 | +0.008 to +0.023 | 100% | Yes |
-| NDCG@10 | +0.016 | +0.009 to +0.023 | 100% | Yes |
-| Hit@1 | +3.3% | +2.0% to +4.6% | 100% | Yes |
+| Recall@10 | +0.016 | +0.008 to +0.023 | 2,000 / 2,000 | Yes |
+| NDCG@10 | +0.016 | +0.009 to +0.023 | 2,000 / 2,000 | Yes |
+| Hit@1 | +3.3% | +2.0% to +4.6% | 2,000 / 2,000 | Yes |
 | Recs to first loved movie (median, fewer is better) | 2 fewer | -2 to 7 fewer | 86% | No |
 <!-- RESULTS:END -->
 
@@ -62,7 +69,7 @@ Live per-user diagnostics (model, holdout AUC, Brier score, NDCG, MRR, calibrati
 
 The Profile tab keeps this short for viewers; here is the full picture.
 
-- **Collaborative filtering.** Truncated SVD on 15.8 million positive MovieLens ratings (4 stars and up) from 198,954 users learns 64-dimension embeddings for 14,407 movies. A viewer's likes, favorites (weighted double), and saves pull their taste vector toward similar movies; skips push it away. Candidates are scored by cosine similarity.
+- **Collaborative filtering.** Truncated SVD on positive MovieLens 32M ratings (4 stars and up) learns 64-dimension movie embeddings. A viewer's likes, favorites (weighted double), and saves pull their taste vector toward similar movies; skips push it away. Candidates are scored by cosine similarity.
 - **Content model.** TF-IDF and Truncated SVD over plot and metadata measure theme and tone. Genre, storytelling traits, Bayesian-adjusted ratings, discovery fit, and Step 2–3 answers complete the content score.
 - **Hybrid ranking.** Score = 65% content + 35% collaborative. Each Showroom row blends in its own goal: Critically Acclaimed (30% ratings), Hidden Gems (28% less-popular but well rated), and Something Different (32% novelty in genre, language, and era, plus a mainstream penalty). The blend weights are hand-set design choices. MMR reranking removes near-duplicates, and titles on the viewer's services rank as easier to watch tonight.
 - **Behavioral model.** After 50 Save/Skip outcomes (12+ of each), Logistic Regression trains on the viewer's own feedback; Gradient Boosting is compared at 100 and the better model on a chronological holdout is used. It contributes 22% of the score. Recent choices weigh more (120-day half-life), display position is excluded so exposure isn't mistaken for taste, and Undo removes a skip from training data.
