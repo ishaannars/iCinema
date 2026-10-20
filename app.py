@@ -27,7 +27,7 @@ st.markdown("""
 <style>
 :root{
 --sumi:#111315;--surface:#171A1F;--border:#2A2E35;--ivory:#F3F0EA;
---muted:#A9ADB7;--muted2:#858B96;--ai:#5C6FA8;--ai-hover:#4B5D8B;
+--muted:#A9ADB7;--muted2:#858B96;--accent:#5C6FA8;--accent-hover:#4B5D8B;
 }
 .stApp{background:var(--sumi);color:var(--ivory)}
 html,body,[class*="css"]{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -476,8 +476,8 @@ div[data-testid="stTextInput"] input{
     margin:0 !important;
 }
 
-div.stButton>button[kind="primary"]{background:var(--ai);border-color:var(--ai);color:white}
-div.stButton>button[kind="primary"]:hover{background:var(--ai-hover);border-color:var(--ai-hover)}
+div.stButton>button[kind="primary"]{background:var(--accent);border-color:var(--accent);color:white}
+div.stButton>button[kind="primary"]:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
 
 div[data-testid="stSlider"] [data-testid="stThumbValue"],
 div[data-testid="stSlider"] [data-testid="stSliderThumbValue"],
@@ -1807,7 +1807,7 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     width:.38rem;
     height:.38rem;
     border-radius:999px;
-    background:var(--ai);
+    background:var(--accent);
     display:inline-block;
     flex:0 0 auto;
 }
@@ -2261,7 +2261,7 @@ body:has(.hero-title) .icinema-logo{
 .model-status-dot{
     width:.42rem !important;
     height:.42rem !important;
-    background:var(--ai) !important;
+    background:var(--accent) !important;
     box-shadow:
         0 0 0 2px rgba(92,111,168,.10),
         0 0 7px rgba(92,111,168,.68),
@@ -4290,8 +4290,8 @@ div[data-testid="stLoadingSpinner"],
     font-weight:680 !important;
 }
 .model-status-dot{
-    color:var(--ai) !important;
-    background:var(--ai) !important;
+    color:var(--accent) !important;
+    background:var(--accent) !important;
 }
 
 
@@ -4523,11 +4523,11 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
 .model-status-panel{display:flex;flex-direction:column;gap:.38rem;margin:.1rem 0 1.35rem;max-width:760px;}
 .model-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-family:var(--ui-font);font-size:.76rem;line-height:1.35;}
 .model-dot{width:.42rem;height:.42rem;border-radius:999px;border:1px solid var(--muted2);flex:0 0 auto;}
-.model-dot.on{background:var(--ai);border-color:var(--ai);box-shadow:0 0 8px rgba(92,111,168,.7);animation:icinema-learning-live 1.8s ease-in-out infinite;}
+.model-dot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(92,111,168,.7);animation:icinema-learning-live 1.8s ease-in-out infinite;}
 .model-name{color:var(--ivory);font-weight:700;}
 .model-note{color:var(--muted);font-weight:500;}
 .model-progress{display:inline-block;width:5.5rem;height:.28rem;border-radius:999px;background:rgba(169,173,183,.18);overflow:hidden;}
-.model-progress span{display:block;height:100%;background:var(--ai);border-radius:999px;}
+.model-progress span{display:block;height:100%;background:var(--accent);border-radius:999px;}
 /* Profile: heading → status → sections on one even rhythm. */
 .profile-heading-gap{height:.55rem !important;min-height:.55rem !important;flex-basis:.55rem !important;}
 .profile-wrap .profile-heading,.profile-wrap .profile-heading-aligned{margin-bottom:0 !important;}
@@ -4913,7 +4913,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 
 
 /* Home proof strip: the tested 3-like edge, front and center */
-.proof-strip{display:flex;align-items:center;gap:1rem;border:1px solid var(--border);border-left:3px solid var(--ai);
+.proof-strip{display:flex;align-items:center;gap:1rem;border:1px solid var(--border);border-left:3px solid var(--accent);
   border-radius:14px;background:rgba(255,255,255,.03);padding:.85rem 1.1rem;margin:-1rem 0 1.6rem;max-width:760px}
 .proof-big{font-size:1.65rem;font-weight:800;letter-spacing:-.03em;color:var(--ivory);white-space:nowrap}
 .proof-copy{color:var(--muted);font-size:.92rem;line-height:1.45}
@@ -5435,7 +5435,7 @@ def with_cf_reason(reasons, payload, limit=3):
     reasons = with_tone_detail(list(reasons or []), (payload or {}).get("movie"), avoid=anchor)
     if isinstance(cf, (int, float)) and cf >= 0.65:
         if anchor:
-            # Embedding similarity means the two movies are loved by the same kinds of viewers.
+            # High similarity means the same MovieLens viewers loved both movies.
             reason = {"label": f"Loved by fans of “{anchor}”",
                       "text": f"Viewers who loved “{anchor}” tend to love this too."}
         else:
@@ -5455,8 +5455,8 @@ def whats_next_ranking(source, payloads, blocked):
 
     60% similarity to that movie and 40% the viewer's own personalized match, so each
     pick follows what they watched AND fits their taste. Similarity comes from the
-    MovieLens CF embeddings (the same viewers loved both movies). When the watched movie
-    is in MovieLens, only candidates with an embedding are compared, so CF and content
+    MovieLens item-kNN model (the same viewers loved both movies). When the watched movie
+    is in MovieLens, only candidates in MovieLens are compared, so CF and content
     scores are never mixed; otherwise genre and tag overlap stand in.
     Returns [(title, used_cf), ...], best first.
     """
@@ -6306,18 +6306,13 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             n_win = int(round(share * 2000))
             cards.append(_stat(f"{n_win:,} / 2,000", "Not a fluke",
                                "Bootstrap resamples of the 3,000 test viewers in which iCinema beat the popularity pick."))
-        cf_full = (offline.get("full") or {}).get("cf") or {}
-        full_note = ""
-        if isinstance(cf_full.get("hit@1"), (int, float)) and isinstance(cf3.get("hit@1"), (int, float)) and cf3["hit@1"] > cf_full["hit@1"]:
-            full_note = (" Personalizing from just 3 likes is where most recommenders struggle; iCinema’s 3-like picks even beat "
-                         "the same model given each viewer’s full history. Stronger comparisons (item-kNN, ALS) are next.")
-        else:
-            full_note = " Stronger comparisons (item-kNN, ALS) are next."
+        full_note = (" It beat the standard recommender baselines (SVD, implicit ALS, and EASE) in a head-to-head benchmark "
+                     "on the same viewers, so it powers every row.")
         if cards and isinstance(users, int):
             proof_html = (
                 '<div class="profile-methodology">'
                 f'<div class="profile-insights-title">Tested on {users:,} real viewers</div>'
-                f'<div class="profile-insights-copy">iCinema saw only 3 movies each MovieLens viewer liked, then predicted the films '
+                f'<div class="profile-insights-copy">iCinema saw only 3 random movies each MovieLens viewer liked, then predicted the films '
                 'they’d rate 4+ stars later, compared with simply recommending what’s popular. '
                 f'{significance_note}{full_note}</div>'
                 f'<div class="insight-grid proof-grid">{"".join(cards)}</div>'

@@ -1,0 +1,491 @@
+{
+ "method": "    python training/benchmark_cf.py --data-dir ml-32m --user-sample 5 Rule written before running: - Same MovieLens positives (4+ stars), same per-user time split, same users for every model. - Models: popularity, the current SVD embeddings (64 dims), SVD 128 dims, item-kNN (cosine with   shrinkage), implicit ALS, EASE (closed-form linear), and top-100-neighbor versions of item-kNN and   EASE that are small enough to ship. - Hyperparameters are chosen on 3,000 validation users. Results are reported on 3,000 different   test users, once. - Onboarding is scored with 3 RANDOM likes from each viewer's history (the honest case). The   last-3 version used before is also reported, because recent likes sit closest to what comes next. - A model replaces the current SVD in the app only if, on random-3 seeds, it beats it on Hit@1 and   NDCG@10 with paired-bootstrap 95% intervals above zero, and its model file is under 25 MB. Writes data/cf_benchmark.json. ",
+ "dataset": {
+  "positives": 3115576,
+  "users": 39786,
+  "movies": 8014,
+  "user_sample": "1 in 5 MovieLens 32M users",
+  "validation_users": 3000,
+  "test_users": 3000
+ },
+ "validation_ndcg_random3": {
+  "SVD, 64 dims (current) ()": 0.045,
+  "SVD, 128 dims ()": 0.0442,
+  "item-kNN (0,)": 0.0853,
+  "item-kNN (20,)": 0.0859,
+  "item-kNN (100,)": 0.0864,
+  "Implicit ALS (10,)": 0.0697,
+  "Implicit ALS (40,)": 0.0663,
+  "EASE (250,)": 0.0696,
+  "EASE (1000,)": 0.0715,
+  "EASE (4000,)": 0.0748
+ },
+ "results": {
+  "SVD, 64 dims (current)": {
+   "params": [],
+   "model_size_mb": 2.1,
+   "random3": {
+    "hit@1": 0.044,
+    "recall@10": 0.05179100529100529,
+    "ndcg@10": 0.04467337910036184,
+    "median_recs_to_first_hit": 49.0
+   },
+   "last3": {
+    "hit@1": 0.08933333333333333,
+    "recall@10": 0.08365489417989418,
+    "ndcg@10": 0.07710026624509789,
+    "median_recs_to_first_hit": 25.0
+   },
+   "full": {
+    "hit@1": 0.06866666666666667,
+    "recall@10": 0.07277156084656085,
+    "ndcg@10": 0.064213236979376,
+    "median_recs_to_first_hit": 24.0
+   }
+  },
+  "SVD, 128 dims": {
+   "params": [],
+   "model_size_mb": 4.1,
+   "random3": {
+    "hit@1": 0.044333333333333336,
+    "recall@10": 0.05053505291005291,
+    "ndcg@10": 0.04430620109544572,
+    "median_recs_to_first_hit": 51.0
+   },
+   "last3": {
+    "hit@1": 0.09233333333333334,
+    "recall@10": 0.07962433862433863,
+    "ndcg@10": 0.07556499992347084,
+    "median_recs_to_first_hit": 28.0
+   },
+   "full": {
+    "hit@1": 0.072,
+    "recall@10": 0.07480886243386244,
+    "ndcg@10": 0.06791733667891353,
+    "median_recs_to_first_hit": 25.0
+   }
+  },
+  "item-kNN": {
+   "params": [
+    100
+   ],
+   "model_size_mb": 256.9,
+   "random3": {
+    "hit@1": 0.082,
+    "recall@10": 0.09141428571428571,
+    "ndcg@10": 0.08152248169106317,
+    "median_recs_to_first_hit": 19.0
+   },
+   "last3": {
+    "hit@1": 0.14366666666666666,
+    "recall@10": 0.12657936507936507,
+    "ndcg@10": 0.11932812387902955,
+    "median_recs_to_first_hit": 12.0
+   },
+   "full": {
+    "hit@1": 0.095,
+    "recall@10": 0.10340304232804233,
+    "ndcg@10": 0.09333313441596774,
+    "median_recs_to_first_hit": 16.0
+   }
+  },
+  "Implicit ALS": {
+   "params": [
+    10
+   ],
+   "model_size_mb": 2.1,
+   "random3": {
+    "hit@1": 0.06866666666666667,
+    "recall@10": 0.08091997354497356,
+    "ndcg@10": 0.06993504848623151,
+    "median_recs_to_first_hit": 21.0
+   },
+   "last3": {
+    "hit@1": 0.12866666666666668,
+    "recall@10": 0.12735542328042326,
+    "ndcg@10": 0.11659899911110079,
+    "median_recs_to_first_hit": 12.0
+   },
+   "full": {
+    "hit@1": 0.10166666666666667,
+    "recall@10": 0.1185755291005291,
+    "ndcg@10": 0.10479612267128831,
+    "median_recs_to_first_hit": 12.0
+   }
+  },
+  "EASE": {
+   "params": [
+    4000
+   ],
+   "model_size_mb": 256.9,
+   "random3": {
+    "hit@1": 0.07166666666666667,
+    "recall@10": 0.08546825396825397,
+    "ndcg@10": 0.07412904009630891,
+    "median_recs_to_first_hit": 19.0
+   },
+   "last3": {
+    "hit@1": 0.13366666666666666,
+    "recall@10": 0.1295649470899471,
+    "ndcg@10": 0.11886844906128836,
+    "median_recs_to_first_hit": 11.0
+   },
+   "full": {
+    "hit@1": 0.11533333333333333,
+    "recall@10": 0.12761468253968253,
+    "ndcg@10": 0.11347762853807716,
+    "median_recs_to_first_hit": 12.0
+   }
+  },
+  "EASE, top-100 per movie (shippable)": {
+   "params": [
+    4000,
+    100
+   ],
+   "model_size_mb": 6.4,
+   "random3": {
+    "hit@1": 0.07266666666666667,
+    "recall@10": 0.08449034391534391,
+    "ndcg@10": 0.07362106921006588,
+    "median_recs_to_first_hit": 19.0
+   },
+   "last3": {
+    "hit@1": 0.13033333333333333,
+    "recall@10": 0.12894907407407408,
+    "ndcg@10": 0.11813247838337013,
+    "median_recs_to_first_hit": 11.0
+   },
+   "full": {
+    "hit@1": 0.11433333333333333,
+    "recall@10": 0.12611283068783066,
+    "ndcg@10": 0.11210349326409194,
+    "median_recs_to_first_hit": 12.0
+   }
+  },
+  "item-kNN, top-100 per movie (shippable)": {
+   "params": [
+    100,
+    100
+   ],
+   "model_size_mb": 6.4,
+   "random3": {
+    "hit@1": 0.079,
+    "recall@10": 0.08774007936507935,
+    "ndcg@10": 0.07766345984382857,
+    "median_recs_to_first_hit": 20.0
+   },
+   "last3": {
+    "hit@1": 0.135,
+    "recall@10": 0.11955410052910054,
+    "ndcg@10": 0.11352961234713985,
+    "median_recs_to_first_hit": 13.0
+   },
+   "full": {
+    "hit@1": 0.08733333333333333,
+    "recall@10": 0.10005013227513226,
+    "ndcg@10": 0.08951595996227506,
+    "median_recs_to_first_hit": 17.0
+   }
+  },
+  "Popularity": {
+   "params": [],
+   "model_size_mb": 0.0,
+   "random3": {
+    "hit@1": 0.05433333333333333,
+    "recall@10": 0.06466798941798942,
+    "ndcg@10": 0.05796726417139443,
+    "median_recs_to_first_hit": 32.0
+   },
+   "last3": {
+    "hit@1": 0.05433333333333333,
+    "recall@10": 0.06466798941798942,
+    "ndcg@10": 0.05796726417139443,
+    "median_recs_to_first_hit": 32.0
+   },
+   "full": {
+    "hit@1": 0.05433333333333333,
+    "recall@10": 0.06466798941798942,
+    "ndcg@10": 0.05796726417139443,
+    "median_recs_to_first_hit": 32.0
+   }
+  },
+  "SVD 64, recency-weighted (half-life 20 likes)": {
+   "params": [
+    20
+   ],
+   "model_size_mb": 2.1,
+   "random3": {
+    "hit@1": 0.046,
+    "recall@10": 0.052093518518518525,
+    "ndcg@10": 0.04524857050911814,
+    "median_recs_to_first_hit": 49.0
+   },
+   "last3": {
+    "hit@1": 0.091,
+    "recall@10": 0.08402208994708994,
+    "ndcg@10": 0.07783113036380714,
+    "median_recs_to_first_hit": 25.0
+   },
+   "full": {
+    "hit@1": 0.07466666666666667,
+    "recall@10": 0.08190277777777777,
+    "ndcg@10": 0.07273026549472164,
+    "median_recs_to_first_hit": 22.0
+   }
+  }
+ },
+ "bootstrap_random3_vs_current": {
+  "SVD, 128 dims": {
+   "hit@1": {
+    "difference": 0.0003,
+    "ci95": [
+     -0.007,
+     0.0077
+    ],
+    "win_share": 0.486
+   },
+   "ndcg@10": {
+    "difference": -0.0004,
+    "ci95": [
+     -0.0029,
+     0.002
+    ],
+    "win_share": 0.375
+   },
+   "recall@10": {
+    "difference": -0.0013,
+    "ci95": [
+     -0.0046,
+     0.0021
+    ],
+    "win_share": 0.239
+   }
+  },
+  "item-kNN": {
+   "hit@1": {
+    "difference": 0.038,
+    "ci95": [
+     0.0267,
+     0.0493
+    ],
+    "win_share": 1.0
+   },
+   "ndcg@10": {
+    "difference": 0.0368,
+    "ci95": [
+     0.0316,
+     0.0423
+    ],
+    "win_share": 1.0
+   },
+   "recall@10": {
+    "difference": 0.0396,
+    "ci95": [
+     0.0335,
+     0.0459
+    ],
+    "win_share": 1.0
+   }
+  },
+  "Implicit ALS": {
+   "hit@1": {
+    "difference": 0.0247,
+    "ci95": [
+     0.0147,
+     0.0347
+    ],
+    "win_share": 1.0
+   },
+   "ndcg@10": {
+    "difference": 0.0253,
+    "ci95": [
+     0.0207,
+     0.0299
+    ],
+    "win_share": 1.0
+   },
+   "recall@10": {
+    "difference": 0.0291,
+    "ci95": [
+     0.0238,
+     0.0345
+    ],
+    "win_share": 1.0
+   }
+  },
+  "EASE": {
+   "hit@1": {
+    "difference": 0.0277,
+    "ci95": [
+     0.017,
+     0.0377
+    ],
+    "win_share": 1.0
+   },
+   "ndcg@10": {
+    "difference": 0.0295,
+    "ci95": [
+     0.0247,
+     0.0342
+    ],
+    "win_share": 1.0
+   },
+   "recall@10": {
+    "difference": 0.0337,
+    "ci95": [
+     0.0282,
+     0.0392
+    ],
+    "win_share": 1.0
+   }
+  },
+  "EASE, top-100 per movie (shippable)": {
+   "hit@1": {
+    "difference": 0.0287,
+    "ci95": [
+     0.0183,
+     0.0387
+    ],
+    "win_share": 1.0
+   },
+   "ndcg@10": {
+    "difference": 0.0289,
+    "ci95": [
+     0.0242,
+     0.0336
+    ],
+    "win_share": 1.0
+   },
+   "recall@10": {
+    "difference": 0.0327,
+    "ci95": [
+     0.0274,
+     0.0383
+    ],
+    "win_share": 1.0
+   }
+  },
+  "item-kNN, top-100 per movie (shippable)": {
+   "hit@1": {
+    "difference": 0.035,
+    "ci95": [
+     0.024,
+     0.0467
+    ],
+    "win_share": 1.0
+   },
+   "ndcg@10": {
+    "difference": 0.033,
+    "ci95": [
+     0.028,
+     0.0384
+    ],
+    "win_share": 1.0
+   },
+   "recall@10": {
+    "difference": 0.0359,
+    "ci95": [
+     0.0299,
+     0.042
+    ],
+    "win_share": 1.0
+   }
+  },
+  "Popularity": {
+   "hit@1": {
+    "difference": 0.0103,
+    "ci95": [
+     0.0,
+     0.0213
+    ],
+    "win_share": 0.971
+   },
+   "ndcg@10": {
+    "difference": 0.0133,
+    "ci95": [
+     0.0078,
+     0.0189
+    ],
+    "win_share": 1.0
+   },
+   "recall@10": {
+    "difference": 0.0129,
+    "ci95": [
+     0.0059,
+     0.0193
+    ],
+    "win_share": 1.0
+   }
+  },
+  "SVD 64, recency-weighted (half-life 20 likes)": {
+   "hit@1": {
+    "difference": 0.002,
+    "ci95": [
+     -0.0003,
+     0.0043
+    ],
+    "win_share": 0.95
+   },
+   "ndcg@10": {
+    "difference": 0.0006,
+    "ci95": [
+     -0.0001,
+     0.0012
+    ],
+    "win_share": 0.958
+   },
+   "recall@10": {
+    "difference": 0.0003,
+    "ci95": [
+     -0.001,
+     0.0016
+    ],
+    "win_share": 0.691
+   }
+  }
+ },
+ "lift_random3_vs_popularity": {
+  "SVD, 64 dims (current)": {
+   "hit@1": -0.1902,
+   "ndcg@10": -0.2293,
+   "recall@10": -0.1991
+  },
+  "SVD, 128 dims": {
+   "hit@1": -0.184,
+   "ndcg@10": -0.2357,
+   "recall@10": -0.2185
+  },
+  "item-kNN": {
+   "hit@1": 0.5092,
+   "ndcg@10": 0.4064,
+   "recall@10": 0.4136
+  },
+  "Implicit ALS": {
+   "hit@1": 0.2638,
+   "ndcg@10": 0.2065,
+   "recall@10": 0.2513
+  },
+  "EASE": {
+   "hit@1": 0.319,
+   "ndcg@10": 0.2788,
+   "recall@10": 0.3216
+  },
+  "EASE, top-100 per movie (shippable)": {
+   "hit@1": 0.3374,
+   "ndcg@10": 0.27,
+   "recall@10": 0.3065
+  },
+  "item-kNN, top-100 per movie (shippable)": {
+   "hit@1": 0.454,
+   "ndcg@10": 0.3398,
+   "recall@10": 0.3568
+  },
+  "SVD 64, recency-weighted (half-life 20 likes)": {
+   "hit@1": -0.1534,
+   "ndcg@10": -0.2194,
+   "recall@10": -0.1944
+  }
+ },
+ "winner": "item-kNN, top-100 per movie (shippable)",
+ "replaces_current": true
+}

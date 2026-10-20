@@ -1,128 +1,108 @@
-# iCinema — ML Movie Recommendation System
+# iCinema
 
-I kept finding myself spending too much time deciding what movie to watch next, so I built iCinema to shorten the path from "what should I watch?" to pressing play. It personalizes from your first few likes, keeps learning from what you save, skip, and watch, gives you one confident Tonight's Show on the services you already have, and takes you to that service in one tap. Please feel free to try it out and share any feedback.
+[![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
+
+I kept spending too much time deciding what to watch, so I built iCinema to shorten the path from "what should I watch?" to pressing play. It personalizes from your first few likes, keeps learning from what you save, skip, and watch, and gives you one confident pick on the services you already have.
 
 <!-- RECRUITER-TOP -->
 **[Try iCinema →](https://icinema.streamlit.app/)**
 
-**From just 3 likes:** first pick rated 4+ stars **8.93% vs 5.67%** for “what’s popular” (+58%) · **+24%** Recall@10 · **+27%** NDCG@10 — tested on 3,000 real MovieLens viewers (time-based split).
-
-
-
-The system combines:
-- **Collaborative filtering pretrained on MovieLens** so recommendations are personalized from your first few likes, not weeks of history
-- **Hybrid recommendation modeling** using collaborative, behavioral, semantic, quality, and discovery signals
-- **Supervised ML** with Logistic Regression and Gradient Boosting trained on each user's Save, Skip, and "Not for me" feedback
-- **TF-IDF + Truncated SVD** for movie theme and tone similarity
-- **Multi-source candidate retrieval** across popular titles, hidden gems, recent releases, international films, and classics
-- **MMR diversity reranking** to reduce repetitive recommendations
-- **Recency-weighted learning** with display position excluded from features
-- **Evaluation** offline on MovieLens and live in the app with ROC AUC, Brier score, NDCG, MRR, calibration error, and Time to Match
-
-## How It Works
-
-`candidate retrieval → feature engineering → collaborative + content scoring → personalized ranking → diversity reranking → user feedback → supervised learning → evaluation`
-
-**Cold start is solved with collaborative filtering.** Movie embeddings are learned offline from real MovieLens ratings. Your Step 1 likes place you among viewers with similar taste, so the Showroom is personalized from the first visit. Saves pull recommendations toward similar movies and Skips push away.
-
-**The supervised layer adds per-user learning.** After 50 Save/Skip outcomes (12+ of each), Logistic Regression starts learning from your behavior; after 100 (24+ of each), Gradient Boosting is compared and the better model on a chronological holdout is used. The collaborative-filtering score is one of its features, so it learns how much to trust that signal for you.
-
-**Tonight's Show** shows your single best match as one compact card with one-tap links to where it streams, preferring the streaming services you choose and falling back to any service so there is always an answer. Your services also make titles you can watch tonight rank as more convenient across every row.
-
-User feedback is stored locally in the browser, so recommendations adapt over time without an account or central user database.
-
 ## Results
 
-<!-- RESULTS:START -->
-**Offline evaluation** — MovieLens (ml-32m), time-based split, 3,000 held-out users, ratings ≥ 4 as positives.
+- From **3 random likes**, the first pick was a movie the viewer later rated 4+ stars **7.9%** of the time, compared with **5.4%** for the most popular movie (**+45%**), on 3,000 MovieLens viewers it never saw.
+- The shipped model beat the old one by **+80%** on that first pick and beat SVD, implicit ALS, and EASE in a head-to-head benchmark.
+- It found a loved movie **12 recommendations sooner** than popularity (median 20 vs 32).
 
-**Headline:** from just 3 likes, Tonight's Show is **+58%** more likely to be a movie the viewer loves than a popularity pick, and Showroom rows are **+24–27%** better (relative lift, computed from unrounded values).
+## What I learned
+
+My first headline was +58%, but it came from each viewer's 3 most recent likes. Recent likes sit right next to what someone watches next, so that test was too easy. With 3 random likes, the old SVD model did worse than recommending what's popular. I benchmarked the standard recommenders on the honest test, and item-kNN won by a wide margin, so it now powers every row.
+
+## How it works
+
+`candidate retrieval → "viewers like you" score + content score → personalized ranking → diversity reranking → your feedback → personal model`
+
+- **Viewers like you (item-kNN).** For each of 14,407 movies, the 100 movies most often loved by the same MovieLens viewers, trained on 15.8 million 4+ star ratings from 198,954 viewers. Your likes, favorites, and saves add up their neighbors. Skips and "Not for me" push them down.
+- **Content.** TF-IDF and Truncated SVD over plot and metadata measure theme and tone.
+- **Personal model.** After 50 Save/Skip outcomes, logistic regression learns from your own choices. Gradient boosting is compared at 100, and the better one on a chronological holdout is used.
+- **Tonight's Show.** Your single best match on the services you pick, with one-tap links to watch.
+- Your feedback stays in your browser. There's no account and no central user database.
+
+## Model benchmark
+
+<!-- CF_BENCHMARK:START -->
+| Model | Hit@1, 3 random likes | NDCG@10, 3 random likes | Hit@1, 3 most recent likes | Hit@1, full history | Size |
+|---|---|---|---|---|---|
+| Popularity | 5.4% | 0.058 | 5.4% | 5.4% | — |
+| SVD, 64 dims (old model) | 4.4% | 0.045 | 8.9% | 6.9% | 2 MB |
+| SVD, 128 dims | 4.4% | 0.044 | 9.2% | 7.2% | 4 MB |
+| SVD 64, recency-weighted (half-life 20 likes) | 4.6% | 0.045 | 9.1% | 7.5% | 2 MB |
+| Implicit ALS | 6.9% | 0.070 | 12.9% | 10.2% | 2 MB |
+| EASE | 7.2% | 0.074 | 13.4% | 11.5% | 257 MB |
+| EASE, top-100 per movie (shippable) | 7.3% | 0.074 | 13.0% | 11.4% | 6 MB |
+| item-kNN | 8.2% | 0.082 | 14.4% | 9.5% | 257 MB |
+| **item-kNN, top-100 per movie (shipped)** | 7.9% | 0.078 | 13.5% | 8.7% | 6 MB |
+
+1 in 5 MovieLens 32M users: 39,786 viewers, 8,014 movies, 3,115,576 ratings of 4+ stars. Settings were picked on 3,000 validation viewers and scored once on 3,000 different test viewers. From `training/benchmark_cf.py`.
+<!-- CF_BENCHMARK:END -->
+
+## Results detail
+
+<!-- RESULTS:START -->
+**Offline evaluation:** ml-32m (1 in 5 MovieLens 32M users), time-based split, 3,000 held-out users, ratings ≥ 4 as positives.
+
+**Headline:** from 3 random likes, Tonight's Show is **+45%** more likely to be a movie the viewer loves than a popularity pick, and Showroom rows are **+34–36%** better (relative lift, computed from unrounded values).
 
 | Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
-| Popularity baseline | 0.066 | 0.060 | 5.67% | 32 |
-| Collaborative filtering (full history) | 0.071 | 0.061 | 5.77% | 27 |
-| Collaborative filtering (only 3 likes, like onboarding) | 0.082 | 0.076 | 8.93% | 29 |
+| Popularity baseline | 0.065 | 0.058 | 5.43% | 32 |
+| item-kNN (full history) | 0.100 | 0.090 | 8.73% | 17 |
+| item-kNN (3 random likes, like onboarding) | 0.088 | 0.078 | 7.90% | 20 |
 
 **Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "Significant" means the 95% interval excludes zero. Differences are absolute (Hit@1 in percentage points).
 
-| Metric | CF (3 likes) vs popularity | 95% CI | Resamples where CF wins | Significant |
+| Metric | Shipped model (3 random likes) vs popularity | 95% CI | Resamples where CF wins | Significant |
 |---|---|---|---|---|
-| Recall@10 | +0.016 | +0.008 to +0.023 | 2,000 / 2,000 | Yes |
-| NDCG@10 | +0.016 | +0.009 to +0.023 | 2,000 / 2,000 | Yes |
-| Hit@1 | +3.3% | +2.0% to +4.6% | 2,000 / 2,000 | Yes |
-| Recs to first loved movie (median, fewer is better) | 2 fewer | -2 to 7 fewer | 86% | No |
+| Recall@10 | +0.023 | +0.017 to +0.029 | 100% | Yes |
+| NDCG@10 | +0.020 | +0.015 to +0.025 | 100% | Yes |
+| Hit@1 | +2.5% | +1.3% to +3.7% | 100% | Yes |
+| Recs to first loved movie (median, fewer is better) | 12 fewer | 10 to 16 fewer | 100% | Yes |
 <!-- RESULTS:END -->
 
-The results above are written automatically by `training/train_cf.py`. See [MODEL_CARD.md](MODEL_CARD.md) for data, limitations, and intended use.
+See [MODEL_CARD.md](MODEL_CARD.md) for data, limits, and intended use. Live per-user diagnostics (AUC, Brier score, NDCG, MRR, calibration error) appear in the app's Profile tab once there's enough feedback.
 
-Live per-user diagnostics (model, holdout AUC, Brier score, NDCG, MRR, calibration error) appear in the app's Profile tab once enough feedback exists.
+## Ranking details
 
-## Current Status and Limitations
+- **Hybrid score.** 65% content and 35% "viewers like you." Each Showroom row adds its own goal: Critically Acclaimed (30% ratings), Hidden Gems (28% less popular but well rated), and Something Different (32% novelty). These blend weights are design choices and haven't been tuned yet.
+- **Personal model.** It contributes 22% of the score. Recent choices weigh more (120-day half-life), and display position is left out so being shown isn't mistaken for taste.
+- **Freshness.** A title shown on earlier visits with no Save, Seen, or Skip drops a little each visit (up to five visits).
+- **Skip vs "Not for me."** Skip is a weak "not now." "Not for me" is a strong dislike, and the title never comes back.
+- **What's next.** Under each Seen movie: 60% similarity to that movie and 40% your personal match. This part hasn't been tested offline yet.
+- **Explanations.** "Loved by fans of …" only names movies you liked, favorited, or saved.
 
-- Feedback lives in each user's browser, so the supervised model learns from one person's data and there is no cross-user learning from app users yet.
-- Very recent releases not yet in MovieLens rely on content signals until they are covered.
-- Streaming availability is for the United States.
-- Watch links open each service's search for the title, because public links can't open a movie inside Netflix or Hulu directly. Services without a dependable search link (Max, Peacock, Paramount+) open TMDB's watch page, which then links to the service.
+## Limits
 
-## Ranking Details
+- Feedback lives in each browser, so there's no learning across app users yet.
+- New releases not in MovieLens rely on content signals.
+- Streaming availability is U.S. only.
+- The benchmark uses 1 in 5 MovieLens 32M viewers. The shipped model is retrained on all of them.
 
-The Profile tab keeps this short for viewers; here is the full picture.
+## Run it
 
-- **Collaborative filtering.** Truncated SVD on positive MovieLens 32M ratings (4 stars and up) learns 64-dimension movie embeddings. A viewer's likes, favorites (weighted double), and saves pull their taste vector toward similar movies; skips push it away. Candidates are scored by cosine similarity.
-- **Content model.** TF-IDF and Truncated SVD over plot and metadata measure theme and tone. Genre, storytelling traits, Bayesian-adjusted ratings, discovery fit, and Step 2–3 answers complete the content score.
-- **Hybrid ranking.** Score = 65% content + 35% collaborative. Each Showroom row blends in its own goal: Critically Acclaimed (30% ratings), Hidden Gems (28% less-popular but well rated), and Something Different (32% novelty in genre, language, and era, plus a mainstream penalty). The blend weights are hand-set design choices. MMR reranking removes near-duplicates, and titles on the viewer's services rank as easier to watch tonight.
-- **Behavioral model.** After 50 Save/Skip outcomes (12+ of each), Logistic Regression trains on the viewer's own feedback; Gradient Boosting is compared at 100 and the better model on a chronological holdout is used. It contributes 22% of the score. Recent choices weigh more (120-day half-life), display position is excluded so exposure isn't mistaken for taste, and Undo removes a skip from training data.
-- **Freshness for returning viewers.** Impression discounting lowers a title a little for each earlier visit where it was shown but got no Save, Seen, or Skip (capped at five visits), and a small per-visit shuffle varies near-ties. Both are stable within a visit, so rows never jump while browsing. The candidate pool also widens: each return visit starts deeper in TMDB's catalog, and dedicated channels pull the most popular and best-rated titles in the viewer's top two genres.
-- **Explicit vs. implicit negatives.** Skip means "not now" and is a weak signal; "Not for me" (in each card's explanation and beside Tonight's Show) is an explicit dislike. It pushes the content profile and collaborative-filtering taste vector away about four times harder, counts as a double-weight negative label for the behavioral model, and the title never returns. Undo reverses either one.
-- **What's next.** For each Seen movie, candidates are scored 60% on collaborative-filtering similarity to that movie (the same MovieLens viewers loved both) and 40% on the viewer's personalized match. When the watched movie isn't in MovieLens, genre and tag overlap stand in. Each Seen movie gets a different pick, and nothing already saved, seen, skipped, or disliked is suggested. What's next has not been evaluated offline; the reported results cover the collaborative-filtering ranking only.
-- **Live metrics.** NDCG@4 and MRR appear after 5 Saves; calibration error after 20 Saves and Skips, so a handful of clicks never shows a misleading "perfect" score.
-- **Explanations.** Each card's reasons are the components that contributed most to that movie's score. "Loved by fans of …" names only movies the viewer liked, favorited, or saved, never ones merely marked Seen.
+```sh
+pip install -r requirements.txt
+streamlit run app.py
+python -m pytest -q
+```
 
-## Technical Depth
+To rebuild the models, download MovieLens 32M into `ml-32m/`, then run `python training/benchmark_cf.py --data-dir ml-32m`, `python training/build_knn.py --data-dir ml-32m`, and `python tools/refresh_results.py`.
 
-Collaborative filtering (truncated SVD on implicit feedback) · cold-start fold-in from onboarding likes · Bayesian quality adjustment · Decision Utility scoring · profile confidence · calibration tracking · position-bias protection · chronological holdout · session analytics · candidate-source diversity · per-card recommendation updates
+## Coming next
 
-## Product Features
-
-- Tonight's Show with your streaming services
-- One-tap links from any recommendation to the service that streams it
-- Personalized movie Showroom
-- "Why this match?" explanations
-- Live Cinema Profile with model diagnostics
-- Save, Seen, Skip, and "Not for me" feedback, with Undo for accidental taps
-- Skip on the Step 1 shelf for movies you don't recognize
-- Fresh picks on every visit, so returning viewers don't see the same ignored movies
-- Streaming availability
-- IMDb and Rotten Tomatoes ratings
-- Hidden gems and controlled discovery
-- "What's next" under every Seen movie: a personalized follow-up pick, with Save and Another pick
-- Browser-local preference persistence with no account required
-
-## Coming Next
-
-- **For Critics tab:** search the full catalog and narrow it by IMDb, Rotten Tomatoes, Metacritic, and runtime. Refine chips (Critics' favorites, Hidden gems, Under 2 hours) re-rank results with your taste profile instead of acting as plain filters.
-- **"Only my services" mode** so every row shows only what you can play tonight, with no repeats across rows.
-- **Rate what you've watched:** thumbs up or down on Seen movies, separating intent (Save) from post-watch satisfaction.
-- **Add likes from the Showroom:** search for movies you already love and add them anytime, not just during onboarding.
-
-### Evaluation and code quality
-
-- **Stronger offline baseline.** The collaborative-filtering results are compared only with a popularity baseline. Next is adding item-kNN and ALS comparisons so the lift is measured against standard recommenders.
-- **Refactor.** `app.py` is about 7,000 lines with layered CSS from rapid iteration. Next is splitting it into modules and consolidating the styles.
-
-## Retraining the Collaborative-Filtering Model
-
-1. Download a MovieLens dataset from grouplens.org (for example `ml-32m`) into the repo root.
-2. Run `python training/train_cf.py --data-dir ml-32m --min-count 20`.
-3. The script updates the Results section here and in `MODEL_CARD.md` automatically. Commit `data/cf_model.npz` and both docs.
+- Tune the hand-set blend weights on held-out viewers.
+- Test What's next offline and add an error analysis.
+- Split `app.py` into modules.
+- Product: a For Critics tab, "Only my services" mode, thumbs up or down on Seen movies, and adding likes from the Showroom.
 
 ## Stack
 
-Python · Streamlit · scikit-learn · NumPy · SciPy · TF-IDF · Truncated SVD · MovieLens · TMDB · OMDb
-
-[Try iCinema](https://icinema.streamlit.app/)
-
-Uses the MovieLens dataset: F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems 5(4). This product uses the TMDB API but is not endorsed or certified by TMDB.
-
-© 2026 Ishaan Narasimhan. All rights reserved.
+Python · Streamlit · scikit-learn · NumPy · SciPy · MovieLens · TMDB · OMDb

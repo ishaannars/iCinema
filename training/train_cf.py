@@ -172,14 +172,19 @@ def compute_lifts(results):
             if pop.get(k) and cf3.get(k) is not None}
 
 
+def _short(results):
+    name = str(results.get("model") or "Collaborative filtering")
+    return name.split(",")[0]
+
+
 def build_report(results):
     """Markdown results block for README / MODEL_CARD, built from cf_results.json alone."""
     full, cold = results["full"], results["three_likes"]
     lifts = results.get("lifts_three_likes_vs_popularity") or compute_lifts(results)
     rows = [
         ("Popularity baseline", full["popularity"]),
-        ("Collaborative filtering (full history)", full["cf"]),
-        ("Collaborative filtering (only 3 likes, like onboarding)", cold["cf"]),
+        (f"{_short(results)} (full history)", full["cf"]),
+        (f"{_short(results)} (3 random likes, like onboarding)", cold["cf"]),
     ]
     def first_hit(m):
         v = m["median_recs_to_first_hit"]
@@ -191,15 +196,15 @@ def build_report(results):
     boot = "\n".join(
         f"| {b['metric']} | {b['difference']} | {b['ci95']} | {b['cf_win_share']:.0%} | {'Yes' if b['significant'] else 'No'} |"
         for b in results["bootstrap_three_likes_vs_popularity"])
-    boot_table = ("| Metric | CF (3 likes) vs popularity | 95% CI | Resamples where CF wins | Significant |\n"
+    boot_table = ("| Metric | Shipped model (3 random likes) vs popularity | 95% CI | Resamples where CF wins | Significant |\n"
                   "|---|---|---|---|---|\n" + boot)
     headline = ""
     if {"hit@1", "ndcg@10", "recall@10"} <= set(lifts):
         lo, hi = sorted((lifts["ndcg@10"], lifts["recall@10"]))
-        headline = (f"**Headline:** from just 3 likes, Tonight's Show is **+{lifts['hit@1']}%** more likely to be a movie "
+        headline = (f"**Headline:** from 3 random likes, Tonight's Show is **+{lifts['hit@1']}%** more likely to be a movie "
                     f"the viewer loves than a popularity pick, and Showroom rows are **+{lo}–{hi}%** better "
                     f"(relative lift, computed from unrounded values).\n\n")
-    return (f"**Offline evaluation** — MovieLens ({results['dataset']}), time-based split, "
+    return (f"**Offline evaluation:** {results['dataset']}, time-based split, "
             f"{results['held_out_users']:,} held-out users, ratings ≥ 4 as positives.\n\n{headline}{table}\n\n"
             f"**Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "
             f"\"Significant\" means the 95% interval excludes zero. Differences are absolute "
