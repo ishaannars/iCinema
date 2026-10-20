@@ -6,7 +6,7 @@ iCinema recommends movies to a single viewer and learns from that viewer's feedb
 
 | Component | What it does | Trained on |
 |---|---|---|
-| Collaborative filtering (item-kNN) | Scores movies the same viewers loved alongside the viewer's likes, from their first few likes | MovieLens 32M ratings (offline) |
+| Collaborative filtering (RP3beta for ranking, item-kNN for similar movies) | Scores movies the same viewers loved alongside the viewer's likes, from their first few likes | MovieLens 32M ratings (offline) |
 | Content scoring | Genre, traits, theme and tone similarity (TF-IDF + Truncated SVD), quality, discovery, priorities | Movie metadata from TMDB |
 | Behavioral model | Logistic Regression, then Gradient Boosting, predicting Save vs. Skip | The viewer's own Save/Skip feedback |
 
@@ -21,7 +21,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 
 ## Data
 
-**MovieLens** (GroupLens, University of Minnesota) provides the ratings used to find which movies the same viewers loved. The shipped item-kNN model keeps each movie's 100 nearest movies (cosine similarity with shrinkage), chosen in a benchmark against popularity, SVD, implicit ALS, and EASE (`training/benchmark_cf.py`). A rating of 4 or higher counts as a positive ("loved it"). Movies with too few positives are dropped (`--min-count`). MovieLens movies are linked to TMDB through the dataset's `links.csv`, and by normalized title and year for the built-in catalog.
+**MovieLens** (GroupLens, University of Minnesota) provides the ratings used to find which movies the same viewers loved. Each shipped model keeps every movie's 100 closest movies. Item-kNN (cosine with shrinkage) won the main benchmark against popularity, SVD, implicit ALS, and EASE (`training/benchmark_cf.py`). RP3beta matched it overall and did better for less mainstream taste, confirmed on fresh viewers (`training/confirm_long_tail.py`), so it ranks every row while item-kNN finds similar movies. A rating of 4 or higher counts as a positive ("loved it"). Movies with too few positives are dropped (`--min-count`). MovieLens movies are linked to TMDB through the dataset's `links.csv`, and by normalized title and year for the built-in catalog.
 
 **TMDB** provides movie metadata, posters, and streaming availability (via JustWatch). **OMDb** provides IMDb and Rotten Tomatoes ratings.
 
@@ -38,22 +38,22 @@ Final ranking blends collaborative filtering and content scoring with weights te
 <!-- RESULTS:START -->
 **Offline evaluation:** ml-32m (1 in 5 MovieLens 32M users), time-based split, 3,000 held-out users, ratings ≥ 4 as positives.
 
-**Headline:** from 3 random likes, Tonight's Show is **+45%** more likely to be a movie the viewer loves than a popularity pick, and Showroom rows are **+34–36%** better (relative lift, computed from unrounded values).
+**Headline:** from 3 random likes, Tonight's Show is **+48%** more likely to be a movie the viewer loves than a popularity pick, and Showroom rows are **+37–39%** better (relative lift, computed from unrounded values).
 
 | Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
 | Popularity baseline | 0.065 | 0.058 | 5.43% | 32 |
-| item-kNN (full history) | 0.100 | 0.090 | 8.73% | 17 |
-| item-kNN (3 random likes, like onboarding) | 0.088 | 0.078 | 7.90% | 20 |
+| Routed: RP3beta (beta 0.3) for less mainstream taste (full history) | 0.100 | 0.089 | 8.50% | 17 |
+| Routed: RP3beta (beta 0.3) for less mainstream taste (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
 
 **Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "Significant" means the 95% interval excludes zero. Differences are absolute (Hit@1 in percentage points).
 
 | Metric | Shipped model (3 random likes) vs popularity | 95% CI | Resamples where CF wins | Significant |
 |---|---|---|---|---|
-| Recall@10 | +0.023 | +0.017 to +0.029 | 100% | Yes |
-| NDCG@10 | +0.020 | +0.015 to +0.025 | 100% | Yes |
-| Hit@1 | +2.5% | +1.3% to +3.7% | 100% | Yes |
-| Recs to first loved movie (median, fewer is better) | 12 fewer | 10 to 16 fewer | 100% | Yes |
+| Recall@10 | +0.025 | +0.020 to +0.031 | 100% | Yes |
+| NDCG@10 | +0.021 | +0.016 to +0.026 | 100% | Yes |
+| Hit@1 | +2.6% | +1.5% to +3.8% | 100% | Yes |
+| Recs to first loved movie (median, fewer is better) | 13 fewer | 10 to 16 fewer | 100% | Yes |
 <!-- RESULTS:END -->
 
 **Live diagnostics.** Once a viewer has 50 Save/Skip outcomes (12+ of each), the behavioral model is trained with a chronological holdout, and the app's Profile tab reports holdout ROC AUC, Brier score, NDCG, MRR, and calibration error for that viewer.

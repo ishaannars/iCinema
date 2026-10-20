@@ -1,0 +1,98 @@
+{
+ "method": "    python training/confirm_routing.py --data-dir ml-32m RP3beta helped viewers with less mainstream taste but dipped mainstream viewers slightly (confirm_long_tail.py). The obvious fix is to route: RP3beta when a viewer's likes are less-loved movies, item-kNN otherwise. Deciding that after seeing the earlier results would be fishing, so it is tested on a completely new set of viewers: a different 1-in-5 slice of MovieLens 32M users (user id ending differently), with both models rebuilt on that slice. Nothing was tuned here. The niche cut (median fan percentile of the 3 likes) is the one set on the first validation set.",
+ "user_offset": 1,
+ "viewers": 39805,
+ "niche_viewers": 10017,
+ "niche_cut_fan_percentile": 0.918,
+ "all": {
+  "item-kNN": {
+   "hit@1": 0.0832,
+   "ndcg@10": 0.0814
+  },
+  "RP3beta": {
+   "hit@1": 0.0799,
+   "ndcg@10": 0.0802
+  },
+  "routed": {
+   "hit@1": 0.0843,
+   "ndcg@10": 0.0828
+  }
+ },
+ "niche": {
+  "item-kNN": {
+   "hit@1": 0.0798,
+   "ndcg@10": 0.0712
+  },
+  "RP3beta": {
+   "hit@1": 0.0844,
+   "ndcg@10": 0.0766
+  },
+  "routed": {
+   "hit@1": 0.0844,
+   "ndcg@10": 0.0766
+  }
+ },
+ "others": {
+  "item-kNN": {
+   "hit@1": 0.0843,
+   "ndcg@10": 0.0849
+  },
+  "RP3beta": {
+   "hit@1": 0.0785,
+   "ndcg@10": 0.0814
+  },
+  "routed": {
+   "hit@1": 0.0843,
+   "ndcg@10": 0.0849
+  }
+ },
+ "routed_vs_rp3_all": {
+  "ndcg_diff": 0.0026,
+  "ci95": [
+   0.0017,
+   0.0035
+  ]
+ },
+ "routed_vs_rp3_niche": {
+  "ndcg_diff": 0.0,
+  "ci95": [
+   0.0,
+   0.0
+  ]
+ },
+ "routed_vs_knn_all": {
+  "ndcg_diff": 0.0014,
+  "ci95": [
+   0.0008,
+   0.0019
+  ]
+ },
+ "routed_vs_knn_niche": {
+  "ndcg_diff": 0.0054,
+  "ci95": [
+   0.003,
+   0.0078
+  ]
+ },
+ "ship_routing": true,
+ "routed_on_benchmark_test": {
+  "random3": {
+   "hit@1": 0.08033333333333334,
+   "recall@10": 0.08974735449735449,
+   "ndcg@10": 0.07917971919025074,
+   "median_recs_to_first_hit": 19.0
+  },
+  "last3": {
+   "hit@1": 0.13133333333333333,
+   "recall@10": 0.11757433862433862,
+   "ndcg@10": 0.11109786304133638,
+   "median_recs_to_first_hit": 13.0
+  },
+  "full": {
+   "hit@1": 0.085,
+   "recall@10": 0.09983320105820107,
+   "ndcg@10": 0.08884985922862237,
+   "median_recs_to_first_hit": 17.0
+  }
+ }
+}

@@ -1,0 +1,76 @@
+{
+ "method": "    python training/confirm_long_tail.py --data-dir ml-32m evaluate_long_tail.py picked RP3beta (beta 0.3) on validation viewers. On its 3,000 test viewers (745 niche), niche viewers improved but the interval crossed zero, so that test was too small to decide. Here the same two models, with no retuning, are scored on every other eligible viewer in the sample (none of them were used to pick anything). Rule written before running: - RP3beta replaces item-kNN if niche viewers improve (paired-bootstrap 95% interval above zero)   and all viewers don't get worse by more than 0.002 NDCG@10 (interval lower bound above -0.002). If it replaces item-kNN, RP3beta is also scored on the benchmark's own 3,000 test viewers, so the README headline compares the shipped model with popularity on the same viewers as every other model. Writes data/long_tail_confirm.json (and data/cf_results.json when the shipped model changes). ",
+ "fresh_viewers": 33786,
+ "fresh_niche_viewers": 8401,
+ "beta": 0.3,
+ "all": {
+  "item-kNN": {
+   "hit@1": 0.0827,
+   "ndcg@10": 0.0811
+  },
+  "RP3beta": {
+   "hit@1": 0.0802,
+   "ndcg@10": 0.0806
+  }
+ },
+ "niche": {
+  "item-kNN": {
+   "hit@1": 0.0756,
+   "ndcg@10": 0.069
+  },
+  "RP3beta": {
+   "hit@1": 0.0775,
+   "ndcg@10": 0.076
+  }
+ },
+ "others": {
+  "item-kNN": {
+   "hit@1": 0.0851,
+   "ndcg@10": 0.0851
+  },
+  "RP3beta": {
+   "hit@1": 0.0811,
+   "ndcg@10": 0.0822
+  }
+ },
+ "top10_less_known_share": {
+  "item-kNN": 0.0053,
+  "RP3beta": 0.0326
+ },
+ "all_ndcg_diff": -0.0005,
+ "all_ci95": [
+  -0.0016,
+  0.0007
+ ],
+ "niche_ndcg_diff": 0.0071,
+ "niche_ci95": [
+  0.0045,
+  0.0097
+ ],
+ "niche_hit1_diff": 0.0019,
+ "niche_hit1_ci95": [
+  -0.0052,
+  0.0087
+ ],
+ "replaces_item_knn": true,
+ "rp3beta_on_benchmark_test": {
+  "random3": {
+   "hit@1": 0.077,
+   "recall@10": 0.08726587301587302,
+   "ndcg@10": 0.07734597655763359,
+   "median_recs_to_first_hit": 19.0
+  },
+  "last3": {
+   "hit@1": 0.11,
+   "recall@10": 0.11734616402116402,
+   "ndcg@10": 0.10531569608976467,
+   "median_recs_to_first_hit": 13.0
+  },
+  "full": {
+   "hit@1": 0.07633333333333334,
+   "recall@10": 0.094940873015873,
+   "ndcg@10": 0.08311138175474733,
+   "median_recs_to_first_hit": 18.0
+  }
+ }
+}

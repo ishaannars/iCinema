@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "training"))
 from benchmark_cf import N_EVAL, load_sample, m_knn, matrix  # noqa: E402
+from evaluate_long_tail import shipped_ranker  # noqa: E402
 from evaluate_blends import content_embeddings  # noqa: E402
 from train_cf import metrics, paired_bootstrap, time_split  # noqa: E402
 from src.recommender import GENRES, build_profile, score_movie_components  # noqa: E402
@@ -122,7 +123,9 @@ def main():
     picked = np.random.default_rng(7).choice(eligible, 2 * N_EVAL, replace=False)
     val, tst = list(picked[:N_EVAL]), list(picked[N_EVAL:])
     bench = json.loads((ROOT / "data" / "cf_benchmark.json").read_text())
-    knn, _ = m_knn(X, float(bench["results"]["item-kNN"]["params"][0]), top=100)
+    shrink = float(bench["results"]["item-kNN"]["params"][0])
+    knn, _ = m_knn(X, shrink, top=100)                 # "similar to this movie" (What's next)
+    rank = shipped_ranker(X, shrink)                    # the app's "viewers like you" ranking
     E = content_embeddings(args.data_dir, pos)
     movies = app_movies(args.data_dir, pos, args.user_sample)
     extra = {m["title"]: m for m in movies}
@@ -134,6 +137,8 @@ def main():
     cuts = {"q_hi": np.quantile(qs, 2 / 3), "q_lo": np.quantile(qs, 1 / 3), "q_top": np.quantile(qs, 0.8),
             "o_hi": np.quantile(os_, 2 / 3), "o_lo": np.quantile(os_, 1 / 3), "pop_lo": np.quantile(ps, 0.25)}
     genre_items = {g: [i for i in np.argsort(-X.getnnz(axis=0)) if movies[i]["genre"] == g][:200] for g in GENRES}
+    fans = X.getnnz(axis=0).astype(float)
+    fan_pct = np.argsort(np.argsort(fans)) / max(len(fans) - 1, 1)
     print("data ready", flush=True)
 
     def features(users, seed=5):
@@ -144,7 +149,7 @@ def main():
             hist = tb[u]
             seeds = [hist[i] for i in sorted(rng.choice(len(hist), 3, replace=False))]
             top, review, adventure, more = answers(hist, movies, cuts)
-            raw = knn(np.asarray(seeds)).astype(np.float64)
+            raw = np.asarray(rank(np.asarray(seeds)), dtype=np.float64)
             raw[hist] = -np.inf
             pool = set(np.argpartition(-raw, 300)[:300].tolist())
             for g in top[:2]:
@@ -164,12 +169,12 @@ def main():
             parts = np.array([[c[k] for k in PARTS] for c in comps])
             only_likes = np.array([score_movie_components(movies[i], likes_p, 50, 50, semantic_similarity=s)["raw_score"]
                                    for i, s in zip(pool, sem)])
-            out.append((np.asarray(pool), cf, full, only_likes, te[u], parts))
+            out.append((np.asarray(pool), cf, full, only_likes, te[u], parts, float(np.median(fan_pct[seeds]))))
         return out
 
     def score(feats, w, content="full"):
         res = []
-        for pool, cf, full, only_likes, truth, _ in feats:
+        for pool, cf, full, only_likes, truth, *_ in feats:
             c = full if content == "full" else only_likes
             s = w * c + (1 - w) * cf
             order = pool[np.argsort(-s)][:50]
@@ -193,7 +198,7 @@ def main():
 
     def design(feats, cols):
         Xs, ys = [], []
-        for pool, cf, _, _, truth, parts in feats:
+        for pool, cf, _, _, truth, parts, _ in feats:
             Xs.append(np.column_stack([cf, parts])[:, cols]); ys.append(np.isin(pool, list(truth)).astype(int))
         return Xs, ys
 
@@ -203,7 +208,7 @@ def main():
         lr = LogisticRegression(C=1.0, max_iter=2000, class_weight="balanced").fit(sc.transform(np.vstack(Xv)), np.concatenate(yv))
         Xt, _ = design(ft, cols)
         res = []
-        for (pool, _, _, _, truth, _), x in zip(ft, Xt):
+        for (pool, _, _, _, truth, _, _), x in zip(ft, Xt):
             order = pool[np.argsort(-lr.decision_function(sc.transform(x)))][:50]
             res.append(metrics(order, truth))
         names = (["viewers_like_you"] + PARTS)
@@ -222,7 +227,24 @@ def main():
                    "steps_2_3_value_inside_learned": {"ndcg_diff": round(s23, 4), "ci95": [round(s23lo, 4), round(s23hi, 4)]},
                    "coefficients_per_unit": coefs,
                    "ships": bool(llo > 0 and clo > 0)}
+    # Niche taste: viewers whose 3 likes are among the least-loved movies (bottom quarter by
+    # median fan percentile, cut set on validation). Same rule: pick on validation, test once.
+    cut = float(np.quantile([f[6] for f in fv], 0.25))
+    nv = [f for f in fv if f[6] <= cut]
+    nt = [f for f in ft if f[6] <= cut]
+    n_val = {w: float(score(nv, w)[:, 1].mean()) for w in GRID}
+    n_best = max(n_val, key=n_val.get)
+    nb, nc = score(nt, n_best), score(nt, CURRENT)
+    nd, nlo, nhi, _ = paired_bootstrap(nb[:, 1], nc[:, 1], np.mean)
+    niche_out = {"fan_percentile_cut": round(cut, 3), "validation_viewers": len(nv), "test_viewers": len(nt),
+                 "validation_ndcg_by_content_weight": {str(k): round(v, 4) for k, v in n_val.items()},
+                 "best_content_weight": n_best,
+                 "test": {"best": {"hit@1": round(float(nb[:, 2].mean()), 4), "ndcg@10": round(float(nb[:, 1].mean()), 4)},
+                          "current": {"hit@1": round(float(nc[:, 2].mean()), 4), "ndcg@10": round(float(nc[:, 1].mean()), 4)}},
+                 "ndcg_diff_vs_current": round(nd, 4), "ci95": [round(nlo, 4), round(nhi, 4)],
+                 "change": bool(n_best != CURRENT and nlo > 0)}
     out = {
+        "niche_taste": niche_out,
         "learned_ranker": learned_out,
         "method": " ".join(__doc__.split("\n\n")[1:4]).replace("\n", " "),
         "validation_ndcg_by_content_weight": {str(k): round(v, 4) for k, v in val_ndcg.items()},

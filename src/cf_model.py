@@ -1,9 +1,13 @@
 """
 "Viewers like you" layer for iCinema, pretrained offline on MovieLens 32M.
 
-The shipped model is item-kNN (data/cf_knn.npz): for every movie, its 100 nearest movies by
-cosine similarity of who loved them. It won the benchmark in training/benchmark_cf.py. If that
-file is missing, the older SVD embeddings (data/cf_model.npz) are used instead.
+Two pretrained files, each listing every movie's 100 closest movies by who loved them:
+- data/cf_knn.npz (item-kNN): ranks movies for most viewers, and answers "how similar are these
+  two movies" for What's next and "Loved by fans of ...".
+- data/cf_rank.npz (RP3beta): ranks movies for viewers whose likes are less-loved movies.
+Routing between them was tested on viewers no earlier test touched (training/confirm_routing.py):
+it beat both models used alone. If cf_rank.npz is missing, item-kNN ranks for everyone. If both
+files are missing, the older SVD embeddings (data/cf_model.npz) are used.
 
 Each viewer's taste is computed on the fly from their browser-local Likes, Favorites, Saves,
 Seen, Skips, and "Not for me" choices, so no viewer data ever leaves the browser.
@@ -16,6 +20,8 @@ import numpy as np
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 KNN_PATH = DATA / "cf_knn.npz"
+RANK_PATH = DATA / "cf_rank.npz"
+ROUTING_PATH = DATA / "routing_confirm.json"
 MODEL_PATH = DATA / "cf_model.npz"
 
 # How strongly each action moves the viewer's taste.
@@ -40,6 +46,8 @@ class _Model:
         else:
             self.emb = d["emb"].astype(np.float32)
             self.n = self.emb.shape[0]
+        fans = d["popularity"].astype(np.float64) if "popularity" in d.files else np.zeros(self.n)
+        self.fan_pct = np.argsort(np.argsort(fans)) / max(len(fans) - 1, 1)   # 0 = fewest fans, 1 = most
         self.by_tmdb = {int(t): i for i, t in enumerate(d["tmdb_id"]) if t > 0}
         self.by_title = {}
         for i, (t, y) in enumerate(zip(d["norm_title"], d["year"])):
@@ -68,6 +76,38 @@ def _load():
     return None
 
 
+@lru_cache(maxsize=1)
+def _load_rank():
+    """Model used to rank movies for a viewer: RP3beta if shipped, else the similarity model."""
+    if RANK_PATH.exists() and _load() is not None and _load().kind == "knn":
+        return _Model(RANK_PATH, "knn")
+    return _load()
+
+
+@lru_cache(maxsize=1)
+def _routing_cut():
+    """Fan-percentile cut for routing to RP3beta, or None if routing isn't shipped."""
+    try:
+        import json
+        d = json.loads(ROUTING_PATH.read_text())
+        return float(d["niche_cut_fan_percentile"]) if d.get("ship_routing") else None
+    except Exception:
+        return None
+
+
+def _ranker_for(signals):
+    """RP3beta when the viewer's liked movies are mostly less-loved ones, item-kNN otherwise."""
+    sim = _load()
+    rank = _load_rank()
+    cut = _routing_cut()
+    if sim is None or rank is sim or cut is None or sim.kind != "knn":
+        return rank
+    liked = [i for i in (_index(m) for m, a in signals or [] if a in FAN_ACTIONS) if i is not None]
+    if liked and float(np.median(sim.fan_pct[liked])) <= cut:
+        return rank
+    return sim
+
+
 def cf_available():
     return _load() is not None
 
@@ -87,6 +127,15 @@ def _index(movie):
     return None
 
 
+def fan_percentile(movie):
+    """Where a movie ranks by MovieLens fans (4+ star ratings): 0 = fewest, 1 = most. None if unknown."""
+    model = _load()
+    idx = _index(movie)
+    if model is None or idx is None:
+        return None
+    return float(model.fan_pct[idx])
+
+
 class Taste:
     """A viewer's taste: a score for every movie, plus percentiles for mapping scores to 0-1."""
 
@@ -98,7 +147,7 @@ class Taste:
 
 def user_vector(signals):
     """signals: list of (movie_dict, action) pairs, action in WEIGHTS. Returns a Taste or None."""
-    model = _load()
+    model = _ranker_for(signals)
     if model is None:
         return None
     if model.kind == "knn":

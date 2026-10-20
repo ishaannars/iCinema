@@ -33,6 +33,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "training"))
 from benchmark_cf import N_EVAL, load_sample, m_knn, matrix  # noqa: E402
+from evaluate_long_tail import shipped_ranker  # noqa: E402
 from train_cf import FIRST_HIT_DEPTH, metrics, paired_bootstrap, time_split  # noqa: E402
 
 GRID = [0.0, 0.2, 0.35, 0.5, 0.65, 0.8, 1.0]
@@ -106,16 +107,18 @@ def main():
     picked = np.random.default_rng(7).choice(eligible, 2 * N_EVAL, replace=False)
     val, tst = list(picked[:N_EVAL]), list(picked[N_EVAL:])
     bench = json.loads((ROOT / "data" / "cf_benchmark.json").read_text())
-    knn, _ = m_knn(X, float(bench["results"]["item-kNN"]["params"][0]), top=100)
+    shrink = float(bench["results"]["item-kNN"]["params"][0])
+    knn, _ = m_knn(X, shrink, top=100)                 # "similar to this movie" (What's next)
+    rank = shipped_ranker(X, shrink)                    # the app's "viewers like you" ranking
     E = content_embeddings(args.data_dir, pos)
     print("content embeddings ready", flush=True)
 
     def blend(w):  # w = content weight
-        return lambda seeds, hist: w * pct(E @ E[seeds].mean(axis=0)) + (1 - w) * pct(knn(np.asarray(seeds)))
+        return lambda seeds, hist: w * pct(E @ E[seeds].mean(axis=0)) + (1 - w) * pct(rank(np.asarray(seeds)))
 
     def whats_next(a):  # a = similarity-to-watched weight; source = most recent like
         return lambda seeds, hist: a * pct(knn(np.asarray(hist[-1:]))) + (1 - a) * pct(
-            0.65 * pct(E @ E[seeds].mean(axis=0)) + 0.35 * pct(knn(np.asarray(seeds))))
+            0.65 * pct(E @ E[seeds].mean(axis=0)) + 0.35 * pct(rank(np.asarray(seeds))))
 
     out = {"method": " ".join(__doc__.split("\n\n")[1:3]).replace("\n", " ")}
     out["content_blend"] = pick("Content vs viewers-like-you", GRID, blend, val, tst, tb, te, 0.65, lambda w: w >= 0.2)
@@ -130,7 +133,7 @@ def main():
     for u in tst:
         hist = tb[u]
         seeds = [hist[i] for i in sorted(rng.choice(len(hist), 3, replace=False))]
-        s = knn(np.asarray(seeds)).astype(np.float64)
+        s = np.asarray(rank(np.asarray(seeds)), dtype=np.float64)
         s[hist] = -np.inf
         first = int(np.argmax(s))
         loved = te[u]

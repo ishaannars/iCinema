@@ -1,87 +1,118 @@
 {
+ "niche_taste": {
+  "fan_percentile_cut": 0.918,
+  "validation_viewers": 750,
+  "test_viewers": 745,
+  "validation_ndcg_by_content_weight": {
+   "0.0": 0.0802,
+   "0.2": 0.0808,
+   "0.35": 0.0783,
+   "0.5": 0.0736,
+   "0.65": 0.0682,
+   "0.8": 0.0541,
+   "1.0": 0.0259
+  },
+  "best_content_weight": 0.2,
+  "test": {
+   "best": {
+    "hit@1": 0.0604,
+    "ndcg@10": 0.0671
+   },
+   "current": {
+    "hit@1": 0.0604,
+    "ndcg@10": 0.0671
+   }
+  },
+  "ndcg_diff_vs_current": 0.0,
+  "ci95": [
+   0.0,
+   0.0
+  ],
+  "change": false
+ },
  "learned_ranker": {
   "test": {
-   "hit@1": 0.0667,
-   "ndcg@10": 0.0719
+   "hit@1": 0.0753,
+   "ndcg@10": 0.0764
   },
   "vs_current": {
-   "ndcg_diff": -0.0042,
+   "ndcg_diff": -0.0017,
    "ci95": [
-    -0.0077,
-    -0.0009
+    -0.0055,
+    0.0022
    ]
   },
   "vs_viewers_like_you_only": {
-   "ndcg_diff": -0.0058,
+   "ndcg_diff": -0.0009,
    "ci95": [
-    -0.0095,
-    -0.0022
+    -0.005,
+    0.0033
    ]
   },
   "steps_2_3_value_inside_learned": {
-   "ndcg_diff": -0.0016,
+   "ndcg_diff": -0.002,
    "ci95": [
-    -0.004,
-    0.0006
+    -0.0044,
+    0.0003
    ]
   },
   "coefficients_per_unit": {
-   "viewers_like_you": 2.599,
-   "genre_affinity": 0.408,
-   "trait_affinity": 0.152,
-   "semantic_similarity": 3.124,
-   "quality_alignment": 1.174,
-   "discovery_alignment": -1.439,
-   "priority_alignment": 0.206,
-   "popularity_normalized": 3.645
+   "viewers_like_you": 3.123,
+   "genre_affinity": 0.456,
+   "trait_affinity": 0.081,
+   "semantic_similarity": 3.287,
+   "quality_alignment": 1.058,
+   "discovery_alignment": -1.453,
+   "priority_alignment": 0.217,
+   "popularity_normalized": 4.011
   },
   "ships": false
  },
  "method": "    python training/evaluate_steps.py --data-dir ml-32m evaluate_blends.py scored content from liked movies only. The app's content score also uses Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of). Here those answers are filled in for each MovieLens viewer from their own earlier ratings, the way they'd likely answer, and scored with the app's real code (src/recommender.py): - Step 1: 3 random liked movies. - Step 2 genres: the viewer's 3 most-liked genres. Reviews vs enjoyment: from how highly rated   their liked movies are. Openness: how often they like movies outside those genres. - Step 3: Hidden Gems, Classics, Recent Releases, Documentaries, or Critically Acclaimed when   their liked movies lean that way. Movies get the app's fields from MovieLens: genres, tags mapped to the app's tone traits, average rating and rating count as audience score, and fan count as popularity. Rule written before running: each viewer is ranked over a shared candidate pool (the top 300 \"viewers like you\" picks plus the 200 most-liked movies in their Step 2 genres). The content weight is picked on 3,000 validation viewers and scored once on 3,000 test viewers. The app's weight changes only if the pick beats the current weight on test by a paired-bootstrap interval above zero. Writes data/steps_results.json. ",
  "validation_ndcg_by_content_weight": {
-  "0.0": 0.0836,
-  "0.2": 0.0835,
-  "0.35": 0.0825,
-  "0.5": 0.0788,
-  "0.65": 0.0765,
-  "0.8": 0.0687,
-  "1.0": 0.0387
+  "0.0": 0.0841,
+  "0.2": 0.0853,
+  "0.35": 0.0851,
+  "0.5": 0.0838,
+  "0.65": 0.0802,
+  "0.8": 0.072,
+  "1.0": 0.039
  },
- "best_content_weight": 0.0,
+ "best_content_weight": 0.2,
  "current_content_weight": 0.2,
  "test": {
   "best": {
-   "hit@1": 0.079,
-   "ndcg@10": 0.0777
+   "hit@1": 0.0723,
+   "ndcg@10": 0.0781
   },
   "current": {
-   "hit@1": 0.067,
-   "ndcg@10": 0.0761
+   "hit@1": 0.0723,
+   "ndcg@10": 0.0781
   },
   "viewers_like_you_only": {
-   "hit@1": 0.079,
-   "ndcg@10": 0.0777
+   "hit@1": 0.077,
+   "ndcg@10": 0.0773
   },
   "content_all_steps_only": {
-   "hit@1": 0.0297,
-   "ndcg@10": 0.0344
+   "hit@1": 0.032,
+   "ndcg@10": 0.0351
   },
   "content_likes_only": {
-   "hit@1": 0.0403,
-   "ndcg@10": 0.0377
+   "hit@1": 0.043,
+   "ndcg@10": 0.0387
   }
  },
- "ndcg_diff_vs_current": 0.0016,
+ "ndcg_diff_vs_current": 0.0,
  "ci95": [
-  -0.0001,
-  0.0032
+  0.0,
+  0.0
  ],
  "change": false,
  "steps_2_3_value": {
-  "ndcg_diff_all_steps_vs_likes_only": 0.0001,
+  "ndcg_diff_all_steps_vs_likes_only": -0.0012,
   "ci95": [
-   -0.0011,
-   0.0013
+   -0.0026,
+   0.0002
   ]
  }
 }

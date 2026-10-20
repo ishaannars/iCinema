@@ -27,7 +27,11 @@ def test_shipped_model_won_under_the_rule():
     assert b["replaces_current"]
     assert boot["hit@1"]["ci95"][0] > 0 and boot["ndcg@10"]["ci95"][0] > 0
     assert b["results"][w]["model_size_mb"] <= 25
-    assert load("cf_results.json")["model"] == w
+    shipped = load("cf_results.json")["model"]
+    confirm = load("long_tail_confirm.json")
+    routing = load("routing_confirm.json")
+    assert (shipped == w or (confirm["replaces_item_knn"] and shipped.startswith("RP3beta"))
+            or (routing["ship_routing"] and shipped.startswith("Routed")))
 
 
 def test_readme_headline_matches_results():
@@ -42,6 +46,10 @@ def test_readme_headline_matches_results():
     assert f"**{sooner:.0f} recommendations sooner**" in readme
     assert f"{r['train_positives'] / 1e6:.1f} million" in readme and f"{r['train_users']:,} viewers" in readme
     assert f"{r['train_movies']:,} movies" in readme
+    rc = load("routing_confirm.json")
+    gain = round(rc["routed_vs_knn_niche"]["ndcg_diff"] / rc["niche"]["item-kNN"]["ndcg@10"] * 100)
+    assert f"rose **{gain}%** and nobody else got worse" in readme and f"{rc['viewers']:,} brand-new viewers" in readme
+    assert rc["others"]["routed"]["ndcg@10"] >= rc["others"]["item-kNN"]["ndcg@10"]
 
 
 def test_readme_tables_are_current():
@@ -73,3 +81,29 @@ def test_steps_test_follows_its_rule():
     assert st["change"] == (st["best_content_weight"] != st["current_content_weight"] and st["ci95"][0] > 0)
     lr = st["learned_ranker"]
     assert lr["ships"] == (lr["vs_current"]["ci95"][0] > 0 and lr["vs_viewers_like_you_only"]["ci95"][0] > 0)
+
+
+def test_decision_time_section_exists():
+    readme = (ROOT / "README.md").read_text()
+    assert "<!-- DECISION_TIME:START -->" in readme and "<!-- DECISION_TIME:END -->" in readme
+
+
+def test_long_tail_confirmation_follows_its_rule():
+    c = load("long_tail_confirm.json")
+    assert c["replaces_item_knn"] == (c["niche_ci95"][0] > 0 and c["all_ci95"][0] > -0.002)
+    assert c["fresh_viewers"] > 10000
+
+
+def test_routing_follows_its_rule():
+    rc = load("routing_confirm.json")
+    assert rc["ship_routing"] == (rc["routed_vs_rp3_all"]["ci95"][0] > 0 and rc["routed_vs_rp3_niche"]["ci95"][0] > -0.002)
+    assert rc["user_offset"] != 0          # a slice no earlier test used
+
+
+def test_rows_and_hidden_gems_claim():
+    rr = load("rows_results.json")["rows"]
+    for v in rr.values():
+        assert v["supported"] == (v["ci95"][0] > 0)
+    g = rr["Hidden Gems"]
+    times = g["hit@10_shipped"] / g["hit@10_popular_of_that_kind"]
+    assert f"**{times:.1f} times as often**" in (ROOT / "README.md").read_text()

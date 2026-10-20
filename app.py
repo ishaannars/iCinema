@@ -18,7 +18,7 @@ from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batc
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 from src.scroll_keeper import scroll_keeper
-from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity
+from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity, fan_percentile
 from src.recommender import _calibrated_match_percent
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
@@ -5838,256 +5838,7 @@ def concise_description(text, limit=138):
     candidate = " ".join(words).rstrip(" ,;:.…")
     return candidate + "." if candidate else first_sentence
 
-def clean_movie_copy(text, ensure_terminal=True):
-    """Normalize movie copy so UI summaries never end on awkward fragments."""
-    value = " ".join(str(text or "").split()).strip()
-    if not value:
-        return ""
-
-    # Normalize punctuation spacing and repeated punctuation.
-    value = re.sub(r"\s+([,.;:!?])", r"\1", value)
-    value = re.sub(r"([,;:]){2,}", r"\1", value)
-    value = re.sub(r"\.{2,}", ".", value)
-    value = value.strip(" \t\n,;:–—-")
-
-    # Remove dangling connector/article words caused by safe truncation.
-    dangling = {
-        "a", "an", "the", "and", "or", "but", "with", "to", "of", "in",
-        "for", "from", "by", "as", "at", "into", "onto", "on", "its", "his",
-        "her", "their", "who", "that", "which"
-    }
-    words = value.rstrip(".!?").split()
-    while words and words[-1].casefold().strip(".,;:") in dangling:
-        words.pop()
-    value = " ".join(words).rstrip(" ,;:")
-
-    if ensure_terminal and value and value[-1] not in ".!?":
-        value += "."
-    return value
-
-
-_HOOK_VERBS = set("""
-is are was were be becomes become finds find follows follow discovers discover tries try must has have
-gets get enters enter returns return meets meet faces face uncovers uncover struggles struggle begins begin
-turns turn joins join grows grow investigates investigate reconnects reconnect attempts attempt receives
-receive attends attend moves move prepares prepare realizes realize spends spend fights fight searches search
-takes take makes make lives live works work falls fall goes go comes come leads lead learns learn sets set
-plans plan hunts hunt runs run seeks seek wants want needs need loses lose wins win tells tell decides decide
-agrees agree forms form builds build hides hide escapes escape travels travel embarks embark stumbles stumble
-must wakes wake kills kill saves save protects protect helps help leaves leave arrives arrive teams team
-tracks track confronts confront battles battle pursues pursue sparks spark unravels unravel navigates navigate
-inherits inherit befriends befriend infiltrates infiltrate recruits recruit risks risk chases chase
-""".split())
-_HOOK_DANGLING_END = {
-    "a", "an", "the", "and", "or", "but", "with", "to", "of", "in", "for", "from", "by", "as", "at",
-    "into", "onto", "on", "its", "his", "her", "their", "who", "that", "which", "young", "whose", "when",
-}
-_HOOK_SPLITS = ("; ", " — ", " – ", ": ", ", and ", ", but ", ", who ", ", where ", ", when ", " when ",
-                ", while ", ", as ", ", until ", " until ", ", before ", ", after ", ", only to ", " in order to ", " after ", " before ", " while ")
-
-
-def _hook_is_complete(text, limit, need_verb=True):
-    text = clean_movie_copy(text, ensure_terminal=False)
-    if not text or len(text) < 24 or len(text) > limit:
-        return False
-    words = [w.casefold().strip(".,;:!?()[]{}\"'") for w in text.split()]
-    if len(words) < 5 or words[-1] in _HOOK_DANGLING_END:
-        return False
-    if words[0] in {"in", "on", "at", "during", "after", "before", "while", "when", "with", "without",
-                    "through", "across", "amid", "following"}:
-        return False
-    return (not need_verb) or any(w in _HOOK_VERBS for w in words[1:])
-
-
-_HOOK_LEADS = (r"^(?:in|on|at|during|after|before|following|inside|across|amid|within|when|while|as|once|until|"
-               r"years after|decades after|set in|in the)\b[^,]{2,110},\s+(.+)$")
-_HOOK_PRONOUN_START = {"he", "she", "they", "it", "his", "her", "their", "its", "this", "these", "there", "but", "and", "then"}
-
-
-_HOOK_AUX = {"is", "are", "was", "were", "has", "have", "had", "must", "can", "could", "will",
-             "would", "should", "may", "might", "does", "did", "gets", "got"}
-
-
-# Words that start a setup phrase ("Years later,", "Meanwhile,", "All unemployed,").
-# A name can never be trimmed because it is never on this list.
-_SETUP_OPENERS = {
-    "years", "months", "weeks", "days", "decades", "centuries", "hours", "moments", "minutes",
-    "meanwhile", "now", "today", "tonight", "soon", "later", "once", "all", "after", "before",
-    "during", "following", "since", "still", "suddenly", "eventually", "finally", "together",
-    "alone", "newly", "recently", "long", "back", "far", "deep", "high", "just", "one", "two",
-    "desperate", "determined", "unemployed", "broke", "orphaned", "widowed", "haunted",
-    "estranged", "exiled", "stranded", "trapped", "armed", "fresh", "fed", "tired", "bored",
-    "lonely", "unable", "eager", "reluctant", "grieving", "struggling", "having", "faced",
-    "facing", "left", "raised", "born", "set",
-}
-
-
-def _is_setup_opener(words):
-    first = words[0].strip(".,;:!?\"'") if words else ""
-    return first in _SETUP_OPENERS
-
-
-def _starts_with_subject(text):
-    """False when a clause would begin with its verb, or is only an appositive
-    ("a young man, is ...") whose real subject was the name before it."""
-    words = [w.casefold().strip(".,;:!?\"'") for w in text.split()]
-    if not words or words[0] in _HOOK_AUX or words[0] in _HOOK_VERBS:
-        return False
-    if words[0] in {"a", "an", "the", "his", "her", "their", "its"}:
-        comma = text.find(", ")
-        if 0 < comma <= 60:
-            after = text[comma + 2:].split()
-            if after and (after[0].casefold() in _HOOK_AUX or after[0].casefold() in _HOOK_VERBS):
-                return False
-    return True
-
-
-def _hook_variants(sentence):
-    """(text, is_whole_clause) options: the sentence, its main clause after up to two
-    leading setup phrases, and safe clause cuts. Whole clauses are grammatical by
-    construction; cuts must also pass the verb check."""
-    whole = [sentence]
-    current = sentence
-    for _ in range(2):
-        lead = re.match(_HOOK_LEADS, current, flags=re.IGNORECASE)
-        if lead:
-            rest = lead.group(1).strip()
-            if not _starts_with_subject(rest):
-                break  # never leave a clause that begins with its verb
-            current = rest
-        else:
-            # Short verbless opener such as "All unemployed," or "Years later,".
-            comma = current.find(", ")
-            opener = current[:comma].casefold().split() if 0 < comma <= 30 else None
-            if not opener or any(w in _HOOK_VERBS for w in opener) or not _is_setup_opener(opener):
-                break  # only clear setup phrases are trimmed; names never are
-            rest = current[comma + 2:].strip()
-            if not _starts_with_subject(rest):
-                break  # "Hana, a young girl, is captured..." keeps its subject
-            current = rest
-        whole.append(current[:1].upper() + current[1:])
-    variants = [(w, True) for w in whole]
-    for source in whole:
-        for marker in _HOOK_SPLITS:
-            pos = source.find(marker)
-            if pos > 20 and not (marker.startswith(",") and "," in source[:pos]):
-                variants.append((source[:pos], False))
-    return variants
-
-
-_SCENE_SETTING = re.compile(
-    r"^(?:it['’]s|it is|it was)\s+(?:the\s+)?(?:\d{4}s?|year|summer|winter|spring|fall|autumn|"
-    r"early|late|mid|eve|night|day|end|dawn|future|era|age)\b"
-    r"|^the year is\b|^set (?:in|during|against)\b|^welcome to\b|^once upon a time\b",
-    re.IGNORECASE,
-)
-
-
-def _is_scene_setting(sentence):
-    """Opening narration ("It's the 1940s, and ...") sets a scene but says nothing about the story."""
-    return bool(_SCENE_SETTING.match(str(sentence or "").strip()))
-
-
-def _ends_on_bare_infinitive(text):
-    """Cuts like "... hope to join" drop the object and read as unfinished."""
-    words = [w.casefold().strip(".,;:!?\"'") for w in str(text or "").split()]
-    return len(words) >= 2 and words[-2] == "to"
-
-
-def quick_card_description(movie, limit=110):
-    """One real, specific, complete line about the movie. Never cut mid-sentence.
-
-    Order: the catalog's hand-written hook; the best complete clause from the
-    opening sentence; a later self-contained sentence; the opening sentence whole
-    if it fits; otherwise a clean prompt to open the synopsis.
-    """
-    movie = movie or {}
-    why = clean_movie_copy(movie.get("why"), ensure_terminal=True)
-    if why and len(why) <= limit + 30:
-        return why
-    full = clean_movie_copy(movie.get("overview") or movie.get("why"), ensure_terminal=False)
-    if not full:
-        return "Tap for the premise."
-    sentences = [s.strip().rstrip(".;:, ") for s in re.split(r"(?<=[.!?])\s+", full) if s.strip()]
-
-    for pos, sentence in enumerate(sentences[:4]):
-        if pos > 0 and sentence.split()[0].casefold().strip(",") in _HOOK_PRONOUN_START:
-            continue  # later sentences that lean on earlier context read as fragments
-        if _is_scene_setting(sentence):
-            continue  # scene-setting narration is a last resort, not a hook
-        complete = [
-            c for c, is_whole in _hook_variants(sentence)
-            if _hook_is_complete(c, limit, need_verb=not is_whole)
-            and (is_whole or not _ends_on_bare_infinitive(c))
-        ]
-        if complete:
-            return clean_movie_copy(max(complete, key=len), ensure_terminal=True)
-
-    # TMDB's own tagline (fetched with the movie details we already request) beats narration.
-    tagline = clean_movie_copy(movie.get("tagline"), ensure_terminal=True)
-    if tagline and 12 <= len(tagline) <= limit:
-        return tagline
-
-    first = clean_movie_copy(sentences[0] if sentences else full, ensure_terminal=True)
-    if len(first) <= limit:
-        return first
-    return "Tap for the premise."
-
-
-def tonight_description(movie, limit=160):
-    """Tonight's Show line: the one-line hook when it says something about the story,
-    otherwise the opening premise in complete sentences (the hero card has room).
-
-    Fixes lines like "It's the 1940s, and the notorious Axe Gang terrorizes Shanghai.",
-    scene-setting narration that the hook logic only uses as a last resort.
-    """
-    hook = quick_card_description(movie, limit=limit)
-    full = clean_movie_copy((movie or {}).get("overview"), ensure_terminal=False)
-    if not full:
-        return hook
-    sentences = [x.strip().rstrip(".;:, ") for x in re.split(r"(?<=[.!?])\s+", full) if x.strip()]
-    if len(sentences) < 2:
-        return hook
-    first = clean_movie_copy(sentences[0], ensure_terminal=True)
-    weak = hook == "Tap for the premise." or (hook == first and _is_scene_setting(sentences[0]))
-    if not weak:
-        return hook
-    second = sentences[1]
-    if len(first) + len(second) > 260:
-        # Keep the second sentence's opening clause: after the scene, "...hope to join" reads fine.
-        m = re.search(r",\s+(?:but|and|while|until|when|as|only)\b|;\s+|\s+[–—]\s+", second)
-        if m and len(second[:m.start()].split()) >= 4:
-            second = second[:m.start()]
-        else:
-            return first
-    return f"{first} {clean_movie_copy(second, ensure_terminal=True)}"
-
-
-def expanded_card_description(movie, max_chars=320):
-    """The premise: the opening of the TMDB overview, in complete sentences.
-
-    Always starts at the beginning, since later sentences ("Then, a man...") lean on
-    earlier ones. Adds whole sentences while they fit and never cuts one mid-way.
-    """
-    full = clean_movie_copy(
-        (movie or {}).get("overview") or (movie or {}).get("why"),
-        ensure_terminal=False,
-    )
-    if not full:
-        return "iCinema does not have a longer premise for this title yet."
-    sentences = [
-        clean_movie_copy(part, ensure_terminal=True)
-        for part in re.split(r"(?<=[.!?])\s+", full)
-        if clean_movie_copy(part, ensure_terminal=False)
-    ]
-    chosen, total = [], 0
-    for sentence in sentences[:3]:
-        projected = total + len(sentence) + (1 if chosen else 0)
-        if chosen and projected > max_chars:
-            break
-        chosen.append(sentence)  # the first sentence is always kept whole
-        total = projected
-    return " ".join(chosen).strip()
+from src.descriptions import expanded_card_description, quick_card_description, tonight_description  # card text rules (unit-tested)
 
 
 def concise_availability_text(text, max_providers=2):
@@ -6323,8 +6074,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             n_win = int(round(share * 2000))
             cards.append(_stat(f"{n_win:,} / 2,000", "Not a fluke",
                                "Bootstrap resamples of the 3,000 test viewers in which iCinema beat the popularity pick."))
-        full_note = (" It beat the standard recommender baselines (SVD, implicit ALS, and EASE) in a head-to-head benchmark "
-                     "on the same viewers, so it powers every row.")
+        full_note = (" It was chosen over SVD, implicit ALS, and EASE in a head-to-head benchmark on the same viewers, "
+                     "and it does better than item-kNN for viewers with less mainstream taste.")
         if cards and isinstance(users, int):
             proof_html = (
                 '<div class="profile-methodology">'
@@ -7449,7 +7200,16 @@ def render_showroom_fragment(p):
                 return rt>=85 or imdb>=7.8 or (tv>=7.6 and votes>=1500) or "Critically Acclaimed" in tags
             if row_name=="Hidden Gems":
                 quality=rt>=75 or imdb>=7.0 or (tv>=7.0 and votes>=150) or "Hidden Gem" in tags
-                little_known=(0<=votes<4000) or (votes<0 and _pop_now(movie)<0.35) or "Hidden Gem" in tags
+                # Little known: under 4,000 TMDB votes; if votes are missing, outside the 20% most-loved
+                # MovieLens movies; if neither is known, TMDB popularity. Unknown never counts as hidden.
+                fans=fan_percentile(movie)
+                if votes>=0:
+                    little_known=votes<4000
+                elif fans is not None:
+                    little_known=fans<0.80
+                else:
+                    little_known=_safe_num(movie.get("popularity"),0.0)>0 and _pop_now(movie)<0.35
+                little_known=little_known or "Hidden Gem" in tags
                 return quality and little_known
             if row_name=="Something Different":
                 return movie.get("genre") not in set(p.get("genres",[]))
@@ -7869,7 +7629,7 @@ screen=st.session_state.screen
 if screen=="welcome":
     logo()
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">iCinema learns what you like and narrows the search to movies, series, and documentaries that fit your preferences</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">One tested pick for tonight from the services you already pay for. It starts from your first 3 likes, reaches past what’s trending, and needs no account.</div>',unsafe_allow_html=True)
 
     c1,c2,c3=st.columns(3)
     steps=[

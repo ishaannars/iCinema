@@ -24,14 +24,27 @@ def benchmark_block():
     names = {"SVD, 64 dims (current)": "SVD, 64 dims (old model)"}
     lines = ["| Model | Hit@1, 3 random likes | NDCG@10, 3 random likes | Hit@1, 3 most recent likes | Hit@1, full history | Size |",
              "|---|---|---|---|---|---|"]
+    conf_path = ROOT / "data" / "long_tail_confirm.json"
+    conf = json.loads(conf_path.read_text()) if conf_path.exists() else {}
+    rp3_ships = bool(conf.get("replaces_item_knn"))
     for n in order:
         r = b["results"][n]
         label = names.get(n, n)
         if n == b["winner"]:
-            label = f"**{label.replace(' (shippable)', '')} (shipped)**"
+            label = f"**{label.replace(' (shippable)', '')} ({'shipped for most viewers and similar movies' if rp3_ships else 'shipped'})**"
         size = "—" if n == "Popularity" else f"{r['model_size_mb']:.0f} MB"
         lines.append(f"| {label} | {r['random3']['hit@1']:.1%} | {r['random3']['ndcg@10']:.3f} | "
                      f"{r['last3']['hit@1']:.1%} | {r['full']['hit@1']:.1%} | {size} |")
+    if rp3_ships:
+        r = conf["rp3beta_on_benchmark_test"]
+        lines.append(f"| **RP3beta (beta {conf['beta']:g}), top-100 per movie (shipped for less mainstream taste)** | {r['random3']['hit@1']:.1%} | "
+                     f"{r['random3']['ndcg@10']:.3f} | {r['last3']['hit@1']:.1%} | {r['full']['hit@1']:.1%} | 5 MB |")
+        rt_path = ROOT / "data" / "routing_confirm.json"
+        rt = json.loads(rt_path.read_text()) if rt_path.exists() else {}
+        if rt.get("ship_routing"):
+            r = rt["routed_on_benchmark_test"]
+            lines.append(f"| **Routed: RP3beta for less mainstream likes, item-kNN otherwise (what the app does)** | {r['random3']['hit@1']:.1%} | "
+                         f"{r['random3']['ndcg@10']:.3f} | {r['last3']['hit@1']:.1%} | {r['full']['hit@1']:.1%} | 10 MB |")
     d = b["dataset"]
     lines += ["", f"{d['user_sample']}: {d['users']:,} viewers, {d['movies']:,} movies, {d['positives']:,} ratings of 4+ stars. "
               f"Settings were picked on {d['validation_users']:,} validation viewers and scored once on {d['test_users']:,} different test viewers. "
@@ -49,11 +62,13 @@ def tested_block():
     r = b["results"]
     w, old, pop = r[b["winner"]]["random3"], r["SVD, 64 dims (current)"]["random3"], r["Popularity"]["random3"]
     cb, wn = br["content_blend"], br["whats_next"]
+    conf_path = ROOT / "data" / "long_tail_confirm.json"
+    lt_path = ROOT / "data" / "long_tail_results.json"
     rec = r["SVD 64, recency-weighted (half-life 20 likes)"]["random3"]
     rows = [
         ("Viewers like you", "9 models, 3 random likes, 3,000 test viewers",
          f"item-kNN won: {w['hit@1']:.1%} first-pick hits vs {pop['hit@1']:.1%} popularity and {old['hit@1']:.1%} old SVD",
-         "✅ item-kNN"),
+         "✅ item-kNN for most viewers"),
         ("Content vs viewers like you", "Every weight from 0% to 100% content",
          f"{cb['best_weight']:.0%} content was best (NDCG {cb['test_best']['ndcg@10']:.3f} vs {cb['test_current']['ndcg@10']:.3f} at the old "
          f"{cb['current_weight']:.0%}). With no floor, {cb['best_weight_without_floor']:.0%} was best",
@@ -63,10 +78,11 @@ def tested_block():
          f"{wn['current_weight']:.0%}). With no floor, {wn['best_weight_without_floor']:.0%} was best",
          f"✅ {wn['best_weight']:.0%} similarity, {1 - wn['best_weight']:.0%} personal match"),
         ("Recency-weighted likes", "SVD with newer likes weighted more", f"{rec['hit@1']:.1%} vs {old['hit@1']:.1%}, no real gain", "❌ No"),
-        ("Row goals (Critically Acclaimed, Hidden Gems, Something Different)", "Not testable offline",
-         "They define what each row is for", "Design choice"),
+        ("Row goals (how much each row leans on its kind)", "Not testable offline", "They define what each row is for", "Design choice"),
         ("Personal Save/Skip model (22%)", "Needs real app users", "Live AUC shows in the Profile tab", "Design choice"),
         ("Section order", "Not an accuracy question", "Your Step 3 picks decide which section comes after Top Matches", "Design choice"),
+        ("Hidden Gems", "Definition", "Under 4,000 TMDB votes, or outside the 20% most-loved MovieLens movies when votes are missing, plus a few hand-picked gems", "Design choice"),
+        ("Card descriptions", "Rules checked by unit tests", "Each line is scored for being specific, standing on its own, and describing the story. No text is generated", "✅ Rule-based"),
     ]
     st = json.loads((ROOT / "data" / "steps_results.json").read_text()) if (ROOT / "data" / "steps_results.json").exists() else None
     if st:
@@ -74,16 +90,52 @@ def tested_block():
         s23, lr = st["steps_2_3_value"], st["learned_ranker"]
         rows.insert(2, ("Every onboarding step (Steps 1–3)", "The app's own scoring, with each viewer's Step 2–3 answers filled in from their history",
                         f"At {st['current_content_weight']:.0%} content, Steps 2–3 didn't move hit rates (NDCG {s23['ndcg_diff_all_steps_vs_likes_only']:+.3f}, "
-                        f"95% CI {s23['ci95'][0]:+.3f} to {s23['ci95'][1]:+.3f}). 0% and {st['current_content_weight']:.0%} content tied on validation "
-                        f"({v['0.0']:.4f} vs {v[str(st['current_content_weight'])]:.4f})",
+                        f"95% CI {s23['ci95'][0]:+.3f} to {s23['ci95'][1]:+.3f}). {st['best_content_weight']:.0%} content was best on validation "
+                        f"(NDCG {v[str(st['best_content_weight'])]:.4f} vs {v['0.0']:.4f} with no content)",
                         f"✅ Kept at {st['current_content_weight']:.0%}, so your answers count at no cost"))
-        rows.insert(3, ("Learned ranker", "Logistic regression on viewers like you plus every content part",
+        nt = st.get("niche_taste")
+        if nt:
+            rows.insert(3, ("More content for niche taste (on top of RP3beta)", f"Viewers whose 3 likes are less-loved movies ({nt['test_viewers']:,} test viewers)",
+                            (f"The current {nt['best_content_weight']:.0%} was already best for them on validation"
+                             if nt["best_content_weight"] == st["current_content_weight"] else
+                             f"{nt['best_content_weight']:.0%} content was best on validation and the gain on test wasn't significant "
+                             f"(NDCG {nt['ndcg_diff_vs_current']:+.3f}, CI {nt['ci95'][0]:+.3f} to {nt['ci95'][1]:+.3f})"),
+                            "No change needed"))
+        rows.insert(4 if nt else 3, ("Learned ranker", "Logistic regression on viewers like you plus every content part",
                         f"Worse than the current blend (NDCG {lr['vs_current']['ndcg_diff']:+.3f})", "❌ No"))
+    if conf_path.exists() and lt_path.exists():
+        cf_, lt = json.loads(conf_path.read_text()), json.loads(lt_path.read_text())
+        tried = [k for k in lt["validation_ndcg_niche"] if k != "item-kNN (shipped)"]
+        rows.insert(1, ("Less mainstream taste", f"{len(tried)} fixes for popularity bias (popularity penalties, ALS, EASE, blends, RP3beta), "
+                        f"then a fresh check on {cf_['fresh_viewers']:,} untouched viewers",
+                        f"RP3beta (beta {cf_['beta']:g}) lifted niche viewers' NDCG {cf_['niche_ndcg_diff']:+.4f} "
+                        f"(95% CI {cf_['niche_ci95'][0]:+.4f} to {cf_['niche_ci95'][1]:+.4f}) with no loss overall "
+                        f"({cf_['all_ndcg_diff']:+.4f}, CI {cf_['all_ci95'][0]:+.4f} to {cf_['all_ci95'][1]:+.4f}). Every other fix made things worse",
+                        "✅ Used for less mainstream likes (see routing)" if cf_["replaces_item_knn"] else "❌ No"))
+        rt_path = ROOT / "data" / "routing_confirm.json"
+        if rt_path.exists():
+            rt = json.loads(rt_path.read_text())
+            rows.insert(2, ("Routing between the two", f"RP3beta for less mainstream likes, item-kNN otherwise, on {rt['viewers']:,} brand-new viewers "
+                            "(a separate slice of MovieLens, models rebuilt, nothing tuned)",
+                            f"Beat RP3beta for everyone (NDCG {rt['routed_vs_rp3_all']['ndcg_diff']:+.4f}, CI {rt['routed_vs_rp3_all']['ci95'][0]:+.4f} to "
+                            f"{rt['routed_vs_rp3_all']['ci95'][1]:+.4f}) and item-kNN for everyone ({rt['routed_vs_knn_all']['ndcg_diff']:+.4f}, CI "
+                            f"{rt['routed_vs_knn_all']['ci95'][0]:+.4f} to {rt['routed_vs_knn_all']['ci95'][1]:+.4f})",
+                            "✅ What the app does" if rt["ship_routing"] else "❌ No"))
+    rows_path = ROOT / "data" / "rows_results.json"
+    if rows_path.exists():
+        rr = json.loads(rows_path.read_text())["rows"]
+        kinds = {"Hidden Gems": "outside the 20% most-loved movies", "Critically Acclaimed": "4.0+ stars from 500+ ratings",
+                 "Something Different": "outside your 3 most-liked genres"}
+        for name, v in rr.items():
+            rows.append((f"{name} row", f"Within movies {kinds[name]}, vs the most popular of that kind ({v['viewers']:,} viewers)",
+                         f"Found a movie the viewer later loved in its top 10 {v['hit@10_shipped']:.1%} of the time vs "
+                         f"{v['hit@10_popular_of_that_kind']:.1%} (CI {v['ci95'][0]:+.3f} to {v['ci95'][1]:+.3f})",
+                         "✅ Supported" if v["supported"] else "❌ Not supported"))
     lines = ["| Part | Test | Result | In the app |", "|---|---|---|---|"]
     lines += [f"| {a} | {b_} | {c} | {d} |" for a, b_, c, d in rows]
     lines += ["", "MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. "
               "Content and personal match always keep at least 20%, so your answers always count. "
-              "From `training/benchmark_cf.py`, `training/evaluate_blends.py`, and `training/evaluate_steps.py`."]
+              "From the scripts in `training/`."]
     return "\n".join(lines)
 
 

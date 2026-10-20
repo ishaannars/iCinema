@@ -1,0 +1,38 @@
+{
+ "method": "    python training/evaluate_rows.py --data-dir ml-32m Each row limits itself to one kind of movie, so a row is only useful if, inside that limit, the shipped \"viewers like you\" ranking still finds what you'll love. On the benchmark's 3,000 test viewers (3 random likes each), every row is scored against the obvious alternative: the most popular movies of that same kind. - Hidden Gems: movies outside the 20% most-loved. - Critically Acclaimed: movies averaging 4.0+ stars from at least 500 ratings (MovieLens stands in   for critic scores). - Something Different: movies outside the viewer's 3 most-liked genres. A viewer counts for a row only if they later loved at least one movie of that kind. Rule written before running: a row is supported if the shipped ranking beats popularity of the same kind on Hit@10 (paired-bootstrap 95% interval above zero). Writes data/rows_results.json. ",
+ "rows": {
+  "Hidden Gems": {
+   "viewers": 1823,
+   "hit@10_shipped": 0.1103,
+   "hit@10_popular_of_that_kind": 0.0411,
+   "diff": 0.0691,
+   "ci95": [
+    0.0538,
+    0.085
+   ],
+   "supported": true
+  },
+  "Critically Acclaimed": {
+   "viewers": 1967,
+   "hit@10_shipped": 0.5191,
+   "hit@10_popular_of_that_kind": 0.4367,
+   "diff": 0.0824,
+   "ci95": [
+    0.058,
+    0.1057
+   ],
+   "supported": true
+  },
+  "Something Different": {
+   "viewers": 2478,
+   "hit@10_shipped": 0.3652,
+   "hit@10_popular_of_that_kind": 0.3047,
+   "diff": 0.0605,
+   "ci95": [
+    0.042,
+    0.0783
+   ],
+   "supported": true
+  }
+ }
+}

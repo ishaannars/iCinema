@@ -62,9 +62,32 @@ def test_falls_back_to_svd_when_knn_file_missing():
     old = cf.KNN_PATH
     try:
         cf.KNN_PATH = ROOT / "data" / "missing.npz"
-        cf._load.cache_clear()
+        cf._load.cache_clear(); cf._load_rank.cache_clear()
         taste = cf.user_vector([(SPIRITED, "like")])
         assert cf._load().kind == "svd" and 0.0 <= cf.cf_affinity(MONONOKE, taste) <= 1.0
     finally:
         cf.KNN_PATH = old
-        cf._load.cache_clear()
+        cf._load.cache_clear(); cf._load_rank.cache_clear()
+
+
+def test_famous_movies_are_not_hidden():
+    assert cf.fan_percentile(MONONOKE) > 0.8
+    assert cf.fan_percentile({"title": "Not A Real Movie Title", "year": 1900}) is None
+
+
+def test_routing_sends_less_mainstream_likes_to_rp3beta():
+    if cf._routing_cut() is None:
+        return
+    mainstream = [(MATRIX, "like"), ({"title": "Toy Story", "year": 1995}, "like"), ({"title": "Fight Club", "year": 1999}, "like")]
+    assert cf._ranker_for(mainstream) is cf._load()
+    niche = [({"title": "Tampopo", "year": 1985}, "like"), ({"title": "Coherence", "year": 2013}, "like"),
+             ({"title": "The Wailing", "year": 2016}, "like")]
+    assert cf._ranker_for(niche) is cf._load_rank()
+
+
+def test_ranking_uses_rp3beta_when_shipped():
+    import json
+    shipped = json.loads((ROOT / "data" / "long_tail_confirm.json").read_text())["replaces_item_knn"]
+    assert (cf.RANK_PATH.exists()) == shipped
+    if shipped:
+        assert float(__import__("numpy").load(cf.RANK_PATH)["beta"]) > 0

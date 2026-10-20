@@ -1,8 +1,14 @@
 {
   "dataset": "ml-32m (1 in 5 MovieLens 32M users)",
-  "model": "item-kNN, top-100 per movie (shippable)",
   "seed_type": "3 random likes from each viewer's history",
   "held_out_users": 3000,
+  "benchmark_users": 39786,
+  "benchmark_movies": 8014,
+  "benchmark_positives": 3115576,
+  "train_users": 198954,
+  "train_movies": 14407,
+  "train_positives": 15779396,
+  "model": "Routed: RP3beta (beta 0.3) for less mainstream taste, item-kNN otherwise",
   "full": {
     "popularity": {
       "hit@1": 0.05433333333333333,
@@ -11,9 +17,9 @@
       "median_recs_to_first_hit": 32.0
     },
     "cf": {
-      "hit@1": 0.08733333333333333,
-      "recall@10": 0.10005013227513226,
-      "ndcg@10": 0.08951595996227506,
+      "hit@1": 0.085,
+      "recall@10": 0.09983320105820107,
+      "ndcg@10": 0.08884985922862237,
       "median_recs_to_first_hit": 17.0
     }
   },
@@ -25,52 +31,45 @@
       "median_recs_to_first_hit": 32.0
     },
     "cf": {
-      "hit@1": 0.079,
-      "recall@10": 0.08774007936507935,
-      "ndcg@10": 0.07766345984382857,
-      "median_recs_to_first_hit": 20.0
+      "hit@1": 0.08033333333333334,
+      "recall@10": 0.08974735449735449,
+      "ndcg@10": 0.07917971919025074,
+      "median_recs_to_first_hit": 19.0
     }
   },
   "bootstrap_three_likes_vs_popularity": [
     {
       "metric": "Recall@10",
-      "difference": "+0.023",
-      "ci95": "+0.017 to +0.029",
+      "difference": "+0.025",
+      "ci95": "+0.020 to +0.031",
       "cf_win_share": 1.0,
       "significant": true
     },
     {
       "metric": "NDCG@10",
-      "difference": "+0.020",
-      "ci95": "+0.015 to +0.025",
+      "difference": "+0.021",
+      "ci95": "+0.016 to +0.026",
       "cf_win_share": 1.0,
       "significant": true
     },
     {
       "metric": "Hit@1",
-      "difference": "+2.5%",
-      "ci95": "+1.3% to +3.7%",
+      "difference": "+2.6%",
+      "ci95": "+1.5% to +3.8%",
       "cf_win_share": 1.0,
       "significant": true
     },
     {
       "metric": "Recs to first loved movie (median, fewer is better)",
-      "difference": "12 fewer",
+      "difference": "13 fewer",
       "ci95": "10 to 16 fewer",
       "cf_win_share": 1.0,
       "significant": true
     }
   ],
   "lifts_three_likes_vs_popularity": {
-    "hit@1": 45,
-    "ndcg@10": 34,
-    "recall@10": 36
-  },
-  "benchmark_users": 39786,
-  "benchmark_movies": 8014,
-  "benchmark_positives": 3115576,
-  "train_users": 198954,
-  "train_movies": 14407,
-  "train_positives": 15779396,
-  "shipped_model": "item-kNN, top-100 neighbors per movie, trained on all of MovieLens 32M"
+    "hit@1": 48,
+    "ndcg@10": 37,
+    "recall@10": 39
+  }
 }

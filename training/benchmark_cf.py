@@ -34,11 +34,11 @@ N_EVAL = 3000
 SHIP_LIMIT_MB = 25
 
 
-def load_sample(data_dir, user_mod, min_count):
+def load_sample(data_dir, user_mod, min_count, user_offset=0):
     parts = []
     for ch in pd.read_csv(Path(data_dir) / "ratings.csv", chunksize=4_000_000,
                           dtype={"userId": "int32", "movieId": "int32", "rating": "float32", "timestamp": "int64"}):
-        ch = ch[(ch["rating"] >= 4.0) & (ch["userId"] % user_mod == 0)]
+        ch = ch[(ch["rating"] >= 4.0) & (ch["userId"] % user_mod == user_offset)]
         parts.append(ch[["userId", "movieId", "timestamp"]])
     pos = pd.concat(parts)
     counts = pos["movieId"].value_counts()
