@@ -5037,9 +5037,13 @@ if not st.session_state.get("_storage_hydrated", False):
 # that component at the top of a page transition can briefly expose its iframe
 # background as a black strip. The normal persist_profile_if_needed() call at
 # the end of the render writes the exact same snapshot silently.
-if st.session_state.pop("_fade_in_once", False):
-    st.markdown('<style>.stApp [data-testid="stMainBlockContainer"], .stApp .block-container'
-                '{animation:icn-appear .25s ease both}.stApp [data-stale="true"]{display:none !important}</style>', unsafe_allow_html=True)
+# Always emit this one style element, so every run has the same layout above the page.
+# If it appeared only on the first run, the next run's elements would shift by one slot and
+# the previous copy of the header and tabs could show as a faded duplicate while it loads.
+_first_paint = st.session_state.pop("_fade_in_once", False)
+st.markdown('<style>' + ('.stApp [data-testid="stMainBlockContainer"], .stApp .block-container'
+                         '{animation:icn-appear .25s ease both}.stApp [data-stale="true"]{display:none !important}'
+                         if _first_paint else '') + '</style>', unsafe_allow_html=True)
 
 _pending_profile = st.session_state.get("_pending_profile_save")
 
@@ -7493,7 +7497,10 @@ def render_showroom_fragment(p):
             n_ok=sum(1 for x in scored if _qualifies(row_name,x[3]))
             if n_ok>=4:
                 scored=[x for x in scored if _qualifies(row_name,x[3])]
-            diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.80 if row_name=="Top Matches for You" else 0.74)
+            if row_name=="Top Matches for You":
+                # Top Matches is exactly your best fits, in order, so no later row can hold a better match.
+                return [(display_match,movie) for _,_,display_match,movie in scored]
+            diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.74)
             chosen={item[3]["title"] for item in diversified}
             ordered=diversified+[item for item in scored if item[3]["title"] not in chosen]
             return [(display_match,movie) for _,_,display_match,movie in ordered]
