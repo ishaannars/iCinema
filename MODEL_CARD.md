@@ -10,7 +10,7 @@ iCinema recommends movies to a single viewer and learns from that viewer's feedb
 | Content scoring | Genre, traits, theme and tone similarity (TF-IDF + Truncated SVD), quality, discovery, priorities | Movie metadata from TMDB |
 | Behavioral model | Logistic Regression, then Gradient Boosting, predicting Save vs. Skip | The viewer's own Save/Skip feedback |
 
-Final ranking blends collaborative filtering (35%) with content scoring (65%). Once the behavioral model is active, its prediction contributes 22% of the score. MMR reranking then reduces repetition within each row.
+Final ranking blends collaborative filtering and content scoring with weights tested on held-out MovieLens viewers (`training/evaluate_blends.py`; currently 80% collaborative, 20% content). Once the behavioral model is active, its prediction contributes 22% of the score. MMR reranking then reduces repetition within each row.
 
 ## Intended use
 

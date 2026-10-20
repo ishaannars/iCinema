@@ -43,6 +43,25 @@
       }
       tops.set(el, top);
     }, true);
+    // Keep the open tab (Showroom, Saved, Seen, Profile) when a rerun redraws the tabs,
+    // for example after removing a movie from Seen. Only tab changes the viewer didn't click are undone.
+    var wantedTab = null, lastTabClick = 0, restoring = false;
+    function tabs() { return doc.querySelectorAll('[data-testid="stTabs"] [role="tab"]'); }
+    doc.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest && e.target.closest('[data-testid="stTabs"] [role="tab"]');
+      if (t) { wantedTab = Array.prototype.indexOf.call(tabs(), t); lastTabClick = Date.now(); }
+    }, true);
+    new MutationObserver(function () {
+      if (wantedTab === null || restoring || Date.now() - lastTabClick < 800) return;
+      var ts = tabs();
+      if (!ts.length) { wantedTab = null; return; }     // left the Showroom: start fresh next time
+      var t = ts[wantedTab];
+      if (t && t.getAttribute("aria-selected") !== "true") {
+        restoring = true;
+        t.click();
+        setTimeout(function () { restoring = false; }, 50);
+      }
+    }).observe(doc.body, {subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected"]});
   } catch (err) { /* keeper is optional; the app works without it */ }
 })();
 </script>

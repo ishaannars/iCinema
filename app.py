@@ -5457,7 +5457,7 @@ def _tag_overlap(a, b):
 def whats_next_ranking(source, payloads, blocked):
     """Candidates ranked by how well they follow `source`, the movie just watched.
 
-    60% similarity to that movie and 40% the viewer's own personalized match, so each
+    A tested mix of similarity to that movie and the viewer's own personalized match, so each
     pick follows what they watched AND fits their taste. Similarity comes from the
     MovieLens item-kNN model (the same viewers loved both movies). When the watched movie
     is in MovieLens, only candidates in MovieLens are compared, so CF and content
@@ -5474,7 +5474,7 @@ def whats_next_ranking(source, payloads, blocked):
         if sim is None:
             same_genre = 1.0 if movie.get("genre") and movie.get("genre") == (source or {}).get("genre") else 0.0
             sim = 0.5 * same_genre + 0.5 * _tag_overlap(movie, source)
-        score = 0.6 * sim + 0.4 * (float(payload.get("match") or 0) / 100.0)
+        score = WHATS_NEXT_SIM * sim + (1 - WHATS_NEXT_SIM) * (float(payload.get("match") or 0) / 100.0)
         scored.append((score, t, used_cf))
     if any(cf for _, _, cf in scored):
         scored = [x for x in scored if x[2]]
@@ -6164,6 +6164,19 @@ def training_scale():
         "movies": fmt(data.get("train_movies"), None),
         "positives": fmt(data.get("train_positives"), None),
     }
+
+
+def _tested_blend_weights():
+    """Blend weights picked on held-out MovieLens viewers (training/evaluate_blends.py)."""
+    try:
+        d = json.loads((Path(__file__).resolve().parent / "data" / "blend_results.json").read_text())
+        return float(d["content_blend"]["best_weight"]), float(d["whats_next"]["best_weight"])
+    except Exception:
+        return 0.65, 0.6
+
+
+# Content vs "viewers like you" in every row, and similarity vs personal match in What's next.
+CONTENT_WEIGHT, WHATS_NEXT_SIM = _tested_blend_weights()
 
 
 @st.cache_data(show_spinner=False)
@@ -7462,7 +7475,7 @@ def render_showroom_fragment(p):
                     cf=cf_affinity(movie,cf_user)
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
                     if cf is not None:
-                        base=0.65*base+0.35*cf
+                        base=CONTENT_WEIGHT*base+(1-CONTENT_WEIGHT)*cf
                         cf_by_title[movie["title"]]=cf
                     learned_probability=predict_success(learning_result,ml_context)
                     if learned_probability is not None:
@@ -7669,7 +7682,11 @@ def render_showroom_fragment(p):
         rating_cache.update(live_ratings_by_title)
         st.session_state.showroom_rating_cache=rating_cache
 
-    row_specs=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
+    # Step 3 answers decide which section comes right after Top Matches. Display order only:
+    # which movie lands in which row is unchanged, so this never costs accuracy.
+    _asked = list(st.session_state.get("more_of") or [])
+    _middle = sorted(["Critically Acclaimed","Hidden Gems"], key=lambda r: (r not in _asked, _asked.index(r) if r in _asked else 0))
+    row_specs=["Top Matches for You"] + _middle + ["Something Different"]
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)

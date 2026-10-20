@@ -1,0 +1,102 @@
+{
+ "method": "    python training/evaluate_blends.py --data-dir ml-32m Same 1-in-5 MovieLens 32M sample, time split, and 3,000 validation / 3,000 test viewers as training/benchmark_cf.py. Rules written before running:",
+ "content_blend": {
+  "validation_ndcg_by_weight": {
+   "0.0": 0.0836,
+   "0.2": 0.0721,
+   "0.35": 0.0674,
+   "0.5": 0.0642,
+   "0.65": 0.0602,
+   "0.8": 0.0556,
+   "1.0": 0.0272
+  },
+  "best_weight_without_floor": 0.0,
+  "best_weight": 0.2,
+  "current_weight": 0.65,
+  "test_best": {
+   "hit@1": 0.0673,
+   "ndcg@10": 0.0689
+  },
+  "test_current": {
+   "hit@1": 0.0657,
+   "ndcg@10": 0.0585
+  },
+  "ndcg_diff_vs_current": 0.0104,
+  "ci95": [
+   0.0078,
+   0.013
+  ],
+  "change": true
+ },
+ "whats_next": {
+  "validation_ndcg_by_weight": {
+   "0.0": 0.0602,
+   "0.2": 0.07,
+   "0.4": 0.0762,
+   "0.6": 0.0827,
+   "0.8": 0.0895,
+   "1.0": 0.1012
+  },
+  "best_weight_without_floor": 1.0,
+  "best_weight": 0.8,
+  "current_weight": 0.6,
+  "test_best": {
+   "hit@1": 0.0967,
+   "ndcg@10": 0.0884
+  },
+  "test_current": {
+   "hit@1": 0.0883,
+   "ndcg@10": 0.081
+  },
+  "ndcg_diff_vs_current": 0.0073,
+  "ci95": [
+   0.0054,
+   0.0093
+  ],
+  "change": true
+ },
+ "content_only_ndcg": 0.0271,
+ "viewers_like_you_only_ndcg": 0.0777,
+ "errors": {
+  "by_history": [
+   {
+    "liked_movies": "3\u201310",
+    "viewers": 247,
+    "hit@1": 0.0243
+   },
+   {
+    "liked_movies": "11\u201330",
+    "viewers": 1122,
+    "hit@1": 0.0597
+   },
+   {
+    "liked_movies": "31\u2013100",
+    "viewers": 1112,
+    "hit@1": 0.0872
+   },
+   {
+    "liked_movies": "100+",
+    "viewers": 519,
+    "hit@1": 0.1291
+   }
+  ],
+  "by_taste": [
+   {
+    "group": "Mainstream taste (most popular 25%)",
+    "viewers": 755,
+    "hit@1": 0.1232
+   },
+   {
+    "group": "Middle 50%",
+    "viewers": 1495,
+    "hit@1": 0.0783
+   },
+   {
+    "group": "Niche taste (least popular 25%)",
+    "viewers": 750,
+    "hit@1": 0.036
+   }
+  ],
+  "overall_hit@1": 0.079
+ }
+}
