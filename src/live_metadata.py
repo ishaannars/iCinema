@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 import requests
 import streamlit as st
+from src.secrets_util import safe_secret
 
 OMDB_URL = "https://www.omdbapi.com/"
 CACHE_SECONDS = 14 * 24 * 60 * 60  # 14 days
@@ -13,7 +14,7 @@ CACHE_SECONDS = 14 * 24 * 60 * 60  # 14 days
 
 def _get_api_key() -> str | None:
     try:
-        return st.secrets.get("OMDB_API_KEY")
+        return safe_secret("OMDB_API_KEY")
     except Exception:
         return None
 

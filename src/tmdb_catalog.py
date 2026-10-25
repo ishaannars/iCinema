@@ -15,6 +15,7 @@ from typing import Dict, Optional, Tuple
 
 import requests
 import streamlit as st
+from src.secrets_util import safe_secret
 
 TMDB_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
@@ -75,8 +76,8 @@ OVERVIEW_TRAIT_KEYWORDS = {
 
 
 def _credentials():
-    bearer = st.secrets.get("TMDB_BEARER_TOKEN", "") if hasattr(st, "secrets") else ""
-    api_key = st.secrets.get("TMDB_API_KEY", "") if hasattr(st, "secrets") else ""
+    bearer = safe_secret("TMDB_BEARER_TOKEN", "") if hasattr(st, "secrets") else ""
+    api_key = safe_secret("TMDB_API_KEY", "") if hasattr(st, "secrets") else ""
     return str(bearer).strip(), str(api_key).strip()
 
 

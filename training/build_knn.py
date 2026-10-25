@@ -25,6 +25,15 @@ TOP = 100
 BLOCK = 1000
 
 
+def _display_title(raw):
+    """'Nausicaä of the Valley of the Wind (Kaze no tani no Naushika) (1984)' -> 'Nausicaä of the Valley of the Wind'."""
+    import re
+    t = re.sub(r"\s*\(\d{4}\)\s*$", "", str(raw or "")).strip()
+    t = re.sub(r"\s*\([^)]*\)\s*$", "", t).strip() or t
+    m = re.match(r"^(.*), (The|A|An)$", t)
+    return f"{m.group(2)} {m.group(1)}" if m else t
+
+
 def _build(X, Xc, fans, n, shrink, beta, meta, norm, path, t0):
     if beta is not None:
         from scipy.sparse import diags
@@ -52,6 +61,8 @@ def _build(X, Xc, fans, n, shrink, beta, meta, norm, path, t0):
         beta=np.float32(beta if beta is not None else -1),
         tmdb_id=meta["tmdbId"].fillna(-1).astype(np.int64).to_numpy(),
         norm_title=np.array([t for t, _ in norm]),
+        title=np.array([_display_title(t) for t in meta["title"]]),
+        title_raw=np.array([str(t) for t in meta["title"]]),
         year=np.array([y or 0 for _, y in norm], dtype=np.int32),
         popularity=fans.astype(np.int32),
     )

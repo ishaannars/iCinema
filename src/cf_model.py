@@ -48,6 +48,8 @@ class _Model:
             self.n = self.emb.shape[0]
         fans = d["popularity"].astype(np.float64) if "popularity" in d.files else np.zeros(self.n)
         self.fan_pct = np.argsort(np.argsort(fans)) / max(len(fans) - 1, 1)   # 0 = fewest fans, 1 = most
+        self.titles = [str(x) for x in d["title"]] if "title" in d.files else None
+        self.titles_raw = [str(x) for x in d["title_raw"]] if "title_raw" in d.files else None
         self.by_tmdb = {int(t): i for i, t in enumerate(d["tmdb_id"]) if t > 0}
         self.by_title = {}
         for i, (t, y) in enumerate(zip(d["norm_title"], d["year"])):
@@ -125,6 +127,28 @@ def _index(movie):
         if (key, y) in model.by_title:
             return model.by_title[(key, y)]
     return None
+
+
+_STOP = {"the", "a", "an", "of", "and", "in", "on", "to"}
+
+
+def preferred_title(movie, tmdb_title):
+    """TMDB's title, unless it names a different release than MovieLens does.
+
+    TMDB sometimes lists a film under a regional or recut title ("Warriors of the Wind" for
+    Nausicaä of the Valley of the Wind). When the first real words don't match, the MovieLens
+    title, which matches the poster and what fans call it, is shown instead.
+    """
+    model = _load()
+    idx = _index(movie)
+    if model is None or idx is None or not model.titles or not tmdb_title:
+        return tmdb_title
+    ml = model.titles[idx]
+    simple = lambda s: " ".join(re.sub(r"[^\w\s]", " ", str(s).casefold()).split())
+    if model.titles_raw and simple(tmdb_title) in simple(model.titles_raw[idx]):
+        return tmdb_title          # TMDB's title is one of the names MovieLens lists ("Se7en")
+    first = lambda s: next((w for w in simple(s).split() if w not in _STOP), "")
+    return ml if ml and first(ml) != first(tmdb_title) else tmdb_title
 
 
 def fan_percentile(movie):

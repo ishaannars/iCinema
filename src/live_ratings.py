@@ -3,6 +3,7 @@ from typing import Dict, Optional, Tuple
 
 import requests
 import streamlit as st
+from src.secrets_util import safe_secret
 
 OMDB_BASE = "https://www.omdbapi.com/"
 CACHE_SECONDS = 60 * 60 * 24 * 14
@@ -10,7 +11,7 @@ CACHE_SECONDS = 60 * 60 * 24 * 14
 
 def _api_key() -> str:
     try:
-        return str(st.secrets.get("OMDB_API_KEY", "")).strip()
+        return str(safe_secret("OMDB_API_KEY", "")).strip()
     except Exception:
         return ""
 

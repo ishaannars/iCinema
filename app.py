@@ -18,7 +18,7 @@ from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batc
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 from src.scroll_keeper import scroll_keeper
-from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity, fan_percentile
+from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity, fan_percentile, preferred_title
 from src.recommender import _calibrated_match_percent
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
@@ -4945,6 +4945,25 @@ div.element-container:has(iframe[title*="browser_storage"]){
     min-width:72vw !important;flex:0 0 72vw !important;scroll-snap-align:start}
 }
 
+/* Home proof card: say what the big number means. Tabs: no leftover focus bar after a click. */
+.proof-big-label{font-size:.72rem;font-weight:600;letter-spacing:0;line-height:1.2;color:var(--muted);margin-top:.25rem;max-width:8.5rem}
+[data-testid="stTabs"] [role="tab"]:focus:not(:focus-visible){outline:none !important;box-shadow:none !important}
+[class*="st-key-refresh_saved"],[class*="st-key-refresh_seen"]{display:none !important;}
+/* Home page as one flow: promise, proof, how it works, start */
+.home-proof{display:flex;align-items:center;gap:1.1rem;margin:1.4rem 0 2.1rem;padding:.2rem 0 .2rem 1.1rem;border-left:3px solid var(--accent)}
+.home-proof-num{font-family:var(--ui-font);font-size:2.1rem;font-weight:800;letter-spacing:-.035em;color:var(--ivory);line-height:1;white-space:nowrap}
+.home-proof-text{font-family:var(--ui-font);color:var(--muted);font-size:.98rem;line-height:1.45}
+.home-proof-text strong{display:block;color:var(--ivory);font-weight:700;font-size:1.02rem;margin-bottom:.15rem}
+.home-proof-text span{display:block}
+.home-steps-label{font-family:var(--ui-font);color:var(--muted2);font-size:.76rem;font-weight:760;letter-spacing:.1em;text-transform:uppercase;margin:0 0 .7rem}
+.home-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;margin-bottom:1.6rem}
+.home-step{border:1px solid var(--border);background:var(--surface);border-radius:18px;padding:1.05rem 1.1rem 1.1rem}
+.home-step-num{width:1.7rem;height:1.7rem;border-radius:999px;display:flex;align-items:center;justify-content:center;
+  background:rgba(92,111,168,.18);color:var(--ivory);font-family:var(--ui-font);font-weight:760;font-size:.82rem;margin-bottom:.7rem}
+.home-step-title{font-family:var(--ui-font);color:var(--ivory);font-weight:740;font-size:1.04rem;letter-spacing:-.015em;margin-bottom:.3rem}
+.home-step-body{font-family:var(--ui-font);color:var(--muted);font-size:.9rem;line-height:1.45}
+@media(max-width:800px){.home-steps{grid-template-columns:1fr}.home-proof{align-items:flex-start;flex-direction:column;gap:.4rem}}
+.profile-chip-muted{color:var(--muted) !important;font-weight:500 !important;border-style:dashed !important}
 </style>
 """, unsafe_allow_html=True)
 
@@ -5350,7 +5369,7 @@ def with_tone_detail(reasons, movie, avoid=None):
     detail = f"{phrase[:1].upper() + phrase[1:]}, like “{best}”."
     out = []
     for reason in reasons or []:
-        if reason.get("label") in ("Feels like your favorites", "Storytelling you like"):
+        if reason.get("label") in ("Feels like your favorites", "Feels like your pick", "Storytelling you like"):
             reason = {**reason, "text": detail}
         out.append(reason)
     return out
@@ -5579,6 +5598,7 @@ def watch_line_html(availability, title, services=None):
 # Pill-sized forms of long reason labels; the full wording stays in the popover.
 _PILL_SHORT = {
     "Feels like your favorites": "Like your favorites",
+    "Feels like your pick": "Like your pick",
     "Storytelling you like": "Your kind of story",
     "Critically acclaimed": "Critics' pick",
     "Easy to watch tonight": "Streaming now",
@@ -5944,8 +5964,11 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     # Plain-language labels; "Your mix" drops lines that repeat "How you choose".
     matters_text = " ".join(p["matters"]).casefold()
     mix = [b for b in p["balance"] if not ("review" in b.casefold() and "review" in matters_text)]
+    _n = int(p.get("movies_used") or 0)
+    _early = (f'<span class="profile-chip profile-chip-muted">Like or save {3 - _n} more movie{"s" if 3 - _n != 1 else ""} to see your tone and patterns</span>'
+              if _n < 3 else "")
     sections = [
-        ("You tend to enjoy", profile_chip_html(p["traits"]), "profile-chip-wrap"),
+        (f"You tend to enjoy · from {_n} movies" if p["traits"] else "Your tone", profile_chip_html(p["traits"]) or _early, "profile-chip-wrap"),
         ("Top genres", profile_chip_html(p["genres"]), "profile-chip-wrap"),
         ("How you choose", profile_chip_html(p["matters"]), "profile-chip-wrap"),
         ("Show me more", profile_chip_html(p["priorities"]), "profile-chip-wrap"),
@@ -5987,9 +6010,10 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="model-status-panel">'
         '<div class="model-row"><span class="model-dot on"></span>'
         '<span class="model-name">Active now</span>'
-        f'<span class="model-note">Collaborative filtering ({(scale["users"] + " ") if scale["users"] else ""}MovieLens viewers) + content model, '
+        f'<span class="model-note">Viewers like you ({(scale["users"] + " ") if scale["users"] else ""}MovieLens fans) and the content model, '
         f'using your {signals} signal{"s" if signals != 1 else ""}'
-        + (f' ({html.escape(signal_parts)})' if signal_parts else '') + '</span></div>'
+        + (f' ({html.escape(signal_parts)})' if signal_parts else '')
+        + '. Every save, skip, and Seen updates it.</span></div>'
         f'{personal_html}'
         '</div>'
     )
@@ -6104,7 +6128,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="methodology-card">'
         f'<div class="methodology-value">Starts with {scale["users"] or "MovieLens"} movie fans</div>'
         f'<div class="methodology-label">A model trained on how they rated {scale["movies"] or "thousands of"} movies compares your first likes with theirs, '
-        'so your first picks are already personal.</div>'
+        'so your first picks are already personal. If your likes are less mainstream, a ranking method tested for that takes over.</div>'
         '</div>'
         '<div class="methodology-card">'
         '<div class="methodology-value">Understands every movie</div>'
@@ -6112,7 +6136,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '</div>'
         '<div class="methodology-card">'
         '<div class="methodology-value">Gives every row a job</div>'
-        '<div class="methodology-label">Best fit, critics’ favorites, hidden gems, or something new, and no movie appears twice.</div>'
+        '<div class="methodology-label">Best fit, critics’ favorites, hidden gems, or something new, and no movie appears twice. '
+        'Each row was tested: within its kind, it finds movies you’ll love more often than the most popular ones.</div>'
         '</div>'
         '<div class="methodology-card">'
         '<div class="methodology-value">Learns you over time</div>'
@@ -6741,7 +6766,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             with st.popover(pill_text, use_container_width=True):
                 st.markdown(
                     f'<div class="match-score"><span class="match-score-value">{fit_head(payload, match)}</span>'
-                    f'<span class="match-score-label">for you · {html.escape(fit_label(payload, match))}</span></div>'
+                    f'<span class="match-score-label">· {html.escape(fit_label(payload, match))}</span></div>'
                     + (f'<div class="match-rank-note">Ranks in your top {int(payload["fit_top_pct"])}% of '
                        f'{int(payload.get("fit_pool") or 0):,} movies iCinema scored for you.</div>'
                        if isinstance(payload.get("fit_top_pct"), (int, float)) else "") +
@@ -6757,7 +6782,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                         unsafe_allow_html=True,
                     )
                 st.markdown(
-                    '<div class="match-model-note">Top signals ranked from this movie’s personalized model score.</div>',
+                    '<div class="match-model-note">The strongest reasons behind this pick.</div>',
                     unsafe_allow_html=True,
                 )
                 st.button(
@@ -6777,8 +6802,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             )
 
     display_movie = dict(movie)
-    if identity.get("display_title"):
-        display_movie["title"] = identity["display_title"]
+    display_movie["title"] = preferred_title(movie, identity.get("display_title") or display_movie.get("title", ""))
     if identity.get("year"):
         display_movie["year"] = identity["year"]
     movie_thumb(display_movie, identity.get("poster_url") or movie.get("poster_url"))
@@ -7003,7 +7027,7 @@ def render_tonight_pick_fragment():
     st.session_state.recommendation_context = recommendation_context
     record_impressions(st.session_state, {title: context})
 
-    display_title = identity.get("display_title") or movie.get("title", "")
+    display_title = preferred_title(movie, identity.get("display_title") or movie.get("title", ""))
     year = identity.get("year") or movie.get("year") or ""
     genre = movie.get("genre") or ""
     poster_url = identity.get("poster_url") or movie.get("poster_url")
@@ -7068,6 +7092,140 @@ def render_tonight_pick_fragment():
                         st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
                                   help=f"Bring back {last_skip}", on_click=tonight_undo)
     persist_from_fragment()
+
+
+def _library_counts():
+    """Saved/Seen counts beside the fixed tab labels, refreshed inside each library fragment."""
+    st.markdown(
+        '<style>[data-testid="stTabs"] [role="tab"][id$="-tab-1"] p::after,'
+        '[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type(2) p::after{content:" (%d)" !important}'
+        '[data-testid="stTabs"] [role="tab"][id$="-tab-2"] p::after,'
+        '[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type(3) p::after{content:" (%d)" !important}</style>'
+        % (len(st.session_state.saved), len(st.session_state.seen)),
+        unsafe_allow_html=True,
+    )
+
+
+@st.fragment
+def _saved_tab():
+    """Saved tab. A fragment, so its buttons rerun only this tab: the open tab never changes."""
+    # Hidden refresh: switching to this tab clicks it (src/scroll_keeper_component), so a change made
+    # on the other library tab shows up here without reloading the page.
+    st.button("Refresh", key="refresh_saved")
+    st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+    st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
+    movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
+    saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+    saved_identity_map = get_movie_identity_batch(saved_identity_keys)
+    saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+    saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
+    saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
+                                                  (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
+                                                 for m in movies)) if movies else {}
+    if not movies:st.caption("Nothing saved yet.")
+    else:
+        cols=st.columns(4, gap="medium")
+        for i,m in enumerate(movies):
+            with cols[i % 4]:
+                with st.container(key=f"savedcard_{i}"):
+                    identity = saved_identity_map.get(m["title"], {}) or {}
+                    display_movie = dict(m)
+                    display_movie["title"] = preferred_title(m, identity.get("display_title") or display_movie.get("title", ""))
+                    if identity.get("year"):
+                        display_movie["year"] = identity["year"]
+                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
+                    st.markdown(library_ratings_html(m, identity, saved_live_map), unsafe_allow_html=True)
+                    st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
+                    saved_actions = st.columns(2, gap="small")
+                    with saved_actions[0]:
+                        st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
+                                  on_click=mark_movie_seen, args=(m["title"], m))
+                    with saved_actions[1]:
+                        st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
+                                  on_click=remove_saved_movie, args=(m["title"],))
+    _library_counts()
+
+
+@st.fragment
+def _seen_tab():
+    """Seen tab. A fragment, so its buttons rerun only this tab: the open tab never changes."""
+    # Hidden refresh: switching to this tab clicks it (src/scroll_keeper_component), so a change made
+    # on the other library tab shows up here without reloading the page.
+    st.button("Refresh", key="refresh_seen")
+    st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+    st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
+    movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
+    seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+    seen_identity_map = get_movie_identity_batch(seen_identity_keys)
+    seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+    seen_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
+                                                 (seen_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
+                                                for m in movies)) if movies else {}
+    if not movies:st.caption("Nothing marked as seen yet.")
+    else:
+        # What's next: one personalized follow-up per Seen movie, never the same pick
+        # twice on this tab, never something already saved, seen, skipped or disliked.
+        wn_payloads = st.session_state.get("showroom_payloads") or {}
+        wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
+                      | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()) | set(st.session_state.likes) | set(st.session_state.favorites))  # tabs9
+        wn_offsets = st.session_state.get("whats_next_offset") or {}
+        wn_taken, wn_picks = set(), {}
+        for m in movies:
+            ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
+            if ranked:
+                pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
+                wn_picks[m["title"]] = pick
+                wn_taken.add(pick[0])
+        wn_identity = st.session_state.get("showroom_identity_cache") or {}
+        cols=st.columns(4, gap="medium")
+        for i,m in enumerate(movies):
+            with cols[i % 4]:
+                with st.container(key=f"seencard_{i}"):
+                    identity = seen_identity_map.get(m["title"], {}) or {}
+                    display_movie = dict(m)
+                    display_movie["title"] = preferred_title(m, identity.get("display_title") or display_movie.get("title", ""))
+                    if identity.get("year"):
+                        display_movie["year"] = identity["year"]
+                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
+                    st.markdown(library_ratings_html(m, identity, seen_live_map), unsafe_allow_html=True)
+                    # Hover × in the poster's top-right corner: remove an accidental Seen.
+                    st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
+                              on_click=remove_from_seen, args=(m["title"],))
+                    pick = wn_picks.get(m["title"])
+                    if pick:
+                        nt, used_cf = pick
+                        npay = wn_payloads.get(nt) or {}
+                        nmovie = npay.get("movie") or {}
+                        nid = wn_identity.get(nt) or {}
+                        nposter = nid.get("poster_url") or nmovie.get("poster_url")
+                        ntitle = preferred_title(nmovie, nid.get("display_title") or nmovie.get("title") or nt)
+                        nyear = nid.get("year") or nmovie.get("year") or ""
+                        why = (f"Viewers who loved “{m['title']}” tend to love this too."
+                               if used_cf else f"Shares the genre and tone of “{m['title']}”.")
+                        with st.container(key=f"whatsnext_{i}"):
+                            with st.popover("What’s next", use_container_width=True):
+                                img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
+                                       if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
+                                st.markdown(
+                                    f'<div class="whatsnext-kicker">Watch next after “{html.escape(m["title"])}”</div>'
+                                    f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
+                                    f'<div class="whatsnext-info">'
+                                    f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
+                                    f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
+                                    f' · {fit_head(npay, npay.get("match"))} for you</div>'
+                                    f'<div class="whatsnext-why">{html.escape(why)}</div>'
+                                    f'</div></div>',
+                                    unsafe_allow_html=True,
+                                )
+                                # Compact pills, about the poster's width, aligned under the poster.
+                                a, b, _ = st.columns([1, 1.35, 4.2], gap="small")
+                                with a:
+                                    st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
+                                              on_click=save_movie, args=(nt, nmovie))
+                                with b:
+                                    st.button("Another pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
+                                              on_click=whats_next_another, args=(m["title"],))
+    _library_counts()
 
 
 def render_showroom_fragment(p):
@@ -7455,10 +7613,10 @@ def render_showroom_fragment(p):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             row_notes={
-                "Top Matches for You":"Best overall fits based on your full preference profile",
-                "Critically Acclaimed":"Highly rated films that still fit what you like",
-                "Hidden Gems":"Strong matches that are less obvious or widely promoted",
-                "Something Different":"A little outside your usual picks, but still likely to click",
+                "Top Matches for You":"Your best fits right now",
+                "Critically Acclaimed":"Highly rated movies that still match your taste",
+                "Hidden Gems":"Less-known movies you’re likely to love",
+                "Something Different":"Outside your usual genres, but still likely to click",
             }
             st.markdown(
                 f'<div class="{row_class} showroom-row-header">'
@@ -7485,114 +7643,10 @@ def render_showroom_fragment(p):
         )
 
     with tabs[1]:
-        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
-        movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
-        saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
-        saved_identity_map = get_movie_identity_batch(saved_identity_keys)
-        saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
-        saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
-        saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
-                                                      (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
-                                                     for m in movies)) if movies else {}
-        if not movies:st.caption("Nothing saved yet.")
-        else:
-            cols=st.columns(4, gap="medium")
-            for i,m in enumerate(movies):
-                with cols[i % 4]:
-                    with st.container(key=f"savedcard_{i}"):
-                        identity = saved_identity_map.get(m["title"], {}) or {}
-                        display_movie = dict(m)
-                        if identity.get("display_title"):
-                            display_movie["title"] = identity["display_title"]
-                        if identity.get("year"):
-                            display_movie["year"] = identity["year"]
-                        movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
-                        st.markdown(library_ratings_html(m, identity, saved_live_map), unsafe_allow_html=True)
-                        st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
-                        saved_actions = st.columns(2, gap="small")
-                        with saved_actions[0]:
-                            st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
-                                      on_click=mark_movie_seen, args=(m["title"], m))
-                        with saved_actions[1]:
-                            st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
-                                      on_click=remove_saved_movie, args=(m["title"],))
+        _saved_tab()
 
     with tabs[2]:
-        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
-        movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
-        seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
-        seen_identity_map = get_movie_identity_batch(seen_identity_keys)
-        seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
-        seen_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
-                                                     (seen_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
-                                                    for m in movies)) if movies else {}
-        if not movies:st.caption("Nothing marked as seen yet.")
-        else:
-            # What's next: one personalized follow-up per Seen movie, never the same pick
-            # twice on this tab, never something already saved, seen, skipped or disliked.
-            wn_payloads = st.session_state.get("showroom_payloads") or {}
-            wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
-                          | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()) | set(st.session_state.likes) | set(st.session_state.favorites))  # tabs9
-            wn_offsets = st.session_state.get("whats_next_offset") or {}
-            wn_taken, wn_picks = set(), {}
-            for m in movies:
-                ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
-                if ranked:
-                    pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
-                    wn_picks[m["title"]] = pick
-                    wn_taken.add(pick[0])
-            wn_identity = st.session_state.get("showroom_identity_cache") or {}
-            cols=st.columns(4, gap="medium")
-            for i,m in enumerate(movies):
-                with cols[i % 4]:
-                    with st.container(key=f"seencard_{i}"):
-                        identity = seen_identity_map.get(m["title"], {}) or {}
-                        display_movie = dict(m)
-                        if identity.get("display_title"):
-                            display_movie["title"] = identity["display_title"]
-                        if identity.get("year"):
-                            display_movie["year"] = identity["year"]
-                        movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
-                        st.markdown(library_ratings_html(m, identity, seen_live_map), unsafe_allow_html=True)
-                        # Hover × in the poster's top-right corner: remove an accidental Seen.
-                        st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
-                                  on_click=remove_from_seen, args=(m["title"],))
-                        pick = wn_picks.get(m["title"])
-                        if pick:
-                            nt, used_cf = pick
-                            npay = wn_payloads.get(nt) or {}
-                            nmovie = npay.get("movie") or {}
-                            nid = wn_identity.get(nt) or {}
-                            nposter = nid.get("poster_url") or nmovie.get("poster_url")
-                            ntitle = nid.get("display_title") or nmovie.get("title") or nt
-                            nyear = nid.get("year") or nmovie.get("year") or ""
-                            why = (f"Viewers who loved “{m['title']}” tend to love this too."
-                                   if used_cf else f"Shares the genre and tone of “{m['title']}”.")
-                            with st.container(key=f"whatsnext_{i}"):
-                                with st.popover("What’s next", use_container_width=True):
-                                    img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
-                                           if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
-                                    st.markdown(
-                                        f'<div class="whatsnext-kicker">Watch next after “{html.escape(m["title"])}”</div>'
-                                        f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
-                                        f'<div class="whatsnext-info">'
-                                        f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
-                                        f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
-                                        f' · {fit_head(npay, npay.get("match"))} for you</div>'
-                                        f'<div class="whatsnext-why">{html.escape(why)} It also fits your taste profile.</div>'
-                                        f'</div></div>',
-                                        unsafe_allow_html=True,
-                                    )
-                                    # Compact pills, about the poster's width, aligned under the poster.
-                                    a, b, _ = st.columns([1, 1.35, 4.2], gap="small")
-                                    with a:
-                                        st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
-                                                  on_click=save_movie, args=(nt, nmovie))
-                                    with b:
-                                        st.button("Another pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
-                                                  on_click=whats_next_another, args=(m["title"],))
+        _seen_tab()
 
     with tabs[3]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -7631,29 +7685,28 @@ if screen=="welcome":
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
     st.markdown('<div class="hero-subtitle">One tested pick for tonight from the services you already pay for. It starts from your first 3 likes, reaches past what’s trending, and needs no account.</div>',unsafe_allow_html=True)
 
-    c1,c2,c3=st.columns(3)
-    steps=[
-        ("01","Rate the Shelf","Choose titles you already enjoy, or search for one you like"),
-        ("02","Tailor Your Preferences","Choose what matters most when deciding what to watch"),
-        ("03","Shape Your Showroom","Choose what iCinema should surface more often"),
-    ]
-    for col,(n,title,body) in zip((c1,c2,c3),steps):
-        with col:
-            st.markdown(f'<div class="step-card"><div class="step-num">Step {n}</div><h3>{title}</h3><div class="muted">{body}</div></div>',unsafe_allow_html=True)
-
+    # Proof, read from the results file so it always matches the README.
     _off = load_offline_results() or {}
     _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
-    _fans = training_scale()["users"]
+    _tested = _off.get("held_out_users")
     if isinstance(_lift, (int, float)):
         st.markdown(
-            '<div class="adapt-note proof-note">'
-            f'<div class="proof-big">+{int(_lift)}%</div>'
-            '<div><strong>Good picks from your first 3 likes. Yours over time.</strong>'
-            f'<span>A model trained on {(_fans + ' ') if _fans else 'MovieLens '}movie fans finds a first pick you’ll love {int(_lift)}% more often than '
-            'just recommending what’s popular. A second model reads every film’s plot and tone, and a third learns from your saves and skips.</span></div>'
-            '</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="adapt-note"><strong>Good picks on day one. Yours over time.</strong><br><span>Two models are ready the moment you finish setup. A third learns from your saves and skips, so every return visit gets you to pressing play faster.</span></div>',unsafe_allow_html=True)
+            '<div class="home-proof">'
+            f'<div class="home-proof-num">+{int(_lift)}%</div>'
+            f'<div class="home-proof-text"><strong>Your first pick is one you’ll love {int(_lift)}% more often than just going with what’s popular.</strong>'
+            + (f'<span>Tested on {_tested:,} movie fans it had never seen.</span>' if isinstance(_tested, int) else '')
+            + '</div></div>', unsafe_allow_html=True)
+
+    steps=[
+        ("1","Rate the Shelf","Like a few movies you already enjoy, or search for one."),
+        ("2","Tailor Your Preferences","Pick your genres and what matters most to you."),
+        ("3","Shape Your Showroom","Choose what you want to see more of."),
+    ]
+    st.markdown(
+        '<div class="home-steps-label">How it works</div><div class="home-steps">'
+        + "".join(f'<div class="home-step"><div class="home-step-num">{n}</div><div class="home-step-title">{t}</div>'
+                  f'<div class="home-step-body">{b}</div></div>' for n, t, b in steps)
+        + '</div>', unsafe_allow_html=True)
     st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
 
 elif screen=="shelf":

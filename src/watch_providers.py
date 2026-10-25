@@ -3,6 +3,7 @@ from typing import Dict, Iterable, Optional, Tuple
 
 import requests
 import streamlit as st
+from src.secrets_util import safe_secret
 
 TMDB_BASE = "https://api.themoviedb.org/3"
 CACHE_SECONDS = 60 * 60 * 24 * 14  # 14 days
@@ -10,8 +11,8 @@ CACHE_SECONDS = 60 * 60 * 24 * 14  # 14 days
 
 def _credentials():
     """Return TMDB authentication without exposing secrets to the UI."""
-    bearer = st.secrets.get("TMDB_BEARER_TOKEN", "") if hasattr(st, "secrets") else ""
-    api_key = st.secrets.get("TMDB_API_KEY", "") if hasattr(st, "secrets") else ""
+    bearer = safe_secret("TMDB_BEARER_TOKEN", "") if hasattr(st, "secrets") else ""
+    api_key = safe_secret("TMDB_API_KEY", "") if hasattr(st, "secrets") else ""
     bearer = str(bearer).strip() if bearer else ""
     api_key = str(api_key).strip() if api_key else ""
     return bearer, api_key

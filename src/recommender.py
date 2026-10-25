@@ -425,15 +425,23 @@ def build_profile(
     adventure_text="Mostly familiar" if adventure<=30 else ("Open to unexpected picks" if adventure>=70 else "Balanced between familiar and new")
     review_text="Reviews matter a lot" if review_priority<=35 else ("Entertainment comes first" if review_priority>=65 else "Reviews and enjoyment are balanced")
     trait_text=", ".join(t.lower() for t in top_traits[:2]); genre_text=" and ".join(top_genres[:2]).lower()
-    opening=f"You favor {trait_text} stories, especially {genre_text} titles." if top_traits and top_traits[0]!="Story-driven" else f"You show the strongest affinity for {genre_text} titles."
+    # Only claim what the viewer's choices support: tone traits need at least 3 liked or saved movies.
+    n_movies=len(likes|favorites|saved_titles)
+    traits_ready=bool(n_movies>=3 and top_traits and top_traits[0]!="Story-driven")
+    opening=(f"You favor {trait_text} stories, especially {genre_text} titles." if traits_ready
+             else f"So far you lean toward {genre_text} titles.")
     review_clause="Strong critical reception plays a larger role in what iCinema surfaces." if review_priority<=35 else ("Entertainment value carries more weight than critical reception in your recommendations." if review_priority>=65 else "Your profile balances critical reception with entertainment value.")
     discovery_clause="The model stays close to the kinds of movies you already like." if adventure<=30 else ("The model has more room to surface unfamiliar genres, eras, languages, and styles." if adventure>=70 else "The model balances familiar choices with room for discovery.")
     selected_priorities=[x for x in (more_of or []) if x and x!="Balanced recommendations"]
-    priority_clause=("It also leans toward " + ", ".join(x.lower() for x in selected_priorities) + " when those choices still fit your learned profile.") if selected_priorities else "No single showroom priority overrides the broader preference profile."
+    _nouns={"Critically Acclaimed":"critically acclaimed films","Hidden Gems":"hidden gems","Recent Releases":"recent releases",
+            "International Films":"international films","Classics":"classics","Documentaries":"documentaries"}
+    _names=[_nouns.get(x, x.lower()) for x in selected_priorities]
+    _listed=(" and ".join(_names) if len(_names)<=2 else f"{_names[0]}, {_names[1]}, and {len(_names)-2} more you picked") if _names else ""
+    priority_clause=("It also leans toward " + _listed + " when they still fit your taste.") if selected_priorities else "No single row preference outweighs the rest of your profile."
 
     p={
-        "traits":top_traits,"genres":top_genres,"matters":matters[:3],"priorities":priorities,
-        "patterns":patterns[:3],"balance":[adventure_text,review_text],
+        "traits":top_traits if traits_ready else [],"genres":top_genres,"matters":matters[:3],"priorities":priorities,
+        "patterns":patterns[:3] if traits_ready else [],"balance":[adventure_text,review_text],"movies_used":n_movies,
         "summary":" ".join([opening,review_clause,discovery_clause,priority_clause]),
         "trait_scores":dict(trait_scores),"genre_scores":dict(genre_scores),
         "signed_trait_scores":signed_trait_scores,"signed_genre_scores":signed_genre_scores,
@@ -607,8 +615,11 @@ def recommendation_explanation(
         discovery_label, discovery_text = "Familiar with a twist", "Close to what you like, with a little something new."
 
     genre_label = f"Your kind of {genre_detail.split(',')[0].strip().lower()}" if genre_detail else "Your kind of movie"
-    theme_text = (f"Its tone is {', '.join(t.lower() for t in trait_overlap[:2])}, like the movies you liked."
-                  if trait_overlap else "Its tone and themes are close to the movies you liked.")
+    # Name the liked movie when there is only one, so the reason matches what the viewer gave.
+    _liked = [x.get("title") for x in (profile.get("semantic_signals") or []) if float(x.get("weight") or 0) >= 1 and x.get("title")]
+    _yours = f"“{_liked[0]}”" if len(_liked) == 1 else "the movies you liked"
+    theme_text = (f"Its tone is {' and '.join(t.lower() for t in trait_overlap[:2])}, like {_yours}."
+                  if trait_overlap else f"Its tone and themes are close to {_yours}.")
     year = movie.get("year")
     priority_reasons = {
         "Critically Acclaimed": ("Critically acclaimed",
@@ -630,9 +641,9 @@ def recommendation_explanation(
     candidates = [
         (0.18 * float(c.get("genre_affinity", 0.5)), genre_label,
          f"{genre_detail.split(',')[0].strip()} is one of your strongest genres."),
-        (0.20 * float(c.get("semantic_similarity", 0.5)), "Feels like your favorites", theme_text),
+        (0.20 * float(c.get("semantic_similarity", 0.5)), "Feels like your favorites" if len(_liked) != 1 else "Feels like your pick", theme_text),
         (0.16 * float(c.get("trait_affinity", 0.5)), "Storytelling you like",
-         "Its pacing and style match the movies you liked or favorited."),
+         f"Its pacing and style match {_yours}."),
         (0.18 * float(c.get("quality_alignment", 0.5)), quality_label, quality_text),
         (0.13 * float(c.get("discovery_alignment", 0.5)), discovery_label, discovery_text),
         (0.15 * float(c.get("priority_alignment", 0.5)), priority_label, priority_text),

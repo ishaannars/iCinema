@@ -91,3 +91,10 @@ def test_ranking_uses_rp3beta_when_shipped():
     assert (cf.RANK_PATH.exists()) == shipped
     if shipped:
         assert float(__import__("numpy").load(cf.RANK_PATH)["beta"]) > 0
+
+
+def test_title_matches_the_poster():
+    assert cf.preferred_title({"title": "Warriors of the Wind", "year": 1984, "tmdb_id": 81},
+                              "Warriors of the Wind") == "Nausicaä of the Valley of the Wind"
+    assert cf.preferred_title({"title": "Se7en", "year": 1995, "tmdb_id": 807}, "Se7en") == "Se7en"
+    assert cf.preferred_title({"title": "Spirited Away", "year": 2001}, "Spirited Away") == "Spirited Away"
