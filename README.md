@@ -154,15 +154,24 @@ streamlit run app.py
 python -m pytest -q
 ```
 
-To rebuild everything, download MovieLens 32M into `ml-32m/` and run these in order, each with `--data-dir ml-32m`: `training/benchmark_cf.py`, `training/evaluate_long_tail.py`, `training/confirm_long_tail.py`, `training/confirm_routing.py`, `training/build_knn.py`, `training/evaluate_blends.py`, `training/evaluate_steps.py`, `training/evaluate_rows.py`. Then run `python tools/refresh_results.py`.
+To rebuild everything, download MovieLens 32M into `ml-32m/` and run these in order, each with `--data-dir ml-32m`: `training/benchmark_cf.py`, `training/evaluate_long_tail.py`, `training/confirm_long_tail.py`, `training/confirm_routing.py`, `training/build_knn.py`, `training/evaluate_blends.py`, `training/evaluate_steps.py`, `training/evaluate_rows.py`. Then run `python training/build_content.py --data-dir ml-32m` and `python tools/refresh_results.py`.
 
 ## Coming next
 
 - Viewers with very little history still get the weakest picks (see Where it's wrong).
 - Run the decision-time test with 20+ people.
-- Split `app.py` into modules.
+- Keep splitting `app.py`: the stylesheet and the streaming helpers now live in `src/ui/`.
 - Product: a For Critics tab, "Only my services" mode, thumbs up or down on Seen movies, and adding likes from the Showroom.
 
 ## Stack
 
 Python · Streamlit · scikit-learn · NumPy · SciPy · MovieLens · TMDB · OMDb
+
+## Data and credits
+
+- **MovieLens 32M** trains "viewers like you" and the content model (genres and fan tags). Used under the GroupLens research license, non-commercial. F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. *ACM Transactions on Interactive Intelligent Systems* 5(4): 19:1–19:19.
+- **TMDB** supplies titles, posters, and descriptions, used for display only. No model is trained on TMDB content. This product uses the TMDB API but is not endorsed or certified by TMDB.
+- **JustWatch** supplies where-to-watch data, through TMDB.
+- **OMDb** supplies IMDb and Rotten Tomatoes scores.
+
+iCinema is a free, non-commercial project. © 2026 Ishaan Narasimhan. All rights reserved.
