@@ -1,0 +1,6 @@
+{
+ "source": "MovieLens 32M genres and fan tags (TF-IDF + truncated SVD, 64 dimensions)",
+ "movies_with_vectors": 14319,
+ "movies_total": 14407,
+ "tmdb_content_used": false
+}

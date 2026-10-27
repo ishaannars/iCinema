@@ -3,9 +3,6 @@ from collections import Counter
 import math
 import re
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import TruncatedSVD
-from sklearn.preprocessing import normalize
 
 GENRES = [
     "Action", "Adventure", "Anime", "Animation", "Comedy", "Documentary",
@@ -311,52 +308,17 @@ def _profile_confidence(profile):
 
 
 def _semantic_batch_scores(movies, profile):
-    """Latent semantic analysis (TF-IDF -> SVD) for user-to-movie similarity.
+    """Theme and tone similarity from the content model (MovieLens genres and fan tags).
 
-    This gives iCinema an NLP layer without requiring an external model API. The
-    latent vectors capture co-occurring themes/phrasing beyond one-hot genres.
+    No TMDB text is used. Movies the content model doesn't know get a neutral 0.5.
     """
-    signals = profile.get("semantic_signals") or []
-    if not movies or not signals:
-        return {id(m):0.5 for m in movies}
-
-    signal_docs = [s.get("text","") for s in signals if s.get("text")]
-    signal_weights = [float(s.get("weight",0.0)) for s in signals if s.get("text")]
-    movie_docs = [_movie_text(m) for m in movies]
-    docs = signal_docs + movie_docs
-    if len(docs) < 3 or not any(d.strip() for d in docs):
-        return {id(m):0.5 for m in movies}
-    try:
-        vectorizer = TfidfVectorizer(
-            stop_words="english", ngram_range=(1,2), min_df=1, max_features=2500,
-            sublinear_tf=True
-        )
-        X = vectorizer.fit_transform(docs)
-        max_components = min(32, X.shape[0]-1, X.shape[1]-1)
-        if max_components >= 2:
-            svd = TruncatedSVD(n_components=max_components, random_state=42)
-            Z = normalize(svd.fit_transform(X))
-        else:
-            Z = normalize(X).toarray()
-        sig = Z[:len(signal_docs)]
-        cand = Z[len(signal_docs):]
-        w = np.asarray(signal_weights, dtype=float)
-        if np.allclose(np.abs(w).sum(),0):
-            return {id(m):0.5 for m in movies}
-        user = (sig * w[:,None]).sum(axis=0)
-        norm = float(np.linalg.norm(user))
-        if norm <= 1e-12:
-            return {id(m):0.5 for m in movies}
-        user = user/norm
-        sims = cand @ user
-        # signed cosine [-1,1] -> [0,1]
-        return {id(m):_clip01((float(s)+1.0)/2.0) for m,s in zip(movies,sims)}
-    except Exception:
-        return {id(m):0.5 for m in movies}
+    from src.content_model import similarity_scores
+    signals = [(s["movie"], float(s.get("weight", 0.0))) for s in (profile.get("semantic_signals") or []) if s.get("movie")]
+    return similarity_scores(list(movies or []), signals)
 
 
 def semantic_similarity_scores(movies, profile):
-    """Public wrapper around iCinema's latent theme/tone similarity layer."""
+    """Public wrapper around the content model's theme and tone similarity."""
     return _semantic_batch_scores(list(movies or []), profile)
 
 
@@ -380,7 +342,7 @@ def build_profile(
         movie=lookup(title)
         if not movie: return
         _movie_signal(movie, weight, traits, genres)
-        semantic.append({"title":title,"text":_movie_text(movie),"weight":float(weight)})
+        semantic.append({"title":title,"movie":movie,"weight":float(weight)})
 
     for title in likes|favorites:
         add(title, SIGNAL_WEIGHTS["favorite"] if title in favorites else SIGNAL_WEIGHTS["like"])

@@ -25,7 +25,7 @@ Then the error analysis showed viewers with less mainstream taste got the worst 
 `candidate retrieval → "viewers like you" score + content score → personalized ranking → diversity reranking → your feedback → personal model`
 
 - **Viewers like you.** Trained on 15.8 million 4+ star ratings from 198,954 viewers across 14,407 movies. Item-kNN ranks movies for most viewers and finds movies similar to one you watched, for What's next and "Loved by fans of …". If your likes are less-loved movies, RP3beta ranks instead: a walk from your likes to the people who loved them and on to what else they loved, with popular movies discounted slightly. Skips and "Not for me" push movies down.
-- **Content.** TF-IDF and Truncated SVD over plot and metadata measure theme and tone.
+- **Content.** Each movie's MovieLens genres and fan tags become a 64-number description (TF-IDF, then truncated SVD), the same recipe the offline tests used. TMDB is used only to show titles, posters, and where to watch.
 - **Personal model.** After 50 Save/Skip outcomes, logistic regression learns from your own choices. Gradient boosting is compared at 100, and the better one on a chronological holdout is used.
 - **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of) shape the content score and your Profile. Step 3 also picks which section comes after Top Matches.
 - **Tonight's Show.** Your single best match on the services you pick, with one-tap links to watch.

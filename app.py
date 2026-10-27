@@ -5897,7 +5897,7 @@ def _format_seconds(value):
 
 
 def cached_semantic_scores(movies, profile):
-    """TF-IDF + SVD theme similarity, recomputed only when inputs change."""
+    """Content-model theme similarity, recomputed only when inputs change."""
     signals = tuple((s.get("title"), s.get("weight")) for s in (profile.get("semantic_signals") or []))
     titles = tuple(m.get("title") for m in movies)
     key = (signals, titles)
@@ -6132,7 +6132,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '</div>'
         '<div class="methodology-card">'
         '<div class="methodology-value">Understands every movie</div>'
-        '<div class="methodology-label">A second model reads each film’s plot, tone, genre, and ratings, and weighs them by your setup answers.</div>'
+        '<div class="methodology-label">A second model compares movies by their genres and the tags MovieLens fans gave them, and weighs them by your setup answers.</div>'
         '</div>'
         '<div class="methodology-card">'
         '<div class="methodology-value">Gives every row a job</div>'
