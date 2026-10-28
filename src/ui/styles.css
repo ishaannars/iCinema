@@ -4977,3 +4977,14 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .privacy-note{font-family:var(--ui-font);color:var(--muted2);font-size:.72rem;line-height:1.4;margin:.2rem 0 .6rem;max-width:560px}
 [class*="st-key-seenrate_"] button{min-height:1.9rem !important;padding:.2rem .4rem !important}
 [class*="st-key-seenrate_"] button p{font-size:.72rem !important;white-space:nowrap !important}
+
+/* Phones: a calm 2 x 2 grid per row instead of a sideways swipe, so nothing hides off-screen. */
+@media (max-width: 640px){
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;overflow-x:visible !important;
+    scroll-snap-type:none !important;gap:.6rem !important;row-gap:1rem !important}
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"] > [data-testid="column"]{
+    min-width:calc(50% - .3rem) !important;flex:1 1 calc(50% - .3rem) !important;scroll-snap-align:none !important}
+  [class*="st-key-showroom_swipe_"] .poster-caption-title{font-size:.92rem !important}
+  [class*="st-key-showroom_swipe_"] button p{font-size:.68rem !important}
+}

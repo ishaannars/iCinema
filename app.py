@@ -2200,11 +2200,11 @@ def _seen_tab():
                     with st.container(key=f"seenrate_{i}"):
                         up, down = st.columns(2, gap="small")
                         with up:
-                            st.button("👍 Loved it" if _r != 1 else "👍 Loved", key=f"seenup_{m['title']}",
+                            st.button("Loved it", key=f"seenup_{m['title']}",
                                       type="primary" if _r == 1 else "secondary", use_container_width=True,
                                       on_click=rate_seen, args=(m["title"], 1))
                         with down:
-                            st.button("👎 Not for me", key=f"seendown_{m['title']}",
+                            st.button("Not for me", key=f"seendown_{m['title']}",
                                       type="primary" if _r == -1 else "secondary", use_container_width=True,
                                       on_click=rate_seen, args=(m["title"], -1))
                     pick = wn_picks.get(m["title"])
@@ -2662,7 +2662,9 @@ def render_showroom_fragment(p):
             def _strong(i):
                 pay = _pays.get(_slots.get(_showroom_slot_key(row_name, i))) or {}
                 top = pay.get("fit_top_pct")
-                return row_name == "Top Matches for You" or _floor is None or not isinstance(top, (int, float)) or top <= _floor
+                # Rows with their own within-kind test (Top Matches, Critically Acclaimed, Hidden Gems,
+                # Something Different) show their best fits. Untested adaptive rows show only strong fits.
+                return row_name not in ADAPTIVE_ROWS or _floor is None or not isinstance(top, (int, float)) or top <= _floor
             kept = [i for i in range(len(choices)) if _strong(i)]
             if not kept:
                 st.caption("No strong fits here yet. Like or save a few more movies and this row fills in.")
@@ -2727,7 +2729,7 @@ screen=st.session_state.screen
 if screen=="welcome":
     logo()
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">Like a few movies and answer a few quick questions. iCinema picks what you’ll love, shows where to watch it tonight, and updates with every save, skip, and watch.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">Like a few movies and answer a few quick questions. iCinema picks what you’ll love, shows where to watch it tonight, and gets better the more you use it.</div>',unsafe_allow_html=True)
 
     # Proof, read from the results file so it always matches the README.
     _off = load_offline_results() or {}
@@ -2780,7 +2782,7 @@ elif screen=="showroom":
     st.markdown(
         '<div class="showroom-header">'
         '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Picked for you, and updated with every choice you make</div>'
+        '<div class="showroom-intro">Picked for you, and sharper with every choice you make</div>'
         '</div>',
         unsafe_allow_html=True
     )

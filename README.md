@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-I kept spending too much time deciding what to watch, so I built iCinema: one place to find your next favorite movie. You like a few movies and answer a few questions, and it picks what you'll love, shows where to watch it tonight, and updates with every save, skip, and watch. It's tested to work for less mainstream taste too, and it needs no account.
+I kept spending too much time deciding what to watch, so I built iCinema: one place to find your next favorite movie. You like a few movies and answer a few questions, and it picks what you'll love, shows where to watch it tonight, and gets better the more you use it (tested: picks from 50 choices beat picks from 3, on viewers no earlier test touched). It's tested to work for less mainstream taste too, and it needs no account.
 
 <!-- RECRUITER-TOP -->
 **[Try iCinema →](https://icinema.streamlit.app/)**
