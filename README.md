@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-I kept spending too much time deciding what to watch, so I built iCinema for people like me. It gives you one tested pick for tonight from the services you already pay for, starting from your first 3 likes. It's built to reach past what's trending, so viewers with less mainstream taste get better picks too. It keeps learning from what you save, skip, and watch, and it needs no account.
+I kept spending too much time deciding what to watch, so I built iCinema: one place to find your next favorite movie. You like a few movies and answer a few questions, and it picks what you'll love, shows where to watch it tonight, and updates with every save, skip, and watch. It's tested to work for less mainstream taste too, and it needs no account.
 
 <!-- RECRUITER-TOP -->
 **[Try iCinema →](https://icinema.streamlit.app/)**
@@ -75,6 +75,9 @@ Then the error analysis showed viewers with less mainstream taste got the worst 
 | Something Different row | Within movies outside your 3 most-liked genres, vs the most popular of that kind (2,478 viewers) | Found a movie the viewer later loved in its top 10 36.5% of the time vs 30.5% (CI +0.042 to +0.078) | ✅ Supported |
 | Love chance | "If you watch it, how likely are you to love it?" Isotonic calibration on 40,581 later ratings from 2,812 test viewers | Calibration error 0.7 points, AUC 0.58, Brier -0.0071 vs guessing the average (CI -0.0087 to -0.0055). Top-1% picks: 73% loved once watched | ✅ Shown on cards |
 | Learns as you use it | Picks from 3 to 50 of a viewer's loves (1,125 test viewers) | NDCG@10 0.093 with 3 choices, 0.099 with 10, 0.106 with 50 (10 vs 3: +0.0051, CI -0.0020 to +0.0114) | ❌ Not claimed |
+| Learns as you use it, fresh test | 50 vs 3 choices on 14,687 viewers from a slice no earlier test used | NDCG@10 0.099 → 0.115 (+0.0157, CI +0.0136 to +0.0178) | ✅ Claim allowed |
+| Fit floor | Where a pick stops being more likely than average to be loved, read from the love-chance table | Top 23.3%. Rows (except Top Matches) leave out weaker picks instead of padding | ✅ Applied to rows |
+| Fourth row follows Step 3 | Not an accuracy question | Recent Releases, Classics, Documentaries, or International Films become the fourth row when picked. Each shows only its own kind | Design choice |
 
 MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. Content and personal match always keep at least 20%, so your answers always count. From the scripts in `training/`.
 <!-- TESTED:END -->
@@ -156,7 +159,7 @@ streamlit run app.py
 python -m pytest -q
 ```
 
-To rebuild everything, download MovieLens 32M into `ml-32m/` and run these in order, each with `--data-dir ml-32m`: `training/benchmark_cf.py`, `training/evaluate_long_tail.py`, `training/confirm_long_tail.py`, `training/confirm_routing.py`, `training/build_knn.py`, `training/evaluate_blends.py`, `training/evaluate_steps.py`, `training/evaluate_rows.py`. Then run `python training/build_content.py --data-dir ml-32m` and `python tools/refresh_results.py`.
+To rebuild every model and number with one command, download MovieLens 32M into `ml-32m/` and run `python reproduce.py --data-dir ml-32m`. The steps it runs, in order, each with `--data-dir ml-32m`: `training/benchmark_cf.py`, `training/evaluate_long_tail.py`, `training/confirm_long_tail.py`, `training/confirm_routing.py`, `training/build_knn.py`, `training/evaluate_blends.py`, `training/evaluate_steps.py`, `training/evaluate_rows.py`. Then run `python training/build_content.py --data-dir ml-32m` and `python tools/refresh_results.py`.
 
 ## Coming next
 

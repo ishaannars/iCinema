@@ -17,3 +17,14 @@ def test_love_line_matches_the_table():
     assert c % 5 == 0 and 0 <= c <= 100
     assert love.love_chance(1) >= love.love_chance(50)
     assert love.love_line(None) == ""
+
+
+def test_fit_floor_sits_where_love_chance_meets_the_average():
+    d = json.loads(love.PATH.read_text())
+    f = love.fit_floor()
+    if not d["ships"]:
+        assert f is None
+        return
+    rows = sorted(d["table"], key=lambda r: r["top_pct"])
+    assert rows[0]["top_pct"] <= f <= rows[-1]["top_pct"]
+    assert love.love_chance(f) in range(int(d["average_love_rate"] * 100) - 5, int(d["average_love_rate"] * 100) + 6)

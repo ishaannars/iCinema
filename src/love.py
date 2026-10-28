@@ -36,3 +36,25 @@ def love_chance(top_pct):
 def love_line(top_pct):
     c = love_chance(top_pct)
     return f"If you watch it: about {c}% chance you'll love it" if c is not None else ""
+
+
+@lru_cache(maxsize=1)
+def fit_floor():
+    """Lowest rank (top-%) where a movie is still at least as likely to be loved as an average one.
+
+    Below this line, a pick is worse than a coin flip weighted by the average love rate, so rows
+    leave it out instead of padding. Read from the tested table; None if the table didn't ship.
+    """
+    try:
+        d = json.loads(PATH.read_text())
+    except (OSError, ValueError):
+        return None
+    if not d.get("ships"):
+        return None
+    avg = float(d["average_love_rate"])
+    rows = sorted(d["table"], key=lambda r: r["top_pct"])
+    for a, b in zip(rows, rows[1:]):
+        if a["chance"] >= avg > b["chance"]:
+            span = a["chance"] - b["chance"]
+            return round(a["top_pct"] + (a["chance"] - avg) / span * (b["top_pct"] - a["top_pct"]), 1)
+    return float(rows[-1]["top_pct"]) if rows[-1]["chance"] >= avg else float(rows[0]["top_pct"])

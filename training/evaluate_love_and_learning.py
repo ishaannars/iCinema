@@ -79,7 +79,7 @@ def main():
         later.append(ch[ch["timestamp"] > ch["userId"].map(cutoff)])
     later = pd.concat(later)
     later["item"] = later["movieId"].map(item_of)
-    rated = later.groupby("userId").apply(lambda g: dict(zip(g["item"], g["rating"] >= 4.0)))
+    rated = {u: dict(zip(g["item"], g["rating"] >= 4.0)) for u, g in later.groupby("userId")}
     print(f"ready: {len(later):,} later ratings", flush=True)
 
     def points(users, seed=5):

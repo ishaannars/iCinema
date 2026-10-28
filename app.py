@@ -24,7 +24,7 @@ from src.recommender import _calibrated_match_percent
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css
-from src.love import love_line
+from src.love import love_line, fit_floor
 from src.ui.watch import (STREAMING_SERVICES, PROVIDER_LINKS, _provider_key, _on_service, provider_watch_url,
                           watch_options, watch_line_html, concise_availability_text, movie_on_services)
 
@@ -32,7 +32,7 @@ st.markdown("<style>" + app_css() + "</style>", unsafe_allow_html=True)
 
 defaults={
     "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"seen_from_saved":set(),"selection_order":[],
+    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"seen_from_saved":set(),"seen_rating":{},"selection_order":[],
     "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
     "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
     "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
@@ -68,6 +68,9 @@ def profile_snapshot():
         "dismissed": sorted(st.session_state.dismissed),
         "disliked": sorted(st.session_state.get("disliked") or set()),
         "seen_from_saved": sorted(st.session_state.get("seen_from_saved") or set()),
+        "seen_rating": dict(st.session_state.get("seen_rating") or {}),
+        "anon_id": st.session_state.get("anon_id"),
+        "analytics_opt_out": bool(st.session_state.get("analytics_opt_out")),
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
@@ -89,6 +92,10 @@ def restore_profile(data):
         st.session_state.dismissed = set(data.get("dismissed") or [])
         st.session_state.disliked = set(data.get("disliked") or [])
         st.session_state.seen_from_saved = set(data.get("seen_from_saved") or [])
+        st.session_state.seen_rating = {str(k): int(v) for k, v in (data.get("seen_rating") or {}).items() if v in (1, -1)}
+        if data.get("anon_id"):
+            st.session_state.anon_id = str(data["anon_id"])
+        st.session_state.analytics_opt_out = bool(data.get("analytics_opt_out"))
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
@@ -703,6 +710,7 @@ def mark_movie_seen(title, movie=None):
 def remove_from_seen(title):
     """Undo an accidental Seen: drop it and its model signal; restore it to Saved if it came from there."""
     st.session_state.seen.discard(title)
+    st.session_state.seen_rating = {k: v for k, v in (st.session_state.get("seen_rating") or {}).items() if k != title}
     from_saved = set(st.session_state.get("seen_from_saved") or set())
     if title in from_saved:
         from_saved.discard(title)
@@ -792,11 +800,30 @@ def _cf_signals():
     for t in st.session_state.likes:
         m = get_movie(t, ext)
         if m: out.append((m, "favorite" if t in st.session_state.favorites else "like"))
+    rated = st.session_state.get("seen_rating") or {}
     for key, action in (("saved", "save"), ("seen", "seen"), ("dismissed", "skip"), ("disliked", "dislike")):
         for t in st.session_state.get(key) or set():
             m = get_movie(t, ext)
-            if m: out.append((m, action))
+            if not m:
+                continue
+            if key == "seen" and rated.get(t) in (1, -1):
+                action = "like" if rated[t] == 1 else "dislike"   # a rated Seen is a real signal
+            out.append((m, action))
     return out
+
+
+def _set_opt_out():
+    st.session_state.analytics_opt_out = not st.session_state.get("_share_counts", True)
+    queue_profile_save()
+
+
+def rate_seen(title, value):
+    """Thumbs on a Seen movie: tap again to clear."""
+    rated = dict(st.session_state.get("seen_rating") or {})
+    rated[title] = 0 if rated.get(title) == value else value
+    rated = {k: v for k, v in rated.items() if v}
+    st.session_state.seen_rating = rated
+    queue_profile_save()
 
 def concise_description(text, limit=138):
     """Return a compact *complete-sounding* description for aligned movie cards.
@@ -1507,6 +1534,32 @@ def render_more_fragment():
     # fragment, which could briefly surface as a dark strip after a card click.
 
 
+# The fourth Showroom row follows your Step 3 picks that have no row of their own;
+# with none picked it stays Something Different. Always four rows at most.
+_THIS_YEAR = __import__("datetime").date.today().year
+ADAPTIVE_ROWS = {
+    "Recent Releases for You": lambda m: int(m.get("year") or 0) >= _THIS_YEAR - 2,
+    "Classics for You": lambda m: 0 < int(m.get("year") or 0) <= 1995,
+    "Documentaries for You": lambda m: m.get("genre") == "Documentary" or "Documentary" in (m.get("tags") or []),
+    "International Films for You": lambda m: str(m.get("original_language") or "en").lower() not in ("", "en"),
+}
+ADAPTIVE_NOTES = {
+    "Recent Releases for You": "From the last two years, ranked for you",
+    "Classics for You": "Older favorites that match what you like",
+    "Documentaries for You": "Nonfiction picked for you",
+    "International Films for You": "Films from around the world that match what you like",
+}
+_ADAPTIVE_FROM_STEP3 = {"Recent Releases": "Recent Releases for You", "Classics": "Classics for You",
+                        "Documentaries": "Documentaries for You", "International Films": "International Films for You"}
+
+
+def fourth_row_name():
+    for pick in st.session_state.get("more_of") or []:
+        if pick in _ADAPTIVE_FROM_STEP3:
+            return _ADAPTIVE_FROM_STEP3[pick]
+    return "Something Different"
+
+
 def _showroom_slot_key(row_name, slot_index):
     return f"{row_name}::{int(slot_index)}"
 
@@ -1718,11 +1771,8 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                 st.markdown(
                     f'<div class="match-score"><span class="match-score-value">{fit_head(payload, match)}</span>'
                     f'<span class="match-score-label">· {html.escape(fit_label(payload, match))}</span></div>'
-                    + (f'<div class="match-rank-note">Ranks in your top {int(payload["fit_top_pct"])}% of '
-                       f'{int(payload.get("fit_pool") or 0):,} movies iCinema scored for you.</div>'
-                       if isinstance(payload.get("fit_top_pct"), (int, float)) else "") +
-                    (f'<div class="match-love">{html.escape(love_line(payload.get("fit_top_pct")))}</div>'
-                     if love_line(payload.get("fit_top_pct")) else "") +
+                    + (f'<div class="match-rank-note">{html.escape(love_line(payload.get("fit_top_pct")))}</div>'
+                       if love_line(payload.get("fit_top_pct")) else "") +
                     '<div class="match-explain-title">Why this matches you</div>',
                     unsafe_allow_html=True,
                 )
@@ -2005,8 +2055,10 @@ def render_tonight_pick_fragment():
     why_html = "".join(f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong> · {html.escape(r["text"])}</div>'
                        for r in reasons)
 
-    tonight_badge = (f"Best on your services · {fit_head(payload, match)} overall" if services
-                     else f"{fit_head(payload, match)} for you")
+    _love = love_line(payload.get("fit_top_pct"))
+    _love_short = _love.replace("If you watch it: about ", "About ").replace(" chance you'll love it", " chance you’ll love it") if _love else ""
+    tonight_badge = ((f"Best on your services · " if services else "")
+                     + (_love_short or f"{fit_head(payload, match)} for you"))
     with st.container(key=f"tonight_hero_{title}"):
         poster_col, info_col = st.columns([1, 6.2], gap="medium")
         with poster_col:
@@ -2016,9 +2068,7 @@ def render_tonight_pick_fragment():
                 '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
-                f'<div class="tonight-badges"><span class="tonight-match">{tonight_badge}</span>{fit}</div>'
-                + (f'<div class="tonight-love">{html.escape(love_line(payload.get("fit_top_pct")))}</div>'
-                   if love_line(payload.get("fit_top_pct")) else "") +
+                f'<div class="tonight-badges"><span class="tonight-match">{html.escape(tonight_badge)}</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline")), limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
@@ -2146,6 +2196,17 @@ def _seen_tab():
                     # Hover × in the poster's top-right corner: remove an accidental Seen.
                     st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
                               on_click=remove_from_seen, args=(m["title"],))
+                    _r = (st.session_state.get("seen_rating") or {}).get(m["title"], 0)
+                    with st.container(key=f"seenrate_{i}"):
+                        up, down = st.columns(2, gap="small")
+                        with up:
+                            st.button("👍 Loved it" if _r != 1 else "👍 Loved", key=f"seenup_{m['title']}",
+                                      type="primary" if _r == 1 else "secondary", use_container_width=True,
+                                      on_click=rate_seen, args=(m["title"], 1))
+                        with down:
+                            st.button("👎 Not for me", key=f"seendown_{m['title']}",
+                                      type="primary" if _r == -1 else "secondary", use_container_width=True,
+                                      on_click=rate_seen, args=(m["title"], -1))
                     pick = wn_picks.get(m["title"])
                     if pick:
                         nt, used_cf = pick
@@ -2187,6 +2248,10 @@ def render_showroom_fragment(p):
     # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
     # briefly draw the tabs twice after an app rerun.
     ensure_session(st.session_state)
+    if not st.session_state.get("_visit_tracked"):
+        from src.telemetry import track
+        track(st.session_state, "visit")
+        st.session_state._visit_tracked = True
     tabs = st.tabs(["Showroom", "Saved", "Seen", "Profile"])  # tabs8: fixed labels keep the open tab
 
     # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
@@ -2326,6 +2391,8 @@ def render_showroom_fragment(p):
                 return quality and little_known
             if row_name=="Something Different":
                 return movie.get("genre") not in set(p.get("genres",[]))
+            if row_name in ADAPTIVE_ROWS:
+                return ADAPTIVE_ROWS[row_name](movie)
             return True
 
 
@@ -2365,6 +2432,9 @@ def render_showroom_fragment(p):
                     objective=0.70*base+0.30*section
                 elif row_name=="Hidden Gems":
                     objective=0.72*base+0.28*section
+                elif row_name in ADAPTIVE_ROWS:
+                    # The row's kind is the hard filter; within it, your personal fit decides.
+                    objective=base+(0.06*_pop_now(movie) if row_name=="Recent Releases for You" else 0.0)
                 else:  # Something Different: serendipity = fans-like-you love it, but it's unlike your usual picks
                     cf_v=cf_by_title.get(movie["title"])
                     sem=semantic_by_id.get(id(movie),0.5)
@@ -2381,8 +2451,8 @@ def render_showroom_fragment(p):
             # non-qualifiers only backfill if the section would otherwise be empty.
             scored.sort(key=lambda x:(_qualifies(row_name,x[3]),x[0],x[1]),reverse=True)
             n_ok=sum(1 for x in scored if _qualifies(row_name,x[3]))
-            if n_ok>=4:
-                scored=[x for x in scored if _qualifies(row_name,x[3])]
+            if n_ok>=4 or row_name in ADAPTIVE_ROWS:
+                scored=[x for x in scored if _qualifies(row_name,x[3])]   # adaptive rows never borrow other kinds
             if row_name=="Top Matches for You":
                 # Top Matches is exactly your best fits, in order, so no later row can hold a better match.
                 return [(display_match,movie) for _,_,display_match,movie in scored]
@@ -2393,7 +2463,7 @@ def render_showroom_fragment(p):
 
         # Reserve distinct movies for each row before rendering. This prevents a title from
         # migrating into another section during the same refresh and keeps every row populated.
-        row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"]
+        row_order=["Top Matches for You","Critically Acclaimed","Hidden Gems",fourth_row_name()]
         row_choices={name: [] for name in row_order}
         row_candidate_queues={name: [] for name in row_order}
 
@@ -2427,14 +2497,14 @@ def render_showroom_fragment(p):
         # candidates that have not appeared elsewhere. This keeps every section alive.
         for row_name in row_order:
             need=4-len(row_choices[row_name])
-            if need<=0:
+            if need<=0 or row_name in ADAPTIVE_ROWS:
                 continue
             fallback=[item for item in ranked if item[1]["title"] not in reserved]
             extra=fallback[:need]
             row_choices[row_name].extend(extra)
             reserved.update(movie["title"] for _,movie in extra)
 
-        visible_movies=[movie for row_name in ["Top Matches for You","Critically Acclaimed","Hidden Gems","Something Different"] for _,movie in row_choices.get(row_name,[])]
+        visible_movies=[movie for row_name in row_order for _,movie in row_choices.get(row_name,[])]
         visible_titles={movie["title"] for movie in visible_movies}
         warm_backups=[]
         for row_name in row_order:
@@ -2559,7 +2629,7 @@ def render_showroom_fragment(p):
     # which movie lands in which row is unchanged, so this never costs accuracy.
     _asked = list(st.session_state.get("more_of") or [])
     _middle = sorted(["Critically Acclaimed","Hidden Gems"], key=lambda r: (r not in _asked, _asked.index(r) if r in _asked else 0))
-    row_specs=["Top Matches for You"] + _middle + ["Something Different"]
+    row_specs=["Top Matches for You"] + _middle + [fourth_row_name()]
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
@@ -2572,6 +2642,7 @@ def render_showroom_fragment(p):
                 "Critically Acclaimed":"Highly rated movies that still match your taste",
                 "Hidden Gems":"Less-known movies you’re likely to love",
                 "Something Different":"Outside your usual genres, but still likely to click",
+                **{name: note for name, note in ADAPTIVE_NOTES.items()},
             }
             st.markdown(
                 f'<div class="{row_class} showroom-row-header">'
@@ -2583,10 +2654,23 @@ def render_showroom_fragment(p):
             if not choices:
                 st.caption("Refreshing personalized matches…")
                 continue
+            # Fit floor: past this rank a movie is less likely to be loved than an average one,
+            # so the row shows fewer cards instead of padding (Top Matches is always shown).
+            _floor = fit_floor()
+            _pays = st.session_state.get("showroom_payloads") or {}
+            _slots = st.session_state.get("showroom_slots") or {}
+            def _strong(i):
+                pay = _pays.get(_slots.get(_showroom_slot_key(row_name, i))) or {}
+                top = pay.get("fit_top_pct")
+                return row_name == "Top Matches for You" or _floor is None or not isinstance(top, (int, float)) or top <= _floor
+            kept = [i for i in range(len(choices)) if _strong(i)]
+            if not kept:
+                st.caption("No strong fits here yet. Like or save a few more movies and this row fills in.")
+                continue
             with st.container(key=f"showroom_swipe_{row_index}"):
-                cols=st.columns(len(choices))
-                for i,_ in enumerate(choices):
-                    with cols[i]:
+                cols=st.columns(4)
+                for c, i in enumerate(kept[:4]):
+                    with cols[c]:
                         render_showroom_card_fragment(row_name,row_index,i)
                         render_card_actions(row_name,row_index,i)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
@@ -2615,6 +2699,11 @@ def render_showroom_fragment(p):
             if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True):
                 reset_profile_state()
                 st.rerun(scope="app")
+        st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
+                  key="_share_counts", on_change=_set_opt_out,
+                  help="Counts like visits and saves, tied to a random ID. Never movie titles, names, emails, or location.")
+        st.markdown('<div class="privacy-note">Your profile stays in this browser. iCinema has no accounts '
+                    'and never sells your data.</div>', unsafe_allow_html=True)
 
 
     # tabs9: counts beside the fixed tab labels, found by tab id (labels never change, so
@@ -2638,7 +2727,7 @@ screen=st.session_state.screen
 if screen=="welcome":
     logo()
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">One tested pick for tonight from the services you already pay for. It starts from your first 3 likes, reaches past what’s trending, and needs no account.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">Like a few movies and answer a few quick questions. iCinema picks what you’ll love, shows where to watch it tonight, and updates with every save, skip, and watch.</div>',unsafe_allow_html=True)
 
     # Proof, read from the results file so it always matches the README.
     _off = load_offline_results() or {}
@@ -2653,9 +2742,9 @@ if screen=="welcome":
             + '</div></div>', unsafe_allow_html=True)
 
     steps=[
-        ("1","Rate the Shelf","Like a few movies you already enjoy, or search for one."),
-        ("2","Tailor Your Preferences","Pick your genres and what matters most to you."),
-        ("3","Shape Your Showroom","Choose what you want to see more of."),
+        ("1","Rate the Shelf","Like a few movies you enjoy."),
+        ("2","Tailor Your Preferences","Tell iCinema what matters to you."),
+        ("3","Shape Your Showroom","Choose what you want more of."),
     ]
     st.markdown(
         '<div class="home-steps-label">How it works</div><div class="home-steps">'
@@ -2691,7 +2780,7 @@ elif screen=="showroom":
     st.markdown(
         '<div class="showroom-header">'
         '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Picked for you and refined with every save, skip, and title you mark</div>'
+        '<div class="showroom-intro">Picked for you, and updated with every choice you make</div>'
         '</div>',
         unsafe_allow_html=True
     )

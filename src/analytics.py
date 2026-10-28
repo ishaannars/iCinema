@@ -71,6 +71,12 @@ def record_event(state, event_type, title, context=None):
     events = list(state.get("analytics_events") or [])
     events.append(event)
     state["analytics_events"] = events[-MAX_EVENTS:]
+    try:
+        from src.telemetry import track
+        track(state, {"dislike": "not_for_me"}.get(str(event_type), str(event_type)),
+              row=context.get("row"), position=context.get("position"), model_version=context.get("model_version"))
+    except Exception:
+        pass
     return event
 
 

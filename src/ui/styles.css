@@ -4941,3 +4941,39 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* Love chance: one quiet line under the match score and on Tonight's Show */
 .match-love,.tonight-love{font-family:var(--ui-font);color:var(--ivory);font-size:.84rem;font-weight:600;margin:.35rem 0 .2rem}
 .tonight-love{color:var(--muted);font-weight:560}
+
+/* A3: layouts that hold at every window width.
+   1) Card rows: 2 per line on tablets, swipe on phones (above).
+   2) Rows nested inside a card (match bubble + Skip, Save + Seen) never inherit the
+      row rules: they stay on one line, inside the card.
+   3) Tonight's Show actions stay one compact line instead of stacking full-width. */
+@media (min-width: 641px) and (max-width: 1100px){
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;row-gap:1.2rem !important}
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+  [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"] > [data-testid="column"]{
+    min-width:calc(50% - .8rem) !important;flex:1 1 calc(50% - .8rem) !important}
+}
+[class*="st-key-showroom_swipe_"] [data-testid="stColumn"] [data-testid="stHorizontalBlock"],
+[class*="st-key-showroom_swipe_"] [data-testid="column"] [data-testid="stHorizontalBlock"]{
+  flex-wrap:nowrap !important;overflow:visible !important;row-gap:0 !important;gap:.4rem !important;padding-bottom:0 !important}
+[class*="st-key-showroom_swipe_"] [data-testid="stColumn"] [data-testid="stColumn"],
+[class*="st-key-showroom_swipe_"] [data-testid="column"] [data-testid="column"]{
+  min-width:0 !important;flex:1 1 0 !important;width:auto !important;scroll-snap-align:none !important}
+[class*="st-key-showroom_controls_"] [data-testid="stColumn"]:first-child,
+[class*="st-key-showroom_controls_"] [data-testid="column"]:first-child{flex:3 1 0 !important}
+[class*="st-key-showroom_controls_"] div[data-testid="stPopover"] button p{
+  overflow:hidden !important;text-overflow:ellipsis !important;white-space:nowrap !important}
+@media (max-width: 900px){
+  [class*="st-key-tonight_actions_"] [data-testid="stHorizontalBlock"]{flex-wrap:nowrap !important;gap:.35rem !important}
+  [class*="st-key-tonight_actions_"] [data-testid="stColumn"],
+  [class*="st-key-tonight_actions_"] [data-testid="column"]{min-width:0 !important;flex:1 1 0 !important;width:auto !important}
+  [class*="st-key-tonight_actions_"] [data-testid="stColumn"]:last-child,
+  [class*="st-key-tonight_actions_"] [data-testid="column"]:last-child{display:none !important}
+  [class*="st-key-tonight_actions_"] button p{font-size:.78rem !important;white-space:nowrap !important}
+}
+/* The love chance reuses the quiet rank-note style. */
+.match-rank-note{color:var(--ivory)}
+
+.privacy-note{font-family:var(--ui-font);color:var(--muted2);font-size:.72rem;line-height:1.4;margin:.2rem 0 .6rem;max-width:560px}
+[class*="st-key-seenrate_"] button{min-height:1.9rem !important;padding:.2rem .4rem !important}
+[class*="st-key-seenrate_"] button p{font-size:.72rem !important;white-space:nowrap !important}

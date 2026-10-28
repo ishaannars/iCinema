@@ -149,6 +149,22 @@ def tested_block():
                      f"NDCG@10 {st[3]['ndcg@10']:.3f} with 3 choices, {st[10]['ndcg@10']:.3f} with 10, {st[50]['ndcg@10']:.3f} with 50 "
                      f"(10 vs 3: {lc['ndcg_gain_10_vs_3']:+.4f}, CI {lc['ci95'][0]:+.4f} to {lc['ci95'][1]:+.4f})",
                      "✅ Claimed in the app" if lc["claim_allowed"] else "❌ Not claimed"))
+    confirm_path = ROOT / "data" / "learning_curve_confirm.json"
+    if confirm_path.exists():
+        cc = json.loads(confirm_path.read_text())
+        st_ = {s["choices"]: s for s in cc["steps"]}
+        rows.append(("Learns as you use it, fresh test", f"50 vs 3 choices on {cc['viewers']:,} viewers from a slice no earlier test used",
+                     f"NDCG@10 {st_[3]['ndcg@10']:.3f} → {st_[50]['ndcg@10']:.3f} ({cc['ndcg_gain_50_vs_3']:+.4f}, "
+                     f"CI {cc['ci95'][0]:+.4f} to {cc['ci95'][1]:+.4f})",
+                     "✅ Claim allowed" if cc["claim_allowed"] else "❌ Not claimed"))
+    if love_path.exists() and lv.get("ships"):
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT))
+        from src.love import fit_floor
+        rows.append(("Fit floor", "Where a pick stops being more likely than average to be loved, read from the love-chance table",
+                     f"Top {fit_floor():g}%. Rows (except Top Matches) leave out weaker picks instead of padding", "✅ Applied to rows"))
+    rows.append(("Fourth row follows Step 3", "Not an accuracy question", "Recent Releases, Classics, Documentaries, or International Films "
+                 "become the fourth row when picked. Each shows only its own kind", "Design choice"))
     lines = ["| Part | Test | Result | In the app |", "|---|---|---|---|"]
     lines += [f"| {a} | {b_} | {c} | {d} |" for a, b_, c, d in rows]
     lines += ["", "MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. "
