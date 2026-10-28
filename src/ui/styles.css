@@ -4988,3 +4988,14 @@ div.element-container:has(iframe[title*="browser_storage"]){
   [class*="st-key-showroom_swipe_"] .poster-caption-title{font-size:.92rem !important}
   [class*="st-key-showroom_swipe_"] button p{font-size:.68rem !important}
 }
+
+/* Buttons: label always centered, one calm size for small card actions. */
+div.stButton > button, [data-testid="stPopover"] > button{display:flex !important;align-items:center !important;justify-content:center !important}
+div.stButton > button > div, div.stButton > button p{width:100% !important;margin:0 !important;text-align:center !important;justify-content:center !important;line-height:1.1 !important}
+[class*="st-key-seenrate_"] [data-testid="stHorizontalBlock"]{gap:.45rem !important}
+[class*="st-key-seenrate_"] button,
+[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button{
+  min-height:1.85rem !important;height:1.85rem !important;padding:0 .6rem !important;border-radius:999px !important}
+[class*="st-key-seenrate_"] button p,
+[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.72rem !important;font-weight:600 !important;white-space:nowrap !important}
+.watch-more{font-weight:600}

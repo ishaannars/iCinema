@@ -33,3 +33,10 @@ def test_your_services_come_first():
 
 def test_links_are_encoded():
     assert " " not in provider_watch_url("Unknown Service", "A Film & More")
+
+
+def test_more_options_are_a_link_to_every_option():
+    out = watch_line_html({"providers": ["Netflix", "Hulu", "Max", "Peacock"], "url": "https://www.themoviedb.org/movie/1/watch"}, "Film")
+    assert "+ 2 more</a>" in out and 'href="https://www.themoviedb.org/movie/1/watch"' in out
+    out = watch_line_html({"providers": ["Netflix", "Hulu", "Max"], "url": "javascript:alert(1)"}, "Film")
+    assert "javascript:" not in out and "+ 1 more" in out

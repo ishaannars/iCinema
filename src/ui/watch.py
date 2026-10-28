@@ -109,7 +109,12 @@ def watch_line_html(availability, title, services=None):
             for _, name, url in opts
         )
     total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
-    more = " + more" if total > len(options) else ""
+    extra = max(0, total - len(options))
+    page = _safe_url(availability.get("url"))
+    # "+ N more" opens the full where-to-watch page, so every option is one tap away.
+    more = ("" if not extra else
+            f' <a class="watch-link watch-more" href="{html.escape(page, quote=True)}" target="_blank" rel="noopener">+ {extra} more</a>'
+            if page else f" + {extra} more")
     picked = [sv for sv in (services or []) if sv in STREAMING_SERVICES]
     if picked and verb == "Streaming":
         mine = [o for o in options if any(_on_service(o[1], sv) for sv in picked)]
