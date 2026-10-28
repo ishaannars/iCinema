@@ -1,0 +1,38 @@
+"""Love chance: "If you watch it, how likely are you to love it?"
+
+Read from data/love_chance.json (built by training/evaluate_love_and_learning.py). The table maps a
+movie's top-% rank among the movies iCinema scored for you to the share of such movies that
+viewers later rated 4+ stars once they watched them. Shown only if the test passed its rule.
+"""
+import json
+from functools import lru_cache
+from pathlib import Path
+
+import numpy as np
+
+PATH = Path(__file__).resolve().parents[1] / "data" / "love_chance.json"
+
+
+@lru_cache(maxsize=1)
+def _table():
+    try:
+        d = json.loads(PATH.read_text())
+    except (OSError, ValueError):
+        return None
+    if not d.get("ships"):
+        return None
+    rows = sorted(d["table"], key=lambda r: r["top_pct"])
+    return np.array([r["top_pct"] for r in rows], float), np.array([r["chance"] for r in rows], float)
+
+
+def love_chance(top_pct):
+    """Whole-number percent, rounded to the nearest 5, or None if not available."""
+    t = _table()
+    if t is None or not isinstance(top_pct, (int, float)):
+        return None
+    return int(5 * round(float(np.interp(float(top_pct), t[0], t[1])) * 100 / 5))
+
+
+def love_line(top_pct):
+    c = love_chance(top_pct)
+    return f"If you watch it: about {c}% chance you'll love it" if c is not None else ""

@@ -73,6 +73,8 @@ Then the error analysis showed viewers with less mainstream taste got the worst 
 | Hidden Gems row | Within movies outside the 20% most-loved movies, vs the most popular of that kind (1,823 viewers) | Found a movie the viewer later loved in its top 10 11.0% of the time vs 4.1% (CI +0.054 to +0.085) | ✅ Supported |
 | Critically Acclaimed row | Within movies 4.0+ stars from 500+ ratings, vs the most popular of that kind (1,967 viewers) | Found a movie the viewer later loved in its top 10 51.9% of the time vs 43.7% (CI +0.058 to +0.106) | ✅ Supported |
 | Something Different row | Within movies outside your 3 most-liked genres, vs the most popular of that kind (2,478 viewers) | Found a movie the viewer later loved in its top 10 36.5% of the time vs 30.5% (CI +0.042 to +0.078) | ✅ Supported |
+| Love chance | "If you watch it, how likely are you to love it?" Isotonic calibration on 40,581 later ratings from 2,812 test viewers | Calibration error 0.7 points, AUC 0.58, Brier -0.0071 vs guessing the average (CI -0.0087 to -0.0055). Top-1% picks: 73% loved once watched | ✅ Shown on cards |
+| Learns as you use it | Picks from 3 to 50 of a viewer's loves (1,125 test viewers) | NDCG@10 0.093 with 3 choices, 0.099 with 10, 0.106 with 50 (10 vs 3: +0.0051, CI -0.0020 to +0.0114) | ❌ Not claimed |
 
 MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. Content and personal match always keep at least 20%, so your answers always count. From the scripts in `training/`.
 <!-- TESTED:END -->

@@ -1,0 +1,54 @@
+{
+ "method": "python training/evaluate_love_and_learning.py --data-dir ml-32m",
+ "pool": 600,
+ "validation_points": 41422,
+ "test_points": 40581,
+ "test_viewers": 2812,
+ "average_love_rate": 0.5368,
+ "table": [
+  {
+   "top_pct": 1,
+   "chance": 0.7251
+  },
+  {
+   "top_pct": 2,
+   "chance": 0.6934
+  },
+  {
+   "top_pct": 5,
+   "chance": 0.6381
+  },
+  {
+   "top_pct": 10,
+   "chance": 0.5943
+  },
+  {
+   "top_pct": 20,
+   "chance": 0.5533
+  },
+  {
+   "top_pct": 35,
+   "chance": 0.4787
+  },
+  {
+   "top_pct": 50,
+   "chance": 0.4787
+  },
+  {
+   "top_pct": 75,
+   "chance": 0.4787
+  },
+  {
+   "top_pct": 100,
+   "chance": 0.3826
+  }
+ ],
+ "test_ece": 0.0068,
+ "test_auc": 0.5761,
+ "brier_diff_vs_average": -0.00708,
+ "brier_ci95": [
+  -0.00873,
+  -0.00546
+ ],
+ "ships": true
+}

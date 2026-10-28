@@ -107,3 +107,15 @@ def test_rows_and_hidden_gems_claim():
     g = rr["Hidden Gems"]
     times = g["hit@10_shipped"] / g["hit@10_popular_of_that_kind"]
     assert f"**{times:.1f} times as often**" in (ROOT / "README.md").read_text()
+
+
+def test_love_chance_follows_its_rule():
+    lv = load("love_chance.json")
+    assert lv["ships"] == (lv["test_ece"] < 0.03 and lv["brier_ci95"][1] < 0)
+    chances = [r["chance"] for r in sorted(lv["table"], key=lambda r: r["top_pct"])]
+    assert chances == sorted(chances, reverse=True)      # higher-ranked movies never get a lower chance
+
+
+def test_learning_curve_follows_its_rule():
+    lc = load("learning_curve.json")
+    assert lc["claim_allowed"] == (lc["ci95"][0] > 0)

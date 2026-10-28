@@ -1,0 +1,37 @@
+{
+ "method": "Uses the benchmark's sample, time split, and viewers (training/benchmark_cf.py) and the shipped routed ranking (item-kNN, or RP3beta for less mainstream likes).",
+ "viewers": 1125,
+ "steps": [
+  {
+   "choices": 3,
+   "hit@1": 0.1147,
+   "ndcg@10": 0.0935
+  },
+  {
+   "choices": 5,
+   "hit@1": 0.1093,
+   "ndcg@10": 0.0951
+  },
+  {
+   "choices": 10,
+   "hit@1": 0.1164,
+   "ndcg@10": 0.0986
+  },
+  {
+   "choices": 25,
+   "hit@1": 0.12,
+   "ndcg@10": 0.1035
+  },
+  {
+   "choices": 50,
+   "hit@1": 0.1209,
+   "ndcg@10": 0.1059
+  }
+ ],
+ "ndcg_gain_10_vs_3": 0.0051,
+ "ci95": [
+  -0.002,
+  0.0114
+ ],
+ "claim_allowed": false
+}

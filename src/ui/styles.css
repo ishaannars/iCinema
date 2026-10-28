@@ -4937,3 +4937,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .home-step-body{font-family:var(--ui-font);color:var(--muted);font-size:.9rem;line-height:1.45}
 @media(max-width:800px){.home-steps{grid-template-columns:1fr}.home-proof{align-items:flex-start;flex-direction:column;gap:.4rem}}
 .profile-chip-muted{color:var(--muted) !important;font-weight:500 !important;border-style:dashed !important}
+
+/* Love chance: one quiet line under the match score and on Tonight's Show */
+.match-love,.tonight-love{font-family:var(--ui-font);color:var(--ivory);font-size:.84rem;font-weight:600;margin:.35rem 0 .2rem}
+.tonight-love{color:var(--muted);font-weight:560}

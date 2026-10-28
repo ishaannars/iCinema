@@ -131,6 +131,24 @@ def tested_block():
                          f"Found a movie the viewer later loved in its top 10 {v['hit@10_shipped']:.1%} of the time vs "
                          f"{v['hit@10_popular_of_that_kind']:.1%} (CI {v['ci95'][0]:+.3f} to {v['ci95'][1]:+.3f})",
                          "✅ Supported" if v["supported"] else "❌ Not supported"))
+    love_path = ROOT / "data" / "love_chance.json"
+    if love_path.exists():
+        lv = json.loads(love_path.read_text())
+        top = lv["table"][0]
+        rows.append(("Love chance", f"\"If you watch it, how likely are you to love it?\" Isotonic calibration on {lv['test_points']:,} "
+                     f"later ratings from {lv['test_viewers']:,} test viewers",
+                     f"Calibration error {lv['test_ece'] * 100:.1f} points, AUC {lv['test_auc']:.2f}, Brier {lv['brier_diff_vs_average']:+.4f} vs "
+                     f"guessing the average (CI {lv['brier_ci95'][0]:+.4f} to {lv['brier_ci95'][1]:+.4f}). "
+                     f"Top-{top['top_pct']}% picks: {top['chance']:.0%} loved once watched",
+                     "✅ Shown on cards" if lv["ships"] else "❌ Not shown"))
+    curve_path = ROOT / "data" / "learning_curve.json"
+    if curve_path.exists():
+        lc = json.loads(curve_path.read_text())
+        st = {s["choices"]: s for s in lc["steps"]}
+        rows.append(("Learns as you use it", f"Picks from 3 to 50 of a viewer's loves ({lc['viewers']:,} test viewers)",
+                     f"NDCG@10 {st[3]['ndcg@10']:.3f} with 3 choices, {st[10]['ndcg@10']:.3f} with 10, {st[50]['ndcg@10']:.3f} with 50 "
+                     f"(10 vs 3: {lc['ndcg_gain_10_vs_3']:+.4f}, CI {lc['ci95'][0]:+.4f} to {lc['ci95'][1]:+.4f})",
+                     "✅ Claimed in the app" if lc["claim_allowed"] else "❌ Not claimed"))
     lines = ["| Part | Test | Result | In the app |", "|---|---|---|---|"]
     lines += [f"| {a} | {b_} | {c} | {d} |" for a, b_, c, d in rows]
     lines += ["", "MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. "

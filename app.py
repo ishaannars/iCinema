@@ -24,6 +24,7 @@ from src.recommender import _calibrated_match_percent
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css
+from src.love import love_line
 from src.ui.watch import (STREAMING_SERVICES, PROVIDER_LINKS, _provider_key, _on_service, provider_watch_url,
                           watch_options, watch_line_html, concise_availability_text, movie_on_services)
 
@@ -1720,6 +1721,8 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                     + (f'<div class="match-rank-note">Ranks in your top {int(payload["fit_top_pct"])}% of '
                        f'{int(payload.get("fit_pool") or 0):,} movies iCinema scored for you.</div>'
                        if isinstance(payload.get("fit_top_pct"), (int, float)) else "") +
+                    (f'<div class="match-love">{html.escape(love_line(payload.get("fit_top_pct")))}</div>'
+                     if love_line(payload.get("fit_top_pct")) else "") +
                     '<div class="match-explain-title">Why this matches you</div>',
                     unsafe_allow_html=True,
                 )
@@ -2014,6 +2017,8 @@ def render_tonight_pick_fragment():
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
                 f'<div class="tonight-badges"><span class="tonight-match">{tonight_badge}</span>{fit}</div>'
+                + (f'<div class="tonight-love">{html.escape(love_line(payload.get("fit_top_pct")))}</div>'
+                   if love_line(payload.get("fit_top_pct")) else "") +
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline")), limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
