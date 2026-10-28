@@ -71,6 +71,9 @@ def profile_snapshot():
         "seen_rating": dict(st.session_state.get("seen_rating") or {}),
         "anon_id": st.session_state.get("anon_id"),
         "analytics_opt_out": bool(st.session_state.get("analytics_opt_out")),
+        "last_visit": st.session_state.get("last_visit"),
+        "last_shown": list(st.session_state.get("last_shown") or [])[:40],
+        "taste_reset_at": st.session_state.get("taste_reset_at"),
         "selection_order": list(st.session_state.get("selection_order", [])),
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
@@ -96,6 +99,10 @@ def restore_profile(data):
         if data.get("anon_id"):
             st.session_state.anon_id = str(data["anon_id"])
         st.session_state.analytics_opt_out = bool(data.get("analytics_opt_out"))
+        st.session_state.prev_visit = data.get("last_visit")
+        st.session_state.prev_shown = list(data.get("last_shown") or [])
+        st.session_state.last_shown = list(data.get("last_shown") or [])
+        st.session_state.taste_reset_at = data.get("taste_reset_at")
         st.session_state.selection_order = list(data.get("selection_order") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
@@ -801,11 +808,18 @@ def _cf_signals():
         m = get_movie(t, ext)
         if m: out.append((m, "favorite" if t in st.session_state.favorites else "like"))
     rated = st.session_state.get("seen_rating") or {}
+    cutoff = st.session_state.get("taste_reset_at")
+    last_act = {}
+    if cutoff:
+        for e in st.session_state.get("analytics_events") or []:
+            last_act[e.get("title")] = max(last_act.get(e.get("title"), 0), float(e.get("timestamp") or 0))
     for key, action in (("saved", "save"), ("seen", "seen"), ("dismissed", "skip"), ("disliked", "dislike")):
         for t in st.session_state.get(key) or set():
             m = get_movie(t, ext)
             if not m:
                 continue
+            if cutoff and key != "disliked" and last_act.get(t, 0) < float(cutoff):
+                continue   # "My taste changed": older saves, Seen and skips stop shaping picks
             if key == "seen" and rated.get(t) in (1, -1):
                 action = "like" if rated[t] == 1 else "dislike"   # a rated Seen is a real signal
             out.append((m, action))
@@ -815,6 +829,29 @@ def _cf_signals():
 def _set_opt_out():
     st.session_state.analytics_opt_out = not st.session_state.get("_share_counts", True)
     queue_profile_save()
+
+
+def taste_changed():
+    """Keep your likes, favorites and "Not for me"s; older saves, Seen and skips stop counting."""
+    import time as _t
+    st.session_state.taste_reset_at = _t.time()
+    queue_profile_save()
+
+
+def taste_undo():
+    st.session_state.taste_reset_at = None
+    queue_profile_save()
+
+
+def lately_genres(limit=3):
+    """Genres of what you saved or loved most recently (last 10), for the Profile."""
+    ext = st.session_state.external_movies
+    recent = [e.get("title") for e in reversed(st.session_state.get("analytics_events") or [])
+              if e.get("event") == "save"][:10]
+    recent += [t for t, v in (st.session_state.get("seen_rating") or {}).items() if v == 1][:5]
+    from collections import Counter
+    c = Counter(g for t in recent if (m := get_movie(t, ext)) and (g := m.get("genre")))
+    return [g for g, _ in c.most_common(limit)]
 
 
 def rate_seen(title, value):
@@ -1551,6 +1588,35 @@ ADAPTIVE_NOTES = {
 }
 _ADAPTIVE_FROM_STEP3 = {"Recent Releases": "Recent Releases for You", "Classics": "Classics for You",
                         "Documentaries": "Documentaries for You", "International Films": "International Films for You"}
+
+
+def _title_of(item):
+    """Row entries are (match, movie) pairs on a full build; after a Save they can be placeholders."""
+    if isinstance(item, (tuple, list)) and len(item) == 2 and isinstance(item[1], dict):
+        return item[1].get("title")
+    if isinstance(item, dict):
+        return item.get("title")
+    return None
+
+
+def _new_picks_note(choices):
+    """'3 new picks since your last visit' for returning viewers; otherwise the usual note."""
+    import time as _t
+    prev, shown = st.session_state.get("prev_visit"), set(st.session_state.get("prev_shown") or [])
+    titles = [t for t in (_title_of(c) for c in (choices or [])) if t]
+    fresh = [t for t in titles if t not in shown]
+    if prev and shown and _t.time() - float(prev) > 6 * 3600 and fresh:
+        n = len(fresh)
+        return f"{n} new pick{'s' if n != 1 else ''} since your last visit"
+    return "Your best fits right now"
+
+
+def _remember_shown(row_choices):
+    import time as _t
+    shown = [t for name in (row_choices or {}) for t in (_title_of(c) for c in (row_choices[name] or [])) if t]
+    if shown:
+        st.session_state.last_shown = shown[:40]
+    st.session_state.last_visit = _t.time()
 
 
 def fourth_row_name():
@@ -2638,7 +2704,7 @@ def render_showroom_fragment(p):
             choices=row_choices.get(row_name,[])
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             row_notes={
-                "Top Matches for You":"Your best fits right now",
+                "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
                 "Critically Acclaimed":"Highly rated movies that still match your taste",
                 "Hidden Gems":"Less-known movies you’re likely to love",
                 "Something Different":"Outside your usual genres, but still likely to click",
@@ -2675,6 +2741,7 @@ def render_showroom_fragment(p):
                     with cols[c]:
                         render_showroom_card_fragment(row_name,row_index,i)
                         render_card_actions(row_name,row_index,i)
+        _remember_shown(row_choices)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
             '<div class="watch-attribution">Streaming availability for the United States. Data by JustWatch via TMDB. '
@@ -2701,6 +2768,15 @@ def render_showroom_fragment(p):
             if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True):
                 reset_profile_state()
                 st.rerun(scope="app")
+        _lately = lately_genres()
+        if _lately:
+            st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(", ".join(_lately))} movies.</div>',
+                        unsafe_allow_html=True)
+        if st.session_state.get("taste_reset_at"):
+            st.button("Undo “My taste changed”", key="taste_undo", on_click=taste_undo)
+        else:
+            st.button("My taste changed", key="taste_changed", on_click=taste_changed,
+                      help="Keeps your likes, favorites and Not for me. Older saves, Seen and skips stop shaping your picks.")
         st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
                   key="_share_counts", on_change=_set_opt_out,
                   help="Counts like visits and saves, tied to a random ID. Never movie titles, names, emails, or location.")

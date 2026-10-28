@@ -23,7 +23,9 @@ def _client():
     except ImportError:
         return None
     host = str(safe_secret("POSTHOG_HOST", "https://us.i.posthog.com") or "https://us.i.posthog.com")
-    return Posthog(key, host=host, disable_geoip=True)
+    # flush_at=1: each event is sent right away on a background thread, so it shows in PostHog
+    # within seconds and never slows the app down.
+    return Posthog(key, host=host, disable_geoip=True, flush_at=1, flush_interval=0.5)
 
 
 def anon_id(state):

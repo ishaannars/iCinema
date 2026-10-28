@@ -12,6 +12,8 @@ I kept spending too much time deciding what to watch, so I built iCinema: one pl
 - From **3 random likes**, the first pick was a movie the viewer later rated 4+ stars **8.0%** of the time, compared with **5.4%** for the most popular movie (**+48%**), on 3,000 MovieLens viewers it never saw.
 - That beat the old model by **+83%** on the first pick, and it found a loved movie **13 recommendations sooner** than popularity (median 19 vs 32).
 - For viewers with **less mainstream taste**, ranking quality rose **8%** and nobody else got worse. This held on 39,805 brand-new viewers from a separate slice of MovieLens.
+- **It gets better the more you use it.** Picks from 50 choices beat picks from 3 (NDCG@10 +0.016, interval +0.014 to +0.018) on viewers no earlier test touched. The first version of this test failed, so the claim waited for a fresh one.
+- **Its love chance is honest.** When it says about 75%, viewers who watched those movies loved them about 75% of the time (calibration error under 1 point).
 - **Hidden Gems has real evidence.** Ranking less-known movies with the shipped model put a movie the viewer later loved in the top 10 **2.7 times as often** as the most popular less-known movies (11.0% vs 4.1%).
 
 ## What I learned
@@ -20,6 +22,8 @@ My first headline was +58%, but it came from each viewer's 3 most recent likes. 
 
 Then the error analysis showed viewers with less mainstream taste got the worst picks. Penalizing popular movies, ALS, EASE, and blends all made things worse for them. RP3beta, a random-walk model that discounts popularity a little, was the one fix that helped. Its first test was too small to call, so I confirmed it on fresh viewers. It also dipped mainstream viewers slightly, so I tested routing (RP3beta for less mainstream likes, item-kNN otherwise) on a brand-new set of viewers. Routing beat both models used alone, so that's what ships. Testing the blend weights the same way moved the app from 65% content to 20%.
 
+I also tested my own product claims. "Gets better the more you use it" failed its first test, so I took it out of the app and retested on fresh viewers before putting it back. Every claim on the home page now points to a test in this repo, and `python reproduce.py` rebuilds all of them.
+
 ## How it works
 
 `candidate retrieval → "viewers like you" score + content score → personalized ranking → diversity reranking → your feedback → personal model`
@@ -27,6 +31,7 @@ Then the error analysis showed viewers with less mainstream taste got the worst 
 - **Viewers like you.** Trained on 15.8 million 4+ star ratings from 198,954 viewers across 14,407 movies. Item-kNN ranks movies for most viewers and finds movies similar to one you watched, for What's next and "Loved by fans of …". If your likes are less-loved movies, RP3beta ranks instead: a walk from your likes to the people who loved them and on to what else they loved, with popular movies discounted slightly. Skips and "Not for me" push movies down.
 - **Content.** Each movie's MovieLens genres and fan tags become a 64-number description (TF-IDF, then truncated SVD), the same recipe the offline tests used. TMDB is used only to show titles, posters, and where to watch.
 - **Personal model.** After 50 Save/Skip outcomes, logistic regression learns from your own choices. Gradient boosting is compared at 100, and the better one on a chronological holdout is used.
+- **Your feedback.** Saves, skips, "Not for me," and "Loved it" or "Not for me" on Seen movies all update your picks. "My taste changed" on the Profile keeps your likes and drops older saves and skips, and returning viewers see how many picks are new since their last visit.
 - **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of) shape the content score and your Profile. Step 3 also picks which section comes after Top Matches.
 - **Tonight's Show.** Your single best match on the services you pick, with one-tap links to watch.
 - Your feedback stays in your browser. There's no account and no central user database.
