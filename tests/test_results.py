@@ -174,3 +174,15 @@ def test_shelf_and_import_tests_follow_their_rules():
     assert (DATA / "shelf_titles.json").exists() == sh["ship"]
     for g in d["imports"].values():
         assert g["use"] == (g["ci95_with_signal"][0] > 0 and g["ci95_all"][0] > -0.002)
+
+
+def test_new_release_and_mood_follow_their_rules():
+    for name, key in (("new_release_confirm.json", None), ("mood_confirm.json", None)):
+        path = DATA / name
+        if not path.exists():
+            continue
+        d = load(name)
+        if name.startswith("new"):
+            assert d["ship"] == (d["vs_genres"]["ci95"][0] > 0 and d["vs_popular"]["ci95"][0] > 0)
+        else:
+            assert d["ship"] == (d["ci95"][0] > 0)

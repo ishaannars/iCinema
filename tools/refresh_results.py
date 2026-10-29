@@ -197,6 +197,22 @@ def tested_block():
                          f"NDCG@10 {g['diff_with_signal']:+.4f} for {g['viewers_with_signal']:,} viewers with such ratings "
                          f"(95% CI {g['ci95_with_signal'][0]:+.4f} to {g['ci95_with_signal'][1]:+.4f})",
                          "✅ Used" if g["use"] else "❌ Not used"))
+    nr_path = ROOT / "data" / "new_release_confirm.json"
+    if nr_path.exists():
+        nr = json.loads(nr_path.read_text())
+        r = nr["recall_at_20"]
+        rows.append(("New releases", "Movies with fan data hidden; facts (director, cast, studio, genre, country) must place them "
+                     "next to their real closest movies better than genres alone and than popular movies (rule in `training/confirm_new_releases.py`)",
+                     f"Recall@20 {r['facts model']:.3f} vs {r['genres only']:.3f} (genres) and {r['most popular']:.3f} (popular), "
+                     f"{nr['hidden_movies_scored']:,} hidden movies", "✅ Ships" if nr["ship"] else "❌ Not shipped"))
+    md_path = ROOT / "data" / "mood_confirm.json"
+    if md_path.exists():
+        md = json.loads(md_path.read_text())
+        r = md["recall_at_50"]
+        rows.append(("Mood search", "Three words from taggers the index never saw must find the movie in the top 50 of all movies "
+                     "(rule in `training/confirm_mood.py`)",
+                     f"Recall@50 {r['mood search']:.3f} vs {r['most popular']:.3f} for popular movies, {md['queries']:,} searches",
+                     "✅ Ships" if md["ship"] else "❌ Not shipped"))
     il_path = ROOT / "data" / "interleave_results.json"
     if il_path.exists():
         il = json.loads(il_path.read_text())

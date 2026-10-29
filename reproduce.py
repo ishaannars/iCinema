@@ -21,6 +21,9 @@ STEPS = [
     "confirm_history_routing.py",   # EASE for viewers with many likes, fresh slice
     "build_ease.py",                # ships cf_full.npz only if that test passed
     "confirm_shelf_and_imports.py", # which Step 1 movies to ask about, which imported ratings to read
+    "fetch_wikidata.py",            # open movie facts for the new-release model (network)
+    "confirm_new_releases.py",      # place new releases by their facts, ships only if it passes
+    "confirm_mood.py",              # mood search over fan tags, ships only if it passes
     "build_content.py",             # content model from genres and fan tags
     "evaluate_blends.py",           # content vs viewers-like-you weights, What's next
     "evaluate_steps.py",            # every onboarding step

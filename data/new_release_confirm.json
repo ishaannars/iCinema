@@ -1,0 +1,27 @@
+{
+ "method": "    python training/confirm_new_releases.py MovieLens stops around 2023, so iCinema's \"viewers like you\" models know nothing about newer movies. This model learns, from Wikidata facts (director, cast, production company, genre, country, decade; public domain, see training/fetch_wikidata.py), where a movie sits among the movies fans love: it predicts the movie's position in iCinema's viewers-like-you space (data/cf_model.npz) from its facts alone (ridge regression on the facts). Test, written before running. Movies with Wikidata facts are split at random: 80% train the model, 20% play \"new releases\" whose fan data is hidden. For each hidden movie, the model's predicted position is used to find its 20 nearest movies, and the score is how many of its real 20 closest movies by fans (data/cf_knn.npz) were found (recall@20). - Baselines: the same model with genres only (what a new movie usually has), and the 20 most   popular movies. - The ridge strength is picked on half of the hidden movies; the other half decides. - Ships if it beats both baselines there (paired-bootstrap 95% interval above zero). If it ships, the model is retrained on every movie with facts and used to place recent movies from Wikidata: data/new_releases.npz. The app then scores a new movie by how close that predicted position is to the movies you liked. Writes data/new_release_confirm.json. ",
+ "movies_with_facts": 14269,
+ "hidden_movies_scored": 1427,
+ "alpha": 1.0,
+ "recall_at_20": {
+  "facts model": 0.0968,
+  "genres only": 0.0221,
+  "most popular": 0.0099
+ },
+ "vs_genres": {
+  "diff": 0.0747,
+  "ci95": [
+   0.0673,
+   0.0821
+  ]
+ },
+ "vs_popular": {
+  "diff": 0.0868,
+  "ci95": [
+   0.0787,
+   0.0949
+  ]
+ },
+ "ship": true,
+ "recent_movies_placed": 1310
+}

@@ -4,3 +4,6 @@ ml-32m/
 __pycache__/
 .streamlit/secrets.toml
 .DS_Store
+
+data/wikidata_cache/
+data/wikidata_movies.json

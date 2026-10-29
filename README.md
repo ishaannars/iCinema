@@ -33,6 +33,8 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 - **Personal model.** After 50 Save/Skip outcomes, logistic regression learns from your own choices. Gradient boosting is compared at 100, and the better one on a chronological holdout is used.
 - **Your feedback.** Saves, skips, "Not for me," and "Loved it" or "Not for me" on Seen movies all update your picks. "What I like has changed" on the Profile keeps your likes and drops older saves and skips, and returning viewers see how many picks are new since their last visit.
 - **Bring your history.** Step 1 can import a Letterboxd or IMDb ratings export: 4 stars become Likes and 4.5 or 5 become Favorites, the same 4+ stars the models treat as "loved." Low and middling ratings are read only if a pre-registered test showed they help. The file stays in your browser.
+- **New releases.** MovieLens stops around 2023, so a second model places newer movies by open Wikidata facts (director, cast, studio, genre, country), learned from where known movies sit among their fans. It ships only if hidden movies land next to their real closest movies better than genres alone (`training/confirm_new_releases.py`).
+- **Mood search.** One box on the Showroom ("slow-burn, twist ending") re-orders Top Matches by a 50/50 mix of fit and match, using only the tags MovieLens fans wrote. It ships only if words from taggers the index never saw find the movie (`training/confirm_mood.py`).
 - **Asking about the right movies.** Which movies Step 1 shows decides how much a few Likes reveal. Research on new users found that balancing how well known a movie is with how much people disagree about it beats asking about the most popular ones. Popular movies still anchor the shelf, since most people have seen them and most viewers watch them, so only middle grounds can replace today's shelf: every other card is one of the most popular movies, alternating with a more revealing pick. A new shelf ships only if the first screen stays as easy to answer and mainstream viewers don't lose out (`training/confirm_shelf_and_imports.py`). For viewers with many likes, a separate test decides whether EASE, best from full histories in the benchmark, ranks their picks (`training/confirm_history_routing.py`).
 - **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of) shape the content score and your Profile. Step 3 also picks which section comes after Top Matches.
 - **Tonight's Show.** Your single best match on the services you pick, with one-tap links to watch.
@@ -88,6 +90,8 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | Step 1 shelf | Which movies to ask about: today's popular shelf vs popular anchors alternating with more revealing picks; picked on half, confirmed on the other half with guardrails for easy answers and mainstream viewers (rule in `training/confirm_shelf_and_imports.py`) | popular + HELF vs popularity: NDCG@10 +0.0012 (95% CI +0.0005 to +0.0021); first screen answerable +0.6 points; mainstream viewers +0.0009 (CI +0.0000 to +0.0017); 39,765 fresh viewers | ✅ Ships |
 | Imported low ratings | 2 stars or less read as Not for me (weight -0.8, no tuning) | NDCG@10 -0.0003 for 32,563 viewers with such ratings (95% CI -0.0010 to +0.0003) | ❌ Not used |
 | Imported middling ratings | 2.5 to 3.5 stars read as Seen (weight 0.5, no tuning) | NDCG@10 -0.0031 for 38,914 viewers with such ratings (95% CI -0.0036 to -0.0027) | ❌ Not used |
+| New releases | Movies with fan data hidden; facts (director, cast, studio, genre, country) must place them next to their real closest movies better than genres alone and than popular movies (rule in `training/confirm_new_releases.py`) | Recall@20 0.097 vs 0.022 (genres) and 0.010 (popular), 1,427 hidden movies | ✅ Ships |
+| Mood search | Three words from taggers the index never saw must find the movie in the top 50 of all movies (rule in `training/confirm_mood.py`) | Recall@50 0.637 vs 0.005 for popular movies, 2,000 searches | ✅ Ships |
 | Routing, live | Team-draft interleaving in Top Matches for viewers with less mainstream likes, first 200 decided visits, two-sided binomial test (rule in `src/interleave.py`) | Running: 0 of 200 decided visits. No result is read before then | Running |
 | Fourth row follows Step 3 | Not an accuracy question | Recent Releases, Classics, Documentaries, or International Films become the fourth row when picked. Each shows only its own kind | Design choice |
 
@@ -202,7 +206,6 @@ To rebuild every model and number with one command, download MovieLens 32M into 
 
 ## Coming next
 
-- A model for new releases that aren't in MovieLens yet, built from Wikidata (director, cast, studio, genre, country) and tested by hiding known movies' fan data.
 - Optional sign-in after your first save, so your profile follows you across devices, with one-tap delete.
 - TV shows in the same rows, with a Movies · Shows · Both switch.
 - "When can I stream it?" for movies still in theaters, labeled as estimates.

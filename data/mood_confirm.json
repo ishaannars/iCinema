@@ -1,0 +1,14 @@
+{
+ "method": "    python training/confirm_mood.py --data-dir ml-32m The index is built from the tags MovieLens fans wrote on movies (no TMDB content, no LLM): each movie's tag words, weighted by TF-IDF. Test, written before running. Taggers are split at random: 80% build the index, 20% are held out. For 2,000 random movies with tags from held-out taggers, the query is three of those held-out tag words, so the words come from people the index never saw. A search succeeds if the movie lands in the top 50 of all 14,407 movies (recall@50). - Baseline: the 50 most popular movies (what you'd get with no search). - Ships if recall@50 beats the baseline (paired-bootstrap 95% interval above zero). If it ships, the index is rebuilt from every tagger: data/mood_index.npz. In the app, a mood re-orders Top Matches by a 50/50 mix of how well each movie fits you and how well it matches the words. Writes data/mood_confirm.json. ",
+ "queries": 2000,
+ "recall_at_50": {
+  "mood search": 0.6375,
+  "most popular": 0.0055
+ },
+ "diff": 0.632,
+ "ci95": [
+  0.6105,
+  0.654
+ ],
+ "ship": true
+}

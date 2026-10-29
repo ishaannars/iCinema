@@ -630,6 +630,10 @@ def with_cf_reason(reasons, payload, limit=3):
             # High similarity means the same MovieLens viewers loved both movies.
             reason = {"label": f"Loved by fans of “{anchor}”",
                       "text": f"Viewers who loved “{anchor}” tend to love this too."}
+        elif fan_percentile((payload or {}).get("movie")) is None:
+            # A new release: no fans yet, so the score comes from its makers and style (new_releases.py).
+            reason = {"label": "New, and close to what you like",
+                      "text": "Its director, cast, and studio point to the movies you liked."}
         else:
             reason = {"label": "Loved by viewers like you",
                       "text": "Viewers who liked the movies you liked tend to love this too."}
@@ -709,6 +713,7 @@ _PILL_SHORT = {
     "Easy to watch tonight": "Streaming now",
     "International pick": "International",
     "Loved by viewers like you": "Fans like you",
+    "New, and close to what you like": "New for you",
 }
 PILL_BUDGET = 25  # characters, including "80% · ", that fit a card pill without clipping
 
@@ -1248,10 +1253,15 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             rows_part = (f", and its rows put {recall_lift}% more movies you’d love in the top 10"
                          if recall_lift is not None else "")
             hits_part = (f" ({cf_hit:.1%} vs {pop_hit:.1%})" if isinstance(cf_hit, (int, float)) and isinstance(pop_hit, (int, float)) else "")
+            stats = [(f"+{pick_lift}%", f"first picks you’ll love vs. the most popular pick{hits_part}")]
+            if recall_lift is not None:
+                stats.append((f"+{recall_lift}%", "more movies you’d love in each row’s top 10"))
+            stats.append((f"{users:,}", "viewers it had never seen, tested from just 3 likes each"))
             proof_html = (
-                f'<div class="profile-insights-copy proof-line"><strong>Tested on {users:,} viewers it had never seen.</strong> '
-                f'From just 3 likes, its first pick was a movie they loved {pick_lift}% more often than the most popular pick'
-                f'{hits_part}{rows_part}. {significance_note}</div>'
+                '<div class="stat-row">' + "".join(f'<div><div class="stat-num">{html.escape(n)}</div>'
+                                                   f'<div class="stat-label">{html.escape(l)}</div></div>' for n, l in stats)
+                + '</div>'
+                f'<div class="how-footnote">{html.escape(significance_note)}</div>'
             )
 
     live_html = ""
@@ -1264,35 +1274,27 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             + '</div>'
         )
 
+    from src.new_releases import available as _nr_ready
+    how = [
+        (f"Learns from {scale['users'] or 'MovieLens'} movie fans",
+         "Your first likes are matched with fans who loved the same movies."),
+        ("Knows every movie", f"Genres and fan tags describe all {scale['movies'] or 'its'} movies"
+         + (", and new releases are placed by their makers." if _nr_ready() else ".")),
+        ("Every row has a job", "Best fit, critics’ picks, hidden gems, something new. No repeats, one movie per series."),
+        ("Gets better with you", "After 50 saves and skips, a model trained only on your choices joins in."),
+    ]
     methodology_html = (
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">How iCinema works</div>'
-        '<div class="methodology-grid how-grid">'
-        '<div class="methodology-card">'
-        f'<div class="methodology-value">Starts with {scale["users"] or "MovieLens"} movie fans</div>'
-        f'<div class="methodology-label">A model trained on how they rated {scale["movies"] or "thousands of"} movies compares your first likes with theirs, '
-        'so your first picks are already personal. If your likes are less mainstream, a ranking method tested for that takes over.</div>'
-        '</div>'
-        '<div class="methodology-card">'
-        '<div class="methodology-value">Understands every movie</div>'
-        '<div class="methodology-label">A second model compares movies by their genres and the tags MovieLens fans gave them, and weighs them by your setup answers.</div>'
-        '</div>'
-        '<div class="methodology-card">'
-        '<div class="methodology-value">Gives every row a job</div>'
-        '<div class="methodology-label">Best fit, critics’ favorites, hidden gems, or something new, and no movie appears twice. '
-        'Each row was tested: within its kind, it finds movies you’ll love more often than the most popular ones.</div>'
-        '</div>'
-        '<div class="methodology-card">'
-        '<div class="methodology-value">Learns you over time</div>'
-        '<div class="methodology-label">After 50 saves and skips, a third model trained only on your choices joins in. Undo keeps accidental taps out.</div>'
-        '</div>'
-        '</div>'
-        + f'{proof_html}{live_html}'
-        + '<div class="profile-insights-copy ratings-note">IMDb and Rotten Tomatoes scores come from OMDb (TMDB’s viewer rating '
-        'when IMDb has none; “No RT” means not reviewed). Movies you pass over step back each visit, so new picks keep surfacing.'
-        + (f' {html.escape(_live_test)}' if (_live_test := live_test_line()) else '')
+        '<div class="how-list">'
+        + "".join(f'<div><div class="how-item-title">{html.escape(t)}</div><div class="how-item-copy">{html.escape(c)}</div></div>'
+                  for t, c in how)
         + '</div>'
-        '</div>'
+        + f'{proof_html}{live_html}'
+        + '<div class="how-footnote">IMDb and Rotten Tomatoes scores come from OMDb (TMDB’s viewer rating when IMDb has none; '
+        '“No RT” means not reviewed). Movies you pass over step back each visit, so new picks keep surfacing.'
+        + (f' {html.escape(_live_test)}' if (_live_test := live_test_line()) else '')
+        + '</div></div>'
     )
 
     insights_section = (
@@ -1845,6 +1847,13 @@ def _clean_ranked(ranked, excluded):
             seen_c.add(c)
         out.append(item)
     return out
+
+
+def _mood_line():
+    """Row note while a mood is set, or "" (only if the words matched something)."""
+    from src.mood import scores
+    q = (st.session_state.get("mood_query") or "").strip()
+    return f"Your best fits for “{q[:40]}”" if q and scores(q) is not None else ""
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -2601,8 +2610,17 @@ def render_showroom_fragment(p):
         cf_user=user_vector(_signals)
         # Live interleaving test: only viewers routed to RP3beta get two different rankings.
         il_on=interleave_eligible(_signals)
+        from src.mood import scores as _mood_scores
+        _mood_q=(st.session_state.get("mood_query") or "").strip()
+        _mood=_mood_scores(_mood_q) if _mood_q else None
+        if _mood is not None:
+            il_on=False      # a mood changes Top Matches on purpose, so the live test sits it out
         cf_user_knn=user_vector(_signals,force_knn=True) if il_on else None
         content_memo={}
+        # Recent movies MovieLens fans haven't rated: placed by the new-release model (if it passed).
+        from src.new_releases import viewer as _nr_viewer, affinity as _nr_affinity
+        from src.cf_model import _index as _cf_idx
+        nr_view=_nr_viewer(_signals,_cf_idx)
         cf_by_title={}
         model_match_by_title={}
 
@@ -2711,6 +2729,8 @@ def render_showroom_fragment(p):
                     ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
                     content_memo[id(movie)]=(base,dict(ml_context))
                     cf=cf_affinity(movie,cf_user)
+                    if cf is None:
+                        cf=_nr_affinity(movie,nr_view)
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
                     if cf is not None:
                         base=CONTENT_WEIGHT*base+(1-CONTENT_WEIGHT)*cf
@@ -2768,6 +2788,12 @@ def render_showroom_fragment(p):
         # Tonight's Pick: the single best personalized match, preferring the viewer's
         # own streaming services and falling back to any service when none are chosen.
         top_all=_row_candidates("Top Matches for You",set())
+        if _mood is not None and top_all:
+            # A mood re-orders Top Matches: half how well each movie fits you, half how well it fits the words.
+            _n=len(top_all)
+            _ms=[float(_mood[i]) if (i:=_cf_idx(m)) is not None else 0.0 for _,m in top_all]
+            _mrank={j:r for r,j in enumerate(sorted(range(_n),key=lambda j:-_ms[j]))}
+            top_all=[top_all[j] for j in sorted(range(_n),key=lambda j:0.5*j/_n+0.5*_mrank[j]/_n)]
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(
             tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
@@ -2995,6 +3021,11 @@ def render_showroom_fragment(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        from src.mood import available as _mood_ready
+        if _mood_ready():
+            with st.container(key="mood_box"):
+                st.text_input("What are you in the mood for?", key="mood_query", label_visibility="collapsed",
+                              placeholder="In the mood for something? Try “slow-burn, twist ending”")
         render_tonight_pick_fragment()
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
@@ -3009,7 +3040,7 @@ def render_showroom_fragment(p):
             st.markdown(
                 f'<div class="{row_class} showroom-row-header">'
                 f'<div class="showroom-row-title">{row_name}</div>'
-                f'<div class="row-model-note">{row_notes[row_name]}</div>'
+                f'<div class="row-model-note">{html.escape(_mood_note) if (row_name=="Top Matches for You" and (_mood_note:=_mood_line())) else row_notes[row_name]}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
