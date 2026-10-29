@@ -3,7 +3,8 @@
     python tools/smoke_app.py
 
 Uses Streamlit's AppTest. Runs the home page, Profile, and Showroom (all four tabs), then
-presses Refresh on Saved and Seen and the first Save button. Prints OK or the errors it hit.
+presses Refresh on Saved and Seen and the first Save button, then repeats with less mainstream
+likes so the live interleaving test in Top Matches runs. Prints OK or the errors it hit.
 """
 import os
 import sys
@@ -44,6 +45,16 @@ def main():
     saves = [b for b in at.button if (b.key or "").startswith("save_")]
     if saves:
         saves[0].click().run(); ok &= check(at, "Save a movie")
+    # Less mainstream likes route to RP3beta, which turns on the live interleaving test in Top Matches.
+    at.session_state["likes"] = {"Past Lives", "The Rescue", "The Worst Person in the World"}
+    at.session_state["saved"] = set()
+    at.run(); ok &= check(at, "Showroom (live test on)")
+    teams = at.session_state["interleave_teams"] if "interleave_teams" in at.session_state else {}
+    print(f"{'Interleaving':<28} {'OK' if teams else 'ERROR: no interleaved Top Matches'}")
+    ok &= bool(teams)
+    saves = [b for b in at.button if (b.key or "").startswith("save_Top Matches")]
+    if saves:
+        saves[0].click().run(); ok &= check(at, "Save in live test")
     print("All screens OK" if ok else "Some screens failed")
     sys.exit(0 if ok else 1)
 

@@ -1,0 +1,73 @@
+{
+ "method": "    python training/confirm_shelf_and_imports.py --data-dir ml-32m Data. The last 1-in-5 slice of MovieLens 32M users that no earlier test used (user id ending 4). Unlike the other tests, every star rating is kept, so a viewer's low and middling ratings are available. Per viewer, the most recent 20% of their 4+ star movies are held out; everything they rated before that point is history. \"Viewers like you\" is item-kNN (top-100), rebuilt on this slice with the shipped settings. Score: NDCG@10 on the held-out movies. Question A, the Step 1 shelf. Which movies should Step 1 show so a new viewer's few Likes say the most about them? Research on new users (GroupLens, \"Getting to know you\") found that asking only about the most popular movies tells you little, since nearly everyone likes them; balancing how well known a movie is with how much people disagree about it works better. Popular movies still matter: most people have seen them, so they're the easiest to answer, and most viewers watch them. Candidates are the 300 movies with the most fans, so every option stays well known. Only middle grounds can replace today's shelf: they alternate a popular anchor (the next most popular movie) with an informative pick (by HELF, the harmonic mean of log-popularity and rating entropy, or by greedy coverage, where each next movie reaches the most viewers not yet reached), so every other card is one of the most popular movies. Pure HELF and pure coverage are scored for reference only and can't be picked. A simulated viewer sees the first 24 shelf movies and likes up to 5 they rated 4+ stars; with no Likes they get popularity picks. Rule written before running: the strategy is picked on a random half of viewers; it replaces the shelf only if, on the other half, it isn't popularity and - beats popularity overall (paired-bootstrap 95% interval above zero), - doesn't make the first screen harder to answer: the share of viewers who can like at least one   of the first 15 cards drops by no more than 1 percentage point, and - doesn't hurt mainstream viewers (likes above the routing cut): NDCG@10 interval lower bound   above -0.002. If it ships, data/shelf_titles.json lists the shelf in order. Question B, imported ratings. An import gives more than loved movies: low ratings (2 stars or less) and middling ones (2.5 to 3.5 stars, \"watched, not loved\"). Scored from a viewer's whole loved history, with the app's existing weights and no tuning: Not for me -0.8, Seen 0.5. Rule written before running, for each signal separately: it is read from imports only if viewers who have such ratings improve (interval above zero) and all viewers don't get worse by more than 0.002 NDCG@10. Writes data/shelf_import_confirm.json. ",
+ "user_offset": 4,
+ "viewers": 39765,
+ "movies": 7862,
+ "shelf": {
+  "validation_ndcg": {
+   "popularity": 0.0887,
+   "HELF": 0.0879,
+   "coverage": 0.0903,
+   "popular + HELF": 0.0903,
+   "popular + coverage": 0.0895
+  },
+  "picked": "popular + HELF",
+  "ship": true,
+  "test_ndcg": {
+   "popularity": 0.0866,
+   "HELF": 0.0858,
+   "coverage": 0.0889,
+   "popular + HELF": 0.0879,
+   "popular + coverage": 0.0882
+  },
+  "diff_vs_popularity": 0.0012,
+  "ci95": [
+   0.0005,
+   0.0021
+  ],
+  "can_like_one_of_first_15": {
+   "popularity": 0.862,
+   "HELF": 0.7393,
+   "coverage": 0.8906,
+   "popular + HELF": 0.8677,
+   "popular + coverage": 0.8854
+  },
+  "answerable_drop_points": -0.56,
+  "mainstream_viewers": 16534,
+  "mainstream_diff": 0.0009,
+  "mainstream_ci95": [
+   0.0,
+   0.0017
+  ]
+ },
+ "imports": {
+  "low_ratings_as_not_for_me": {
+   "viewers_with_signal": 32563,
+   "diff_with_signal": -0.0003,
+   "ci95_with_signal": [
+    -0.001,
+    0.0003
+   ],
+   "diff_all": -0.0003,
+   "ci95_all": [
+    -0.0008,
+    0.0003
+   ],
+   "use": false
+  },
+  "middling_ratings_as_seen": {
+   "viewers_with_signal": 38914,
+   "diff_with_signal": -0.0031,
+   "ci95_with_signal": [
+    -0.0036,
+    -0.0027
+   ],
+   "diff_all": -0.0031,
+   "ci95_all": [
+    -0.0035,
+    -0.0026
+   ],
+   "use": false
+  }
+ }
+}

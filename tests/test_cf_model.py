@@ -98,3 +98,26 @@ def test_title_matches_the_poster():
                               "Warriors of the Wind") == "Nausicaä of the Valley of the Wind"
     assert cf.preferred_title({"title": "Se7en", "year": 1995, "tmdb_id": 807}, "Se7en") == "Se7en"
     assert cf.preferred_title({"title": "Spirited Away", "year": 2001}, "Spirited Away") == "Spirited Away"
+
+
+def test_interleaving_only_for_viewers_routed_to_rp3beta():
+    mainstream = [(MATRIX, "like")]
+    assert not cf.interleave_eligible(mainstream)
+    model = cf._load()
+    import numpy as np
+    niche = [({"title": model.titles[i], "year": int(0)}, "like") for i in np.argsort(model.fan_pct)[200:3200:1000][:3]]
+    if cf._routing_cut() is not None and cf._load_rank() is not model:
+        assert cf.interleave_eligible(niche)
+        a, b = cf.user_vector(niche), cf.user_vector(niche, force_knn=True)
+        assert a is not None and b is not None and not np.allclose(a.scores, b.scores)
+
+
+def test_history_routing_is_off_unless_its_test_passed():
+    import json
+    full, cut = cf._history_cut()
+    path = cf.HISTORY_PATH
+    shipped = path.exists() and json.loads(path.read_text()).get("ship") and cf.FULL_PATH.exists()
+    assert (full is not None) == bool(shipped)
+    if full is None:
+        many = [({"title": t}, "like") for t in ("The Matrix", "Inception", "Up", "Heat")]
+        assert cf._ranker_for(many) is cf._niche_ranker(many)

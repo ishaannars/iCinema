@@ -16,7 +16,8 @@ def test_no_key_means_nothing_is_sent():
 
 def test_only_known_events_and_no_titles():
     assert "title" not in telemetry.track.__code__.co_varnames
-    assert telemetry.ALLOWED == {"visit", "save", "skip", "seen", "not_for_me", "seen_loved", "seen_not_for_me"}
+    assert telemetry.ALLOWED == {"visit", "save", "skip", "seen", "not_for_me", "seen_loved", "seen_not_for_me",
+                                  "interleave_shown"}
 
 
 def test_opt_out_is_respected():

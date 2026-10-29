@@ -6,7 +6,9 @@ Two pretrained files, each listing every movie's 100 closest movies by who loved
   two movies" for What's next and "Loved by fans of ...".
 - data/cf_rank.npz (RP3beta): ranks movies for viewers whose likes are less-loved movies.
 Routing between them was tested on viewers no earlier test touched (training/confirm_routing.py):
-it beat both models used alone. If cf_rank.npz is missing, item-kNN ranks for everyone. If both
+it beat both models used alone.
+- data/cf_full.npz (EASE), only if training/confirm_history_routing.py passed: ranks movies for
+  viewers with many likes (for example after a Letterboxd import), where EASE beat item-kNN. If cf_rank.npz is missing, item-kNN ranks for everyone. If both
 files are missing, the older SVD embeddings (data/cf_model.npz) are used.
 
 Each viewer's taste is computed on the fly from their browser-local Likes, Favorites, Saves,
@@ -22,6 +24,8 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 KNN_PATH = DATA / "cf_knn.npz"
 RANK_PATH = DATA / "cf_rank.npz"
 ROUTING_PATH = DATA / "routing_confirm.json"
+FULL_PATH = DATA / "cf_full.npz"
+HISTORY_PATH = DATA / "history_routing_confirm.json"
 MODEL_PATH = DATA / "cf_model.npz"
 
 # How strongly each action moves the viewer's taste.
@@ -97,8 +101,36 @@ def _routing_cut():
         return None
 
 
+@lru_cache(maxsize=1)
+def _history_cut():
+    """(EASE model, number of likes at which it takes over), or (None, None) if not shipped."""
+    try:
+        import json
+        d = json.loads(HISTORY_PATH.read_text())
+        sim = _load()
+        if d.get("ship") and d.get("chosen_cut_likes") and FULL_PATH.exists() and sim is not None and sim.kind == "knn":
+            full = _Model(FULL_PATH, "knn")
+            if full.n == sim.n:            # must list the same movies in the same order
+                return full, int(d["chosen_cut_likes"])
+    except Exception:
+        pass
+    return None, None
+
+
+def _fan_count(signals):
+    return sum(1 for m, a in signals or [] if a in FAN_ACTIONS and _index(m) is not None)
+
+
 def _ranker_for(signals):
-    """RP3beta when the viewer's liked movies are mostly less-loved ones, item-kNN otherwise."""
+    """EASE for viewers with many likes (if shipped); else RP3beta when the liked movies are
+    mostly less-loved ones, item-kNN otherwise."""
+    full, n_cut = _history_cut()
+    if full is not None and _fan_count(signals) >= n_cut:
+        return full
+    return _niche_ranker(signals)
+
+
+def _niche_ranker(signals):
     sim = _load()
     rank = _load_rank()
     cut = _routing_cut()
@@ -169,9 +201,23 @@ class Taste:
         self.neg = np.sort(-scores[scores < 0])
 
 
-def user_vector(signals):
-    """signals: list of (movie_dict, action) pairs, action in WEIGHTS. Returns a Taste or None."""
-    model = _ranker_for(signals)
+def interleave_eligible(signals):
+    """True when routing sends this viewer to RP3beta, so routed and item-kNN-only rankings differ.
+
+    For everyone else the two are the same list, and the live interleaving test doesn't run.
+    """
+    sim = _load()
+    rank = _load_rank()
+    return (sim is not None and sim.kind == "knn" and rank is not sim
+            and _ranker_for(signals) is rank)
+
+
+def user_vector(signals, force_knn=False):
+    """signals: list of (movie_dict, action) pairs, action in WEIGHTS. Returns a Taste or None.
+
+    force_knn=True skips routing and ranks with item-kNN (the comparison side of the live test).
+    """
+    model = _load() if force_knn else _ranker_for(signals)
     if model is None:
         return None
     if model.kind == "knn":
@@ -261,3 +307,51 @@ def item_similarity(a, b):
             hit = np.flatnonzero(model.nbr[j] == i)
         return 0.5 + 0.5 * (1 - hit[0] / model.nbr.shape[1]) if hit.size else 0.5
     return (model.sim(i, j) + 1.0) / 2.0
+
+
+def lookup(title, year=0):
+    """The MovieLens movie matching a title and year, as a small movie dict, or None.
+
+    Used by the Letterboxd import, where all we have is a title and a year.
+    """
+    model = _load()
+    idx = _index({"title": title, "year": year})
+    if model is None or idx is None:
+        return None
+    if not hasattr(model, "tmdb_by_idx"):
+        model.tmdb_by_idx = {i: t for t, i in model.by_tmdb.items()}
+    tmdb = model.tmdb_by_idx.get(idx, 0)
+    name = model.titles[idx] if model.titles else str(title)
+    return {"title": name, "year": int(year or 0), "tmdb_id": int(tmdb), "external": True,
+            "candidate_source": "letterboxd"}
+
+
+def fuzzy_titles(query, n=5, cutoff=0.75):
+    """Close spellings of a title among MovieLens movies, best-known first ("interstallar" -> Interstellar).
+
+    Used when title search finds nothing, so a typo never ends in an empty result."""
+    import difflib
+    model = _load()
+    q = _norm_title(query)
+    if model is None or len(q) < 3:
+        return []
+    if not hasattr(model, "_norm_best"):
+        best, model._year_of = {}, {}
+        for (k, y), i in model.by_title.items():
+            if y:
+                model._year_of.setdefault(i, y)
+                if k not in best or model.fan_pct[i] > model.fan_pct[best[k]]:
+                    best[k] = i          # same title, several films: keep the best-known one
+        model._norm_best = best
+        model._norm_list = sorted(best)
+    close = difflib.get_close_matches(q, model._norm_list, n=12, cutoff=cutoff)
+    ratio = {k: difflib.SequenceMatcher(None, q, k).ratio() for k in close}
+    close.sort(key=lambda k: ratio[k] + 0.15 * float(model.fan_pct[model._norm_best[k]]), reverse=True)
+    idx = [model._norm_best[k] for k in close]
+    out = []
+    for i in idx[:n]:
+        m = lookup(model.titles[i] if model.titles else close[0], model._year_of.get(i, 0))
+        if m:
+            m["year"] = model._year_of.get(i, 0)
+            out.append(m)
+    return out

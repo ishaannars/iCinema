@@ -1,0 +1,36 @@
+{
+ "method": "    python training/confirm_history_routing.py --data-dir ml-32m Why ask. In the benchmark (cf_benchmark.json), item-kNN won from 3 likes, which is why it ships. But from a viewer's whole history, EASE scored clearly higher (NDCG@10 0.113 vs 0.093). Letterboxd import gives many viewers hundreds of likes on day one, so the question is whether a viewer's number of likes should pick the model. Setup. A 1-in-5 slice of MovieLens 32M users that no earlier test used (user id ending 3; slices 0, 1 and 2 were used before). Models are rebuilt on this slice: the current routed ranking (item-kNN, RP3beta for less mainstream likes, same settings as shipped) and EASE in the form that ships (each movie keeps its 100 strongest positive links, lambda from the benchmark). Each viewer is scored from their whole training history, like an importer would be.",
+ "user_offset": 3,
+ "viewers": 39756,
+ "validation_viewers": 19878,
+ "test_viewers": 19878,
+ "validation_ndcg_by_cut": {
+  "10": 0.10997,
+  "25": 0.10532,
+  "50": 0.10127,
+  "100": 0.09789,
+  "never": 0.09501
+ },
+ "chosen_cut_likes": 10,
+ "ease_lambda": 4000.0,
+ "ship": true,
+ "test_viewers_at_or_above_cut": 18620,
+ "many_likes": {
+  "current_ndcg": 0.0961,
+  "ease_ndcg": 0.1131,
+  "diff": 0.017,
+  "ci95": [
+   0.0155,
+   0.0185
+  ]
+ },
+ "all": {
+  "current_ndcg": 0.0951,
+  "routed_ndcg": 0.1111,
+  "diff": 0.0159,
+  "ci95": [
+   0.0144,
+   0.0174
+  ]
+ }
+}

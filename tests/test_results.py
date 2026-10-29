@@ -119,3 +119,58 @@ def test_love_chance_follows_its_rule():
 def test_learning_curve_follows_its_rule():
     lc = load("learning_curve.json")
     assert lc["claim_allowed"] == (lc["ci95"][0] > 0)
+
+
+def test_live_test_follows_its_rule():
+    import refresh_results as rr
+    il = load("interleave_results.json")
+    assert il["target_decided_visits"] == 200 and 0 <= il["decided_visits"] <= 200
+    if il["status"] != "finished":
+        assert not {"routed_wins", "knn_wins", "p_value"} & set(il)   # nothing to peek at
+    else:
+        assert il["routed_wins"] + il["knn_wins"] == 200
+        assert il["significant"] == (il["p_value"] < 0.05 and il["leader"] is not None)
+        off = il["significant"] and il["leader"] == "knn" and not any(g["worse"] for g in il["guardrails"].values())
+        assert (il["decision"] == "turn routing off") == off
+    assert rr.live_test_block() in (ROOT / "README.md").read_text()
+
+
+def test_beyond_accuracy_table_is_current():
+    import refresh_results as rr
+    assert rr.beyond_block() in (ROOT / "README.md").read_text()
+    path = DATA / "beyond_accuracy.json"
+    if path.exists():
+        for m in load("beyond_accuracy.json")["models"].values():
+            assert 0 < m["catalog_coverage"] <= 1 and 0 <= m["pick_popularity_percentile"] <= 100
+            assert 0 <= m["top10_variety"] <= 1
+
+
+def test_history_routing_follows_its_rule():
+    path = DATA / "history_routing_confirm.json"
+    if not path.exists():
+        return
+    hr = load("history_routing_confirm.json")
+    if hr.get("chosen_cut_likes") is None:
+        assert hr["ship"] is False
+    else:
+        assert hr["chosen_cut_likes"] in (10, 25, 50, 100)
+        expected = hr["many_likes"]["ci95"][0] > 0 and hr["all"]["ci95"][0] > -0.002
+        assert hr["ship"] == expected
+
+
+def test_shelf_and_import_tests_follow_their_rules():
+    path = DATA / "shelf_import_confirm.json"
+    if not path.exists():
+        assert not (DATA / "shelf_titles.json").exists()
+        return
+    d = load("shelf_import_confirm.json")
+    sh = d["shelf"]
+    assert sh["picked"] in ("popularity", "popular + HELF", "popular + coverage")   # popular stays on every other card
+    if sh["picked"] == "popularity":
+        assert sh["ship"] is False
+    else:
+        assert sh["ship"] == (sh["ci95"][0] > 0 and sh["answerable_drop_points"] <= 1.0
+                              and sh["mainstream_ci95"][0] > -0.002)
+    assert (DATA / "shelf_titles.json").exists() == sh["ship"]
+    for g in d["imports"].values():
+        assert g["use"] == (g["ci95_with_signal"][0] > 0 and g["ci95_all"][0] > -0.002)

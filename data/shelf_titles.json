@@ -1,0 +1,305 @@
+{
+ "strategy": "popular + HELF",
+ "titles": [
+  {
+   "title": "The Shawshank Redemption",
+   "year": 1994,
+   "tmdb_id": 278
+  },
+  {
+   "title": "Titanic",
+   "year": 1997,
+   "tmdb_id": 597
+  },
+  {
+   "title": "Pulp Fiction",
+   "year": 1994,
+   "tmdb_id": 680
+  },
+  {
+   "title": "Shrek",
+   "year": 2001,
+   "tmdb_id": 808
+  },
+  {
+   "title": "The Matrix",
+   "year": 1999,
+   "tmdb_id": 603
+  },
+  {
+   "title": "Avatar",
+   "year": 2009,
+   "tmdb_id": 19995
+  },
+  {
+   "title": "Forrest Gump",
+   "year": 1994,
+   "tmdb_id": 13
+  },
+  {
+   "title": "Kill Bill: Vol. 1",
+   "year": 2003,
+   "tmdb_id": 24
+  },
+  {
+   "title": "The Silence of the Lambs",
+   "year": 1991,
+   "tmdb_id": 274
+  },
+  {
+   "title": "Pirates of the Caribbean: The Curse of the Black Pearl",
+   "year": 2003,
+   "tmdb_id": 22
+  },
+  {
+   "title": "Star Wars: Episode IV - A New Hope",
+   "year": 1977,
+   "tmdb_id": 11
+  },
+  {
+   "title": "Independence Day",
+   "year": 1996,
+   "tmdb_id": 602
+  },
+  {
+   "title": "Fight Club",
+   "year": 1999,
+   "tmdb_id": 550
+  },
+  {
+   "title": "The Lord of the Rings: The Fellowship of the Ring",
+   "year": 2001,
+   "tmdb_id": 120
+  },
+  {
+   "title": "Schindler's List",
+   "year": 1993,
+   "tmdb_id": 424
+  },
+  {
+   "title": "The Lord of the Rings: The Two Towers",
+   "year": 2002,
+   "tmdb_id": 121
+  },
+  {
+   "title": "Star Wars: Episode V - The Empire Strikes Back",
+   "year": 1980,
+   "tmdb_id": 1891
+  },
+  {
+   "title": "The Lord of the Rings: The Return of the King",
+   "year": 2003,
+   "tmdb_id": 122
+  },
+  {
+   "title": "The Usual Suspects",
+   "year": 1995,
+   "tmdb_id": 629
+  },
+  {
+   "title": "Jurassic Park",
+   "year": 1993,
+   "tmdb_id": 329
+  },
+  {
+   "title": "The Godfather",
+   "year": 1972,
+   "tmdb_id": 238
+  },
+  {
+   "title": "Gladiator",
+   "year": 2000,
+   "tmdb_id": 98
+  },
+  {
+   "title": "Raiders of the Lost Ark",
+   "year": 1981,
+   "tmdb_id": 85
+  },
+  {
+   "title": "Toy Story",
+   "year": 1995,
+   "tmdb_id": 862
+  },
+  {
+   "title": "American Beauty",
+   "year": 1999,
+   "tmdb_id": 14
+  },
+  {
+   "title": "Kill Bill: Vol. 2",
+   "year": 2004,
+   "tmdb_id": 393
+  },
+  {
+   "title": "Braveheart",
+   "year": 1995,
+   "tmdb_id": 197
+  },
+  {
+   "title": "Star Wars: Episode I - The Phantom Menace",
+   "year": 1999,
+   "tmdb_id": 1893
+  },
+  {
+   "title": "Star Wars: Episode VI - Return of the Jedi",
+   "year": 1983,
+   "tmdb_id": 1892
+  },
+  {
+   "title": "Finding Nemo",
+   "year": 2003,
+   "tmdb_id": 12
+  },
+  {
+   "title": "Terminator 2: Judgment Day",
+   "year": 1991,
+   "tmdb_id": 280
+  },
+  {
+   "title": "The Fifth Element",
+   "year": 1997,
+   "tmdb_id": 18
+  },
+  {
+   "title": "The Dark Knight",
+   "year": 2008,
+   "tmdb_id": 155
+  },
+  {
+   "title": "American Pie",
+   "year": 1999,
+   "tmdb_id": 2105
+  },
+  {
+   "title": "Seven",
+   "year": 1995,
+   "tmdb_id": 807
+  },
+  {
+   "title": "The Matrix Reloaded",
+   "year": 2003,
+   "tmdb_id": 604
+  },
+  {
+   "title": "Inception",
+   "year": 2010,
+   "tmdb_id": 27205
+  },
+  {
+   "title": "Harry Potter and the Sorcerer's Stone",
+   "year": 2001,
+   "tmdb_id": 671
+  },
+  {
+   "title": "Fargo",
+   "year": 1996,
+   "tmdb_id": 275
+  },
+  {
+   "title": "The Incredibles",
+   "year": 2004,
+   "tmdb_id": 9806
+  },
+  {
+   "title": "Saving Private Ryan",
+   "year": 1998,
+   "tmdb_id": 857
+  },
+  {
+   "title": "Monsters, Inc.",
+   "year": 2001,
+   "tmdb_id": 585
+  },
+  {
+   "title": "Memento",
+   "year": 2000,
+   "tmdb_id": 77
+  },
+  {
+   "title": "Spider-Man",
+   "year": 2002,
+   "tmdb_id": 557
+  },
+  {
+   "title": "Back to the Future",
+   "year": 1985,
+   "tmdb_id": 105
+  },
+  {
+   "title": "Men in Black",
+   "year": 1997,
+   "tmdb_id": 607
+  },
+  {
+   "title": "The Fugitive",
+   "year": 1993,
+   "tmdb_id": 5503
+  },
+  {
+   "title": "There's Something About Mary",
+   "year": 1998,
+   "tmdb_id": 544
+  },
+  {
+   "title": "The Sixth Sense",
+   "year": 1999,
+   "tmdb_id": 745
+  },
+  {
+   "title": "Crouching Tiger, Hidden Dragon",
+   "year": 2000,
+   "tmdb_id": 146
+  },
+  {
+   "title": "Good Will Hunting",
+   "year": 1997,
+   "tmdb_id": 489
+  },
+  {
+   "title": "Donnie Darko",
+   "year": 2001,
+   "tmdb_id": 141
+  },
+  {
+   "title": "Twelve Monkeys",
+   "year": 1995,
+   "tmdb_id": 63
+  },
+  {
+   "title": "X-Men",
+   "year": 2000,
+   "tmdb_id": 36657
+  },
+  {
+   "title": "Apollo 13",
+   "year": 1995,
+   "tmdb_id": 568
+  },
+  {
+   "title": "300",
+   "year": 2007,
+   "tmdb_id": 1271
+  },
+  {
+   "title": "One Flew Over the Cuckoo's Nest",
+   "year": 1975,
+   "tmdb_id": 510
+  },
+  {
+   "title": "The Avengers",
+   "year": 2012,
+   "tmdb_id": 24428
+  },
+  {
+   "title": "Monty Python and the Holy Grail",
+   "year": 1975,
+   "tmdb_id": 762
+  },
+  {
+   "title": "Austin Powers: International Man of Mystery",
+   "year": 1997,
+   "tmdb_id": 816
+  }
+ ]
+}

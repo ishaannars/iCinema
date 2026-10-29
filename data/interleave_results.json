@@ -1,0 +1,7 @@
+{
+ "target_decided_visits": 200,
+ "interleaved_visits": 0,
+ "decided_visits": 0,
+ "status": "running",
+ "rule": "See src/interleave.py (written before data collection)."
+}

@@ -1,0 +1,40 @@
+{
+ "method": "    python training/evaluate_beyond_accuracy.py --data-dir ml-32m Same viewers and same 3 random likes as the benchmark (first 1-in-5 slice, the 3,000 test viewers, seed 5), so these sit next to the accuracy numbers. For each viewer, each model's top 10 (movies they already liked removed): - Catalog coverage: share of the benchmark's movies that appear in at least one viewer's top 10. - Popularity of picks: average fan percentile of the top 10 (0 = fewest MovieLens fans, 100 = most).   Lower means less obvious picks. - Variety in a top 10: average share of movie pairs in the list that have different genre sets   (1 minus genre Jaccard similarity, MovieLens genres). Models: popularity, item-kNN (top-100), RP3beta (top-100, shipped beta), and routed (what the app does). Rule written before running: these numbers describe the shipped models; nothing is tuned or changed because of them, and there's no pass or fail. Routed vs item-kNN gets paired-bootstrap 95% intervals on popularity of picks and variety (2,000 resamples of viewers). Coverage is reported as a single number. Writes data/beyond_accuracy.json. ",
+ "viewers": 3000,
+ "catalog_movies": 8014,
+ "top_k": 10,
+ "models": {
+  "Popularity": {
+   "catalog_coverage": 0.008,
+   "pick_popularity_percentile": 99.9,
+   "top10_variety": 0.796
+  },
+  "item-kNN": {
+   "catalog_coverage": 0.1416,
+   "pick_popularity_percentile": 98.4,
+   "top10_variety": 0.752
+  },
+  "RP3beta": {
+   "catalog_coverage": 0.1793,
+   "pick_popularity_percentile": 97.5,
+   "top10_variety": 0.775
+  },
+  "Routed (what the app does)": {
+   "catalog_coverage": 0.1754,
+   "pick_popularity_percentile": 97.7,
+   "top10_variety": 0.762
+  }
+ },
+ "routed_vs_knn": {
+  "pick_popularity_diff": -0.74,
+  "pick_popularity_ci95": [
+   -0.96,
+   -0.53
+  ],
+  "variety_diff": 0.0103,
+  "variety_ci95": [
+   0.0083,
+   0.0124
+  ]
+ }
+}

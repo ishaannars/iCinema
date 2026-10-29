@@ -18,7 +18,8 @@ from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batc
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 from src.scroll_keeper import scroll_keeper
-from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity, fan_percentile, preferred_title
+from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity, fan_percentile, preferred_title, interleave_eligible
+from src.interleave import team_draft, TARGET_DECIDED
 from src.recommender import _calibrated_match_percent
 
 st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
@@ -32,7 +33,7 @@ st.markdown("<style>" + app_css() + "</style>", unsafe_allow_html=True)
 
 defaults={
     "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"seen_from_saved":set(),"seen_rating":{},"selection_order":[],
+    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"seen_from_saved":set(),"seen_rating":{},"selection_order":[],"imported_titles":set(),"imported_seen":set(),"imported_disliked":set(),"import_summary":None,
     "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
     "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
     "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
@@ -75,6 +76,9 @@ def profile_snapshot():
         "last_shown": list(st.session_state.get("last_shown") or [])[:40],
         "taste_reset_at": st.session_state.get("taste_reset_at"),
         "selection_order": list(st.session_state.get("selection_order", [])),
+        "imported_titles": sorted(st.session_state.get("imported_titles") or set()),
+        "imported_seen": sorted(st.session_state.get("imported_seen") or set()),
+        "imported_disliked": sorted(st.session_state.get("imported_disliked") or set()),
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
         "streaming_services": list(st.session_state.get("streaming_services") or []),
@@ -104,6 +108,9 @@ def restore_profile(data):
         st.session_state.last_shown = list(data.get("last_shown") or [])
         st.session_state.taste_reset_at = data.get("taste_reset_at")
         st.session_state.selection_order = list(data.get("selection_order") or [])
+        st.session_state.imported_titles = set(data.get("imported_titles") or [])
+        st.session_state.imported_seen = set(data.get("imported_seen") or [])
+        st.session_state.imported_disliked = set(data.get("imported_disliked") or [])
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
         st.session_state.streaming_services = list(data.get("streaming_services") or [])
@@ -188,6 +195,21 @@ RECOGNIZABLE_SHELF_TITLES = [
     "Memories of Murder", "The Worst Person in the World",
 ]
 
+def _tested_shelf():
+    """Step 1 shelf picked by training/confirm_shelf_and_imports.py, or [] if that test didn't pass."""
+    try:
+        rows = json.loads((Path(__file__).resolve().parent / "data" / "shelf_titles.json").read_text())["titles"]
+    except Exception:
+        return []
+    out = []
+    for r in rows:
+        m = get_movie(r["title"])
+        out.append(dict(m) if m else {"title": r["title"], "year": int(r.get("year") or 0),
+                                      "tmdb_id": int(r.get("tmdb_id") or 0), "external": True,
+                                      "candidate_source": "shelf"})
+    return out
+
+
 def _shelf_key(movie):
     return (str(movie.get("title", "")).casefold(), int(movie.get("year") or 0))
 
@@ -195,7 +217,8 @@ def _seed_local_shelf_pool():
     if st.session_state.shelf_pool_initialized:
         return
     selected = st.session_state.likes | st.session_state.favorites
-    pool = []
+    visible = {_shelf_key(m) for m in st.session_state.shelf_movies}
+    pool = [m for m in _tested_shelf() if m.get("title") not in selected and _shelf_key(m) not in visible]
     for title in RECOGNIZABLE_SHELF_TITLES:
         movie = get_movie(title)
         if not movie or movie.get("title") in selected:
@@ -257,7 +280,8 @@ def _next_shelf_movie():
 def ensure_rotating_shelf():
     selected = st.session_state.likes | st.session_state.favorites
     if not st.session_state.shelf_movies:
-        st.session_state.shelf_movies = [dict(m) for m in STARTER_MOVIES if m.get("title") not in selected]
+        first = _tested_shelf() or [dict(m) for m in STARTER_MOVIES]
+        st.session_state.shelf_movies = [m for m in first if m.get("title") not in selected][:15]
         st.session_state.shelf_seen_titles.update(_shelf_key(m) for m in st.session_state.shelf_movies)
     else:
         st.session_state.shelf_movies = [m for m in st.session_state.shelf_movies if m.get("title") not in selected]
@@ -336,6 +360,64 @@ def live_search_box():
     except Exception:
         return st.text_input("Search movies", placeholder="Search by title",
                              label_visibility="collapsed", key="movie_search_query")
+
+
+def _import_flags():
+    """Which extra imported signals passed their offline test (data/shelf_import_confirm.json)."""
+    try:
+        d = json.loads((Path(__file__).resolve().parent / "data" / "shelf_import_confirm.json").read_text())["imports"]
+        return bool(d["low_ratings_as_not_for_me"]["use"]), bool(d["middling_ratings_as_seen"]["use"])
+    except Exception:
+        return False, False
+
+
+def import_letterboxd():
+    """Read an uploaded Letterboxd or IMDb export and add its ratings as signals."""
+    from src.cf_model import lookup
+    from src.letterboxd import read_ratings, to_choices
+    up = st.session_state.get("lb_upload")
+    if up is None:
+        return
+    use_low, use_mid = _import_flags()
+    try:
+        choices, summary = to_choices(read_ratings(up.getvalue()), lookup, use_low, use_mid)
+    except Exception:
+        st.session_state.import_summary = {"error": True}
+        return
+    imported = set(st.session_state.get("imported_titles") or set())
+    imp_seen = set(st.session_state.get("imported_seen") or set())
+    imp_dis = set(st.session_state.get("imported_disliked") or set())
+    for movie, kind in choices:
+        title = movie["title"]
+        if title in st.session_state.likes:
+            continue                      # keep what the viewer already chose by hand
+        if kind in ("seen", "dislike"):
+            if not get_movie(title):
+                st.session_state.external_movies[title] = movie
+            (imp_seen if kind == "seen" else imp_dis).add(title)
+            continue
+        if not get_movie(title):          # catalog movies keep their richer catalog details
+            st.session_state.external_movies[title] = movie
+        st.session_state.likes.add(title)
+        if kind == "favorite":
+            st.session_state.favorites.add(title)
+        imported.add(title)
+    st.session_state.imported_titles = imported
+    st.session_state.imported_seen = imp_seen
+    st.session_state.imported_disliked = imp_dis
+    st.session_state.import_summary = summary
+    queue_profile_save()
+
+
+def undo_letterboxd_import():
+    for title in st.session_state.get("imported_titles") or set():
+        st.session_state.likes.discard(title)
+        st.session_state.favorites.discard(title)
+    st.session_state.imported_titles = set()
+    st.session_state.imported_seen = set()
+    st.session_state.imported_disliked = set()
+    st.session_state.import_summary = None
+    queue_profile_save()
 
 
 def remove_step1_selection(title):
@@ -823,6 +905,13 @@ def _cf_signals():
             if key == "seen" and rated.get(t) in (1, -1):
                 action = "like" if rated[t] == 1 else "dislike"   # a rated Seen is a real signal
             out.append((m, action))
+    for key, action in (("imported_seen", "seen"), ("imported_disliked", "dislike")):
+        for t in st.session_state.get(key) or set():   # only filled if that signal passed its test
+            if t in st.session_state.likes:
+                continue
+            m = get_movie(t, ext)
+            if m:
+                out.append((m, action))
     return out
 
 
@@ -1164,7 +1253,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '“No RT” means Rotten Tomatoes hasn’t reviewed the movie.</div>'
         '<div class="profile-insights-copy ratings-note">Fresh every visit: movies you passed over step back, and iCinema '
         'searches deeper into your favorite genres, so new picks keep surfacing.</div>'
-        f'{live_html}'
+        + (f'<div class="profile-insights-copy ratings-note">{html.escape(_live_test)}</div>' if (_live_test := live_test_line()) else '')
+        + f'{live_html}'
         '</div>'
         f'{proof_html}'
     )
@@ -1284,13 +1374,21 @@ def render_shelf_fragment():
 
         matches = []
         already_selected_matches = []
+        did_you_mean = False
         if search_query.strip():
+            from src.cf_model import fan_percentile, fuzzy_titles
+            from src.search_rank import rerank
             if tmdb_catalog_configured():
-                matches = search_movies(search_query.strip(), 8)
+                matches = search_movies(search_query.strip(), 20)
             else:
                 q = search_query.strip().lower()
-                local_titles = [title for title in searchable_titles() if q in title.lower()][:8]
+                local_titles = [title for title in searchable_titles() if q in title.lower()][:20]
                 matches = [get_movie(title) for title in local_titles if get_movie(title)]
+            # Exact titles first, best-known breaks ties (search_rank.py); a typo falls back to close spellings.
+            matches = rerank(search_query, matches, known=lambda m: fan_percentile(m) is not None)[:8]
+            if not matches:
+                matches = fuzzy_titles(search_query)
+                did_you_mean = bool(matches)
 
             selected_titles = st.session_state.likes | st.session_state.favorites
             already_selected_matches = [m for m in matches if m["title"] in selected_titles]
@@ -1307,7 +1405,7 @@ def render_shelf_fragment():
 
         if search_query.strip():
             if matches:
-                st.markdown('<div class="search-results-label">Matching titles</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="search-results-label">{"Did you mean" if did_you_mean else "Matching titles"}</div>', unsafe_allow_html=True)
                 result_cols = st.columns(2)
                 for j, movie in enumerate(matches):
                     title = movie["title"]
@@ -1372,11 +1470,32 @@ def render_shelf_fragment():
                         args=("favorite",),
                     )
 
+    with st.container(key="step1_letterboxd"):
+        # Optional, so it stays one quiet line under search (progressive disclosure): no new box or button.
+        with st.expander("Or import your ratings from Letterboxd or IMDb"):
+            st.caption("Upload the ZIP from Letterboxd or the ratings file from IMDb. Your file stays in this browser.")
+            st.file_uploader("Letterboxd export (ZIP or ratings.csv) or IMDb ratings.csv", type=["zip", "csv"], key="lb_upload",
+                             label_visibility="collapsed", on_change=import_letterboxd)
+        _imp = st.session_state.get("import_summary")
+        _n_imp = len(st.session_state.get("imported_titles") or set())
+        if _imp and _imp.get("error"):
+            st.caption("That file couldn’t be read. Upload the ZIP from Letterboxd, its ratings.csv, or IMDb’s ratings export.")
+        elif _n_imp:
+            note = f"{_n_imp} loved movie{'s' if _n_imp != 1 else ''} imported"
+            if _imp and _imp.get("not_found"):
+                note += f" ({_imp['not_found']} couldn’t be matched)"
+            c1, c2 = st.columns([5, 1], gap="small")
+            with c1:
+                st.caption(note)
+            with c2:
+                st.button("Undo import", key="undo_import", on_click=undo_letterboxd_import, use_container_width=True)
+
     with st.container(key="step1_selections"):
         _selected_set = st.session_state.likes | st.session_state.favorites
-        chosen_titles = [t for t in st.session_state.get("selection_order", []) if t in _selected_set]
-        chosen_titles += sorted(_selected_set - set(chosen_titles))
-        chosen_count = len(chosen_titles)
+        _imported = set(st.session_state.get("imported_titles") or set())
+        chosen_titles = [t for t in st.session_state.get("selection_order", []) if t in _selected_set and t not in _imported]
+        chosen_titles += sorted(_selected_set - set(chosen_titles) - _imported)
+        chosen_count = len(_selected_set)
 
         if chosen_titles:
             st.markdown(
@@ -1626,6 +1745,40 @@ def fourth_row_name():
     return "Something Different"
 
 
+def _interleave_session():
+    """Random ID for this visit's live test. A new Showroom visit gets a new one."""
+    sid = st.session_state.get("showroom_session_id")
+    if st.session_state.get("_il_for") != sid or not st.session_state.get("_il_session"):
+        import uuid
+        st.session_state._il_for = sid
+        st.session_state._il_session = uuid.uuid4().hex[:12]
+    return st.session_state._il_session
+
+
+def _interleave_fields(row_name, title):
+    """Team and visit ID for a Top Matches card during the live test, else nothing."""
+    team = (st.session_state.get("interleave_teams") or {}).get(title)
+    if row_name != "Top Matches for You" or not team:
+        return {}
+    return {"il_team": team, "il_session": _interleave_session()}
+
+
+def live_test_line():
+    """One plain line about the live interleaving test, read from data/interleave_results.json."""
+    try:
+        r = json.loads((Path(__file__).resolve().parent / "data" / "interleave_results.json").read_text())
+    except Exception:
+        return None
+    target = int(r.get("target_decided_visits") or TARGET_DECIDED)
+    if r.get("status") != "finished":
+        return (f"Live test running: {int(r.get('decided_visits') or 0)} of {target}. For viewers with less mainstream likes, "
+                "Top Matches mixes picks from two ranking methods and counts which one gets more saves.")
+    if not r.get("significant"):
+        return f"Live test finished ({target} visits): no detectable difference between the two ranking methods."
+    lead = "the less-mainstream method" if r.get("leader") == "routed" else "the standard method"
+    return f"Live test finished ({target} visits): {lead} won {max(r['routed_wins'], r['knn_wins'])} of {target}."
+
+
 def _showroom_slot_key(row_name, slot_index):
     return f"{row_name}::{int(slot_index)}"
 
@@ -1798,6 +1951,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         "cf_affinity":round(float(payload.get("cf") if payload.get("cf") is not None else 0.5),6),
         "candidate_source":movie.get("candidate_source"),
         "model_version":"v5.191",
+        **_interleave_fields(row_name, title),
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -2371,7 +2525,12 @@ def render_showroom_fragment(p):
         learning_result=learning_model_for(st.session_state.get("analytics_events", []))
         ranked_movies=[movie for _,movie in ranked]
         semantic_by_id=cached_semantic_scores(ranked_movies,p)
-        cf_user=user_vector(_cf_signals())
+        _signals=_cf_signals()
+        cf_user=user_vector(_signals)
+        # Live interleaving test: only viewers routed to RP3beta get two different rankings.
+        il_on=interleave_eligible(_signals)
+        cf_user_knn=user_vector(_signals,force_knn=True) if il_on else None
+        content_memo={}
         cf_by_title={}
         model_match_by_title={}
 
@@ -2478,6 +2637,7 @@ def render_showroom_fragment(p):
                     model_match_by_title[movie["title"]]=display_match
                     ml_context=dict(components)
                     ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
+                    content_memo[id(movie)]=(base,dict(ml_context))
                     cf=cf_affinity(movie,cf_user)
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
                     if cf is not None:
@@ -2546,12 +2706,59 @@ def render_showroom_fragment(p):
         tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
         reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
 
+        # Team-draft interleave routed vs item-kNN-only for Top Matches (rule in src/interleave.py).
+        # Tonight's Show and the other rows always use the routed ranking.
+        top_matches_ordered=[item for item in top_all if item[1]["title"] not in reserved]
+        il_teams, il_override = {}, {}
+        if il_on and cf_user_knn is not None:
+            import random as _random
+            import bisect as _bisect
+            b_scored=[]
+            for _,movie in top_all:
+                memo=content_memo.get(id(movie))
+                if memo is None:
+                    continue
+                b_base,b_ctx=memo[0],dict(memo[1])
+                cf_b=cf_affinity(movie,cf_user_knn)
+                b_ctx["cf_affinity"]=cf_b if cf_b is not None else 0.5
+                if cf_b is not None:
+                    b_base=CONTENT_WEIGHT*b_base+(1-CONTENT_WEIGHT)*cf_b
+                b_learned=predict_success(learning_result,b_ctx)
+                if b_learned is not None:
+                    b_base=0.78*b_base+0.22*b_learned
+                t=movie["title"]
+                b_obj=(b_base+0.06*_pop_now(movie)-FATIGUE_STEP*min(fatigue.get(t,0),FATIGUE_CAP)
+                       +VARIETY_SPREAD*visit_variety(t))
+                b_scored.append((b_obj,b_base,cf_b,movie))
+            b_scored.sort(key=lambda x:(x[0],x[1]),reverse=True)
+            a_map={m["title"]:(dm,m) for dm,m in top_all}
+            a_ids=[m["title"] for _,m in top_matches_ordered][:60]
+            b_ids=[x[3]["title"] for x in b_scored if x[3]["title"] not in reserved][:60]
+            merged,il_teams=team_draft(a_ids,b_ids,_random.Random(),limit=40)
+            # Cards picked by item-kNN show item-kNN's own score and love chance, so neither side looks better.
+            b_asc=sorted(x[1] for x in b_scored)
+            b_info={x[3]["title"]:x for x in b_scored}
+            for t in merged:
+                if il_teams.get(t)=="knn" and t in b_info:
+                    _,b_base,cf_b,_m=b_info[t]
+                    above=len(b_asc)-_bisect.bisect_right(b_asc,b_base)
+                    il_override[t]={"match":_calibrated_match_percent(b_base,p),"cf":cf_b,
+                                    "top_pct":max(1,-(-100*(above+1)//max(1,len(b_asc))))}
+            top_matches_ordered=[(il_override.get(t,{}).get("match",a_map[t][0]),a_map[t][1]) for t in merged if t in a_map]
+        st.session_state.interleave_teams=il_teams
+        if il_teams:
+            from src.telemetry import track
+            _il=_interleave_session()
+            if st.session_state.get("_il_shown")!=_il:
+                track(st.session_state,"interleave_shown",il_session=_il)
+                st.session_state._il_shown=_il
+
         # Pass 1: category-specific ordering with strict cross-row de-duplication.
         # Keep the remaining ranked candidates as a replacement queue so one card can
         # advance without rebuilding the entire Showroom.
         for row_name in row_order:
             if row_name=="Top Matches for You":
-                ordered=[item for item in top_all if item[1]["title"] not in reserved]
+                ordered=list(top_matches_ordered)
             else:
                 ordered=_row_candidates(row_name,reserved)
             picks=ordered[:4]
@@ -2585,6 +2792,8 @@ def render_showroom_fragment(p):
         visible_identity_keys=tuple((movie["title"], int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) for movie in metadata_movies)
         watch_by_title=get_watch_availability_batch(visible_movie_keys,"US")
         for row_name in row_order:
+            if il_teams and row_name=="Top Matches for You":
+                continue   # interleaved order is shown as drafted, so neither ranker gets the top spots
             row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*service_availability_utility(watch_by_title.get(item[1]["title"])),reverse=True)
 
         recommendation_context={}
@@ -2604,6 +2813,7 @@ def render_showroom_fragment(p):
                     "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
                     "candidate_source":movie.get("candidate_source"),
                     "model_version":"v5.191",
+                    **_interleave_fields(row_name,movie["title"]),
                 }
         st.session_state.recommendation_context=recommendation_context
         record_impressions(st.session_state,recommendation_context)
@@ -2677,6 +2887,9 @@ def render_showroom_fragment(p):
                 _above = _pool - bisect.bisect_right(_asc, _memo[0])   # movies scored strictly higher
                 _pl["fit_top_pct"] = max(1, -(-100 * (_above + 1) // _pool))
                 _pl["fit_pool"] = _pool
+        for _t, _ov in il_override.items():
+            if _t in payloads:
+                payloads[_t].update({"match": _ov["match"], "cf": _ov["cf"], "fit_top_pct": _ov["top_pct"]})
         st.session_state.showroom_payloads=payloads
         st.session_state.showroom_row_queues=queues
         st.session_state.showroom_slots=slots

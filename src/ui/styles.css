@@ -4999,3 +4999,13 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 [class*="st-key-seenrate_"] button p,
 [class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.72rem !important;font-weight:600 !important;white-space:nowrap !important}
 .watch-more{font-weight:600}
+
+/* Step 1 import: one quiet line under search that opens on click, styled like the search copy. */
+.st-key-step1_letterboxd div[data-testid="stExpander"]{margin:.1rem 0 .4rem !important;}
+.st-key-step1_letterboxd div[data-testid="stExpander"] summary{min-height:1.6rem !important;align-items:center !important;}
+.st-key-step1_letterboxd div[data-testid="stExpander"] summary p{
+    font-size:.88rem !important;line-height:1.5 !important;font-weight:450 !important;
+    color:var(--muted) !important;-webkit-line-clamp:1 !important;
+    text-decoration:underline;text-decoration-color:rgba(169,173,183,.35);text-underline-offset:3px;
+}
+.st-key-step1_letterboxd div[data-testid="stExpander"] summary:hover p{color:var(--ivory) !important;}

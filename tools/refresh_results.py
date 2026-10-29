@@ -163,6 +163,47 @@ def tested_block():
         from src.love import fit_floor
         rows.append(("Fit floor", "Where a pick stops being more likely than average to be loved, read from the love-chance table",
                      f"Top {fit_floor():g}%. Rows (except Top Matches) leave out weaker picks instead of padding", "✅ Applied to rows"))
+    hr_path = ROOT / "data" / "history_routing_confirm.json"
+    if hr_path.exists():
+        hr = json.loads(hr_path.read_text())
+        if hr.get("chosen_cut_likes"):
+            m = hr["many_likes"]
+            res = (f"Viewers with {hr['chosen_cut_likes']}+ likes: NDCG@10 {m['current_ndcg']:.3f} → {m['ease_ndcg']:.3f} "
+                   f"(95% CI {m['ci95'][0]:+.3f} to {m['ci95'][1]:+.3f}), {hr['test_viewers_at_or_above_cut']:,} fresh viewers")
+        else:
+            res = "The current ranking stayed best at every cut, so nothing changed"
+        rows.append(("Many likes (Letterboxd import)", "EASE takes over at N likes; N picked on half of a fresh slice, "
+                     "confirmed on the other half (rule in `training/confirm_history_routing.py`)", res,
+                     "✅ Ships" if hr.get("ship") else "❌ Not shipped"))
+    si_path = ROOT / "data" / "shelf_import_confirm.json"
+    if si_path.exists():
+        si = json.loads(si_path.read_text())
+        sh = si["shelf"]
+        if sh["picked"] == "popularity":
+            res = "Popularity stayed best on the first half, so the shelf didn't change"
+        else:
+            res = (f"{sh['picked']} vs popularity: NDCG@10 {sh['diff_vs_popularity']:+.4f} "
+                   f"(95% CI {sh['ci95'][0]:+.4f} to {sh['ci95'][1]:+.4f}); first screen answerable "
+                   f"{-sh['answerable_drop_points']:+.1f} points; mainstream viewers {sh['mainstream_diff']:+.4f} "
+                   f"(CI {sh['mainstream_ci95'][0]:+.4f} to {sh['mainstream_ci95'][1]:+.4f}); {si['viewers']:,} fresh viewers")
+        rows.append(("Step 1 shelf", "Which movies to ask about: today's popular shelf vs popular anchors alternating with more revealing picks; "
+                     "picked on half, confirmed on the other half with guardrails for easy answers and mainstream viewers "
+                     "(rule in `training/confirm_shelf_and_imports.py`)", res,
+                     "✅ Ships" if sh["ship"] else "❌ Not shipped"))
+        for key, label, how in (("low_ratings_as_not_for_me", "Imported low ratings", "2 stars or less read as Not for me (weight -0.8, no tuning)"),
+                                ("middling_ratings_as_seen", "Imported middling ratings", "2.5 to 3.5 stars read as Seen (weight 0.5, no tuning)")):
+            g = si["imports"][key]
+            rows.append((label, how,
+                         f"NDCG@10 {g['diff_with_signal']:+.4f} for {g['viewers_with_signal']:,} viewers with such ratings "
+                         f"(95% CI {g['ci95_with_signal'][0]:+.4f} to {g['ci95_with_signal'][1]:+.4f})",
+                         "✅ Used" if g["use"] else "❌ Not used"))
+    il_path = ROOT / "data" / "interleave_results.json"
+    if il_path.exists():
+        il = json.loads(il_path.read_text())
+        rows.append(("Routing, live", "Team-draft interleaving in Top Matches for viewers with less mainstream likes, "
+                     f"first {il['target_decided_visits']} decided visits, two-sided binomial test (rule in `src/interleave.py`)",
+                     live_result_text(il), "Running" if il["status"] != "finished" else
+                     ("❌ Routing turned off" if il.get("decision") == "turn routing off" else "✅ Routing stays")))
     rows.append(("Fourth row follows Step 3", "Not an accuracy question", "Recent Releases, Classics, Documentaries, or International Films "
                  "become the fourth row when picked. Each shows only its own kind", "Design choice"))
     lines = ["| Part | Test | Result | In the app |", "|---|---|---|---|"]
@@ -170,6 +211,54 @@ def tested_block():
     lines += ["", "MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. "
               "Content and personal match always keep at least 20%, so your answers always count. "
               "From the scripts in `training/`."]
+    return "\n".join(lines)
+
+
+LSTART, LEND = "<!-- LIVE_TEST:START -->", "<!-- LIVE_TEST:END -->"
+YSTART, YEND = "<!-- BEYOND:START -->", "<!-- BEYOND:END -->"
+
+
+def live_result_text(il):
+    if il["status"] != "finished":
+        return f"Running: {il['decided_visits']} of {il['target_decided_visits']} decided visits. No result is read before then"
+    if not il["significant"]:
+        return (f"No detectable difference: routed won {il['routed_wins']} of {il['target_decided_visits']} "
+                f"(p = {il['p_value']:.3f})")
+    who = "Routed" if il["leader"] == "routed" else "item-kNN"
+    return f"{who} won {max(il['routed_wins'], il['knn_wins'])} of {il['target_decided_visits']} (p = {il['p_value']:.3f})"
+
+
+def live_test_block():
+    il = json.loads((ROOT / "data" / "interleave_results.json").read_text())
+    lines = [f"**{live_result_text(il)}.**", ""]
+    if il["status"] == "finished":
+        g = il.get("guardrails") or {}
+        if g:
+            lines.append(f"Guardrails for the leader: skips {g['skip']['winner']} vs {g['skip']['other']} (p = {g['skip']['p_value']:.3f}), "
+                         f"\"Not for me\" {g['not_for_me']['winner']} vs {g['not_for_me']['other']} (p = {g['not_for_me']['p_value']:.3f}).")
+        v = il.get("one_vote_per_viewer") or {}
+        if v.get("viewers"):
+            lines.append(f"One vote per viewer: routed {v['routed']}, item-kNN {v['knn']} ({v['viewers']} viewers).")
+        lines.append("")
+    lines.append(f"{il['interleaved_visits']:,} visits have had interleaving on so far. Only visits where one ranker earned more saves count.")
+    return "\n".join(lines)
+
+
+def beyond_block():
+    path = ROOT / "data" / "beyond_accuracy.json"
+    if not path.exists():
+        return "_Not run yet. Run `python training/evaluate_beyond_accuracy.py --data-dir ml-32m`._"
+    b = json.loads(path.read_text())
+    lines = ["| Model | Catalog reached | Popularity of picks (0 = least known, 100 = most) | Variety in a top 10 |",
+             "|---|---|---|---|"]
+    for name, m in b["models"].items():
+        label = f"**{name}**" if name.startswith("Routed") else name
+        lines.append(f"| {label} | {m['catalog_coverage']:.1%} | {m['pick_popularity_percentile']:.1f} | {m['top10_variety']:.2f} |")
+    r = b["routed_vs_knn"]
+    lines += ["", f"Routed vs item-kNN: popularity of picks {r['pick_popularity_diff']:+.2f} (95% CI {r['pick_popularity_ci95'][0]:+.2f} to "
+              f"{r['pick_popularity_ci95'][1]:+.2f}), variety {r['variety_diff']:+.4f} (CI {r['variety_ci95'][0]:+.4f} to {r['variety_ci95'][1]:+.4f}). "
+              f"Top {b['top_k']} for the benchmark's {b['viewers']:,} test viewers from 3 random likes, across {b['catalog_movies']:,} movies. "
+              "Descriptive only: nothing was tuned on these numbers. From `training/evaluate_beyond_accuracy.py`."]
     return "\n".join(lines)
 
 
@@ -211,6 +300,9 @@ def main():
     if (ROOT / "data" / "blend_results.json").exists():
         body = _put(body, TSTART, TEND, tested_block())
         body = _put(body, ESTART, EEND, errors_block())
+    if (ROOT / "data" / "interleave_results.json").exists():
+        body = _put(body, LSTART, LEND, live_test_block())
+    body = _put(body, YSTART, YEND, beyond_block())
     readme.write_text(body)
     print("Updated benchmark, tested-parts, and error tables in README.md")
     lifts = results["lifts_three_likes_vs_popularity"]

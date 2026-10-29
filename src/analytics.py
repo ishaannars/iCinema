@@ -76,7 +76,8 @@ def record_event(state, event_type, title, context=None):
         top = ((state.get("showroom_payloads") or {}).get(str(title)) or {}).get("fit_top_pct")
         track(state, {"dislike": "not_for_me"}.get(str(event_type), str(event_type)),
               row=context.get("row"), position=context.get("position"), top_pct=top,
-              model_version=context.get("model_version"))
+              model_version=context.get("model_version"),
+              il_team=context.get("il_team"), il_session=context.get("il_session"))
     except Exception:
         pass
     return event

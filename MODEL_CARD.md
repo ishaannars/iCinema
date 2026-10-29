@@ -72,6 +72,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 - **Coverage gaps.** Movies not in MovieLens, especially recent releases, get no collaborative-filtering score and rely on content signals.
 - **Popularity bias.** Movies with many fans have more reliable neighbors, so well-known films can be favored.
 - **Offline metrics are not live outcomes.** MovieLens ratings approximate what a viewer would enjoy; they do not measure whether iCinema viewers pressed play.
+- **The live test is a screen.** Team-draft interleaving in Top Matches (rule in `src/interleave.py`) compares routed ranking with item-kNN alone, only for viewers with less mainstream likes, by saves within a visit. It doesn't measure retention, and its result is read only after 200 decided visits.
 - **Watch links open a search, not the title page.** Public links cannot open a movie inside Netflix or Hulu directly, and some services fall back to TMDB's watch page.
 - **United States only** for streaming availability.
 

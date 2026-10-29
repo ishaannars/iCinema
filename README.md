@@ -32,6 +32,8 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 - **Content.** Each movie's MovieLens genres and fan tags become a 64-number description (TF-IDF, then truncated SVD), the same recipe the offline tests used. TMDB is used only to show titles, posters, and where to watch.
 - **Personal model.** After 50 Save/Skip outcomes, logistic regression learns from your own choices. Gradient boosting is compared at 100, and the better one on a chronological holdout is used.
 - **Your feedback.** Saves, skips, "Not for me," and "Loved it" or "Not for me" on Seen movies all update your picks. "My taste changed" on the Profile keeps your likes and drops older saves and skips, and returning viewers see how many picks are new since their last visit.
+- **Bring your history.** Step 1 can import a Letterboxd or IMDb ratings export: 4 stars become Likes and 4.5 or 5 become Favorites, the same 4+ stars the models treat as "loved." Low and middling ratings are read only if a pre-registered test showed they help. The file stays in your browser.
+- **Asking about the right movies.** Which movies Step 1 shows decides how much a few Likes reveal. Research on new users found that balancing how well known a movie is with how much people disagree about it beats asking about the most popular ones. Popular movies still anchor the shelf, since most people have seen them and most viewers watch them, so only middle grounds can replace today's shelf: every other card is one of the most popular movies, alternating with a more revealing pick. A new shelf ships only if the first screen stays as easy to answer and mainstream viewers don't lose out (`training/confirm_shelf_and_imports.py`). For viewers with many likes, a separate test decides whether EASE, best from full histories in the benchmark, ranks their picks (`training/confirm_history_routing.py`).
 - **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of) shape the content score and your Profile. Step 3 also picks which section comes after Top Matches.
 - **Tonight's Show.** Your single best match on the services you pick, with one-tap links to watch.
 - Your feedback stays in your browser. There's no account and no central user database.
@@ -82,6 +84,11 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | Learns as you use it | Picks from 3 to 50 of a viewer's loves (1,125 test viewers) | NDCG@10 0.093 with 3 choices, 0.099 with 10, 0.106 with 50 (10 vs 3: +0.0051, CI -0.0020 to +0.0114) | ❌ Not claimed |
 | Learns as you use it, fresh test | 50 vs 3 choices on 14,687 viewers from a slice no earlier test used | NDCG@10 0.099 → 0.115 (+0.0157, CI +0.0136 to +0.0178) | ✅ Claim allowed |
 | Fit floor | Where a pick stops being more likely than average to be loved, read from the love-chance table | Top 23.3%. Rows (except Top Matches) leave out weaker picks instead of padding | ✅ Applied to rows |
+| Many likes (Letterboxd import) | EASE takes over at N likes; N picked on half of a fresh slice, confirmed on the other half (rule in `training/confirm_history_routing.py`) | Viewers with 10+ likes: NDCG@10 0.096 → 0.113 (95% CI +0.015 to +0.018), 18,620 fresh viewers | ✅ Ships |
+| Step 1 shelf | Which movies to ask about: today's popular shelf vs popular anchors alternating with more revealing picks; picked on half, confirmed on the other half with guardrails for easy answers and mainstream viewers (rule in `training/confirm_shelf_and_imports.py`) | popular + HELF vs popularity: NDCG@10 +0.0012 (95% CI +0.0005 to +0.0021); first screen answerable +0.6 points; mainstream viewers +0.0009 (CI +0.0000 to +0.0017); 39,765 fresh viewers | ✅ Ships |
+| Imported low ratings | 2 stars or less read as Not for me (weight -0.8, no tuning) | NDCG@10 -0.0003 for 32,563 viewers with such ratings (95% CI -0.0010 to +0.0003) | ❌ Not used |
+| Imported middling ratings | 2.5 to 3.5 stars read as Seen (weight 0.5, no tuning) | NDCG@10 -0.0031 for 38,914 viewers with such ratings (95% CI -0.0036 to -0.0027) | ❌ Not used |
+| Routing, live | Team-draft interleaving in Top Matches for viewers with less mainstream likes, first 200 decided visits, two-sided binomial test (rule in `src/interleave.py`) | Running: 0 of 200 decided visits. No result is read before then | Running |
 | Fourth row follows Step 3 | Not an accuracy question | Recent Releases, Classics, Documentaries, or International Films become the fourth row when picked. Each shows only its own kind | Design choice |
 
 MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. Content and personal match always keep at least 20%, so your answers always count. From the scripts in `training/`.
@@ -96,6 +103,33 @@ First-pick hit rate for the shipped model from 3 random likes (7.7% overall).
 - **Niche taste is hardest.** 4.3% for viewers whose later favorites were the least popular movies, 12.7% for the most popular. Movies with few fans have fewer neighbors to draw on.
 - New movies that aren't in MovieLens get no "viewers like you" score, so content alone ranks them.
 <!-- ERRORS:END -->
+
+## Live test
+
+Offline wins don't always hold up with real people, so routing is also being tested live. Routing only changes the ranking for viewers whose likes are less mainstream, so that's who the test covers. For them, Top Matches mixes picks from the routed ranking and from item-kNN alone (team-draft interleaving). Each card is credited to the ranker that picked it, and whichever earns more saves in a visit wins that visit. I chose interleaving over an A/B test because each viewer is their own control. Teams at Netflix and Microsoft report it needs far fewer users to detect the same difference. It measures engagement within a visit. Long-term retention needs an A/B test once there's enough traffic.
+
+The rule was written before launch, in `src/interleave.py`: the first 200 decided visits, a two-sided binomial test at 0.05, skips and "Not for me" as guardrails, and no peeking. The report shows progress only until all 200 are in.
+
+<!-- LIVE_TEST:START -->
+**Running: 0 of 200 decided visits. No result is read before then.**
+
+0 visits have had interleaving on so far. Only visits where one ranker earned more saves count.
+<!-- LIVE_TEST:END -->
+
+## Beyond accuracy
+
+Hit rates don't show whether a model keeps recommending the same famous movies. This table shows how much of the catalog each model reaches, how well known its picks are, and how varied a top 10 is.
+
+<!-- BEYOND:START -->
+| Model | Catalog reached | Popularity of picks (0 = least known, 100 = most) | Variety in a top 10 |
+|---|---|---|---|
+| Popularity | 0.8% | 99.9 | 0.80 |
+| item-kNN | 14.2% | 98.4 | 0.75 |
+| RP3beta | 17.9% | 97.5 | 0.78 |
+| **Routed (what the app does)** | 17.5% | 97.7 | 0.76 |
+
+Routed vs item-kNN: popularity of picks -0.74 (95% CI -0.96 to -0.53), variety +0.0103 (CI +0.0083 to +0.0124). Top 10 for the benchmark's 3,000 test viewers from 3 random likes, across 8,014 movies. Descriptive only: nothing was tuned on these numbers. From `training/evaluate_beyond_accuracy.py`.
+<!-- BEYOND:END -->
 
 ## How iCinema compares
 
@@ -142,7 +176,7 @@ See [MODEL_CARD.md](MODEL_CARD.md) for data, limits, and intended use. Live per-
 
 ## Ranking details
 
-- **Hybrid score.** Content and "viewers like you" are blended with the tested weights above. Each Showroom row adds its own goal: Critically Acclaimed (30% ratings), Hidden Gems (28% less popular but well rated), and Something Different (32% novelty). Top Matches is strictly your best fits.
+- **Hybrid score.** Content and "viewers like you" are blended with the tested weights above. Each Showroom row adds its own goal: Critically Acclaimed (30% ratings), Hidden Gems (28% less popular but well rated), and Something Different (32% novelty). Top Matches is strictly your best fits. During the live test, for viewers with less mainstream likes, it interleaves the best fits from two rankers and keeps the drafted order.
 - **Personal model.** It contributes 22% of the score. Recent choices weigh more (120-day half-life), and display position is left out so being shown isn't mistaken for taste.
 - **Freshness.** A title shown on earlier visits with no Save, Seen, or Skip drops a little each visit (up to five visits).
 - **Skip vs "Not for me."** Skip is a weak "not now." "Not for me" is a strong dislike, and the title never comes back.
@@ -164,14 +198,16 @@ streamlit run app.py
 python -m pytest -q
 ```
 
-To rebuild every model and number with one command, download MovieLens 32M into `ml-32m/` and run `python reproduce.py --data-dir ml-32m`. The steps it runs, in order, each with `--data-dir ml-32m`: `training/benchmark_cf.py`, `training/evaluate_long_tail.py`, `training/confirm_long_tail.py`, `training/confirm_routing.py`, `training/build_knn.py`, `training/evaluate_blends.py`, `training/evaluate_steps.py`, `training/evaluate_rows.py`. Then run `python training/build_content.py --data-dir ml-32m` and `python tools/refresh_results.py`.
+To rebuild every model and number with one command, download MovieLens 32M into `ml-32m/` and run `python reproduce.py --data-dir ml-32m`. It runs each script in `training/` in order (the list is at the top of `reproduce.py`), then `tools/refresh_results.py`. The live test is scored with `python tools/interleave_report.py --api`.
 
 ## Coming next
 
-- Viewers with very little history still get the weakest picks (see Where it's wrong).
-- Run the decision-time test with 20+ people.
-- Keep splitting `app.py`: the stylesheet and the streaming helpers now live in `src/ui/`.
-- Product: a For Critics tab, "Only my services" mode, thumbs up or down on Seen movies, and adding likes from the Showroom.
+- A model for new releases that aren't in MovieLens yet, built from Wikidata (director, cast, studio, genre, country) and tested by hiding known movies' fan data.
+- Optional sign-in after your first save, so your profile follows you across devices, with one-tap delete.
+- TV shows in the same rows, with a Movies · Shows · Both switch.
+- "When can I stream it?" for movies still in theaters, labeled as estimates.
+- A For Critics tab, an "Only my services" mode, and adding likes from the Showroom anytime.
+- Run the decision-time test with 20+ people, and keep splitting `app.py`.
 
 ## Stack
 

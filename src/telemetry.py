@@ -1,7 +1,9 @@
 """Anonymous usage counts, sent to PostHog only when a key is configured.
 
 What is sent: a random browser ID, the event type (visit, save, skip, seen, not_for_me), the row,
-the card position, the love-chance band, and the model version. Never titles, names, emails, or
+the card position, the love-chance band, and the model version. During the live interleaving test
+(src/interleave.py) it also sends which ranker picked the card ("routed" or "knn") and a random
+per-visit test ID. Never titles, names, emails, or
 IP-based location. Viewers can turn it off in their Profile. Without POSTHOG_KEY in Streamlit
 secrets nothing is sent and nothing breaks.
 """
@@ -10,7 +12,8 @@ from functools import lru_cache
 
 from src.secrets_util import safe_secret
 
-ALLOWED = {"visit", "save", "skip", "seen", "not_for_me", "seen_loved", "seen_not_for_me"}
+ALLOWED = {"visit", "save", "skip", "seen", "not_for_me", "seen_loved", "seen_not_for_me", "interleave_shown"}
+TEAMS = {"routed", "knn"}
 
 
 @lru_cache(maxsize=1)
@@ -34,7 +37,7 @@ def anon_id(state):
     return state["anon_id"]
 
 
-def track(state, event, row=None, position=None, top_pct=None, model_version=None):
+def track(state, event, row=None, position=None, top_pct=None, model_version=None, il_team=None, il_session=None):
     """Fire-and-forget. Any failure is swallowed, so analytics can never break the app."""
     if event not in ALLOWED or state.get("analytics_opt_out"):
         return
@@ -44,9 +47,13 @@ def track(state, event, row=None, position=None, top_pct=None, model_version=Non
     band = None
     if isinstance(top_pct, (int, float)):
         band = "top 1%" if top_pct <= 1 else "top 5%" if top_pct <= 5 else "top 20%" if top_pct <= 20 else "below top 20%"
+    props = {"row": row, "position": position, "fit_band": band,
+             "model_version": model_version, "$process_person_profile": False}
+    if il_session:
+        props["il_session"] = str(il_session)[:16]
+        if il_team in TEAMS:
+            props["il_team"] = il_team
     try:
-        client.capture(distinct_id=anon_id(state), event=event,
-                       properties={"row": row, "position": position, "fit_band": band,
-                                   "model_version": model_version, "$process_person_profile": False})
+        client.capture(distinct_id=anon_id(state), event=event, properties=props)
     except Exception:
         pass

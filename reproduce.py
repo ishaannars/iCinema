@@ -18,12 +18,16 @@ STEPS = [
     "confirm_long_tail.py",         # RP3beta on fresh viewers
     "confirm_routing.py",           # routing on a brand-new slice
     "build_knn.py",                 # shipped models on all of MovieLens 32M
+    "confirm_history_routing.py",   # EASE for viewers with many likes, fresh slice
+    "build_ease.py",                # ships cf_full.npz only if that test passed
+    "confirm_shelf_and_imports.py", # which Step 1 movies to ask about, which imported ratings to read
     "build_content.py",             # content model from genres and fan tags
     "evaluate_blends.py",           # content vs viewers-like-you weights, What's next
     "evaluate_steps.py",            # every onboarding step
     "evaluate_rows.py",             # each Showroom row within its kind
     "evaluate_love_and_learning.py",  # love chance and first learning-curve test
     "confirm_learning_curve.py",    # fresh learning-curve test
+    "evaluate_beyond_accuracy.py",  # coverage, popularity of picks, variety
 ]
 
 
