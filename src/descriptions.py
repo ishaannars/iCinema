@@ -262,6 +262,8 @@ def quick_card_description(movie, limit=110):
         best = max(candidates)
         if best[0] >= 4:
             return best[2]
+    if tagline and len(tagline.split()) >= 3 and len(tagline) <= limit and not _MARKETING.search(tagline):
+        return tagline        # "Welcome to the Real World." beats "An action film from 1999."
     return _details_line(movie)
 
 

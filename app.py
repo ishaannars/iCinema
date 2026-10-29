@@ -1145,17 +1145,16 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         pct = min(100, round(decisions / 50 * 100))
         personal_html = (f'<div class="model-row"><span class="model-dot"></span>'
                          f'<span class="model-name">Your personal model</span>'
-                         f'<span class="model-note">Learns from your saves and skips: {min(decisions, 50)} of 50 · '
-                         f'{int(insights.get("saves") or 0)} saves, {int(insights.get("skips") or 0)} skips (needs 12+ of each; Seen doesn\'t count)</span>'
+                         f'<span class="model-note">Joins after 50 saves and skips ({min(decisions, 50)} so far, at least 12 of each)</span>'
                          f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
     models_html = (
         '<div class="model-status-panel">'
         '<div class="model-row"><span class="model-dot on"></span>'
         '<span class="model-name">Active now</span>'
-        f'<span class="model-note">Viewers like you ({(scale["users"] + " ") if scale["users"] else ""}MovieLens fans) and the content model, '
-        f'using your {signals} signal{"s" if signals != 1 else ""}'
+        f'<span class="model-note">Picks from {(scale["users"] + " ") if scale["users"] else ""}MovieLens fans and the content model, '
+        f'based on your {signals} choice{"s" if signals != 1 else ""}'
         + (f' ({html.escape(signal_parts)})' if signal_parts else '')
-        + '. Every save, skip, and Seen updates it.</span></div>'
+        + '.</span></div>'
         f'{personal_html}'
         '</div>'
     )
@@ -1182,6 +1181,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
               "Finds from Critically Acclaimed, Hidden Gems, and Something Different."),
         _stat(conf, "Profile strength", "Grows with every like, save, and skip."),
     ]
+    # Only stats with real values; "Learning" placeholders repeated six times read as noise.
+    insight_cards = [c for c in insight_cards if '>Learning<' not in c]
     insight_html = "".join(insight_cards)
 
     ranking=ranking_metrics(events)
@@ -1242,15 +1243,15 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                                "Bootstrap resamples of the 3,000 test viewers in which iCinema beat the popularity pick."))
         full_note = (" It was chosen over SVD, implicit ALS, and EASE in a head-to-head benchmark on the same viewers, "
                      "and it does better than item-kNN for viewers with less mainstream likes.")
-        if cards and isinstance(users, int):
+        if pick_lift is not None and isinstance(users, int):
+            cf_hit, pop_hit = cf3.get("hit@1"), pop.get("hit@1")
+            rows_part = (f", and its rows put {recall_lift}% more movies you’d love in the top 10"
+                         if recall_lift is not None else "")
+            hits_part = (f" ({cf_hit:.1%} vs {pop_hit:.1%})" if isinstance(cf_hit, (int, float)) and isinstance(pop_hit, (int, float)) else "")
             proof_html = (
-                '<div class="profile-methodology">'
-                f'<div class="profile-insights-title">Tested on {users:,} real viewers</div>'
-                f'<div class="profile-insights-copy">iCinema saw only 3 random movies each MovieLens viewer liked, then predicted the films '
-                'they’d rate 4+ stars later, compared with simply recommending what’s popular. '
-                f'{significance_note}{full_note}</div>'
-                f'<div class="insight-grid proof-grid">{"".join(cards)}</div>'
-                '</div>'
+                f'<div class="profile-insights-copy proof-line"><strong>Tested on {users:,} viewers it had never seen.</strong> '
+                f'From just 3 likes, its first pick was a movie they loved {pick_lift}% more often than the most popular pick'
+                f'{hits_part}{rows_part}. {significance_note}</div>'
             )
 
     live_html = ""
@@ -1286,22 +1287,20 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="methodology-label">After 50 saves and skips, a third model trained only on your choices joins in. Undo keeps accidental taps out.</div>'
         '</div>'
         '</div>'
-        '<div class="profile-insights-copy ratings-note">About ratings: IMDb and Rotten Tomatoes scores come from OMDb. '
-        'When IMDb has no score, iCinema shows the viewer rating from TMDB, a large community movie database. '
-        '“No RT” means Rotten Tomatoes hasn’t reviewed the movie.</div>'
-        '<div class="profile-insights-copy ratings-note">Fresh every visit: movies you passed over step back, and iCinema '
-        'searches deeper into your favorite genres, so new picks keep surfacing.</div>'
-        + (f'<div class="profile-insights-copy ratings-note">{html.escape(_live_test)}</div>' if (_live_test := live_test_line()) else '')
-        + f'{live_html}'
+        + f'{proof_html}{live_html}'
+        + '<div class="profile-insights-copy ratings-note">IMDb and Rotten Tomatoes scores come from OMDb (TMDB’s viewer rating '
+        'when IMDb has none; “No RT” means not reviewed). Movies you pass over step back each visit, so new picks keep surfacing.'
+        + (f' {html.escape(_live_test)}' if (_live_test := live_test_line()) else '')
+        + '</div>'
         '</div>'
-        f'{proof_html}'
     )
 
     insights_section = (
-        f'<div class="profile-insights"><div class="profile-insights-title">iCinema’s Insights</div>'
-        f'<div class="profile-insights-copy">How fast iCinema gets you from browsing to a movie worth watching.</div>'
-        f'<div class="insight-grid stats-grid">{insight_html}</div></div>'
-        f'{methodology_html}'
+        (f'<div class="profile-insights"><div class="profile-insights-title">Your stats</div>'
+         f'<div class="insight-grid stats-grid">{insight_html}</div></div>' if insight_html else
+         '<div class="profile-insights"><div class="profile-insights-title">Your stats</div>'
+         '<div class="profile-insights-copy">They appear after your first few saves.</div></div>')
+        + methodology_html
         if include_insights else ""
     )
 
@@ -1372,32 +1371,33 @@ def render_shelf_fragment():
     for i,movie in enumerate(shelf_movies):
         title=movie["title"]
         with cols[i%5]:
-            movie_thumb(movie, shelf_landscape_map.get(title) or movie.get("poster_url") or shelf_poster_map.get(title))
-            b1,b2,b3=st.columns([1,1.3,1], gap="small")
-            with b1:
+            with st.container(key=f"shelf_card_{i}"):
+                # Skip is a small × on the artwork, so each card has just two actions underneath.
                 st.button(
-                    "Like",
-                    key=f"like_{i}_{movie.get('tmdb_id') or title}",
-                    use_container_width=True,
-                    on_click=rate_shelf_movie,
-                    args=(movie, "like", i),
-                )
-            with b2:
-                st.button(
-                    "Favorite",
-                    key=f"fav_{i}_{movie.get('tmdb_id') or title}",
-                    use_container_width=True,
-                    on_click=rate_shelf_movie,
-                    args=(movie, "favorite", i),
-                )
-            with b3:
-                st.button(
-                    "Skip",
+                    "×",
                     key=f"shelfskip_{i}_{movie.get('tmdb_id') or title}",
-                    use_container_width=True,
+                    help="Haven't seen it, show another",
                     on_click=skip_shelf_movie,
                     args=(i,),
                 )
+                movie_thumb(movie, shelf_landscape_map.get(title) or movie.get("poster_url") or shelf_poster_map.get(title))
+                b1,b2=st.columns(2, gap="small")
+                with b1:
+                    st.button(
+                        "Like",
+                        key=f"like_{i}_{movie.get('tmdb_id') or title}",
+                        use_container_width=True,
+                        on_click=rate_shelf_movie,
+                        args=(movie, "like", i),
+                    )
+                with b2:
+                    st.button(
+                        "Favorite",
+                        key=f"fav_{i}_{movie.get('tmdb_id') or title}",
+                        use_container_width=True,
+                        on_click=rate_shelf_movie,
+                        args=(movie, "favorite", i),
+                    )
 
     with st.container(key="step1_search"):
         st.markdown(
@@ -1815,6 +1815,38 @@ def live_test_line():
     return f"Live test finished ({target} visits): {lead} won {max(r['routed_wins'], r['knn_wins'])} of {target}."
 
 
+from src.dedupe import MAKING_OF as _MAKING_OF, franchise as _franchise
+
+
+def _clean_ranked(ranked, excluded):
+    """Drop anything the viewer already chose under another title, duplicate copies of one movie,
+    and making-of specials. Liked "Star Wars: Episode IV - A New Hope" also blocks TMDB's "Star Wars"."""
+    from src.cf_model import _index as _cf_index
+    ext = st.session_state.external_movies
+    blk_t, blk_c = set(), set()
+    for t in excluded:
+        m = get_movie(t, ext) or {"title": t}
+        if int(m.get("tmdb_id") or 0):
+            blk_t.add(int(m["tmdb_id"]))
+        c = _cf_index(m)
+        if c is not None:
+            blk_c.add(c)
+    seen_t, seen_c, out = set(), set(), []
+    for item in ranked:
+        m = item[1]
+        tid, c = int(m.get("tmdb_id") or 0), _cf_index(m)
+        if (tid and (tid in blk_t or tid in seen_t)) or (c is not None and (c in blk_c or c in seen_c)):
+            continue
+        if _MAKING_OF.search(str(m.get("title", ""))):
+            continue
+        if tid:
+            seen_t.add(tid)
+        if c is not None:
+            seen_c.add(c)
+        out.append(item)
+    return out
+
+
 def _showroom_slot_key(row_name, slot_index):
     return f"{row_name}::{int(slot_index)}"
 
@@ -1834,8 +1866,9 @@ def _advance_showroom_slot(row_name, slot_index):
     )
 
     replacement = None
+    current_series = {_franchise(t) for t in current_titles}
     for title in queues.get(row_name, []):
-        if not title or title in current_titles or title in excluded:
+        if not title or title in current_titles or title in excluded or _franchise(title) in current_series:
             continue
         if title not in payloads:
             continue
@@ -2075,8 +2108,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
 
-    quick_desc = quick_card_description(dict(movie, tagline=identity.get("tagline")), limit=92)
-    expanded_desc = expanded_card_description(movie)
+    # Catalog movies often lack a plot summary; TMDB's (display only) beats a generic "An action film from 1999."
+    _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
+    quick_desc = quick_card_description(_desc_movie, limit=92)
+    expanded_desc = expanded_card_description(_desc_movie)
     summary_id = f"movie-summary-{row_index}-{slot_index}"
     st.markdown(
         f'<div class="movie-summary-toggle">'
@@ -2558,6 +2593,7 @@ def render_showroom_fragment(p):
             excluded,
             None,
         )
+        ranked = _clean_ranked(ranked, excluded)
         learning_result=learning_model_for(st.session_state.get("analytics_events", []))
         ranked_movies=[movie for _,movie in ranked]
         semantic_by_id=cached_semantic_scores(ranked_movies,p)
@@ -2741,6 +2777,7 @@ def render_showroom_fragment(p):
         fit_titles={m["title"] for _,m in fits}
         tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
         reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
+        reserved_series={_franchise(t) for t in reserved}
 
         # Team-draft interleave routed vs item-kNN-only for Top Matches (rule in src/interleave.py).
         # Tonight's Show and the other rows always use the routed ranking.
@@ -2797,7 +2834,15 @@ def render_showroom_fragment(p):
                 ordered=list(top_matches_ordered)
             else:
                 ordered=_row_candidates(row_name,reserved)
-            picks=ordered[:4]
+            # One movie per series across the Showroom, so rows don't fill up with sequels.
+            picks=[]
+            for item in ordered:
+                if len(picks)>=4:
+                    break
+                if item[1]["title"] in reserved or _franchise(item[1]["title"]) in reserved_series:
+                    continue
+                picks.append(item)
+                reserved_series.add(_franchise(item[1]["title"]))
             row_choices[row_name].extend(picks)
             row_candidate_queues[row_name].extend(ordered)
             reserved.update(movie["title"] for _,movie in picks)
@@ -2808,8 +2853,10 @@ def render_showroom_fragment(p):
             need=4-len(row_choices[row_name])
             if need<=0 or row_name in ADAPTIVE_ROWS:
                 continue
-            fallback=[item for item in ranked if item[1]["title"] not in reserved]
+            fallback=[item for item in ranked if item[1]["title"] not in reserved
+                      and _franchise(item[1]["title"]) not in reserved_series]
             extra=fallback[:need]
+            reserved_series.update(_franchise(m["title"]) for _,m in extra)
             row_choices[row_name].extend(extra)
             reserved.update(movie["title"] for _,movie in extra)
 
@@ -3009,25 +3056,27 @@ def render_showroom_fragment(p):
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         render_live_profile()
         st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
-        edit, reset, _ = st.columns([1.5, 1.2, 4], gap="small")
-        with edit:
-            # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
-            st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
-        with reset:
-            if st.button("Reset profile", key="reset_profile_tab", use_container_width=True):
-                reset_profile_state()
-                st.rerun(scope="app")
         _lately = lately_genres()
         if _lately:
             _l = list(_lately)
             _lst = _l[0] if len(_l) == 1 else (" and ".join(_l) if len(_l) == 2 else ", ".join(_l[:-1]) + ", and " + _l[-1])
             st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(_lst)} movies.</div>',
                         unsafe_allow_html=True)
-        if st.session_state.get("taste_reset_at"):
-            st.button("Undo “What I like has changed”", key="taste_undo", on_click=taste_undo)
-        else:
-            st.button("What I like has changed", key="taste_changed", on_click=taste_changed,
-                      help="Keeps your likes, favorites and Not for me. Older saves, Seen and skips stop shaping your picks.")
+        # One row of three matching pills.
+        edit, changed, reset, _ = st.columns([1.5, 1.6, 1.2, 2.2], gap="small")
+        with edit:
+            # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
+            st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
+        with changed:
+            if st.session_state.get("taste_reset_at"):
+                st.button("Undo “What I like has changed”", key="taste_undo", on_click=taste_undo, use_container_width=True)
+            else:
+                st.button("What I like has changed", key="taste_changed", on_click=taste_changed, use_container_width=True,
+                          help="Keeps your likes, favorites and Not for me. Older saves, Seen and skips stop shaping your picks.")
+        with reset:
+            if st.button("Reset profile", key="reset_profile_tab", use_container_width=True):
+                reset_profile_state()
+                st.rerun(scope="app")
         st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
                   key="_share_counts", on_change=_set_opt_out,
                   help="Counts like visits and saves, tied to a random ID. Never movie titles, names, emails, or location.")
@@ -3056,7 +3105,18 @@ screen=st.session_state.screen
 if screen=="welcome":
     logo()
     st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">Like a few movies and answer a few quick questions. iCinema picks what you’ll love, shows where to watch it tonight, and gets better the more you use it.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">Picks you’ll love, where to watch them tonight, and better every time you use it.</div>',unsafe_allow_html=True)
+    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
+    st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
+
+    # Show the product: what's big right now, the kind of movie iCinema finds for you.
+    _hits = _current_hits(6, set())
+    if len(_hits) >= 4:
+        st.markdown(
+            '<div class="home-strip">' + "".join(
+                f'<img src="{html.escape(str(m["poster_url"]), quote=True)}" alt="{html.escape(str(m.get("title", "")))}">'
+                for m in _hits if str(m.get("poster_url", "")).startswith("https://")) + '</div>',
+            unsafe_allow_html=True)
 
     # Proof, read from the results file so it always matches the README.
     _off = load_offline_results() or {}
@@ -3069,18 +3129,6 @@ if screen=="welcome":
             f'<div class="home-proof-text"><strong>More first picks you’ll love than going with what’s popular.</strong>'
             + (f'<span>Tested on {_tested:,} movie fans iCinema had never seen.</span>' if isinstance(_tested, int) else '')
             + '</div></div>', unsafe_allow_html=True)
-
-    steps=[
-        ("1","Rate the Shelf","Like a few movies you enjoy."),
-        ("2","Tailor Your Preferences","Tell iCinema what matters to you."),
-        ("3","Shape Your Showroom","Choose what you want more of."),
-    ]
-    st.markdown(
-        '<div class="home-steps-label">How it works</div><div class="home-steps">'
-        + "".join(f'<div class="home-step"><div class="home-step-num">{n}</div><div class="home-step-title">{t}</div>'
-                  f'<div class="home-step-body">{b}</div></div>' for n, t, b in steps)
-        + '</div>', unsafe_allow_html=True)
-    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
 
 elif screen=="shelf":
     render_shelf_fragment()

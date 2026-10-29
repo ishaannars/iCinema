@@ -559,6 +559,7 @@ def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
         "tmdb_id": resolved_id,
         "imdb_id": payload.get("imdb_id") or None,
         "tagline": (payload.get("tagline") or "").strip() or None,
+        "overview": (payload.get("overview") or "").strip() or None,
     }
 
 
