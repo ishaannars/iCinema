@@ -613,7 +613,8 @@ def _best_landscape(images):
     pool = titled or textless or backdrops
     best = max(pool, key=rank)
     path = best.get("file_path")
-    return f"{TMDB_BACKDROP_BASE}{path}" if path else None
+    # "#titled" marks key art that already shows the title, so the card can skip the text title.
+    return (f"{TMDB_BACKDROP_BASE}{path}" + ("#titled" if pool is titled else "")) if path else None
 
 
 @st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)

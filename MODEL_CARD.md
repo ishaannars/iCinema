@@ -21,7 +21,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 
 ## Data
 
-**MovieLens** (GroupLens, University of Minnesota) provides the ratings used to find which movies the same viewers loved. Each shipped model keeps every movie's 100 closest movies. Item-kNN (cosine with shrinkage) won the main benchmark against popularity, SVD, implicit ALS, and EASE (`training/benchmark_cf.py`). RP3beta matched it overall and did better for less mainstream taste, confirmed on fresh viewers (`training/confirm_long_tail.py`), so it ranks every row while item-kNN finds similar movies. A rating of 4 or higher counts as a positive ("loved it"). Movies with too few positives are dropped (`--min-count`). MovieLens movies are linked to TMDB through the dataset's `links.csv`, and by normalized title and year for the built-in catalog.
+**MovieLens** (GroupLens, University of Minnesota) provides the ratings used to find which movies the same viewers loved. Each shipped model keeps every movie's 100 closest movies. Item-kNN (cosine with shrinkage) won the main benchmark against popularity, SVD, implicit ALS, and EASE (`training/benchmark_cf.py`). RP3beta matched it overall and did better for less mainstream likes, confirmed on fresh viewers (`training/confirm_long_tail.py`), so it ranks every row while item-kNN finds similar movies. A rating of 4 or higher counts as a positive ("loved it"). Movies with too few positives are dropped (`--min-count`). MovieLens movies are linked to TMDB through the dataset's `links.csv`, and by normalized title and year for the built-in catalog.
 
 **TMDB** provides movie metadata, posters, and streaming availability (via JustWatch). **OMDb** provides IMDb and Rotten Tomatoes ratings.
 
@@ -43,8 +43,8 @@ Final ranking blends collaborative filtering and content scoring with weights te
 | Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
 | Popularity baseline | 0.065 | 0.058 | 5.43% | 32 |
-| Routed: RP3beta (beta 0.3) for less mainstream taste (full history) | 0.100 | 0.089 | 8.50% | 17 |
-| Routed: RP3beta (beta 0.3) for less mainstream taste (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
+| Routed: RP3beta (beta 0.3) for less mainstream likes (full history) | 0.100 | 0.089 | 8.50% | 17 |
+| Routed: RP3beta (beta 0.3) for less mainstream likes (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
 
 **Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "Significant" means the 95% interval excludes zero. Differences are absolute (Hit@1 in percentage points).
 
@@ -61,7 +61,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 ## Design choices
 
 - **Display position is excluded** from behavioral-model features, so a movie shown first is not mistaken for a movie the viewer prefers.
-- **Recent feedback is weighted more** (120-day half-life), since taste drifts.
+- **Recent feedback is weighted more** (120-day half-life), since what people like drifts.
 - **Undo removes the skip from training data**, so an accidental tap does not teach the model a false dislike.
 - **The shown Match %** reflects the same blended score used for ranking.
 
@@ -78,7 +78,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 
 ## Ethical considerations
 
-The model uses no demographic data and stores no personal data outside the viewer's browser. Recommendations can reinforce existing taste; the "Something Different" and "Hidden Gems" rows, the adventure setting, and MMR diversity reranking are there to counter that.
+The model uses no demographic data and stores no personal data outside the viewer's browser. Recommendations can reinforce what a viewer already likes; the "Something Different" and "Hidden Gems" rows, the adventure setting, and MMR diversity reranking are there to counter that.
 
 ## Citation
 

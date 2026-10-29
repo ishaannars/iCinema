@@ -2,7 +2,7 @@
 
     python training/confirm_routing.py --data-dir ml-32m
 
-RP3beta helped viewers with less mainstream taste but dipped mainstream viewers slightly
+RP3beta helped viewers with less mainstream likes but dipped mainstream viewers slightly
 (confirm_long_tail.py). The obvious fix is to route: RP3beta when a viewer's likes are less-loved
 movies, item-kNN otherwise. Deciding that after seeing the earlier results would be fishing, so
 it is tested on a completely new set of viewers: a different 1-in-5 slice of MovieLens 32M users
@@ -128,7 +128,7 @@ def main():
         old = json.loads(res_path.read_text())
         new = {k: old[k] for k in ("dataset", "seed_type", "held_out_users", "benchmark_users", "benchmark_movies",
                                    "benchmark_positives", "train_users", "train_movies", "train_positives") if k in old}
-        new.update({"model": f"Routed: RP3beta (beta {conf['beta']:g}) for less mainstream taste, item-kNN otherwise",
+        new.update({"model": f"Routed: RP3beta (beta {conf['beta']:g}) for less mainstream likes, item-kNN otherwise",
                     "full": {"popularity": rows["Popularity"]["full"], "cf": rows["routed"]["full"]},
                     "three_likes": {"popularity": rows["Popularity"]["random3"], "cf": rows["routed"]["random3"]},
                     "bootstrap_three_likes_vs_popularity": boot})

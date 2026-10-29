@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 STEPS = [
     "benchmark_cf.py",              # 9 models, honest 3-random-likes test
-    "evaluate_long_tail.py",        # 12 fixes for less mainstream taste
+    "evaluate_long_tail.py",        # 12 fixes for less mainstream likes
     "confirm_long_tail.py",         # RP3beta on fresh viewers
     "confirm_routing.py",           # routing on a brand-new slice
     "build_knn.py",                 # shipped models on all of MovieLens 32M

@@ -1,5 +1,5 @@
 {
- "method": "    python training/confirm_routing.py --data-dir ml-32m RP3beta helped viewers with less mainstream taste but dipped mainstream viewers slightly (confirm_long_tail.py). The obvious fix is to route: RP3beta when a viewer's likes are less-loved movies, item-kNN otherwise. Deciding that after seeing the earlier results would be fishing, so it is tested on a completely new set of viewers: a different 1-in-5 slice of MovieLens 32M users (user id ending differently), with both models rebuilt on that slice. Nothing was tuned here. The niche cut (median fan percentile of the 3 likes) is the one set on the first validation set.",
+ "method": "    python training/confirm_routing.py --data-dir ml-32m RP3beta helped viewers with less mainstream likes but dipped mainstream viewers slightly (confirm_long_tail.py). The obvious fix is to route: RP3beta when a viewer's likes are less-loved movies, item-kNN otherwise. Deciding that after seeing the earlier results would be fishing, so it is tested on a completely new set of viewers: a different 1-in-5 slice of MovieLens 32M users (user id ending differently), with both models rebuilt on that slice. Nothing was tuned here. The niche cut (median fan percentile of the 3 likes) is the one set on the first validation set.",
  "user_offset": 1,
  "viewers": 39805,
  "niche_viewers": 10017,

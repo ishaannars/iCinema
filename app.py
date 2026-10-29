@@ -210,6 +210,27 @@ def _tested_shelf():
     return out
 
 
+def _current_hits(k, skip):
+    """The k most popular recent movies on TMDB right now (released in the last 3 years)."""
+    if not tmdb_catalog_configured():
+        return []
+    try:
+        import datetime
+        recent = datetime.date.today().year - 3
+        cands = [dict(m) for m in discover_movies(100) if m.get("poster_url") and int(m.get("year") or 0) >= recent]
+    except Exception:
+        return []
+    cands.sort(key=lambda m: float(m.get("popularity") or 0), reverse=True)
+    out = []
+    for m in cands:
+        if _shelf_key(m) in skip or (str(m.get("title", "")).casefold(), 0) in skip:
+            continue
+        out.append(m)
+        if len(out) >= k:
+            break
+    return out
+
+
 def _shelf_key(movie):
     return (str(movie.get("title", "")).casefold(), int(movie.get("year") or 0))
 
@@ -280,8 +301,15 @@ def _next_shelf_movie():
 def ensure_rotating_shelf():
     selected = st.session_state.likes | st.session_state.favorites
     if not st.session_state.shelf_movies:
-        first = _tested_shelf() or [dict(m) for m in STARTER_MOVIES]
-        st.session_state.shelf_movies = [m for m in first if m.get("title") not in selected][:15]
+        tested = _tested_shelf()
+        first = tested or [dict(m) for m in STARTER_MOVIES]
+        first = [m for m in first if m.get("title") not in selected]
+        if tested:
+            # The tested order fills the first two rows. The third row is this year's biggest movies,
+            # so the shelf feels current; the test didn't score them, it only adds more to like.
+            hits = _current_hits(5, {_shelf_key(m) for m in first[:10]} | {(str(t).casefold(), 0) for t in selected})
+            first = first[:10] + hits + first[10:]
+        st.session_state.shelf_movies = first[:15]
         st.session_state.shelf_seen_titles.update(_shelf_key(m) for m in st.session_state.shelf_movies)
     else:
         st.session_state.shelf_movies = [m for m in st.session_state.shelf_movies if m.get("title") not in selected]
@@ -605,6 +633,13 @@ def with_cf_reason(reasons, payload, limit=3):
         else:
             reason = {"label": "Loved by viewers like you",
                       "text": "Viewers who liked the movies you liked tend to love this too."}
+        if anchor:   # one line per movie: fold a tone line about the same movie into this one
+            key = re.sub(r"[^\w]", "", anchor.casefold())
+            same = [r for r in reasons if r.get("label") in ("Feels like your favorites", "Feels like your pick", "Storytelling you like")
+                    and key in re.sub(r"[^\w]", "", str(r.get("text", "")).casefold())]
+            if same:
+                reasons = [r for r in reasons if r not in same]
+                reason["text"] = f"Viewers who loved “{anchor}” tend to love this too, and it has a similar tone."
         reasons = [reason] + reasons
     return reasons[:limit]
 
@@ -860,6 +895,9 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None):
         poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
 
     year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
+    # Key art that already shows the title gets no text title (like streaming apps); others keep it.
+    art_has_title = bool(poster_url) and str(poster_url).endswith("#titled")
+    title_html = "" if art_has_title else f'<div class="poster-caption-title" title="{title}">{title}</div>'
     
     if library_mode == "saved":
         caption_class = "poster-caption library-poster-caption saved-poster-caption"
@@ -869,7 +907,7 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None):
         caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
     st.markdown(
         poster_html
-        + f'<div class="{caption_class}"><div class="poster-caption-title" title="{title}">{title}</div>{year_html}</div>',
+        + f'<div class="{caption_class}{" art-titled" if art_has_title else ""}">{title_html}{year_html}</div>',
         unsafe_allow_html=True
     )
 
@@ -1203,7 +1241,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             cards.append(_stat(f"{n_win:,} / 2,000", "Not a fluke",
                                "Bootstrap resamples of the 3,000 test viewers in which iCinema beat the popularity pick."))
         full_note = (" It was chosen over SVD, implicit ALS, and EASE in a head-to-head benchmark on the same viewers, "
-                     "and it does better than item-kNN for viewers with less mainstream taste.")
+                     "and it does better than item-kNN for viewers with less mainstream likes.")
         if cards and isinstance(users, int):
             proof_html = (
                 '<div class="profile-methodology">'
@@ -1562,7 +1600,6 @@ def render_taste_fragment():
     st.markdown(
         '<div class="pref-scale-wrap">'
         '<div class="pref-scale-ends"><span>Great reviews</span><span>Easy to enjoy</span></div>'
-        f'<div class="pref-scale-helper">{review_label}</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -1614,7 +1651,6 @@ def render_taste_fragment():
     st.markdown(
         '<div class="pref-scale-wrap">'
         '<div class="pref-scale-ends"><span>Stay close to what I like</span><span>Show me something different</span></div>'
-        f'<div class="pref-scale-helper">{adventure_label}</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -2918,7 +2954,7 @@ def render_showroom_fragment(p):
             row_class = "showroom-row first" if row_index == 0 else "showroom-row"
             row_notes={
                 "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
-                "Critically Acclaimed":"Highly rated movies that still match your taste",
+                "Critically Acclaimed":"Highly rated movies that still fit what you like",
                 "Hidden Gems":"Less-known movies you’re likely to love",
                 "Something Different":"Outside your usual genres, but still likely to click",
                 **{name: note for name, note in ADAPTIVE_NOTES.items()},
@@ -2978,17 +3014,19 @@ def render_showroom_fragment(p):
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
             st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
         with reset:
-            if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True):
+            if st.button("Reset profile", key="reset_profile_tab", use_container_width=True):
                 reset_profile_state()
                 st.rerun(scope="app")
         _lately = lately_genres()
         if _lately:
-            st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(", ".join(_lately))} movies.</div>',
+            _l = list(_lately)
+            _lst = _l[0] if len(_l) == 1 else (" and ".join(_l) if len(_l) == 2 else ", ".join(_l[:-1]) + ", and " + _l[-1])
+            st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(_lst)} movies.</div>',
                         unsafe_allow_html=True)
         if st.session_state.get("taste_reset_at"):
-            st.button("Undo “My taste changed”", key="taste_undo", on_click=taste_undo)
+            st.button("Undo “What I like has changed”", key="taste_undo", on_click=taste_undo)
         else:
-            st.button("My taste changed", key="taste_changed", on_click=taste_changed,
+            st.button("What I like has changed", key="taste_changed", on_click=taste_changed,
                       help="Keeps your likes, favorites and Not for me. Older saves, Seen and skips stop shaping your picks.")
         st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
                   key="_share_counts", on_change=_set_opt_out,
@@ -3028,8 +3066,8 @@ if screen=="welcome":
         st.markdown(
             '<div class="home-proof">'
             f'<div class="home-proof-num">+{int(_lift)}%</div>'
-            f'<div class="home-proof-text"><strong>Your first pick is one you’ll love {int(_lift)}% more often than just going with what’s popular.</strong>'
-            + (f'<span>Tested on {_tested:,} movie fans it had never seen.</span>' if isinstance(_tested, int) else '')
+            f'<div class="home-proof-text"><strong>More first picks you’ll love than going with what’s popular.</strong>'
+            + (f'<span>Tested on {_tested:,} movie fans iCinema had never seen.</span>' if isinstance(_tested, int) else '')
             + '</div></div>', unsafe_allow_html=True)
 
     steps=[

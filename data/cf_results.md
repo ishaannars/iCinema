@@ -5,8 +5,8 @@
 | Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
 | Popularity baseline | 0.065 | 0.058 | 5.43% | 32 |
-| Routed: RP3beta (beta 0.3) for less mainstream taste (full history) | 0.100 | 0.089 | 8.50% | 17 |
-| Routed: RP3beta (beta 0.3) for less mainstream taste (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
+| Routed: RP3beta (beta 0.3) for less mainstream likes (full history) | 0.100 | 0.089 | 8.50% | 17 |
+| Routed: RP3beta (beta 0.3) for less mainstream likes (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
 
 **Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "Significant" means the 95% interval excludes zero. Differences are absolute (Hit@1 in percentage points).
 

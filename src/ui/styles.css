@@ -5009,3 +5009,30 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     text-decoration:underline;text-decoration-color:rgba(169,173,183,.35);text-underline-offset:3px;
 }
 .st-key-step1_letterboxd div[data-testid="stExpander"] summary:hover p{color:var(--ivory) !important;}
+
+/* Profile: "What I like has changed" and its Undo match the other pill buttons
+   (a help tooltip wraps the button, so the generic div.stButton>button rule missed it). */
+.st-key-taste_changed button,
+.st-key-taste_undo button{
+    border-radius:999px !important;
+    min-height:2.6rem !important;
+    padding:.5rem 1.3rem !important;
+    font-weight:600 !important;
+}
+.st-key-taste_changed, .st-key-taste_undo{margin-top:.1rem !important;margin-bottom:.9rem !important;}
+
+/* Step 2 genres: rounded chips like every other control, in place of sharp squares. */
+[class*="st-key-genre_"] button{
+    border-radius:999px !important;
+    aspect-ratio:auto !important;
+    max-width:none !important;
+    width:100% !important;
+    min-height:2.6rem !important;
+    height:2.6rem !important;
+    padding:.2rem .6rem !important;
+    margin:.1rem 0 .5rem !important;
+}
+[class*="st-key-genre_"] button p{font-size:.82rem !important;white-space:nowrap !important;}
+
+/* Step 1 shelf: when the key art already shows the title, only the year sits under it. */
+.poster-caption.art-titled{min-height:0 !important;margin-top:.45rem !important;}

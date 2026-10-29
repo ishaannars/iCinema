@@ -227,7 +227,7 @@ def main():
                    "steps_2_3_value_inside_learned": {"ndcg_diff": round(s23, 4), "ci95": [round(s23lo, 4), round(s23hi, 4)]},
                    "coefficients_per_unit": coefs,
                    "ships": bool(llo > 0 and clo > 0)}
-    # Niche taste: viewers whose 3 likes are among the least-loved movies (bottom quarter by
+    # Niche likes: viewers whose 3 likes are among the least-loved movies (bottom quarter by
     # median fan percentile, cut set on validation). Same rule: pick on validation, test once.
     cut = float(np.quantile([f[6] for f in fv], 0.25))
     nv = [f for f in fv if f[6] <= cut]

@@ -82,7 +82,7 @@
   ],
   "by_taste": [
    {
-    "group": "Mainstream taste (most popular 25%)",
+    "group": "Mainstream likes (most popular 25%)",
     "viewers": 755,
     "hit@1": 0.1272
    },
@@ -92,7 +92,7 @@
     "hit@1": 0.0689
    },
    {
-    "group": "Niche taste (least popular 25%)",
+    "group": "Niche likes (least popular 25%)",
     "viewers": 750,
     "hit@1": 0.0427
    }

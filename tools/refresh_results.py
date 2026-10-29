@@ -37,7 +37,7 @@ def benchmark_block():
                      f"{r['last3']['hit@1']:.1%} | {r['full']['hit@1']:.1%} | {size} |")
     if rp3_ships:
         r = conf["rp3beta_on_benchmark_test"]
-        lines.append(f"| **RP3beta (beta {conf['beta']:g}), top-100 per movie (shipped for less mainstream taste)** | {r['random3']['hit@1']:.1%} | "
+        lines.append(f"| **RP3beta (beta {conf['beta']:g}), top-100 per movie (shipped for less mainstream likes)** | {r['random3']['hit@1']:.1%} | "
                      f"{r['random3']['ndcg@10']:.3f} | {r['last3']['hit@1']:.1%} | {r['full']['hit@1']:.1%} | 5 MB |")
         rt_path = ROOT / "data" / "routing_confirm.json"
         rt = json.loads(rt_path.read_text()) if rt_path.exists() else {}
@@ -95,7 +95,7 @@ def tested_block():
                         f"✅ Kept at {st['current_content_weight']:.0%}, so your answers count at no cost"))
         nt = st.get("niche_taste")
         if nt:
-            rows.insert(3, ("More content for niche taste (on top of RP3beta)", f"Viewers whose 3 likes are less-loved movies ({nt['test_viewers']:,} test viewers)",
+            rows.insert(3, ("More content for niche likes (on top of RP3beta)", f"Viewers whose 3 likes are less-loved movies ({nt['test_viewers']:,} test viewers)",
                             (f"The current {nt['best_content_weight']:.0%} was already best for them on validation"
                              if nt["best_content_weight"] == st["current_content_weight"] else
                              f"{nt['best_content_weight']:.0%} content was best on validation and the gain on test wasn't significant "
@@ -106,7 +106,7 @@ def tested_block():
     if conf_path.exists() and lt_path.exists():
         cf_, lt = json.loads(conf_path.read_text()), json.loads(lt_path.read_text())
         tried = [k for k in lt["validation_ndcg_niche"] if k != "item-kNN (shipped)"]
-        rows.insert(1, ("Less mainstream taste", f"{len(tried)} fixes for popularity bias (popularity penalties, ALS, EASE, blends, RP3beta), "
+        rows.insert(1, ("Less mainstream likes", f"{len(tried)} fixes for popularity bias (popularity penalties, ALS, EASE, blends, RP3beta), "
                         f"then a fresh check on {cf_['fresh_viewers']:,} untouched viewers",
                         f"RP3beta (beta {cf_['beta']:g}) lifted niche viewers' NDCG {cf_['niche_ndcg_diff']:+.4f} "
                         f"(95% CI {cf_['niche_ci95'][0]:+.4f} to {cf_['niche_ci95'][1]:+.4f}) with no loss overall "
@@ -271,8 +271,8 @@ def errors_block():
         "",
         f"- **Viewers with little history are hardest.** {h['3–10']:.1%} for viewers with 3–10 liked movies, "
         f"{h['100+']:.1%} for 100+. They have fewer later favorites to hit.",
-        f"- **Niche taste is hardest.** {g['Niche taste']:.1%} for viewers whose later favorites were the least popular movies, "
-        f"{g['Mainstream taste']:.1%} for the most popular. Movies with few fans have fewer neighbors to draw on.",
+        f"- **Niche likes is hardest.** {g['Niche likes']:.1%} for viewers whose later favorites were the least popular movies, "
+        f"{g['Mainstream likes']:.1%} for the most popular. Movies with few fans have fewer neighbors to draw on.",
         "- New movies that aren't in MovieLens get no \"viewers like you\" score, so content alone ranks them.",
     ])
 

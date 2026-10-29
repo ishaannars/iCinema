@@ -8,7 +8,7 @@
   "train_users": 198954,
   "train_movies": 14407,
   "train_positives": 15779396,
-  "model": "Routed: RP3beta (beta 0.3) for less mainstream taste, item-kNN otherwise",
+  "model": "Routed: RP3beta (beta 0.3) for less mainstream likes, item-kNN otherwise",
   "full": {
     "popularity": {
       "hit@1": 0.05433333333333333,

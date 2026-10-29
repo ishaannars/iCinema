@@ -142,8 +142,8 @@ def main():
     r = pd.DataFrame(rows)
     r["history_band"] = pd.cut(r["history"], [0, 10, 30, 100, 10**6], labels=["3–10", "11–30", "31–100", "100+"])
     q = r["median_pop_of_loved"].quantile([0.25, 0.75]).to_numpy()
-    r["taste_band"] = np.where(r["median_pop_of_loved"] <= q[0], "Niche taste (least popular 25%)",
-                               np.where(r["median_pop_of_loved"] >= q[1], "Mainstream taste (most popular 25%)", "Middle 50%"))
+    r["taste_band"] = np.where(r["median_pop_of_loved"] <= q[0], "Niche likes (least popular 25%)",
+                               np.where(r["median_pop_of_loved"] >= q[1], "Mainstream likes (most popular 25%)", "Middle 50%"))
     out["errors"] = {
         "by_history": [{"liked_movies": str(k), "viewers": int(len(g)), "hit@1": round(float(g["hit"].mean()), 4)}
                        for k, g in r.groupby("history_band", observed=True)],

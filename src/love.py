@@ -26,11 +26,12 @@ def _table():
 
 
 def love_chance(top_pct):
-    """Whole-number percent, rounded to the nearest 5, or None if not available."""
+    """Whole-number percent, rounded down to a multiple of 5 so it never claims more than was
+    measured (72.5% shows as 70%), or None if not available."""
     t = _table()
     if t is None or not isinstance(top_pct, (int, float)):
         return None
-    return int(5 * round(float(np.interp(float(top_pct), t[0], t[1])) * 100 / 5))
+    return int(5 * np.floor(float(np.interp(float(top_pct), t[0], t[1])) * 100 / 5 + 1e-9))
 
 
 def love_line(top_pct):

@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-I kept spending too much time deciding what to watch, so I built iCinema: one place to find your next favorite movie. You like a few movies and answer a few questions, and it picks what you'll love, shows where to watch it tonight, and gets better the more you use it (tested: picks from 50 choices beat picks from 3, on viewers no earlier test touched). It's tested to work for less mainstream taste too, and it needs no account.
+I kept spending too much time deciding what to watch, so I built iCinema: one place to find your next favorite movie. You like a few movies and answer a few questions, and it picks what you'll love, shows where to watch it tonight, and gets better the more you use it (tested: picks from 50 choices beat picks from 3, on viewers no earlier test touched). It's tested to work for less mainstream likes too, and it needs no account.
 
 <!-- RECRUITER-TOP -->
 **[Try iCinema →](https://icinema.streamlit.app/)**
@@ -11,7 +11,7 @@ I kept spending too much time deciding what to watch, so I built iCinema: one pl
 
 - From **3 random likes**, the first pick was a movie the viewer later rated 4+ stars **8.0%** of the time, compared with **5.4%** for the most popular movie (**+48%**), on 3,000 MovieLens viewers it never saw.
 - That beat the old model by **+83%** on the first pick, and it found a loved movie **13 recommendations sooner** than popularity (median 19 vs 32).
-- For viewers with **less mainstream taste**, ranking quality rose **8%** and nobody else got worse. This held on 39,805 brand-new viewers from a separate slice of MovieLens.
+- For viewers with **less mainstream likes**, ranking quality rose **8%** and nobody else got worse. This held on 39,805 brand-new viewers from a separate slice of MovieLens.
 - **It gets better the more you use it.** Picks from 50 choices beat picks from 3 (NDCG@10 +0.016, interval +0.014 to +0.018) on viewers no earlier test touched. The first version of this test failed, so the claim waited for a fresh one.
 - **Its love chance is honest.** When it says about 75%, viewers who watched those movies loved them about 75% of the time (calibration error under 1 point).
 - **Hidden Gems has real evidence.** Ranking less-known movies with the shipped model put a movie the viewer later loved in the top 10 **2.7 times as often** as the most popular less-known movies (11.0% vs 4.1%).
@@ -20,7 +20,7 @@ I kept spending too much time deciding what to watch, so I built iCinema: one pl
 
 My first headline was +58%, but it came from each viewer's 3 most recent likes. Recent likes sit right next to what someone watches next, so that test was too easy. With 3 random likes, the old SVD model did worse than recommending what's popular. I benchmarked the standard recommenders on the honest test, and item-kNN won by a wide margin.
 
-Then the error analysis showed viewers with less mainstream taste got the worst picks. Penalizing popular movies, ALS, EASE, and blends all made things worse for them. RP3beta, a random-walk model that discounts popularity a little, was the one fix that helped. Its first test was too small to call, so I confirmed it on fresh viewers. It also dipped mainstream viewers slightly, so I tested routing (RP3beta for less mainstream likes, item-kNN otherwise) on a brand-new set of viewers. Routing beat both models used alone, so that's what ships. Testing the blend weights the same way moved the app from 65% content to 20%.
+Then the error analysis showed viewers with less mainstream likes got the worst picks. Penalizing popular movies, ALS, EASE, and blends all made things worse for them. RP3beta, a random-walk model that discounts popularity a little, was the one fix that helped. Its first test was too small to call, so I confirmed it on fresh viewers. It also dipped mainstream viewers slightly, so I tested routing (RP3beta for less mainstream likes, item-kNN otherwise) on a brand-new set of viewers. Routing beat both models used alone, so that's what ships. Testing the blend weights the same way moved the app from 65% content to 20%.
 
 I also tested my own product claims. "Gets better the more you use it" failed its first test, so I took it out of the app and retested on fresh viewers before putting it back. Every claim on the home page now points to a test in this repo, and `python reproduce.py` rebuilds all of them.
 
@@ -31,7 +31,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 - **Viewers like you.** Trained on 15.8 million 4+ star ratings from 198,954 viewers across 14,407 movies. Item-kNN ranks movies for most viewers and finds movies similar to one you watched, for What's next and "Loved by fans of …". If your likes are less-loved movies, RP3beta ranks instead: a walk from your likes to the people who loved them and on to what else they loved, with popular movies discounted slightly. Skips and "Not for me" push movies down.
 - **Content.** Each movie's MovieLens genres and fan tags become a 64-number description (TF-IDF, then truncated SVD), the same recipe the offline tests used. TMDB is used only to show titles, posters, and where to watch.
 - **Personal model.** After 50 Save/Skip outcomes, logistic regression learns from your own choices. Gradient boosting is compared at 100, and the better one on a chronological holdout is used.
-- **Your feedback.** Saves, skips, "Not for me," and "Loved it" or "Not for me" on Seen movies all update your picks. "My taste changed" on the Profile keeps your likes and drops older saves and skips, and returning viewers see how many picks are new since their last visit.
+- **Your feedback.** Saves, skips, "Not for me," and "Loved it" or "Not for me" on Seen movies all update your picks. "What I like has changed" on the Profile keeps your likes and drops older saves and skips, and returning viewers see how many picks are new since their last visit.
 - **Bring your history.** Step 1 can import a Letterboxd or IMDb ratings export: 4 stars become Likes and 4.5 or 5 become Favorites, the same 4+ stars the models treat as "loved." Low and middling ratings are read only if a pre-registered test showed they help. The file stays in your browser.
 - **Asking about the right movies.** Which movies Step 1 shows decides how much a few Likes reveal. Research on new users found that balancing how well known a movie is with how much people disagree about it beats asking about the most popular ones. Popular movies still anchor the shelf, since most people have seen them and most viewers watch them, so only middle grounds can replace today's shelf: every other card is one of the most popular movies, alternating with a more revealing pick. A new shelf ships only if the first screen stays as easy to answer and mainstream viewers don't lose out (`training/confirm_shelf_and_imports.py`). For viewers with many likes, a separate test decides whether EASE, best from full histories in the benchmark, ranks their picks (`training/confirm_history_routing.py`).
 - **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of) shape the content score and your Profile. Step 3 also picks which section comes after Top Matches.
@@ -52,7 +52,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | EASE, top-100 per movie (shippable) | 7.3% | 0.074 | 13.0% | 11.4% | 6 MB |
 | item-kNN | 8.2% | 0.082 | 14.4% | 9.5% | 257 MB |
 | **item-kNN, top-100 per movie (shipped for most viewers and similar movies)** | 7.9% | 0.078 | 13.5% | 8.7% | 6 MB |
-| **RP3beta (beta 0.3), top-100 per movie (shipped for less mainstream taste)** | 7.7% | 0.077 | 11.0% | 7.6% | 5 MB |
+| **RP3beta (beta 0.3), top-100 per movie (shipped for less mainstream likes)** | 7.7% | 0.077 | 11.0% | 7.6% | 5 MB |
 | **Routed: RP3beta for less mainstream likes, item-kNN otherwise (what the app does)** | 8.0% | 0.079 | 13.1% | 8.5% | 10 MB |
 
 1 in 5 MovieLens 32M users: 39,786 viewers, 8,014 movies, 3,115,576 ratings of 4+ stars. Settings were picked on 3,000 validation viewers and scored once on 3,000 different test viewers. From `training/benchmark_cf.py`.
@@ -64,11 +64,11 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | Part | Test | Result | In the app |
 |---|---|---|---|
 | Viewers like you | 9 models, 3 random likes, 3,000 test viewers | item-kNN won: 7.9% first-pick hits vs 5.4% popularity and 4.4% old SVD | ✅ item-kNN for most viewers |
-| Less mainstream taste | 12 fixes for popularity bias (popularity penalties, ALS, EASE, blends, RP3beta), then a fresh check on 33,786 untouched viewers | RP3beta (beta 0.3) lifted niche viewers' NDCG +0.0071 (95% CI +0.0045 to +0.0097) with no loss overall (-0.0005, CI -0.0016 to +0.0007). Every other fix made things worse | ✅ Used for less mainstream likes (see routing) |
+| Less mainstream likes | 12 fixes for popularity bias (popularity penalties, ALS, EASE, blends, RP3beta), then a fresh check on 33,786 untouched viewers | RP3beta (beta 0.3) lifted niche viewers' NDCG +0.0071 (95% CI +0.0045 to +0.0097) with no loss overall (-0.0005, CI -0.0016 to +0.0007). Every other fix made things worse | ✅ Used for less mainstream likes (see routing) |
 | Routing between the two | RP3beta for less mainstream likes, item-kNN otherwise, on 39,805 brand-new viewers (a separate slice of MovieLens, models rebuilt, nothing tuned) | Beat RP3beta for everyone (NDCG +0.0026, CI +0.0017 to +0.0035) and item-kNN for everyone (+0.0014, CI +0.0008 to +0.0019) | ✅ What the app does |
 | Content vs viewers like you | Every weight from 0% to 100% content | 20% content was best (NDCG 0.075 vs 0.061 at the old 65%). With no floor, 0% was best | ✅ 20% content, 80% viewers like you |
 | Every onboarding step (Steps 1–3) | The app's own scoring, with each viewer's Step 2–3 answers filled in from their history | At 20% content, Steps 2–3 didn't move hit rates (NDCG -0.001, 95% CI -0.003 to +0.000). 20% content was best on validation (NDCG 0.0853 vs 0.0841 with no content) | ✅ Kept at 20%, so your answers count at no cost |
-| More content for niche taste (on top of RP3beta) | Viewers whose 3 likes are less-loved movies (745 test viewers) | The current 20% was already best for them on validation | No change needed |
+| More content for niche likes (on top of RP3beta) | Viewers whose 3 likes are less-loved movies (745 test viewers) | The current 20% was already best for them on validation | No change needed |
 | Learned ranker | Logistic regression on viewers like you plus every content part | Worse than the current blend (NDCG -0.002) | ❌ No |
 | What's next | Every mix of similarity to the watched movie and personal match | 80% similarity was best (NDCG 0.090 vs 0.083 at the old 60%). With no floor, 100% was best | ✅ 80% similarity, 20% personal match |
 | Recency-weighted likes | SVD with newer likes weighted more | 4.6% vs 4.4%, no real gain | ❌ No |
@@ -100,7 +100,7 @@ MovieLens has no onboarding answers, so Step 2–3 answers were filled in from e
 First-pick hit rate for the shipped model from 3 random likes (7.7% overall).
 
 - **Viewers with little history are hardest.** 3.2% for viewers with 3–10 liked movies, 13.3% for 100+. They have fewer later favorites to hit.
-- **Niche taste is hardest.** 4.3% for viewers whose later favorites were the least popular movies, 12.7% for the most popular. Movies with few fans have fewer neighbors to draw on.
+- **Niche likes is hardest.** 4.3% for viewers whose later favorites were the least popular movies, 12.7% for the most popular. Movies with few fans have fewer neighbors to draw on.
 - New movies that aren't in MovieLens get no "viewers like you" score, so content alone ranks them.
 <!-- ERRORS:END -->
 
@@ -137,7 +137,7 @@ Checked October 2026. iCinema doesn't claim to be the only option.
 
 | Option | What it gives you | What iCinema adds |
 |---|---|---|
-| JustWatch | Search across streaming services and recommendations based on what people with similar tastes watch, free with no account for the basics | One pick for tonight, a published accuracy benchmark, and a personal model that learns from your saves and skips in your browser |
+| JustWatch | Search across streaming services and recommendations based on what people like you watch, free with no account for the basics | One pick for tonight, a published accuracy benchmark, and a personal model that learns from your saves and skips in your browser |
 | Reelgood | Browsing across 150+ services, with recommendations after you create an account and add your services | The same personal picks with no account |
 | Your streaming app's home screen | Picks from that one service's catalog | Picks across every service you pay for, with a reason for each one |
 
@@ -159,8 +159,8 @@ The test compares iCinema with browsing a streaming app, timed until a person wo
 | Model | Recall@10 | NDCG@10 | Hit@1 (Tonight's Show) | Median recs to first loved movie |
 |---|---|---|---|---|
 | Popularity baseline | 0.065 | 0.058 | 5.43% | 32 |
-| Routed: RP3beta (beta 0.3) for less mainstream taste (full history) | 0.100 | 0.089 | 8.50% | 17 |
-| Routed: RP3beta (beta 0.3) for less mainstream taste (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
+| Routed: RP3beta (beta 0.3) for less mainstream likes (full history) | 0.100 | 0.089 | 8.50% | 17 |
+| Routed: RP3beta (beta 0.3) for less mainstream likes (3 random likes, like onboarding) | 0.090 | 0.079 | 8.03% | 19 |
 
 **Is the cold-start win real?** Paired bootstrap over users (2,000 resamples). "Significant" means the 95% interval excludes zero. Differences are absolute (Hit@1 in percentage points).
 
@@ -177,7 +177,7 @@ See [MODEL_CARD.md](MODEL_CARD.md) for data, limits, and intended use. Live per-
 ## Ranking details
 
 - **Hybrid score.** Content and "viewers like you" are blended with the tested weights above. Each Showroom row adds its own goal: Critically Acclaimed (30% ratings), Hidden Gems (28% less popular but well rated), and Something Different (32% novelty). Top Matches is strictly your best fits. During the live test, for viewers with less mainstream likes, it interleaves the best fits from two rankers and keeps the drafted order.
-- **Personal model.** It contributes 22% of the score. Recent choices weigh more (120-day half-life), and display position is left out so being shown isn't mistaken for taste.
+- **Personal model.** It contributes 22% of the score. Recent choices weigh more (120-day half-life), and display position is left out so being shown isn’t mistaken for liking something.
 - **Freshness.** A title shown on earlier visits with no Save, Seen, or Skip drops a little each visit (up to five visits).
 - **Skip vs "Not for me."** Skip is a weak "not now." "Not for me" is a strong dislike, and the title never comes back.
 - **What's next.** Under each Seen movie: a tested mix of similarity to that movie and your personal match (see the table above).

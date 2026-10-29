@@ -1,4 +1,4 @@
-"""Fix the weakest case: viewers whose likes are less-loved movies ("niche taste").
+"""Fix the weakest case: viewers whose likes are less-loved movies ("niche likes").
 
     python training/evaluate_long_tail.py --data-dir ml-32m
 
