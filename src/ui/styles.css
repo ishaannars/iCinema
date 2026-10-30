@@ -5234,3 +5234,24 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 /* Popup rows: wider label column so every row lines up. */
 .why-pop-row{grid-template-columns:7.2rem 1fr !important;}
 .why-pop-rows{gap:.5rem !important;}
+
+/* ---- Batch 4b polish ---- */
+.st-key-refresh_profile{display:none !important;}
+/* Tap the art to read the story: it opens right under the art, same type everywhere. */
+.art-toggle{display:block;cursor:pointer;}
+.art-toggle:hover .poster{border-color:rgba(169,173,183,.55) !important;}
+.premise-panel{display:none;margin:.6rem 0 .5rem;padding:.75rem .85rem;border:1px solid rgba(169,173,183,.18);
+    border-radius:12px;background:rgba(255,255,255,.03);}
+.card-hook-box:checked + .premise-panel{display:block;}
+.premise-title{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-weight:700;font-size:.95rem;
+    letter-spacing:-.01em;margin-bottom:.3rem;}
+.premise-copy{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.5;}
+/* What's shaping your picks */
+.model-panel-title{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-weight:700;font-size:1rem;margin:0 0 .5rem;}
+.model-status-panel .model-share{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ivory);font-size:.82rem;
+    min-width:3rem;text-align:right;}
+.model-status-panel .model-name{min-width:15rem !important;}
+.model-panel-foot{font-family:var(--ui-font);color:var(--muted2);font-size:.75rem;margin-top:.45rem;}
+/* The model's written read of you, set like a readout. */
+.profile-summary,.profile-summary strong{font-family:ui-monospace,SFMono-Regular,Menlo,"IBM Plex Mono",monospace !important;
+    font-size:.86rem !important;line-height:1.65 !important;letter-spacing:-.01em;color:var(--muted) !important;font-style:normal !important;}

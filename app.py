@@ -849,12 +849,21 @@ def remove_from_seen(title):
     queue_profile_save()
 
 
-def library_text_html(movie, identity, live_map, watch_html=""):
+def premise_panel(toggle_id, title, movie, identity):
+    """Hidden panel under the art: the title and the full premise, opened by tapping the art."""
+    full = expanded_card_description(dict(movie, tagline=identity.get("tagline"),
+                                          overview=movie.get("overview") or identity.get("overview")))
+    return (f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
+            f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
+            f'<div class="premise-copy">{html.escape(full)}</div></div>')
+
+
+def library_text_html(movie, identity, live_map, watch_html="", premise=""):
     """The Showroom card's text block for Saved / Seen: year and genres, ratings, where to watch."""
     year = identity.get("year") or movie.get("year")
     meta = [str(x) for x in (year, genre_pair(movie)) if x]
     parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
-    return ('<div class="card-text">'
+    return ('<div class="card-text">' + premise +
             f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
             f'<div class="ratings">{" · ".join(parts) or "Ratings unavailable"}</div>'
             + (f'<div class="watch-availability">{watch_html}</div>' if watch_html else "")
@@ -899,7 +908,7 @@ def reset_profile_from_fragment():
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
 
-def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landscape=False):
+def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landscape=False, toggle_id=None):
     title = html.escape(str(movie.get("title", "")))
     year = html.escape(str(movie.get("year", "")))
     poster_url = poster_url or movie.get("poster_url")
@@ -931,6 +940,8 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landsc
         caption_class = "poster-caption library-poster-caption seen-poster-caption"
     else:
         caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
+    if toggle_id:   # tapping the art opens this card's premise (see premise_panel)
+        poster_html = f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{poster_html}</label>'
     st.markdown(
         poster_html
         + f'<div class="{caption_class}{" art-titled" if art_has_title else ""}">{title_html}{year_html}</div>',
@@ -1186,14 +1197,35 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                          f'<span class="model-name">Your personal model</span>'
                          f'<span class="model-note">{html.escape(_personal_need(learned, decisions))}</span>'
                          f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
+    # What's shaping your picks: each model, whether it's on, and its real share of the score.
+    from src import cf_model as _cfm
+    from src.new_releases import available as _nr_on
+    _sig = _cf_signals()
+    _full_m, _ = _cfm._history_cut()
+    _rk = _cfm._ranker_for(_sig) if _sig else None
+    _cf_name = ("EASE (you’ve rated a lot)" if _full_m is not None and _rk is _full_m else
+                "RP3beta (less mainstream likes)" if _rk is not None and _rk is _cfm._load_rank() and _rk is not _cfm._load() else
+                "item-kNN")
+    _p_share = 0.22 if learned.ready else 0.0
+    _fans = round((1 - CONTENT_WEIGHT) * (1 - _p_share) * 100)
+    _cont = round(CONTENT_WEIGHT * (1 - _p_share) * 100)
+    _mood_on = bool((st.session_state.get("mood_query") or "").strip())
+    rows = [
+        (True, "Viewers like you", f"{_fans}%", f"{_cf_name}, from {(scale['users'] + ' ') if scale['users'] else ''}fans’ ratings"),
+        (True, "Your answers and each movie’s style", f"{_cont}%", "Content model: genres, fan tags, Steps 2 and 3"),
+        (_nr_on(), "New releases", "", "Placed by their makers when fans haven’t rated them yet"),
+        (_mood_on, "Mood search", "", "Filtering by fan tags right now" if _mood_on else "On when you type a mood"),
+        (learned.ready, "Your personal model", f"{round(_p_share * 100)}%" if learned.ready else "",
+         f"{learned.model_name} on {learned.samples} of your decisions" if learned.ready else _personal_need(learned, decisions)),
+    ]
     models_html = (
-        '<div class="model-status-panel">'
-        '<div class="model-row"><span class="model-dot on"></span>'
-        '<span class="model-name">Active now</span>'
-        f'<span class="model-note">{(scale["users"] + " ") if scale["users"] else ""}fans’ ratings and every movie’s genres and tags, '
-        f'shaped by your {signals} choice{"s" if signals != 1 else ""}</span></div>'
-        f'{personal_html}'
-        '</div>'
+        '<div class="model-status-panel"><div class="model-panel-title">What’s shaping your picks</div>'
+        + "".join(f'<div class="model-row"><span class="model-dot{" on" if on else ""}"></span>'
+                  f'<span class="model-name">{html.escape(name)}</span>'
+                  f'<span class="model-share">{share}</span>'
+                  f'<span class="model-note">{html.escape(note)}</span></div>'
+                  for on, name, share, note in rows)
+        + '<div class="model-panel-foot">Shares come from tests on held-out MovieLens viewers.</div></div>'
     )
 
     def _stat(value, title, note):
@@ -1362,7 +1394,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     heading_class = "tab-primary-heading profile-heading-aligned" if tab_heading else "profile-heading"
     profile_heading_html = f'<div class="{heading_class}">Your Cinema Profile</div>' if show_heading else ""
 
-    st.markdown(
+    _page = (
         f'<div class="profile-wrap">'
         f'{profile_heading_html}'
         f'<div class="profile-heading-gap"></div>'
@@ -1370,8 +1402,9 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         f'<div class="profile-grid">{section_html}</div>'
         f'<div class="profile-summary">{p["summary"]}</div>'
         f'{insights_section}'
-        f'</div>', unsafe_allow_html=True
+        f'</div>'
     )
+    st.markdown(re.sub(r"\s*\n\s*", " ", _page), unsafe_allow_html=True)
 
 
 
@@ -1388,7 +1421,7 @@ def _with_app_rerun(fn):
     return inner
 
 
-@st.fragment(run_every="4s")
+@st.fragment
 @_with_app_rerun
 def render_live_profile():
     """Profile tab, refreshed every few seconds.
@@ -1397,6 +1430,7 @@ def render_live_profile():
     tab showing counts from when the Showroom was built. Rebuilding it from current state
     keeps the signals and the "x of 50" progress matching what you just did.
     """
+    st.button("Refresh", key="refresh_profile")     # hidden; clicked when the Profile tab opens
     render_cinema_profile(current_profile(), include_insights=True, show_heading=True, tab_heading=True)
 
 
@@ -2278,27 +2312,21 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     _art = get_landscape_art(movie.get("title", ""), int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) \
         if tmdb_catalog_configured() else None
     _year = display_movie.get("year")
-    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or movie.get("poster_url"), landscape=True)
+    _sid = f"card-premise-{row_index}-{slot_index}"
+    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or movie.get("poster_url"), landscape=True,
+                toggle_id=_sid)
     # Like streaming apps: art, then what you decide on (year, two genres), then ratings and where to watch.
     # Why it's here lives in the % pill, so the card stays two short lines.
     rating_parts = ratings_text(card_ratings(movie, live_rating))
     meta = [str(x) for x in (_year, genre_pair(movie)) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
-    _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
-    _hook = plain_premise(_desc_movie) or quick_card_description(_desc_movie, limit=110)
-    _full = expanded_card_description(_desc_movie)
-    _sid = f"card-hook-{row_index}-{slot_index}"
-    # One block, so the lines sit at even spacing: year and genres, ratings, where to watch, then a
-    # two-line premise you can tap to read in full.
     st.markdown(
         '<div class="card-text">'
-        f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+        + premise_panel(_sid, display_movie.get("title", ""), movie, identity)
+        + f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
         f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>'
         f'<div class="{availability_class}">{watch_html}</div>'
-        f'<div class="card-hook-toggle"><input class="card-hook-box" type="checkbox" id="{_sid}">'
-        f'<label class="card-hook" for="{_sid}">{html.escape(_hook)}</label>'
-        f'<div class="card-hook-full">{html.escape(_full)}</div></div>'
         '</div>',
         unsafe_allow_html=True)
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
@@ -2610,10 +2638,12 @@ def _saved_tab():
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
                     _art = saved_art_map.get(m["title"])
+                    _sid = f"saved-premise-{i}"
                     movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]),
-                                landscape=True)
+                                landscape=True, toggle_id=_sid)
                     st.markdown(library_text_html(m, identity, saved_live_map,
-                                                  watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))),
+                                                  watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services")),
+                                                  premise=premise_panel(_sid, display_movie.get("title", ""), m, identity)),
                                 unsafe_allow_html=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
@@ -2667,9 +2697,12 @@ def _seen_tab():
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
                     _art = seen_art_map.get(m["title"])
+                    _sid = f"seen-premise-{i}"
                     movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]),
-                                landscape=True)
-                    st.markdown(library_text_html(m, identity, seen_live_map), unsafe_allow_html=True)
+                                landscape=True, toggle_id=_sid)
+                    st.markdown(library_text_html(m, identity, seen_live_map,
+                                                  premise=premise_panel(_sid, display_movie.get("title", ""), m, identity)),
+                                unsafe_allow_html=True)
                     # Hover × in the poster's top-right corner: remove an accidental Seen.
                     st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
                               on_click=remove_from_seen, args=(m["title"],))
@@ -3300,19 +3333,14 @@ def render_showroom_fragment(p):
             st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(_lst)} movies.</div>',
                         unsafe_allow_html=True)
         # One row of three matching pills.
-        edit, changed, reset, _ = st.columns([1.5, 1.6, 1.2, 2.2], gap="small")
+        edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
         with edit:
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
             st.button("Edit my answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),
                       help="Change your likes, genres, and other setup answers.")
-        with changed:
-            if st.session_state.get("taste_reset_at"):
-                st.button("Undo start fresh", key="taste_undo", on_click=taste_undo, use_container_width=True)
-            else:
-                st.button("Start fresh from today", key="taste_changed", on_click=taste_changed, use_container_width=True,
-                          help="Keeps your likes, favorites and Not for me. Older saves, Seen and skips stop shaping your picks.")
         with reset:
-            if st.button("Reset profile", key="reset_profile_tab", use_container_width=True):
+            if st.button("Reset profile", key="reset_profile_tab", use_container_width=True,
+                         help="Start over: clears your likes, saves, and answers in this browser."):
                 reset_profile_state()
                 st.rerun(scope="app")
         st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),

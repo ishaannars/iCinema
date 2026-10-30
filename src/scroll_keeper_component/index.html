@@ -49,7 +49,7 @@
       var t = e.target && e.target.closest && e.target.closest('[data-testid="stTabs"] [role="tab"]');
       if (!t) return;
       var i = Array.prototype.indexOf.call(doc.querySelectorAll('[data-testid="stTabs"] [role="tab"]'), t);
-      var key = i === 1 ? "refresh_saved" : i === 2 ? "refresh_seen" : null;
+      var key = i === 1 ? "refresh_saved" : i === 2 ? "refresh_seen" : i === 3 ? "refresh_profile" : null;
       if (!key) return;
       setTimeout(function () {
         var b = doc.querySelector('[class*="st-key-' + key + '"] button');
