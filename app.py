@@ -135,6 +135,31 @@ if not st.session_state.get("_storage_hydrated", False):
     st.session_state._fade_in_once = True
     st.session_state._last_persisted_profile = json.dumps(profile_snapshot(), sort_keys=True, default=str) if restored else None
 
+# Move my profile: a link from another device asks before replacing this browser's profile.
+from src.profile_link import decode as _decode_profile_link, encode as _encode_profile_link
+_incoming = st.query_params.get("p")
+if _incoming and st.session_state.get("_link_handled") != _incoming:
+    _data = _decode_profile_link(_incoming)
+    if _data is None:
+        st.session_state._link_handled = _incoming
+    else:
+        st.markdown('<div class="link-banner">Load your iCinema profile from this link? '
+                    'It replaces the profile saved in this browser.</div>', unsafe_allow_html=True)
+        _a, _b, _ = st.columns([1.2, 1, 5], gap="small")
+        with _a:
+            if st.button("Load my profile", type="primary", key="link_load"):
+                restore_profile({**profile_snapshot(), **_data, "external_movies": {**st.session_state.external_movies,
+                                                                                    **(_data.get("external_movies") or {})}})
+                st.session_state._link_handled = _incoming
+                st.query_params.clear()
+                st.session_state._last_persisted_profile = None    # the end of the next run saves it to this browser
+                st.rerun()
+        with _b:
+            if st.button("Not now", key="link_skip"):
+                st.session_state._link_handled = _incoming
+                st.query_params.clear()
+                st.rerun()
+
 # Profile-changing actions queue a snapshot, but we deliberately do NOT mount
 # the browser-storage component before the destination page renders. Mounting
 # that component at the top of a page transition can briefly expose its iframe
@@ -1270,12 +1295,18 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _why_cf = {"EASE": "you’ve rated a lot, and EASE won the test for long histories",
                "RP3beta": "your likes are less mainstream, and RP3beta won that test",
                "item-kNN": "item-kNN won the benchmark from just a few likes"}.get(_short_cf, "")
-    _segments = [("People like you", _fans, "seg-fans"), ("What you told us", _cont, "seg-you")]
+    from src import ltr as _ltr_mod
+    _ltr_on = _ltr_mod.available()
+    _segments = [("Learned ranker" if _ltr_on else "People like you", _fans, "seg-fans"), ("What you told us", _cont, "seg-you")]
     if learned.ready:
         _segments.append(("Just you", round(_p_share * 100), "seg-personal"))
     bar = "".join(f'<span class="mix-seg {c}" style="width:{w}%"><span>{html.escape(n)} {w}%</span></span>' for n, w, c in _segments)
     items = [
-        (True, "People like you", f"{scale['users'] or 'MovieLens'} fans who loved what you loved. Ranked by {_short_cf}: {_why_cf}."),
+        ((True, "Learned ranker", "One model that weighs six others, learned from 3,000 MovieLens viewers: "
+          + ", ".join(f"{ {'routed': _short_cf + ' (routed)', 'item_knn': 'item-kNN', 'rp3beta': 'RP3beta', 'ease': 'EASE', 'content': 'content', 'popularity': 'popularity'}.get(k, k)} {v:.0%}"
+                      for k, v in sorted((_ltr_mod.result().get('feature_shares') or {}).items(), key=lambda kv: -kv[1]) if v > 0.005) + ".")
+         if _ltr_on else
+         (True, "People like you", f"{scale['users'] or 'MovieLens'} fans who loved what you loved. Ranked by {_short_cf}: {_why_cf}.")),
         (True, "What you told us", "Your genres and answers, matched to each movie’s genres and fan tags."),
         (_nr_on(), "Brand-new movies", "Too new for fan ratings, so they’re placed by their director, cast, and studio."),
         (_mood_on, "Your mood", "Filtering by fan tags right now." if _mood_on else "Type a mood above to filter by it."),
@@ -2013,8 +2044,11 @@ def why_rows(reasons, movie=None, live_rating=None, payload=None):
         if is_new:
             rows.append(("New release", f"Its makers sit closer to your likes than {int(round(cf * 100))}% of new releases"))
         else:
-            rows.append(("Fans like you", f"Closer to your likes than {int(round(cf * 100))}% of movies"
-                         + (f" · top match: {_short_title(anchor)}" if anchor else "")))
+            from src import ltr as _l
+            rows.append(("Model score" if _l.available() else "Fans like you",
+                         (f"Above {int(round(cf * 100))}% of movies, from six models combined" if _l.available()
+                          else f"Closer to your likes than {int(round(cf * 100))}% of movies")
+                         + (f" · fans of {_short_title(anchor)} love it" if anchor else "")))
     sem = payload.get("semantic_similarity")
     tone = next((re.search(r"like “(.+?)”", str(r.get("text", ""))) for r in reasons or []
                  if str(r.get("label", "")).startswith("Feels like")), None)
@@ -2385,6 +2419,12 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     meta = [str(x) for x in (_year, genre_pair(movie)) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
+    if availability.get("status") in {"unknown", "unavailable"}:
+        # Still in theaters? Show labeled estimates for when it reaches home (src/stream_when.py).
+        from src.stream_when import line as _when
+        _w = _when(identity.get("release_date"), identity.get("studios") or ())
+        if _w:
+            watch_html, availability_class = html.escape(_w), "watch-availability"
     st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), movie, identity,
         f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
         f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>'
@@ -2907,6 +2947,9 @@ def render_showroom_fragment(p):
         from src.new_releases import viewer as _nr_viewer, affinity as _nr_affinity
         from src.cf_model import _index as _cf_idx
         nr_view=_nr_viewer(_signals,_cf_idx)
+        # Learned ranker (shipped only if it beat the fixed mix): one score from all six models.
+        from src import ltr as _ltr
+        ltr_aff=_ltr.viewer_scores(_signals) if _ltr.available() else None
         cf_by_title={}
         model_match_by_title={}
 
@@ -3020,7 +3063,8 @@ def render_showroom_fragment(p):
                     ml_context=dict(components)
                     ml_context.update({"model_score":base,"decision_utility":components.get("decision_utility",base),"match":display_match,"position":2})
                     content_memo[id(movie)]=(base,dict(ml_context))
-                    cf=cf_affinity(movie,cf_user)
+                    _ci=_cf_idx(movie) if ltr_aff is not None else None
+                    cf=float(ltr_aff[_ci]) if _ci is not None else cf_affinity(movie,cf_user)
                     if cf is None:
                         cf=_nr_affinity(movie,nr_view)
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
@@ -3395,7 +3439,17 @@ def render_showroom_fragment(p):
             st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(_lst)} movies.</div>',
                         unsafe_allow_html=True)
         # One row of three matching pills.
-        edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
+        edit, move, reset, _ = st.columns([1.5, 1.5, 1.3, 2.2], gap="small")
+        with move:
+            with st.popover("Move my profile", use_container_width=True):
+                try:
+                    _host = st.context.headers.get("host") or "icinema.streamlit.app"
+                except Exception:
+                    _host = "icinema.streamlit.app"
+                st.markdown('<div class="why-pop-head" style="font-size:1rem">Open this link on your other device</div>'
+                            '<div class="why-pop-line">It carries your likes, saves, and answers. No account, nothing personal. '
+                            'Anyone with the link can load this profile.</div>', unsafe_allow_html=True)
+                st.code(f"https://{_host}/?p={_encode_profile_link(profile_snapshot())}", language=None)
         with edit:
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
             st.button("Edit my answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),

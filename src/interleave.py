@@ -1,4 +1,7 @@
-"""Live interleaving test: routed ranking vs item-kNN only, in Top Matches.
+"""Live interleaving test: the shipped ranking vs item-kNN only, in Top Matches.
+
+Updated before any data came in (0 of 200): the shipped ranking is now the learned ranker
+(training/confirm_ltr.py) when it ships, otherwise the routed ranking. The rule below is unchanged.
 
 What it compares. Routing sends a viewer to RP3beta when their liked movies are mostly less-loved
 ones, and to item-kNN otherwise. For everyone else the two rankings are the same list, so the test

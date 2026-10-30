@@ -7,3 +7,4 @@ __pycache__/
 
 data/wikidata_cache/
 data/wikidata_movies.json
+amazon-movies-tv/

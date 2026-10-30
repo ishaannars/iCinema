@@ -1,0 +1,17 @@
+{
+ "method": "    python training/confirm_tv.py --amazon-dir amazon-movies-tv MovieLens has no TV, so this uses the Movies_and_TV part of Amazon Reviews 2023 (McAuley Lab, UCSD; 17.3M ratings from 6.5M people, 1996 to Sep 2023, released for research). Each product is either a show (a TV category or \"Season\"/\"Series\" in its title; all seasons of a show count as one show) or a movie, matched to iCinema's MovieLens movies by title. A 4 or 5 star rating is a \"loved.\" \"Fans like you\" is item-kNN, the same cosine-with-shrink model iCinema uses for movies.",
+ "people": 2492586,
+ "shows": 69281,
+ "matched_movies": 2422,
+ "held_out": 1100,
+ "ship": false,
+ "ndcg_at_20": {
+  "fans like you": 0.0043,
+  "most popular shows": 0.0256
+ },
+ "diff": -0.0213,
+ "ci95": [
+  -0.0265,
+  -0.0162
+ ]
+}

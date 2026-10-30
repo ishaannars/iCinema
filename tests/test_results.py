@@ -197,3 +197,16 @@ def test_learning_to_rank_follows_its_rule():
     assert d["ship"] == (d["ci95"][0] > 0)
     assert (DATA / "ltr_model.joblib").exists() == d["ship"]
     assert abs(sum(d["feature_shares"].values()) - 1) < 0.01 or sum(d["feature_shares"].values()) == 0
+
+
+def test_tv_follows_its_rule():
+    path = DATA / "tv_confirm.json"
+    if not path.exists():
+        assert not (DATA / "tv_knn.npz").exists()
+        return
+    d = load("tv_confirm.json")
+    if d["held_out"] < 500:
+        assert d["ship"] is False
+    else:
+        assert d["ship"] == (d["ci95"][0] > 0)
+    assert (DATA / "tv_knn.npz").exists() == d["ship"]

@@ -223,6 +223,15 @@ def tested_block():
                      f"(95% CI {lt['ci95'][0]:+.4f} to {lt['ci95'][1]:+.4f}); biggest inputs: "
                      + ", ".join(f"{k} {v:.0%}" for k, v in top),
                      "✅ Ships" if lt["ship"] else "❌ Not shipped"))
+    tv_path = ROOT / "data" / "tv_confirm.json"
+    if tv_path.exists():
+        tv = json.loads(tv_path.read_text())
+        r = tv.get("ndcg_at_20") or {}
+        rows.append(("TV shows", "Amazon Reviews 2023 fans; held-out people's loved movies alone must rank the shows they loved above "
+                     "the most popular shows (rule in `training/confirm_tv.py`)",
+                     (f"NDCG@20 {r['fans like you']:.3f} vs {r['most popular shows']:.3f}, {tv['held_out']:,} held-out people, "
+                      f"{tv['shows']:,} shows" if r else f"Too few people to test ({tv['held_out']:,})"),
+                     "✅ Ships" if tv["ship"] else "❌ Not shipped"))
     il_path = ROOT / "data" / "interleave_results.json"
     if il_path.exists():
         il = json.loads(il_path.read_text())

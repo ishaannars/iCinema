@@ -371,3 +371,24 @@ def movie_at(i):
                 model._year_by_idx.setdefault(j, y)
     return {"title": model.titles[i] if model.titles else "", "year": int(model._year_by_idx.get(int(i), 0)),
             "tmdb_id": int(model.tmdb_by_idx.get(int(i), 0)), "external": True, "candidate_source": "mood"}
+
+
+def scores_with(model, signals):
+    """Raw scores for every movie from one kNN-style model (item-kNN, RP3beta or EASE), or None."""
+    if model is None or model.kind != "knn":
+        return None
+    scores = np.zeros(model.n, dtype=np.float32)
+    used = False
+    for movie, action in signals or []:
+        idx, w = _index(movie), WEIGHTS.get(action, 0.0)
+        if idx is None or w == 0:
+            continue
+        np.add.at(scores, model.nbr[idx], w * model.w[idx])
+        used = used or w > 0
+    if not used:
+        return None
+    for movie, _ in signals or []:
+        idx = _index(movie)
+        if idx is not None:
+            scores[idx] = 0.0
+    return scores
