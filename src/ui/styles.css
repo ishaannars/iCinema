@@ -5264,3 +5264,21 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .card-text > .premise-panel{margin:0 0 .6rem !important;}
 .card-desc{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;line-height:1.45;margin:.25rem 0 .6rem !important;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4rem;}
+
+/* ---- 4c polish ---- */
+/* Profile chips read like the model's output. */
+.profile-chip,.profile-analysis-row{font-family:ui-monospace,SFMono-Regular,Menlo,"IBM Plex Mono",monospace !important;
+    font-weight:500 !important;font-size:.82rem !important;letter-spacing:-.01em !important;}
+/* How your picks are made: one bar with the real mix, then plain rows. */
+.mix-bar{display:flex;width:100%;max-width:760px;height:2rem;border-radius:999px;overflow:hidden;margin:.2rem 0 .9rem;
+    border:1px solid rgba(169,173,183,.2);}
+.mix-seg{display:flex;align-items:center;padding:0 .8rem;white-space:nowrap;overflow:hidden;}
+.mix-seg span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.76rem;color:var(--ivory);}
+.seg-fans{background:rgba(92,111,168,.55);} .seg-you{background:rgba(92,111,168,.28);} .seg-personal{background:rgba(243,240,234,.14);}
+.model-status-panel .model-name{min-width:10.5rem !important;}
+.model-status-panel .model-row{align-items:flex-start !important;}
+/* Tap panel: a charming line, then the story in brief. */
+.premise-tag{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-size:.88rem;font-style:italic;margin:0 0 .35rem;opacity:.9;}
+/* Mood search: a display face, still clean. */
+.st-key-mood_box input,.st-key-mood_box input::placeholder{font-family:"Space Grotesk",var(--ui-font) !important;
+    font-size:.95rem !important;letter-spacing:-.01em;}

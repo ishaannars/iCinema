@@ -854,14 +854,16 @@ def card_html(toggle_id, art_html, title, movie, identity, lines_html):
     short description. Keeping it all in one block is what makes the tap work and the spacing even."""
     dm = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
     full = expanded_card_description(dm)
-    short = plain_premise(dm) or quick_card_description(dm, limit=110)
+    short = plain_premise(dm) or " ".join(str(dm.get("overview") or "").split()) or full
+    tag = " ".join(str(identity.get("tagline") or "").split())
+    tag = tag if 0 < len(tag) <= 80 else ""
     return ('<div class="card-text">'
             f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
             f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{art_html}</label>'
             f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
-            f'<div class="premise-copy">{html.escape(full)}</div></div>'
+            + (f'<div class="premise-tag">{html.escape(tag)}</div>' if tag else "")
+            + f'<div class="premise-copy">{html.escape(short)}</div></div>'
             f'{lines_html}'
-            f'<div class="card-desc">{html.escape(short)}</div>'
             '</div>')
 
 
@@ -1238,22 +1240,29 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _fans = round((1 - CONTENT_WEIGHT) * (1 - _p_share) * 100)
     _cont = round(CONTENT_WEIGHT * (1 - _p_share) * 100)
     _mood_on = bool((st.session_state.get("mood_query") or "").strip())
-    rows = [
-        (True, "Viewers like you", f"{_fans}%", f"{_cf_name}, from {(scale['users'] + ' ') if scale['users'] else ''}fans’ ratings"),
-        (True, "Your answers and each movie’s style", f"{_cont}%", "Content model: genres, fan tags, Steps 2 and 3"),
-        (_nr_on(), "New releases", "", "Placed by their makers when fans haven’t rated them yet"),
-        (_mood_on, "Mood search", "", "Filtering by fan tags right now" if _mood_on else "On when you type a mood"),
-        (learned.ready, "Your personal model", f"{round(_p_share * 100)}%" if learned.ready else "",
-         f"{learned.model_name} on {learned.samples} of your decisions" if learned.ready else _personal_need(learned, decisions)),
+    _short_cf = _cf_name.split(" (")[0]
+    _why_cf = {"EASE": "you’ve rated a lot, and EASE won the test for long histories",
+               "RP3beta": "your likes are less mainstream, and RP3beta won that test",
+               "item-kNN": "item-kNN won the benchmark from just a few likes"}.get(_short_cf, "")
+    _segments = [("People like you", _fans, "seg-fans"), ("What you told us", _cont, "seg-you")]
+    if learned.ready:
+        _segments.append(("Just you", round(_p_share * 100), "seg-personal"))
+    bar = "".join(f'<span class="mix-seg {c}" style="width:{w}%"><span>{html.escape(n)} {w}%</span></span>' for n, w, c in _segments)
+    items = [
+        (True, "People like you", f"{scale['users'] or 'MovieLens'} fans who loved what you loved. Ranked by {_short_cf}: {_why_cf}."),
+        (True, "What you told us", "Your genres and answers, matched to each movie’s genres and fan tags."),
+        (_nr_on(), "Brand-new movies", "Too new for fan ratings, so they’re placed by their director, cast, and studio."),
+        (_mood_on, "Your mood", "Filtering by fan tags right now." if _mood_on else "Type a mood above to filter by it."),
+        (learned.ready, "Just you",
+         f"Learning from your own {learned.samples} saves and skips." if learned.ready else _personal_need(learned, decisions)),
     ]
     models_html = (
-        '<div class="model-status-panel"><div class="model-panel-title">What’s shaping your picks</div>'
+        '<div class="model-status-panel"><div class="model-panel-title">How your picks are made</div>'
+        f'<div class="mix-bar">{bar}</div>'
         + "".join(f'<div class="model-row"><span class="model-dot{" on" if on else ""}"></span>'
                   f'<span class="model-name">{html.escape(name)}</span>'
-                  f'<span class="model-share">{share}</span>'
-                  f'<span class="model-note">{html.escape(note)}</span></div>'
-                  for on, name, share, note in rows)
-        + '<div class="model-panel-foot">Shares come from tests on held-out MovieLens viewers.</div></div>'
+                  f'<span class="model-note">{html.escape(note)}</span></div>' for on, name, note in items)
+        + '<div class="model-panel-foot">Mix chosen in tests on MovieLens viewers the models never saw.</div></div>'
     )
 
     def _stat(value, title, note):
@@ -1428,7 +1437,6 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         f'<div class="profile-heading-gap"></div>'
         f'{models_html}'
         f'<div class="profile-grid">{section_html}</div>'
-        f'<div class="profile-summary">{p["summary"]}</div>'
         f'{insights_section}'
         f'</div>'
     )
@@ -1965,36 +1973,38 @@ def _clean_ranked(ranked, excluded):
 
 
 def why_rows(reasons, movie=None, live_rating=None, payload=None):
-    """Short label/fact pairs for the % popup, each backed by a model number."""
+    """Label/number pairs for the % popup. Every value is a number the models actually used."""
+    payload = payload or {}
     rows = []
-    rt = (live_rating or {}).get("rt")
-    rt = rt if isinstance(rt, (int, float)) else (movie or {}).get("rt")
-    cf = (payload or {}).get("cf")
-    for r in reasons or []:
-        label = str(r.get("label", ""))
-        m = re.match(r"Loved by fans of “(.+)”", label)
-        if m:
-            rows.append(("Fans like you", f"People who loved {_short_title(m.group(1))} loved this"))
-        elif label == "Fits your mood":
-            rows.append(("Your mood", "Fans describe it the way you did"))
-        elif label.startswith("New, and close"):
-            rows.append(("New release", "Same makers or style as movies you liked"))
-        elif label.startswith("Feels like") and "like “" in str(r.get("text", "")):
-            mm = re.search(r"like “(.+?)”", str(r.get("text", "")))
-            rows.append(("Tone", f"Close to {_short_title(mm.group(1))}" if mm else "Close to your favorites"))
-        if len(rows) >= 2:
-            break
-    if isinstance(cf, (int, float)) and not any(k == "Fans like you" for k, _ in rows):
-        rows.append(("Fans like you", f"Closer to your likes than {int(round(cf * 100))}% of movies"))
-    if isinstance(rt, (int, float)) and rt >= 0:
-        rows.append(("Critics", f"{int(rt)}% on Rotten Tomatoes"))
-    imdb = (live_rating or {}).get("imdb")
-    imdb = imdb if isinstance(imdb, (int, float)) else (movie or {}).get("imdb")
-    if isinstance(imdb, (int, float)) and imdb > 0:
-        rows.append(("Audiences", f"{imdb:.1f} / 10 on IMDb"))
-    rank, pool = (payload or {}).get("fit_rank"), (payload or {}).get("fit_pool")
+    rank, pool = payload.get("fit_rank"), payload.get("fit_pool")
     if isinstance(rank, int) and isinstance(pool, int) and pool > 0:
         rows.append(("Rank", f"#{rank:,} of {pool:,} movies scored for you"))
+    cf = payload.get("cf")
+    is_new = fan_percentile(movie) is None
+    anchor = next((re.match(r"Loved by fans of “(.+)”", str(r.get("label", ""))).group(1)
+                   for r in reasons or [] if re.match(r"Loved by fans of “(.+)”", str(r.get("label", "")))), None)
+    if isinstance(cf, (int, float)):
+        if is_new:
+            rows.append(("New release", f"Its makers sit closer to your likes than {int(round(cf * 100))}% of new releases"))
+        else:
+            rows.append(("Fans like you", f"Closer to your likes than {int(round(cf * 100))}% of movies"
+                         + (f" · top match: {_short_title(anchor)}" if anchor else "")))
+    sem = payload.get("semantic_similarity")
+    tone = next((re.search(r"like “(.+?)”", str(r.get("text", ""))) for r in reasons or []
+                 if str(r.get("label", "")).startswith("Feels like")), None)
+    if isinstance(sem, (int, float)) and sem > 0:
+        rows.append(("Tone", f"{int(round(sem * 100))}% match on genres and fan tags"
+                     + (f" · closest: {_short_title(tone.group(1))}" if tone else "")))
+    if any(r.get("label") == "Fits your mood" for r in reasons or []):
+        rows.append(("Mood", "In the top 10% of fan-tag matches for your words"))
+    rt = (live_rating or {}).get("rt")
+    rt = rt if isinstance(rt, (int, float)) else (movie or {}).get("rt")
+    imdb = (live_rating or {}).get("imdb")
+    imdb = imdb if isinstance(imdb, (int, float)) else (movie or {}).get("imdb")
+    scores = [x for x in ((f"RT {int(rt)}%" if isinstance(rt, (int, float)) and rt >= 0 else None),
+                          (f"IMDb {imdb:.1f}" if isinstance(imdb, (int, float)) and imdb > 0 else None)) if x]
+    if scores:
+        rows.append(("Ratings", " · ".join(scores)))
     return rows[:5] or [("Fit", "Ranked high by the models for what you’ve liked")]
 
 
@@ -2177,7 +2187,8 @@ def save_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    _advance_showroom_slot(row_name, slot_index)
+    if not _advance_showroom_slot(row_name, slot_index):
+        return                  # nothing strong left in this row: a full rebuild drops the card
     _mark_showroom_fast()
 
 def seen_showroom_slot(row_name, slot_index):
@@ -2190,7 +2201,8 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    _advance_showroom_slot(row_name, slot_index)
+    if not _advance_showroom_slot(row_name, slot_index):
+        return                  # nothing strong left in this row: a full rebuild drops the card
     _mark_showroom_fast()
 
 def _showroom_cached_metadata(movie):
@@ -3459,7 +3471,7 @@ elif screen=="showroom":
             with st.container(key="mood_box"):
                 _active = bool((st.session_state.get("mood_query") or "").strip())
                 st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
-                              placeholder="Search a mood: feel-good, mind-bending, anime…")
+                              placeholder="Find your mood: feel-good, mind-bending, anime…")
                 if _active:
                     st.button("✕", key="mood_clear", help="Clear the mood",
                               on_click=lambda: st.session_state.update(mood_query=""))
