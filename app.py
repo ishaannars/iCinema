@@ -849,6 +849,22 @@ def remove_from_seen(title):
     queue_profile_save()
 
 
+def card_html(toggle_id, art_html, title, movie, identity, lines_html):
+    """One card in one block: tap the art to open the full story under it, then the info lines and a
+    short description. Keeping it all in one block is what makes the tap work and the spacing even."""
+    dm = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
+    full = expanded_card_description(dm)
+    short = plain_premise(dm) or quick_card_description(dm, limit=110)
+    return ('<div class="card-text">'
+            f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
+            f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{art_html}</label>'
+            f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
+            f'<div class="premise-copy">{html.escape(full)}</div></div>'
+            f'{lines_html}'
+            f'<div class="card-desc">{html.escape(short)}</div>'
+            '</div>')
+
+
 def premise_panel(toggle_id, title, movie, identity):
     """Hidden panel under the art: the title and the full premise, opened by tapping the art."""
     full = expanded_card_description(dict(movie, tagline=identity.get("tagline"),
@@ -856,6 +872,16 @@ def premise_panel(toggle_id, title, movie, identity):
     return (f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
             f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
             f'<div class="premise-copy">{html.escape(full)}</div></div>')
+
+
+def library_lines_html(movie, identity, live_map, watch_html=""):
+    """Year and genres, ratings, where to watch: the same lines as a Showroom card."""
+    year = identity.get("year") or movie.get("year")
+    meta = [str(x) for x in (year, genre_pair(movie)) if x]
+    parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
+    return (f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+            f'<div class="ratings">{" · ".join(parts) or "Ratings unavailable"}</div>'
+            + (f'<div class="watch-availability">{watch_html}</div>' if watch_html else ""))
 
 
 def library_text_html(movie, identity, live_map, watch_html="", premise=""):
@@ -908,7 +934,7 @@ def reset_profile_from_fragment():
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
 
-def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landscape=False, toggle_id=None):
+def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landscape=False, toggle_id=None, return_html=False):
     title = html.escape(str(movie.get("title", "")))
     year = html.escape(str(movie.get("year", "")))
     poster_url = poster_url or movie.get("poster_url")
@@ -940,7 +966,9 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landsc
         caption_class = "poster-caption library-poster-caption seen-poster-caption"
     else:
         caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
-    if toggle_id:   # tapping the art opens this card's premise (see premise_panel)
+    if return_html:      # the caller puts the art in the same block as the card's text (one block, even spacing)
+        return poster_html
+    if toggle_id:
         poster_html = f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{poster_html}</label>'
     st.markdown(
         poster_html
@@ -2313,22 +2341,18 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         if tmdb_catalog_configured() else None
     _year = display_movie.get("year")
     _sid = f"card-premise-{row_index}-{slot_index}"
-    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or movie.get("poster_url"), landscape=True,
-                toggle_id=_sid)
+    _art_html = movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or movie.get("poster_url"),
+                            landscape=True, return_html=True)
     # Like streaming apps: art, then what you decide on (year, two genres), then ratings and where to watch.
     # Why it's here lives in the % pill, so the card stays two short lines.
     rating_parts = ratings_text(card_ratings(movie, live_rating))
     meta = [str(x) for x in (_year, genre_pair(movie)) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
-    st.markdown(
-        '<div class="card-text">'
-        + premise_panel(_sid, display_movie.get("title", ""), movie, identity)
-        + f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+    st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), movie, identity,
+        f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
         f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>'
-        f'<div class="{availability_class}">{watch_html}</div>'
-        '</div>',
-        unsafe_allow_html=True)
+        f'<div class="{availability_class}">{watch_html}</div>'), unsafe_allow_html=True)
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
     persist_from_fragment()
 
@@ -2639,11 +2663,11 @@ def _saved_tab():
                         display_movie["year"] = identity["year"]
                     _art = saved_art_map.get(m["title"])
                     _sid = f"saved-premise-{i}"
-                    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]),
-                                landscape=True, toggle_id=_sid)
-                    st.markdown(library_text_html(m, identity, saved_live_map,
-                                                  watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services")),
-                                                  premise=premise_panel(_sid, display_movie.get("title", ""), m, identity)),
+                    _art_html = movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url")
+                                            or saved_poster_map.get(m["title"]), landscape=True, return_html=True)
+                    st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), m, identity,
+                                          library_lines_html(m, identity, saved_live_map,
+                                                             watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services")))),
                                 unsafe_allow_html=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
@@ -2698,10 +2722,10 @@ def _seen_tab():
                         display_movie["year"] = identity["year"]
                     _art = seen_art_map.get(m["title"])
                     _sid = f"seen-premise-{i}"
-                    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]),
-                                landscape=True, toggle_id=_sid)
-                    st.markdown(library_text_html(m, identity, seen_live_map,
-                                                  premise=premise_panel(_sid, display_movie.get("title", ""), m, identity)),
+                    _art_html = movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url")
+                                            or seen_poster_map.get(m["title"]), landscape=True, return_html=True)
+                    st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), m, identity,
+                                          library_lines_html(m, identity, seen_live_map)),
                                 unsafe_allow_html=True)
                     # Hover × in the poster's top-right corner: remove an accidental Seen.
                     st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
