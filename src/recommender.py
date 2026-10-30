@@ -519,7 +519,7 @@ def recommendation_explanation(
         if g and g not in genre_pool:
             genre_pool.append(g)
     overlap_genres = [g for g in genre_pool if g.casefold() == movie_genre.casefold() or any(g.casefold() == t.casefold() for t in movie_tags)]
-    genre_detail = ", ".join(overlap_genres[:2]) if overlap_genres else (movie_genre or "your strongest genres")
+    genre_detail = ", ".join(overlap_genres[:2]) if overlap_genres else (movie_genre or "")
 
     trait_overlap = [t for t in profile_traits if any(t.casefold() == mt.casefold() for mt in movie_tags)]
     theme_detail = ", ".join(trait_overlap[:2]) if trait_overlap else "movies you liked or favorited"
@@ -601,12 +601,15 @@ def recommendation_explanation(
         first_priority, ("What you asked for", "It fits the kinds of movies you asked to see more of."))
 
     candidates = [
-        (0.18 * float(c.get("genre_affinity", 0.5)), genre_label,
+        # No genre known (e.g. a movie found only by fan tags): no genre reason, rather than a garbled one.
+        (0.18 * float(c.get("genre_affinity", 0.5)) if genre_detail else -1.0, genre_label,
          f"{genre_detail.split(',')[0].strip()} is one of your strongest genres."),
         (0.20 * float(c.get("semantic_similarity", 0.5)), "Feels like your favorites" if len(_liked) != 1 else "Feels like your pick", theme_text),
         (0.16 * float(c.get("trait_affinity", 0.5)), "Storytelling you like",
          f"Its pacing and style match {_yours}."),
-        (0.18 * float(c.get("quality_alignment", 0.5)), quality_label, quality_text),
+        # Only call it well rated when it is: RT 75%+ (Rotten Tomatoes' own bar) or 7.5+ from audiences.
+        (0.18 * float(c.get("quality_alignment", 0.5)) if ((rt or 0) >= 75 or (imdb or 0) >= 7.5 or (tmdb_vote or 0) >= 7.5)
+         else -1.0, quality_label, quality_text),
         (0.13 * float(c.get("discovery_alignment", 0.5)), discovery_label, discovery_text),
         (0.15 * float(c.get("priority_alignment", 0.5)), priority_label, priority_text),
         (0.07 * float(c.get("availability_alignment", availability_score)), "Easy to watch tonight",

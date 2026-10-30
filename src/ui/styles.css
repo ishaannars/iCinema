@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap");
 :root{
 --sumi:#111315;--surface:#171A1F;--border:#2A2E35;--ivory:#F3F0EA;
 --muted:#A9ADB7;--muted2:#858B96;--accent:#5C6FA8;--accent-hover:#4B5D8B;
@@ -5195,3 +5196,28 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .st-key-mood_box input{height:2.5rem !important;font-size:.9rem !important;background:rgba(255,255,255,.04) !important;
     border:1px solid rgba(169,173,183,.18) !important;}
 .st-key-mood_box input:focus{border-color:rgba(169,173,183,.45) !important;}
+
+/* ---- Batch 3c ---- */
+/* Year and genres in the original small, letter-spaced style; ratings in the original ratings style. */
+.card-year{margin:.6rem 0 .15rem !important;color:var(--muted) !important;}
+/* Two-line premise at a glance; tap it to read the whole thing in place. */
+.card-hook-toggle{margin:.2rem 0 .6rem;}
+.card-hook-box{position:absolute;opacity:0;pointer-events:none;width:0;height:0;}
+.card-hook-toggle .card-hook{display:-webkit-box !important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    white-space:normal !important;cursor:pointer;margin:0 !important;font-size:.82rem !important;line-height:1.4 !important;
+    min-height:2.3rem;color:var(--muted) !important;}
+.card-hook-toggle .card-hook:hover{color:var(--ivory) !important;}
+.card-hook-full{display:none;font-family:var(--ui-font);color:var(--muted);font-size:.8rem;line-height:1.45;margin-top:.4rem;
+    padding-top:.4rem;border-top:1px solid rgba(169,173,183,.14);}
+.card-hook-box:checked ~ .card-hook-full{display:block;}
+.card-hook-box:checked ~ .card-hook{-webkit-line-clamp:unset;color:var(--ivory) !important;}
+/* Card text as one block with even, tight spacing. */
+.card-text > div{margin-top:0 !important;margin-bottom:.28rem !important;min-height:0 !important;height:auto !important;}
+.card-text .card-year{margin-top:.55rem !important;}
+.card-text .card-hook-toggle{margin:.35rem 0 .55rem !important;}
+
+/* Headings: Apple-clean, with a slightly sharper display face for a bit of edge. */
+@font-face{font-family:"iCinema Display";src:local("SF Pro Display"),local("Inter Tight");}
+.icinema-logo,.hero-title,.showroom-heading,.showroom-row-title,.tab-primary-heading,.page-top-heading,
+.step2-title,.profile-heading,.tonight-title{
+    font-family:"Space Grotesk","iCinema Display",var(--ui-font) !important;letter-spacing:-.035em !important;}

@@ -2242,16 +2242,24 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     # Why it's here lives in the % pill, so the card stays two short lines.
     rating_parts = ratings_text(card_ratings(movie, live_rating))
     meta = [str(x) for x in (_year, genre_pair(movie)) if x]
-    st.markdown(f'<div class="ratings card-meta">{" · ".join(html.escape(m) for m in meta)}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>', unsafe_allow_html=True)
-
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
-    st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
-
     _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
-    st.markdown(f'<div class="card-hook">{html.escape(quick_card_description(_desc_movie, limit=64))}</div>',
-                unsafe_allow_html=True)
+    _hook = quick_card_description(_desc_movie, limit=110)
+    _full = expanded_card_description(_desc_movie)
+    _sid = f"card-hook-{row_index}-{slot_index}"
+    # One block, so the lines sit at even spacing: year and genres, ratings, where to watch, then a
+    # two-line premise you can tap to read in full.
+    st.markdown(
+        '<div class="card-text">'
+        f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+        f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>'
+        f'<div class="{availability_class}">{watch_html}</div>'
+        f'<div class="card-hook-toggle"><input class="card-hook-box" type="checkbox" id="{_sid}">'
+        f'<label class="card-hook" for="{_sid}">{html.escape(_hook)}</label>'
+        f'<div class="card-hook-full">{html.escape(_full)}</div></div>'
+        '</div>',
+        unsafe_allow_html=True)
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
     persist_from_fragment()
 
@@ -2491,7 +2499,7 @@ def render_tonight_pick_fragment():
                 f'<div class="tonight-meta">{html.escape(meta)}</div>'
                 f'<div class="tonight-badges"><span class="tonight-match">{html.escape(tonight_badge)}</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
-                f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline")), limit=160))}</div>'
+                f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview")), limit=160))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
                 '</div>',
                 unsafe_allow_html=True,
@@ -2720,8 +2728,12 @@ def render_showroom_fragment(p):
             from src.mood import top_rows as _mood_rows
             from src.cf_model import movie_at as _movie_at
             _have = {str(m.get("title", "")).casefold() for m in candidate_pool}
+            _mood_genre = next((g for g in GENRES if g.casefold() in _mq.casefold()), None)
             for _r in _mood_rows(_mq, 150):
                 _m = _movie_at(_r)
+                if _m and _mood_genre:
+                    _m["genre"] = _mood_genre
+                    _m["tags"] = [_mood_genre]
                 if _m and _m["title"] and _m["title"].casefold() not in _have:
                     candidate_pool.append(_m)
                     _have.add(_m["title"].casefold())
@@ -3199,6 +3211,10 @@ def render_showroom_fragment(p):
                 # Rows with their own within-kind test (Top Matches, Critically Acclaimed, Hidden Gems,
                 # Something Different) show their best fits. Untested adaptive rows show only strong fits.
                 return row_name == "Top Matches for You" or _floor is None or not isinstance(top, (int, float)) or top <= _floor
+            # A weak pick is swapped for the next strong one in this row's queue, so rows stay full when they can.
+            for i in range(len(choices)):
+                if not _strong(i) and _advance_showroom_slot(row_name, i):
+                    _slots = st.session_state.get("showroom_slots") or {}
             kept = [i for i in range(len(choices)) if _strong(i)]
             if not kept:
                 st.caption("No strong fits here yet. Like or save a few more movies and this row fills in.")
