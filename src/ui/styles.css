@@ -5221,3 +5221,16 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .icinema-logo,.hero-title,.showroom-heading,.showroom-row-title,.tab-primary-heading,.page-top-heading,
 .step2-title,.profile-heading,.tonight-title{
     font-family:"Space Grotesk","iCinema Display",var(--ui-font) !important;letter-spacing:-.035em !important;}
+
+/* ---- Batch 4 polish ---- */
+/* Skip matches the fit pill: a compact outlined pill. */
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{border:1px solid rgba(169,173,183,.28) !important;
+    background:transparent !important;border-radius:999px !important;color:var(--ivory) !important;}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button:hover{border-color:rgba(169,173,183,.55) !important;}
+/* Saved and Seen cards match Showroom cards. */
+[class*="st-key-savedcard_"] .poster-caption.art-titled,[class*="st-key-seencard_"] .poster-caption.art-titled{display:none !important;}
+[class*="st-key-savedcard_"] .poster-caption:not(.art-titled),[class*="st-key-seencard_"] .poster-caption:not(.art-titled){
+    height:auto !important;min-height:0 !important;margin:.55rem 0 0 !important;}
+/* Popup rows: wider label column so every row lines up. */
+.why-pop-row{grid-template-columns:7.2rem 1fr !important;}
+.why-pop-rows{gap:.5rem !important;}

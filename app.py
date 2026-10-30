@@ -849,6 +849,18 @@ def remove_from_seen(title):
     queue_profile_save()
 
 
+def library_text_html(movie, identity, live_map, watch_html=""):
+    """The Showroom card's text block for Saved / Seen: year and genres, ratings, where to watch."""
+    year = identity.get("year") or movie.get("year")
+    meta = [str(x) for x in (year, genre_pair(movie)) if x]
+    parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
+    return ('<div class="card-text">'
+            f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+            f'<div class="ratings">{" · ".join(parts) or "Ratings unavailable"}</div>'
+            + (f'<div class="watch-availability">{watch_html}</div>' if watch_html else "")
+            + '</div>')
+
+
 def library_ratings_html(movie, identity, live_map):
     """Same ratings line as the Showroom cards (IMDb · RT, 'No RT', or viewer score)."""
     parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
@@ -1079,6 +1091,19 @@ def learning_model_for(events):
     return result
 
 
+def _personal_need(learned, decisions):
+    """What the personal model still needs: 50 decisions and at least 12 saves and 12 skips."""
+    saves, skips = int(getattr(learned, "positives", 0) or 0), int(getattr(learned, "negatives", 0) or 0)
+    n = int(getattr(learned, "samples", 0) or decisions)
+    if n < 50:
+        return f"{n} of 50 saves and skips"
+    if saves < 12:
+        return f"Needs 12 saves to start ({saves} so far). Skips alone can’t show what you like."
+    if skips < 12:
+        return f"Needs 12 skips to start ({skips} so far)."
+    return "Starting with your next visit"
+
+
 def training_scale():
     """Human-readable MovieLens training size, read from the results file when available."""
     data = load_offline_results() or {}
@@ -1159,7 +1184,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         pct = min(100, round(decisions / 50 * 100))
         personal_html = (f'<div class="model-row"><span class="model-dot"></span>'
                          f'<span class="model-name">Your personal model</span>'
-                         f'<span class="model-note">{min(decisions, 50)} of 50 saves and skips</span>'
+                         f'<span class="model-note">{html.escape(_personal_need(learned, decisions))}</span>'
                          f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
     models_html = (
         '<div class="model-status-panel">'
@@ -1897,11 +1922,18 @@ def why_rows(reasons, movie=None, live_rating=None, payload=None):
             rows.append(("Tone", f"Close to {_short_title(mm.group(1))}" if mm else "Close to your favorites"))
         if len(rows) >= 2:
             break
-    if isinstance(rt, (int, float)) and rt >= 75 and len(rows) < 3:
+    if isinstance(cf, (int, float)) and not any(k == "Fans like you" for k, _ in rows):
+        rows.append(("Fans like you", f"Closer to your likes than {int(round(cf * 100))}% of movies"))
+    if isinstance(rt, (int, float)) and rt >= 0:
         rows.append(("Critics", f"{int(rt)}% on Rotten Tomatoes"))
-    if isinstance(cf, (int, float)) and len(rows) < 3 and not any(k == "Fans like you" for k, _ in rows):
-        rows.append(("Fans like you", f"Closer than {int(round(cf * 100))}% of movies"))
-    return rows or [("Fit", "Ranked high by the models for what you’ve liked")]
+    imdb = (live_rating or {}).get("imdb")
+    imdb = imdb if isinstance(imdb, (int, float)) else (movie or {}).get("imdb")
+    if isinstance(imdb, (int, float)) and imdb > 0:
+        rows.append(("Audiences", f"{imdb:.1f} / 10 on IMDb"))
+    rank, pool = (payload or {}).get("fit_rank"), (payload or {}).get("fit_pool")
+    if isinstance(rank, int) and isinstance(pool, int) and pool > 0:
+        rows.append(("Rank", f"#{rank:,} of {pool:,} movies scored for you"))
+    return rows[:5] or [("Fit", "Ranked high by the models for what you’ve liked")]
 
 
 def why_sentences(reasons, movie=None, live_rating=None, limit=2):
@@ -1928,6 +1960,15 @@ def why_sentences(reasons, movie=None, live_rating=None, limit=2):
         if len(out) >= limit:
             break
     return out or ["Ranked high by the models for what you’ve liked."]
+
+
+def plain_premise(movie):
+    """The opening sentence of the plot summary: clear and specific, no marketing tagline."""
+    text = " ".join(str((movie or {}).get("overview") or "").split())
+    if not text:
+        return ""
+    first = re.split(r"(?<=[.!?])\s+", text)[0].strip()
+    return first if 30 <= len(first) <= 220 else ""
 
 
 def genre_pair(movie):
@@ -2245,7 +2286,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
-    _hook = quick_card_description(_desc_movie, limit=110)
+    _hook = plain_premise(_desc_movie) or quick_card_description(_desc_movie, limit=110)
     _full = expanded_card_description(_desc_movie)
     _sid = f"card-hook-{row_index}-{slot_index}"
     # One block, so the lines sit at even spacing: year and genres, ratings, where to watch, then a
@@ -2552,6 +2593,7 @@ def _saved_tab():
     saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
     saved_identity_map = get_movie_identity_batch(saved_identity_keys)
     saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+    saved_art_map = get_landscape_batch(saved_identity_keys) if movies else {}
     saved_watch_map = get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies), "US") if movies else {}
     saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
                                                   (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
@@ -2567,9 +2609,12 @@ def _saved_tab():
                     display_movie["title"] = preferred_title(m, identity.get("display_title") or display_movie.get("title", ""))
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]), compact=True, library_mode="saved")
-                    st.markdown(library_ratings_html(m, identity, saved_live_map), unsafe_allow_html=True)
-                    st.markdown(f'<div class="watch-availability saved-watch">{watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))}</div>', unsafe_allow_html=True)
+                    _art = saved_art_map.get(m["title"])
+                    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url") or saved_poster_map.get(m["title"]),
+                                landscape=True)
+                    st.markdown(library_text_html(m, identity, saved_live_map,
+                                                  watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))),
+                                unsafe_allow_html=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
                         st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
@@ -2592,6 +2637,7 @@ def _seen_tab():
     seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
     seen_identity_map = get_movie_identity_batch(seen_identity_keys)
     seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
+    seen_art_map = get_landscape_batch(seen_identity_keys) if movies else {}
     seen_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
                                                  (seen_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
                                                 for m in movies)) if movies else {}
@@ -2620,8 +2666,10 @@ def _seen_tab():
                     display_movie["title"] = preferred_title(m, identity.get("display_title") or display_movie.get("title", ""))
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
-                    movie_thumb(display_movie, identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]), compact=True, library_mode="seen")
-                    st.markdown(library_ratings_html(m, identity, seen_live_map), unsafe_allow_html=True)
+                    _art = seen_art_map.get(m["title"])
+                    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url") or seen_poster_map.get(m["title"]),
+                                landscape=True)
+                    st.markdown(library_text_html(m, identity, seen_live_map), unsafe_allow_html=True)
                     # Hover × in the poster's top-right corner: remove an accidental Seen.
                     st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
                               on_click=remove_from_seen, args=(m["title"],))
@@ -3153,6 +3201,7 @@ def render_showroom_fragment(p):
                     continue
                 _above = _pool - bisect.bisect_right(_asc, _memo[0])   # movies scored strictly higher
                 _pl["fit_top_pct"] = max(1, -(-100 * (_above + 1) // _pool))
+                _pl["fit_rank"] = int(_above + 1)
                 _pl["fit_pool"] = _pool
         for _t, _ov in il_override.items():
             if _t in payloads:
