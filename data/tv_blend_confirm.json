@@ -1,0 +1,23 @@
+{
+ "method": "    python training/confirm_tv_blend.py --amazon-dir amazon-movies-tv The first attempt (training/confirm_tv.py) tied with \"most popular shows\": on Amazon most people rate only a few shows, mostly the same big ones. A blend of the two is the standard answer to a strong popularity baseline, so this is one more try, decided by a rule written before running. Same data, same show/movie matching, same item-kNN. A fresh random group of people (different from the first attempt) with at least 3 loved movies and 2 loved shows is held out entirely; similarities come only from everyone else. Each held-out person's loved movies rank every show by (1 - a) * fans-like-you percentile + a * popularity percentile. - a is picked from 0.2, 0.4, 0.6, 0.8 on one half of the held-out people, by NDCG@20. - On the other half, with a fixed, it ships only if it beats \"most popular shows\" with a   paired-bootstrap 95% interval above zero. This is the last attempt with this data: if it fails, TV stays on \"coming next\" in the README. If it ships, data/tv_knn.npz is built from everyone, with the blend weight. Writes data/tv_blend_confirm.json. ",
+ "people": 1707288,
+ "shows": 8120,
+ "held_out": 10000,
+ "validation_ndcg_by_weight": {
+  "0.2": 0.0792,
+  "0.4": 0.079,
+  "0.6": 0.0782,
+  "0.8": 0.0764
+ },
+ "popularity_weight": 0.2,
+ "ndcg_at_20": {
+  "blend": 0.0718,
+  "most popular shows": 0.0597
+ },
+ "diff": 0.0121,
+ "ci95": [
+  0.0084,
+  0.0159
+ ],
+ "ship": true
+}

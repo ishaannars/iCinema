@@ -209,4 +209,7 @@ def test_tv_follows_its_rule():
         assert d["ship"] is False
     else:
         assert d["ship"] == (d["ci95"][0] > 0)
-    assert (DATA / "tv_knn.npz").exists() == d["ship"]
+    blend = load("tv_blend_confirm.json") if (DATA / "tv_blend_confirm.json").exists() else {}
+    if blend:
+        assert blend["ship"] == (blend["ci95"][0] > 0 and blend["held_out"] >= 1000)
+    assert (DATA / "tv_knn.npz").exists() == bool(d["ship"] or blend.get("ship"))

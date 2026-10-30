@@ -232,6 +232,14 @@ def tested_block():
                      (f"NDCG@20 {r['fans like you']:.3f} vs {r['most popular shows']:.3f}, {tv['held_out']:,} held-out people, "
                       f"{tv['shows']:,} shows" if r else f"Too few people to test ({tv['held_out']:,})"),
                      "✅ Ships" if tv["ship"] else "❌ Not shipped"))
+    tb_path = ROOT / "data" / "tv_blend_confirm.json"
+    if tb_path.exists():
+        tb = json.loads(tb_path.read_text())
+        r = tb["ndcg_at_20"]
+        rows.append(("TV shows, second try", f"Fans like you blended with popularity (weight {tb['popularity_weight']} picked on half "
+                     "of a fresh held-out group, judged on the other half; rule in `training/confirm_tv_blend.py`)",
+                     f"NDCG@20 {r['blend']:.3f} vs {r['most popular shows']:.3f} (95% CI {tb['ci95'][0]:+.4f} to {tb['ci95'][1]:+.4f})",
+                     "✅ Ships" if tb["ship"] else "❌ Not shipped: TV stays on Coming next"))
     il_path = ROOT / "data" / "interleave_results.json"
     if il_path.exists():
         il = json.loads(il_path.read_text())

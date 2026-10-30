@@ -96,6 +96,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | Mood search | Three words from taggers the index never saw must find the movie in the top 50 of all movies (rule in `training/confirm_mood.py`) | Recall@50 0.637 vs 0.005 for popular movies, 2,000 searches | ✅ Ships |
 | Learning to rank | Gradient-boosted trees re-rank each viewer's top 300 using every model's score; trained on 3,000 viewers, judged on 3,000 others (rule in `training/confirm_ltr.py`) | NDCG@10 0.0800 vs 0.0759 today (95% CI +0.0007 to +0.0076); biggest inputs: routed 46%, popularity 27%, content 13% | ✅ Ships |
 | TV shows | Amazon Reviews 2023 fans; held-out people's loved movies alone must rank the shows they loved above the most popular shows (rule in `training/confirm_tv.py`) | NDCG@20 0.057 vs 0.056, 5,000 held-out people, 8,120 shows | ❌ Not shipped |
+| TV shows, second try | Fans like you blended with popularity (weight 0.2 picked on half of a fresh held-out group, judged on the other half; rule in `training/confirm_tv_blend.py`) | NDCG@20 0.072 vs 0.060 (95% CI +0.0084 to +0.0159) | ✅ Ships |
 | Routing, live | Team-draft interleaving in Top Matches for viewers with less mainstream likes, first 200 decided visits, two-sided binomial test (rule in `src/interleave.py`) | Running: 0 of 200 decided visits. No result is read before then | Running |
 | Fourth row follows Step 3 | Not an accuracy question | Recent Releases, Classics, Documentaries, or International Films become the fourth row when picked. Each shows only its own kind | Design choice |
 
@@ -210,8 +211,7 @@ To rebuild every model and number with one command, download MovieLens 32M into 
 
 ## Coming next
 
-- Optional sign-in after your first save, so your profile follows you across devices, with one-tap delete.
-- TV shows in the same rows, with a Movies · Shows · Both switch.
+- **TV shows,** once a model beats "most popular shows" on real fan ratings. The first try on Amazon Reviews 2023 tied with popularity, so no TV row ships until one wins (see Tested).
 - A For Critics tab, an "Only my services" mode, and adding likes from the Showroom anytime.
 - Run the decision-time test with 20+ people, and keep splitting `app.py`.
 
