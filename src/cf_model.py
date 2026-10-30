@@ -355,3 +355,19 @@ def fuzzy_titles(query, n=5, cutoff=0.75):
             m["year"] = model._year_of.get(i, 0)
             out.append(m)
     return out
+
+
+def movie_at(i):
+    """Movie dict for row i of data/cf_knn.npz (title, year, TMDB id), for candidates found by index."""
+    model = _load()
+    if model is None or not (0 <= int(i) < model.n):
+        return None
+    if not hasattr(model, "tmdb_by_idx"):
+        model.tmdb_by_idx = {j: t for t, j in model.by_tmdb.items()}
+    if not hasattr(model, "_year_by_idx"):
+        model._year_by_idx = {}
+        for (k, y), j in model.by_title.items():
+            if y:
+                model._year_by_idx.setdefault(j, y)
+    return {"title": model.titles[i] if model.titles else "", "year": int(model._year_by_idx.get(int(i), 0)),
+            "tmdb_id": int(model.tmdb_by_idx.get(int(i), 0)), "external": True, "candidate_source": "mood"}

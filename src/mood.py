@@ -46,3 +46,12 @@ def _scores(query):
 def scores(query):
     """Match of every movie (rows of data/cf_knn.npz) to the words, or None if no word is known."""
     return _scores(" ".join(words(query)))
+
+
+def top_rows(query, k=150):
+    """Rows of the movies that best match the words (strongest first), for adding to the pool."""
+    s = scores(query)
+    if s is None:
+        return []
+    idx = np.argpartition(-s, min(k, len(s) - 1))[:k]
+    return [int(i) for i in idx[np.argsort(-s[idx])] if s[i] > 0]

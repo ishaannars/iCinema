@@ -1159,16 +1159,14 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         pct = min(100, round(decisions / 50 * 100))
         personal_html = (f'<div class="model-row"><span class="model-dot"></span>'
                          f'<span class="model-name">Your personal model</span>'
-                         f'<span class="model-note">Joins after 50 saves and skips ({min(decisions, 50)} so far, at least 12 of each)</span>'
+                         f'<span class="model-note">{min(decisions, 50)} of 50 saves and skips</span>'
                          f'<span class="model-progress"><span style="width:{pct}%"></span></span></div>')
     models_html = (
         '<div class="model-status-panel">'
         '<div class="model-row"><span class="model-dot on"></span>'
         '<span class="model-name">Active now</span>'
-        f'<span class="model-note">Picks from {(scale["users"] + " ") if scale["users"] else ""}MovieLens fans and the content model, '
-        f'based on your {signals} choice{"s" if signals != 1 else ""}'
-        + (f' ({html.escape(signal_parts)})' if signal_parts else '')
-        + '.</span></div>'
+        f'<span class="model-note">{(scale["users"] + " ") if scale["users"] else ""}fans’ ratings and every movie’s genres and tags, '
+        f'shaped by your {signals} choice{"s" if signals != 1 else ""}</span></div>'
         f'{personal_html}'
         '</div>'
     )
@@ -1879,6 +1877,33 @@ def _clean_ranked(ranked, excluded):
     return out
 
 
+def why_rows(reasons, movie=None, live_rating=None, payload=None):
+    """Short label/fact pairs for the % popup, each backed by a model number."""
+    rows = []
+    rt = (live_rating or {}).get("rt")
+    rt = rt if isinstance(rt, (int, float)) else (movie or {}).get("rt")
+    cf = (payload or {}).get("cf")
+    for r in reasons or []:
+        label = str(r.get("label", ""))
+        m = re.match(r"Loved by fans of “(.+)”", label)
+        if m:
+            rows.append(("Fans like you", f"People who loved {_short_title(m.group(1))} loved this"))
+        elif label == "Fits your mood":
+            rows.append(("Your mood", "Fans describe it the way you did"))
+        elif label.startswith("New, and close"):
+            rows.append(("New release", "Same makers or style as movies you liked"))
+        elif label.startswith("Feels like") and "like “" in str(r.get("text", "")):
+            mm = re.search(r"like “(.+?)”", str(r.get("text", "")))
+            rows.append(("Tone", f"Close to {_short_title(mm.group(1))}" if mm else "Close to your favorites"))
+        if len(rows) >= 2:
+            break
+    if isinstance(rt, (int, float)) and rt >= 75 and len(rows) < 3:
+        rows.append(("Critics", f"{int(rt)}% on Rotten Tomatoes"))
+    if isinstance(cf, (int, float)) and len(rows) < 3 and not any(k == "Fans like you" for k, _ in rows):
+        rows.append(("Fans like you", f"Closer than {int(round(cf * 100))}% of movies"))
+    return rows or [("Fit", "Ranked high by the models for what you’ve liked")]
+
+
 def why_sentences(reasons, movie=None, live_rating=None, limit=2):
     """Up to two plain sentences from the model's strongest reasons for this movie, nothing generic."""
     out = []
@@ -2151,7 +2176,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             match_col, undo_col, skip_col = st.columns([2.75,0.62,0.90], gap="small")
             with undo_col:
                 st.button(
-                    "Undo",
+                    "↶",
                     key=f"undo_{row_name}_{slot_index}_{title}",
                     help=f"Undo skip · bring back {undo_title}",
                     use_container_width=True,
@@ -2183,7 +2208,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                 st.markdown(
                     f'<div class="why-pop-head">{html.escape(fit_head(payload, match))} for you</div>'
                     + (f'<div class="why-pop-odds">{html.escape(_odds)}</div>' if _odds else "")
-                    + "".join(f'<div class="why-pop-line">{html.escape(t)}</div>' for t in why_sentences(reasons, movie, live_rating)),
+                    + '<div class="why-pop-rows">'
+                    + "".join(f'<div class="why-pop-row"><span class="why-pop-k">{html.escape(k)}</span>'
+                              f'<span class="why-pop-v">{html.escape(v)}</span></div>' for k, v in why_rows(reasons, movie, live_rating, payload))
+                    + '</div>',
                     unsafe_allow_html=True,
                 )
                 st.button(
@@ -2215,13 +2243,15 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     rating_parts = ratings_text(card_ratings(movie, live_rating))
     meta = [str(x) for x in (_year, genre_pair(movie)) if x]
     st.markdown(f'<div class="ratings card-meta">{" · ".join(html.escape(m) for m in meta)}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="card-sub">{html.escape(" · ".join(rating_parts))}</div>' if rating_parts else "",
-                unsafe_allow_html=True)
+    st.markdown(f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>', unsafe_allow_html=True)
 
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
 
+    _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
+    st.markdown(f'<div class="card-hook">{html.escape(quick_card_description(_desc_movie, limit=64))}</div>',
+                unsafe_allow_html=True)
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
     persist_from_fragment()
 
@@ -2685,6 +2715,16 @@ def render_showroom_fragment(p):
             except Exception:
                 external_pool = []
         candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
+        _mq = (st.session_state.get("mood_query") or "").strip()
+        if _mq:
+            from src.mood import top_rows as _mood_rows
+            from src.cf_model import movie_at as _movie_at
+            _have = {str(m.get("title", "")).casefold() for m in candidate_pool}
+            for _r in _mood_rows(_mq, 150):
+                _m = _movie_at(_r)
+                if _m and _m["title"] and _m["title"].casefold() not in _have:
+                    candidate_pool.append(_m)
+                    _have.add(_m["title"].casefold())
         ranked = rank_movies(
             candidate_pool,
             p,
@@ -3198,12 +3238,13 @@ def render_showroom_fragment(p):
         edit, changed, reset, _ = st.columns([1.5, 1.6, 1.2, 2.2], gap="small")
         with edit:
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
-            st.button("Edit my preferences", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",))
+            st.button("Edit my answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),
+                      help="Change your likes, genres, and other setup answers.")
         with changed:
             if st.session_state.get("taste_reset_at"):
-                st.button("Undo “What I like has changed”", key="taste_undo", on_click=taste_undo, use_container_width=True)
+                st.button("Undo start fresh", key="taste_undo", on_click=taste_undo, use_container_width=True)
             else:
-                st.button("What I like has changed", key="taste_changed", on_click=taste_changed, use_container_width=True,
+                st.button("Start fresh from today", key="taste_changed", on_click=taste_changed, use_container_width=True,
                           help="Keeps your likes, favorites and Not for me. Older saves, Seen and skips stop shaping your picks.")
         with reset:
             if st.button("Reset profile", key="reset_profile_tab", use_container_width=True):
@@ -3287,7 +3328,7 @@ elif screen=="showroom":
     logo()
     p=current_profile()
     from src.mood import available as _mood_ready
-    _hl, _hr = st.columns([1.55, 1], gap="large", vertical_alignment="bottom")
+    _hl, _hr = st.columns([1.55, 1], gap="large", vertical_alignment="center")
     with _hl:
         st.markdown(
             '<div class="showroom-header">'
@@ -3301,17 +3342,10 @@ elif screen=="showroom":
             with st.container(key="mood_box"):
                 _active = bool((st.session_state.get("mood_query") or "").strip())
                 st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
-                              placeholder="What are you in the mood for?")
+                              placeholder="Search a mood: feel-good, mind-bending, anime…")
                 if _active:
                     st.button("✕", key="mood_clear", help="Clear the mood",
                               on_click=lambda: st.session_state.update(mood_query=""))
-            if not _active:
-                with st.container(key="mood_chips"):
-                    _cc = st.columns(4, gap="small")
-                    for _i, _m in enumerate(("Feel-good", "Mind-bending", "Dark", "Funny")):
-                        with _cc[_i]:
-                            st.button(_m, key=f"mood_chip_{_i}", use_container_width=True,
-                                      on_click=lambda m=_m: st.session_state.update(mood_query=m.lower()))
 
     render_showroom_fragment(p)
 

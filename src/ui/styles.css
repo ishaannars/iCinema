@@ -5132,9 +5132,7 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 
 /* Save is the one primary action; Seen is secondary. Smaller, rounder, calmer. */
 [class*="st-key-movie_actions_"] button{min-height:2rem !important;height:2rem !important;font-size:.78rem !important;border-radius:999px !important;}
-[class*="st-key-movie_actions_"] [class*="st-key-save_"] button{background:var(--ivory) !important;color:#111315 !important;border-color:var(--ivory) !important;}
-[class*="st-key-movie_actions_"] [class*="st-key-save_"] button p{color:#111315 !important;}
-[class*="st-key-movie_actions_"] [class*="st-key-seen_"] button{background:transparent !important;border-color:rgba(169,173,183,.3) !important;}
+
 
 /* Mood search Clear sits inside the same pill row. */
 .st-key-mood_box [class*="st-key-mood_clear"] button{border:0 !important;background:transparent !important;color:var(--muted) !important;min-height:2.6rem !important;}
@@ -5154,8 +5152,7 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     background:linear-gradient(transparent,rgba(0,0,0,.55));pointer-events:none;}
 .poster .art-logo,.poster .art-title-text{z-index:2;}
 /* Undo next to Skip reads as a word, same weight as Skip. */
-[class*="st-key-showroom_controls_"] [class*="st-key-undo_"] button{border:0 !important;background:transparent !important;
-    color:var(--muted) !important;min-height:1.75rem !important;height:1.75rem !important;font-size:.72rem !important;}
+
 
 /* The % popover: one headline, the odds, two plain sentences. */
 .why-pop-head{font-family:var(--ui-font);color:var(--ivory);font-size:1.35rem;font-weight:800;letter-spacing:-.02em;margin:.1rem 0 .15rem;}
@@ -5174,3 +5171,27 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .st-key-mood_chips button{min-height:1.7rem !important;height:1.7rem !important;font-size:.72rem !important;border-radius:999px !important;
     background:transparent !important;border-color:rgba(169,173,183,.25) !important;color:var(--muted) !important;}
 .st-key-mood_chips button:hover{color:var(--ivory) !important;border-color:rgba(169,173,183,.5) !important;}
+
+/* ---- Batch 3b ---- */
+.card-hook{font-family:var(--ui-font);color:var(--muted);font-size:.8rem;line-height:1.35;margin:.15rem 0 .6rem;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* % popup: headline, odds, then label/fact rows anyone can scan. */
+.why-pop-head{font-size:1.25rem !important;}
+.why-pop-odds{font-size:.88rem !important;font-weight:600 !important;margin-bottom:.8rem !important;}
+.why-pop-rows{display:grid;gap:.45rem;margin:0 0 .8rem;border-top:1px solid rgba(169,173,183,.14);padding-top:.7rem;}
+.why-pop-row{display:grid;grid-template-columns:6.2rem 1fr;gap:.6rem;align-items:baseline;font-family:var(--ui-font);}
+.why-pop-k{color:var(--muted2);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.why-pop-v{color:var(--ivory);font-size:.88rem;font-weight:500;line-height:1.4;}
+/* Model status: two tidy rows. */
+.model-status-panel .model-row{display:flex !important;align-items:center !important;gap:.6rem !important;flex-wrap:nowrap !important;margin:.25rem 0 !important;}
+.model-status-panel .model-name{font-family:var(--ui-font);font-weight:700;font-size:.85rem;color:var(--ivory);white-space:nowrap;min-width:9.5rem;}
+.model-status-panel .model-note{font-family:var(--ui-font);font-size:.85rem;color:var(--muted);}
+.model-status-panel .model-progress{width:7rem;flex:0 0 7rem;}
+/* Profile buttons all the same weight. */
+.st-key-edit_preferences button p,.st-key-taste_changed button p,.st-key-taste_undo button p,.st-key-reset_profile_tab button p{
+    font-weight:600 !important;font-size:.9rem !important;}
+/* Mood search: one calm field, same height as the tabs row. */
+.st-key-mood_box{margin:0 !important;}
+.st-key-mood_box input{height:2.5rem !important;font-size:.9rem !important;background:rgba(255,255,255,.04) !important;
+    border:1px solid rgba(169,173,183,.18) !important;}
+.st-key-mood_box input:focus{border-color:rgba(169,173,183,.45) !important;}
