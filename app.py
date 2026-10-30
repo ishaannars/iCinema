@@ -893,16 +893,21 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landsc
     poster_url = poster_url or movie.get("poster_url")
     if poster_url and not str(poster_url).lower().startswith(("https://", "http://")):
         poster_url = None   # only web image links reach the page
+    logo_url = None
+    if poster_url and "#logo=" in str(poster_url):
+        poster_url, logo_url = str(poster_url).split("#logo=", 1)
     if poster_url:
         safe_url = html.escape(str(poster_url), quote=True)
-        poster_html = (f'<div class="poster has-image{" landscape" if landscape else ""}">'
-                       f'<img src="{safe_url}" alt="Poster for {title}"></div>')
+        portrait = landscape and "/w780" not in str(poster_url)       # no 16:9 art: fit the poster inside the frame
+        logo_html = (f'<img class="art-logo" src="{html.escape(logo_url, quote=True)}" alt="">' if logo_url else "")
+        poster_html = (f'<div class="poster has-image{" landscape" if landscape else ""}{" fallback" if portrait else ""}">'
+                       f'<img src="{safe_url}" alt="Poster for {title}">{logo_html}</div>')
     else:
         poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
 
     year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
     # Key art that already shows the title gets no text title (like streaming apps); others keep it.
-    art_has_title = bool(poster_url) and str(poster_url).endswith("#titled")
+    art_has_title = bool(logo_url) or (bool(poster_url) and str(poster_url).endswith("#titled"))
     title_html = "" if art_has_title else f'<div class="poster-caption-title" title="{title}">{title}</div>'
     
     if library_mode == "saved":
@@ -1285,6 +1290,9 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         ("Step 1", "Asks about the right movies",
          "The shelf mixes famous movies with ones fans split on, so a few likes say the most. Search forgives typos, "
          "and you can import Letterboxd or IMDb ratings."),
+        ("Steps 2 and 3", "Uses everything you told it",
+         "Reviews vs. easy to enjoy sets how much critics count. Your genres and openness steer the content model and "
+         "how far picks roam. What you want more of chooses your fourth row."),
         ("Viewers like you", f"Learns from {_fans} movie fans",
          "Item-kNN matches your likes with fans who loved the same movies. RP3beta takes over when your likes are less mainstream"
          + (", and EASE when you’ve rated a lot." if _ease_on else ".") + " Each won a head-to-head test."),
@@ -1293,7 +1301,10 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
          + (". New releases are placed by their director, cast, and studio from Wikidata." if _nr_ready() else ".")),
         ("Showroom", "Gives every row a job",
          "Best fit, critics’ picks, hidden gems, something new. Each row has its own goal, picks are kept varied, and "
-         "there’s one movie per series." + (" A mood search re-orders Top Matches by fan tags." if _mood_on() else "")),
+         "there’s one movie per series, and weak or unwatchable picks are left out."),
+        *([("Mood search", "Finds the feeling you’re after",
+            "Type a mood and Tonight’s Show and Top Matches show movies fans described that way, ranked by fit. "
+            "Clear it and everything goes back.")] if _mood_on() else []),
         ("Honest numbers", "Tells you the real odds",
          "“Chance you’ll love it” was measured on viewers the models never saw, and it’s rounded down, never up."),
         ("Over time", "Gets better with you",
@@ -1865,13 +1876,35 @@ def _clean_ranked(ranked, excluded):
     return out
 
 
-def card_reason_line(reasons):
-    """The strongest reason as one short line under the title, e.g. Because you loved “Up”."""
-    for r in reasons or []:
+def genre_pair(movie):
+    """Two genres, e.g. "Sci-Fi, Action": the main one plus the next genre among its tags."""
+    main = (movie or {}).get("genre")
+    second = next((t for t in (movie or {}).get("tags") or [] if t in GENRES and t != main), None)
+    return ", ".join(x for x in (main, second) if x)
+
+
+def _short_title(t):
+    """'The Lord of the Rings: The Fellowship of the Ring' -> 'The Lord of the Rings' for one-line reasons."""
+    t = re.split(r":| - | – ", str(t))[0].strip()
+    return t if len(t) <= 26 else t[:24].rsplit(" ", 1)[0] + "…"
+
+
+def card_reason_line(reasons, row_name=None, movie=None, live_rating=None):
+    """One short line saying why this card is here: the row's own job first, then the top personal reason."""
+    reasons = reasons or []
+    if reasons and reasons[0].get("label") == "Fits your mood":
+        return "Fits your mood"
+    if row_name == "Critically Acclaimed":
+        return "Critics and audiences agree"
+    if row_name == "Hidden Gems":
+        return "Less known, made for you"
+    if row_name == "Something Different":
+        return f"New ground: {(movie or {}).get('genre') or 'a different genre'}"
+    for r in reasons:
         label = str(r.get("label", ""))
         m = re.match(r"Loved by fans of “(.+)”", label)
         if m:
-            return f"Because you loved “{m.group(1)}”"
+            return f"Because you loved {_short_title(m.group(1))}"
         if label:
             return label
     return ""
@@ -1921,6 +1954,12 @@ def _advance_showroom_slot(row_name, slot_index):
         if not title or title in current_titles or title in excluded or _franchise(title) in current_series:
             continue
         if title not in payloads:
+            continue
+        _top = (payloads.get(title) or {}).get("fit_top_pct")
+        _fl = fit_floor()
+        if row_name != "Top Matches for You" and _fl is not None and isinstance(_top, (int, float)) and _top > _fl:
+            continue          # past the fit floor: less likely to be loved than an average movie
+        if ((st.session_state.get("showroom_watch_cache") or {}).get(title) or {}).get("status") == "unavailable":
             continue
         replacement = title
         break
@@ -2152,15 +2191,15 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         display_movie["year"] = identity["year"]
     _art = get_landscape_art(movie.get("title", ""), int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) \
         if tmdb_catalog_configured() else None
-    movie_thumb(display_movie, _art or identity.get("poster_url") or movie.get("poster_url"), landscape=bool(_art))
-    _why = card_reason_line(reasons)
+    _year = display_movie.get("year")
+    movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or movie.get("poster_url"), landscape=True)
+    # One meta line (what viewers decide on first: genre, then ratings), then why it's here.
+    rating_parts = ratings_text(card_ratings(movie, live_rating))
+    meta = [str(x) for x in (_year, genre_pair(movie)) if x] + list(rating_parts)
+    st.markdown(f'<div class="ratings card-meta">{" · ".join(html.escape(m) for m in meta)}</div>', unsafe_allow_html=True)
+    _why = card_reason_line(reasons, row_name, movie, live_rating)
     if _why:
         st.markdown(f'<div class="card-why">{html.escape(_why)}</div>', unsafe_allow_html=True)
-
-    rating_parts = ratings_text(card_ratings(movie, live_rating))
-    rating_class = "ratings" if rating_parts else "ratings muted"
-    rating_text = " · ".join(rating_parts) or "Ratings unavailable"
-    st.markdown(f'<div class="{rating_class}">{rating_text}</div>',unsafe_allow_html=True)
 
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
@@ -2168,7 +2207,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
 
     # Catalog movies often lack a plot summary; TMDB's (display only) beats a generic "An action film from 1999."
     _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
-    quick_desc = quick_card_description(_desc_movie, limit=92)
+    quick_desc = quick_card_description(_desc_movie, limit=64)
     expanded_desc = expanded_card_description(_desc_movie)
     summary_id = f"movie-summary-{row_index}-{slot_index}"
     st.markdown(
@@ -2741,7 +2780,13 @@ def render_showroom_fragment(p):
             tv=_safe_num(movie.get("tmdb_vote"),-1.0); votes=_safe_num(movie.get("tmdb_vote_count"),-1.0)
             tags=set(movie.get("tags",[]))
             if row_name=="Critically Acclaimed":
-                return rt>=85 or imdb>=7.8 or (tv>=7.6 and votes>=1500) or "Critically Acclaimed" in tags
+                # Critics and audiences both agree: Rotten Tomatoes 75%+ (its own bar for its best-reviewed
+                # films) and IMDb 7.5+. A missing score can't vouch for a movie, so the known one must clear its bar.
+                critics_ok = rt>=75 if rt>=0 else None
+                viewers_ok = imdb>=7.5 if imdb>=0 else ((tv>=7.5 and votes>=1500) if tv>=0 else None)
+                if critics_ok is None and viewers_ok is None:
+                    return "Critically Acclaimed" in tags
+                return critics_ok is not False and viewers_ok is not False
             if row_name=="Hidden Gems":
                 quality=rt>=75 or imdb>=7.0 or (tv>=7.0 and votes>=150) or "Hidden Gem" in tags
                 # Little known: under 4,000 TMDB votes; if votes are missing, outside the 20% most-loved
@@ -2841,10 +2886,18 @@ def render_showroom_fragment(p):
         top_all=_row_candidates("Top Matches for You",set())
         if _mood is not None and top_all:
             # A mood re-orders Top Matches: half how well each movie fits you, half how well it fits the words.
+            import numpy as _np
             _n=len(top_all)
             _ms=[float(_mood[i]) if (i:=_cf_idx(m)) is not None else 0.0 for _,m in top_all]
-            _mrank={j:r for r,j in enumerate(sorted(range(_n),key=lambda j:-_ms[j]))}
-            top_all=[top_all[j] for j in sorted(range(_n),key=lambda j:0.5*j/_n+0.5*_mrank[j]/_n)]
+            _pos=_mood[_mood>0]
+            _thr=float(_np.quantile(_pos,0.95)) if len(_pos) else 1.0
+            _hit=[j for j in range(_n) if _ms[j]>=_thr]          # movies fans really describe that way
+            if len(_hit)>=4:
+                _mrank={j:r for r,j in enumerate(sorted(_hit,key=lambda j:-_ms[j]))}
+                _frank={j:r for r,j in enumerate(_hit)}
+                _first=sorted(_hit,key=lambda j:0.5*_frank[j]+0.5*_mrank[j])
+                _hs=set(_hit)
+                top_all=[top_all[j] for j in _first]+[top_all[j] for j in range(_n) if j not in _hs]
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(
             tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
@@ -3104,7 +3157,7 @@ def render_showroom_fragment(p):
                 top = pay.get("fit_top_pct")
                 # Rows with their own within-kind test (Top Matches, Critically Acclaimed, Hidden Gems,
                 # Something Different) show their best fits. Untested adaptive rows show only strong fits.
-                return row_name not in ADAPTIVE_ROWS or _floor is None or not isinstance(top, (int, float)) or top <= _floor
+                return row_name == "Top Matches for You" or _floor is None or not isinstance(top, (int, float)) or top <= _floor
             kept = [i for i in range(len(choices)) if _strong(i)]
             if not kept:
                 st.caption("No strong fits here yet. Like or save a few more movies and this row fills in.")
@@ -3245,8 +3298,14 @@ elif screen=="showroom":
     if _mood_ready():
         with _hr:
             with st.container(key="mood_box"):
-                st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
-                              placeholder="Search by mood, like “slow-burn, twist ending”")
+                _active = bool((st.session_state.get("mood_query") or "").strip())
+                _f, _c = st.columns([5, 1] if _active else [1, 0.0001], gap="small", vertical_alignment="center")
+                with _f:
+                    st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
+                                  placeholder="Search by mood, like “slow-burn, twist ending”")
+                if _active:
+                    with _c:
+                        st.button("Clear", key="mood_clear", on_click=lambda: st.session_state.update(mood_query=""))
 
     render_showroom_fragment(p)
 

@@ -598,6 +598,7 @@ def get_movie_identity_batch(
 
 # --- Landscape artwork for the Step 1 shelf -------------------------------------------
 TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780"
+TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w300"
 
 
 def _best_landscape(images):
@@ -611,6 +612,13 @@ def _best_landscape(images):
 
     titled = [b for b in backdrops if b.get("iso_639_1") == "en"]
     textless = [b for b in backdrops if not b.get("iso_639_1")]
+    logos = [l for l in (images or {}).get("logos") or [] if l.get("iso_639_1") == "en" and l.get("file_path")]
+    # Best look (like Apple TV): a clean still with the film's own title logo laid over it.
+    if textless and logos:
+        still = max(textless, key=rank).get("file_path")
+        logo = max(logos, key=rank).get("file_path")
+        if still and logo:
+            return f"{TMDB_BACKDROP_BASE}{still}#logo={TMDB_LOGO_BASE}{logo}"
     pool = titled or textless or backdrops
     best = max(pool, key=rank)
     path = best.get("file_path")

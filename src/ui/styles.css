@@ -5106,3 +5106,36 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .how-step{font-family:var(--ui-font);color:var(--ai);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.25rem;}
 .stat-row{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:1.6rem !important;max-width:860px;}
 @media(max-width:800px){.stat-row{grid-template-columns:1fr !important;}}
+
+/* ---- Showroom cards, Apple-style: art, one meta line, one why line, one watch line, one hook ---- */
+.poster.landscape{position:relative !important;background:#0d0f12 !important;}
+.poster.landscape.fallback img{object-fit:contain !important;}          /* posters never stretch the row */
+.poster .art-logo{position:absolute !important;left:6%;bottom:9%;width:46% !important;height:auto !important;
+    max-height:38% !important;object-fit:contain !important;object-position:left bottom !important;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.55));border-radius:0 !important;}
+[class*="st-key-showroom_swipe_"] .poster-caption.art-titled{display:none !important;}   /* the art carries the title; year is in the meta line */
+[class*="st-key-showroom_swipe_"] .poster-caption:not(.art-titled){height:auto !important;min-height:0 !important;margin:.55rem 0 0 !important;}
+.card-meta{margin:.55rem 0 .1rem !important;font-size:.8rem !important;font-weight:700 !important;color:var(--ivory) !important;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:auto !important;min-height:0 !important;}
+.card-why{margin:.1rem 0 .2rem !important;color:var(--muted) !important;}
+.watch-availability{white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;
+    height:auto !important;min-height:0 !important;max-height:1.4rem !important;margin:.1rem 0 .15rem !important;font-size:.78rem !important;}
+.movie-summary-label{display:block !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;
+    height:auto !important;min-height:0 !important;max-height:1.4rem !important;font-size:.78rem !important;}
+
+/* Fit pill and Skip: small and quiet above the art; Skip reads as a text button. */
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button{min-height:1.75rem !important;height:1.75rem !important;
+    padding:0 .8rem !important;font-size:.72rem !important;border-color:rgba(169,173,183,.28) !important;}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{border:0 !important;background:transparent !important;
+    color:var(--muted) !important;min-height:1.75rem !important;height:1.75rem !important;font-size:.72rem !important;}
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button:hover{color:var(--ivory) !important;}
+
+/* Save is the one primary action; Seen is secondary. Smaller, rounder, calmer. */
+[class*="st-key-movie_actions_"] button{min-height:2rem !important;height:2rem !important;font-size:.78rem !important;border-radius:999px !important;}
+[class*="st-key-movie_actions_"] [class*="st-key-save_"] button{background:var(--ivory) !important;color:#111315 !important;border-color:var(--ivory) !important;}
+[class*="st-key-movie_actions_"] [class*="st-key-save_"] button p{color:#111315 !important;}
+[class*="st-key-movie_actions_"] [class*="st-key-seen_"] button{background:transparent !important;border-color:rgba(169,173,183,.3) !important;}
+
+/* Mood search Clear sits inside the same pill row. */
+.st-key-mood_box [class*="st-key-mood_clear"] button{border:0 !important;background:transparent !important;color:var(--muted) !important;min-height:2.6rem !important;}
+.st-key-mood_box [class*="st-key-mood_clear"] button:hover{color:var(--ivory) !important;}
