@@ -979,6 +979,20 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landsc
     )
 
 def current_profile():
+    """The viewer's profile, rebuilt only when something it depends on changed (not once per card)."""
+    ss = st.session_state
+    sig = (tuple(sorted(ss.likes)), tuple(sorted(ss.favorites)), tuple(ss.genres), ss.review_priority,
+           tuple(ss.more_of), len(ss.saved), len(ss.dismissed), ss.adventure, len(ss.seen),
+           len(ss.get("disliked") or ()), len(ss.external_movies), len(ss.get("analytics_events") or ()))
+    memo = ss.get("_profile_memo")
+    if memo and memo[0] == sig:
+        return memo[1]
+    prof = _build_current_profile()
+    ss._profile_memo = (sig, prof)
+    return prof
+
+
+def _build_current_profile():
     return build_profile(
         st.session_state.likes, st.session_state.favorites, st.session_state.genres,
         st.session_state.review_priority, st.session_state.more_of,
@@ -1132,6 +1146,18 @@ def learning_model_for(events):
     return result
 
 
+def _ltr_note():
+    """One honest line on the learning-to-rank test, once it has run."""
+    try:
+        d = json.loads((Path(__file__).resolve().parent / "data" / "ltr_confirm.json").read_text())
+    except Exception:
+        return ""
+    if d.get("ship"):
+        return f" A ranker that combines every model beat this mix (NDCG@10 {d['ndcg_learned']:.3f} vs {d['ndcg_current_blend']:.3f})."
+    return (f" A ranker that combines every model was tested and didn’t beat this mix "
+            f"(NDCG@10 {d['ndcg_learned']:.3f} vs {d['ndcg_current_blend']:.3f}), so the mix stays.")
+
+
 def _personal_need(learned, decisions):
     """What the personal model still needs: 50 decisions and at least 12 saves and 12 skips."""
     saves, skips = int(getattr(learned, "positives", 0) or 0), int(getattr(learned, "negatives", 0) or 0)
@@ -1262,7 +1288,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         + "".join(f'<div class="model-row"><span class="model-dot{" on" if on else ""}"></span>'
                   f'<span class="model-name">{html.escape(name)}</span>'
                   f'<span class="model-note">{html.escape(note)}</span></div>' for on, name, note in items)
-        + '<div class="model-panel-foot">Mix chosen in tests on MovieLens viewers the models never saw.</div></div>'
+        + f'<div class="model-panel-foot">Mix chosen in tests on MovieLens viewers the models never saw.{_ltr_note()}</div></div>'
     )
 
     def _stat(value, title, note):
@@ -2133,9 +2159,10 @@ def _advance_showroom_slot(row_name, slot_index):
 
     if replacement:
         slots[slot_key] = replacement
-        st.session_state.showroom_slots = slots
-        return True
-    return False
+    else:
+        slots[slot_key] = None      # nothing strong left: the card simply goes away (no slow rebuild)
+    st.session_state.showroom_slots = slots
+    return True
 
 def dislike_movie(title, movie=None):
     """Explicit negative feedback: stronger than Skip, and the title never returns."""
@@ -2187,8 +2214,7 @@ def save_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    if not _advance_showroom_slot(row_name, slot_index):
-        return                  # nothing strong left in this row: a full rebuild drops the card
+    _advance_showroom_slot(row_name, slot_index)
     _mark_showroom_fast()
 
 def seen_showroom_slot(row_name, slot_index):
@@ -2201,8 +2227,7 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    if not _advance_showroom_slot(row_name, slot_index):
-        return                  # nothing strong left in this row: a full rebuild drops the card
+    _advance_showroom_slot(row_name, slot_index)
     _mark_showroom_fast()
 
 def _showroom_cached_metadata(movie):
@@ -2252,8 +2277,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     movie = payload.get("movie")
     if not title or not movie or title in acted:
-        st.caption("Refreshing match…")
-        return
+        return            # an emptied slot: nothing strong left for this spot
 
     match = int(payload.get("match") or 0)
     p = current_profile()
@@ -2372,6 +2396,8 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
 def render_card_actions(row_name, row_index, slot_index):
     """Save / Seen sit outside the card fragment: a click runs the page once, directly,
     so the Saved / Seen tabs update without a second rerun triggered from a fragment."""
+    if not (st.session_state.get("showroom_slots") or {}).get(_showroom_slot_key(row_name, slot_index)):
+        return
     with st.container(key=f"movie_actions_{row_index}_{slot_index}"):
         a, b = st.columns(2, gap="small")
         with a:
@@ -3212,7 +3238,7 @@ def render_showroom_fragment(p):
         queues={}
         for row_name in row_order:
             queue_titles=[]
-            for match,movie in row_candidate_queues.get(row_name,[])[:40]:
+            for match,movie in row_candidate_queues.get(row_name,[])[:80]:
                 title=movie["title"]
                 queue_titles.append(title)
                 payloads.setdefault(title,{

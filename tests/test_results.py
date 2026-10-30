@@ -186,3 +186,14 @@ def test_new_release_and_mood_follow_their_rules():
             assert d["ship"] == (d["vs_genres"]["ci95"][0] > 0 and d["vs_popular"]["ci95"][0] > 0)
         else:
             assert d["ship"] == (d["ci95"][0] > 0)
+
+
+def test_learning_to_rank_follows_its_rule():
+    path = DATA / "ltr_confirm.json"
+    if not path.exists():
+        assert not (DATA / "ltr_model.joblib").exists()
+        return
+    d = load("ltr_confirm.json")
+    assert d["ship"] == (d["ci95"][0] > 0)
+    assert (DATA / "ltr_model.joblib").exists() == d["ship"]
+    assert abs(sum(d["feature_shares"].values()) - 1) < 0.01 or sum(d["feature_shares"].values()) == 0

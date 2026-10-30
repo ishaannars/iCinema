@@ -213,6 +213,16 @@ def tested_block():
                      "(rule in `training/confirm_mood.py`)",
                      f"Recall@50 {r['mood search']:.3f} vs {r['most popular']:.3f} for popular movies, {md['queries']:,} searches",
                      "✅ Ships" if md["ship"] else "❌ Not shipped"))
+    lt_path = ROOT / "data" / "ltr_confirm.json"
+    if lt_path.exists():
+        lt = json.loads(lt_path.read_text())
+        top = sorted(lt["feature_shares"].items(), key=lambda kv: -kv[1])[:3]
+        rows.append(("Learning to rank", "Gradient-boosted trees re-rank each viewer's top 300 using every model's score; "
+                     "trained on 3,000 viewers, judged on 3,000 others (rule in `training/confirm_ltr.py`)",
+                     f"NDCG@10 {lt['ndcg_learned']:.4f} vs {lt['ndcg_current_blend']:.4f} today "
+                     f"(95% CI {lt['ci95'][0]:+.4f} to {lt['ci95'][1]:+.4f}); biggest inputs: "
+                     + ", ".join(f"{k} {v:.0%}" for k, v in top),
+                     "✅ Ships" if lt["ship"] else "❌ Not shipped"))
     il_path = ROOT / "data" / "interleave_results.json"
     if il_path.exists():
         il = json.loads(il_path.read_text())

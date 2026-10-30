@@ -24,6 +24,7 @@ STEPS = [
     "fetch_wikidata.py",            # open movie facts for the new-release model (network)
     "confirm_new_releases.py",      # place new releases by their facts, ships only if it passes
     "confirm_mood.py",              # mood search over fan tags, ships only if it passes
+    "confirm_ltr.py",               # gradient-boosted ranker over all models vs today's blend
     "build_content.py",             # content model from genres and fan tags
     "evaluate_blends.py",           # content vs viewers-like-you weights, What's next
     "evaluate_steps.py",            # every onboarding step

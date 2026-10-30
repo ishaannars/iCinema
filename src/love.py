@@ -40,6 +40,7 @@ def love_line(top_pct):
 
 
 @lru_cache(maxsize=1)
+@lru_cache(maxsize=1)
 def fit_floor():
     """Lowest rank (top-%) where a movie is still at least as likely to be loved as an average one.
 
