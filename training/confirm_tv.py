@@ -62,8 +62,10 @@ def show_name(title):
 
 
 def is_tv(meta):
-    cats = " ".join(str(c) for c in (meta.get("categories") or []))
-    return "TV" in cats or bool(_TV_TITLE.search(str(meta.get("title") or "")))
+    """A show if a category is TV itself (not the whole store's "Movies & TV") or the title says Season/Series."""
+    cats = [str(c).strip() for c in (meta.get("categories") or [])]
+    tv_cat = any(c == "TV" or c.startswith("TV ") or c in ("TV Series", "Television") for c in cats)
+    return tv_cat or bool(_TV_TITLE.search(str(meta.get("title") or "")))
 
 
 def cosine_top(X, cols_keep, shrink, rows=None, top=TOP):

@@ -41,3 +41,5 @@ def test_tv_show_names_group_seasons():
     assert show_name("Breaking Bad: Season 3") == "Breaking Bad"
     assert show_name("The Wire - The Complete Series") == "The Wire"
     assert is_tv({"title": "Lost Season 1", "categories": []}) and not is_tv({"title": "Heat", "categories": ["Movies"]})
+    assert not is_tv({"title": "Heat", "categories": ["Movies & TV", "Movies"]})   # the store name isn't a TV category
+    assert is_tv({"title": "Lost", "categories": ["Movies & TV", "TV"]})
