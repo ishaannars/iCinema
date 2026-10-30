@@ -899,15 +899,18 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landsc
     if poster_url:
         safe_url = html.escape(str(poster_url), quote=True)
         portrait = landscape and "/w780" not in str(poster_url)       # no 16:9 art: fit the poster inside the frame
-        logo_html = (f'<img class="art-logo" src="{html.escape(logo_url, quote=True)}" alt="">' if logo_url else "")
+        logo_html = (f'<img class="art-logo" src="{html.escape(logo_url, quote=True)}" alt="">' if logo_url else
+                     (f'<div class="art-title-text">{title}</div>' if landscape and not str(poster_url).endswith("#titled") else ""))
         poster_html = (f'<div class="poster has-image{" landscape" if landscape else ""}{" fallback" if portrait else ""}">'
                        f'<img src="{safe_url}" alt="Poster for {title}">{logo_html}</div>')
+    elif landscape:
+        poster_html = f'<div class="poster landscape"><div class="art-title-text">{title}</div></div>'
     else:
         poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
 
     year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
     # Key art that already shows the title gets no text title (like streaming apps); others keep it.
-    art_has_title = bool(logo_url) or (bool(poster_url) and str(poster_url).endswith("#titled"))
+    art_has_title = bool(logo_url) or landscape or (bool(poster_url) and str(poster_url).endswith("#titled"))
     title_html = "" if art_has_title else f'<div class="poster-caption-title" title="{title}">{title}</div>'
     
     if library_mode == "saved":
@@ -1876,6 +1879,32 @@ def _clean_ranked(ranked, excluded):
     return out
 
 
+def why_sentences(reasons, movie=None, live_rating=None, limit=2):
+    """Up to two plain sentences from the model's strongest reasons for this movie, nothing generic."""
+    out = []
+    rt = (live_rating or {}).get("rt")
+    rt = rt if isinstance(rt, (int, float)) else (movie or {}).get("rt")
+    for r in reasons or []:
+        label, text = str(r.get("label", "")), str(r.get("text", ""))
+        m = re.match(r"Loved by fans of “(.+)”", label)
+        if m:
+            out.append(f"Fans of {_short_title(m.group(1))} love it.")
+        elif label == "Fits your mood":
+            out.append(text)
+        elif label.startswith("Critics") or label == "Critically acclaimed":
+            if isinstance(rt, (int, float)) and rt >= 75:
+                out.append(f"Critics agree: {int(rt)}% on Rotten Tomatoes.")
+        elif label.startswith("New, and close"):
+            out.append("New, from people who made movies you liked.")
+        elif label in ("What you asked for", "Loved by viewers like you"):
+            continue      # too vague to be worth a line
+        elif text:
+            out.append(text if text.endswith(".") else text + ".")
+        if len(out) >= limit:
+            break
+    return out or ["Ranked high by the models for what you’ve liked."]
+
+
 def genre_pair(movie):
     """Two genres, e.g. "Sci-Fi, Action": the main one plus the next genre among its tags."""
     main = (movie or {}).get("genre")
@@ -2122,7 +2151,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             match_col, undo_col, skip_col = st.columns([2.75,0.62,0.90], gap="small")
             with undo_col:
                 st.button(
-                    "↶",
+                    "Undo",
                     key=f"undo_{row_name}_{slot_index}_{title}",
                     help=f"Undo skip · bring back {undo_title}",
                     use_container_width=True,
@@ -2149,24 +2178,12 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
             with st.popover(pill_text, use_container_width=True):
+                _love = love_line(payload.get("fit_top_pct"))
+                _odds = _love.replace("If you watch it: about ", "About ").replace(" chance you'll love it", " chance you’ll love it") if _love else ""
                 st.markdown(
-                    f'<div class="match-score"><span class="match-score-value">{fit_head(payload, match)}</span>'
-                    f'<span class="match-score-label">· {html.escape(fit_label(payload, match))}</span></div>'
-                    + (f'<div class="match-rank-note">{html.escape(love_line(payload.get("fit_top_pct")))}</div>'
-                       if love_line(payload.get("fit_top_pct")) else "") +
-                    '<div class="match-explain-title">Why this matches you</div>',
-                    unsafe_allow_html=True,
-                )
-                for reason in reasons:
-                    st.markdown(
-                        f'<div class="match-reason">'
-                        f'<div class="match-reason-label">{html.escape(reason["label"])}</div>'
-                        f'<div class="match-reason-copy">{html.escape(reason["text"])}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                st.markdown(
-                    '<div class="match-model-note">The strongest reasons behind this pick.</div>',
+                    f'<div class="why-pop-head">{html.escape(fit_head(payload, match))} for you</div>'
+                    + (f'<div class="why-pop-odds">{html.escape(_odds)}</div>' if _odds else "")
+                    + "".join(f'<div class="why-pop-line">{html.escape(t)}</div>' for t in why_sentences(reasons, movie, live_rating)),
                     unsafe_allow_html=True,
                 )
                 st.button(
@@ -2193,34 +2210,18 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         if tmdb_catalog_configured() else None
     _year = display_movie.get("year")
     movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or movie.get("poster_url"), landscape=True)
-    # One meta line (what viewers decide on first: genre, then ratings), then why it's here.
+    # Like streaming apps: art, then what you decide on (year, two genres), then ratings and where to watch.
+    # Why it's here lives in the % pill, so the card stays two short lines.
     rating_parts = ratings_text(card_ratings(movie, live_rating))
-    meta = [str(x) for x in (_year, genre_pair(movie)) if x] + list(rating_parts)
+    meta = [str(x) for x in (_year, genre_pair(movie)) if x]
     st.markdown(f'<div class="ratings card-meta">{" · ".join(html.escape(m) for m in meta)}</div>', unsafe_allow_html=True)
-    _why = card_reason_line(reasons, row_name, movie, live_rating)
-    if _why:
-        st.markdown(f'<div class="card-why">{html.escape(_why)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="card-sub">{html.escape(" · ".join(rating_parts))}</div>' if rating_parts else "",
+                unsafe_allow_html=True)
 
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     st.markdown(f'<div class="{availability_class}">{watch_html}</div>', unsafe_allow_html=True)
 
-    # Catalog movies often lack a plot summary; TMDB's (display only) beats a generic "An action film from 1999."
-    _desc_movie = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
-    quick_desc = quick_card_description(_desc_movie, limit=64)
-    expanded_desc = expanded_card_description(_desc_movie)
-    summary_id = f"movie-summary-{row_index}-{slot_index}"
-    st.markdown(
-        f'<div class="movie-summary-toggle">'
-        f'<input class="movie-summary-checkbox" type="checkbox" id="{summary_id}">'
-        f'<label class="movie-summary-label" for="{summary_id}">{html.escape(quick_desc)}</label>'
-        f'<div class="movie-full-description">'
-        f'<div class="movie-synopsis-label">Premise</div>'
-        f'<div class="movie-synopsis-copy">{html.escape(expanded_desc)}</div>'
-        f'</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
     persist_from_fragment()
 
@@ -2897,7 +2898,7 @@ def render_showroom_fragment(p):
                 _frank={j:r for r,j in enumerate(_hit)}
                 _first=sorted(_hit,key=lambda j:0.5*_frank[j]+0.5*_mrank[j])
                 _hs=set(_hit)
-                top_all=[top_all[j] for j in _first]+[top_all[j] for j in range(_n) if j not in _hs]
+                top_all=[top_all[j] for j in _first]   # only movies that fit the mood, even after many Skips
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(
             tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
@@ -3299,13 +3300,18 @@ elif screen=="showroom":
         with _hr:
             with st.container(key="mood_box"):
                 _active = bool((st.session_state.get("mood_query") or "").strip())
-                _f, _c = st.columns([5, 1] if _active else [1, 0.0001], gap="small", vertical_alignment="center")
-                with _f:
-                    st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
-                                  placeholder="Search by mood, like “slow-burn, twist ending”")
+                st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
+                              placeholder="What are you in the mood for?")
                 if _active:
-                    with _c:
-                        st.button("Clear", key="mood_clear", on_click=lambda: st.session_state.update(mood_query=""))
+                    st.button("✕", key="mood_clear", help="Clear the mood",
+                              on_click=lambda: st.session_state.update(mood_query=""))
+            if not _active:
+                with st.container(key="mood_chips"):
+                    _cc = st.columns(4, gap="small")
+                    for _i, _m in enumerate(("Feel-good", "Mind-bending", "Dark", "Funny")):
+                        with _cc[_i]:
+                            st.button(_m, key=f"mood_chip_{_i}", use_container_width=True,
+                                      on_click=lambda m=_m: st.session_state.update(mood_query=m.lower()))
 
     render_showroom_fragment(p)
 
