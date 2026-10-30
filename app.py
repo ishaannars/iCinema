@@ -14,7 +14,7 @@ from src.recommender import (
 from src.analytics import ensure_session, start_new_session, record_event, record_impressions, analytics_insights
 from src.ml_engine import train_learning_model, predict_success, ranking_metrics, calibration_metrics
 from src.watch_providers import get_watch_availability_batch, tmdb_configured
-from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batch, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
+from src.tmdb_catalog import search_movies, get_poster_batch, get_landscape_batch, get_landscape_art, get_movie_identity_batch, tmdb_catalog_configured, discover_movies
 from src.live_ratings import get_live_ratings_batch, omdb_configured
 from src.browser_storage import browser_storage
 from src.scroll_keeper import scroll_keeper
@@ -887,7 +887,7 @@ def reset_profile_from_fragment():
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
 
-def movie_thumb(movie, poster_url=None, compact=False, library_mode=None):
+def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landscape=False):
     title = html.escape(str(movie.get("title", "")))
     year = html.escape(str(movie.get("year", "")))
     poster_url = poster_url or movie.get("poster_url")
@@ -895,7 +895,8 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None):
         poster_url = None   # only web image links reach the page
     if poster_url:
         safe_url = html.escape(str(poster_url), quote=True)
-        poster_html = f'<div class="poster has-image"><img src="{safe_url}" alt="Poster for {title}"></div>'
+        poster_html = (f'<div class="poster has-image{" landscape" if landscape else ""}">'
+                       f'<img src="{safe_url}" alt="Poster for {title}"></div>')
     else:
         poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
 
@@ -1275,20 +1276,35 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         )
 
     from src.new_releases import available as _nr_ready
+    from src.mood import available as _mood_on
+    from src.cf_model import _history_cut
+    _ease_on = _history_cut()[0] is not None
+    _fans = scale["users"] or "MovieLens"
+    _n_movies = scale["movies"] or "thousands of"
     how = [
-        (f"Learns from {scale['users'] or 'MovieLens'} movie fans",
-         "Your first likes are matched with fans who loved the same movies."),
-        ("Knows every movie", f"Genres and fan tags describe all {scale['movies'] or 'its'} movies"
-         + (", and new releases are placed by their makers." if _nr_ready() else ".")),
-        ("Every row has a job", "Best fit, critics’ picks, hidden gems, something new. No repeats, one movie per series."),
-        ("Gets better with you", "After 50 saves and skips, a model trained only on your choices joins in."),
+        ("Step 1", "Asks about the right movies",
+         "The shelf mixes famous movies with ones fans split on, so a few likes say the most. Search forgives typos, "
+         "and you can import Letterboxd or IMDb ratings."),
+        ("Viewers like you", f"Learns from {_fans} movie fans",
+         "Item-kNN matches your likes with fans who loved the same movies. RP3beta takes over when your likes are less mainstream"
+         + (", and EASE when you’ve rated a lot." if _ease_on else ".") + " Each won a head-to-head test."),
+        ("Every movie", "Knows what each movie is like",
+         f"A content model reads the genres and fan tags of {_n_movies} movies"
+         + (". New releases are placed by their director, cast, and studio from Wikidata." if _nr_ready() else ".")),
+        ("Showroom", "Gives every row a job",
+         "Best fit, critics’ picks, hidden gems, something new. Each row has its own goal, picks are kept varied, and "
+         "there’s one movie per series." + (" A mood search re-orders Top Matches by fan tags." if _mood_on() else "")),
+        ("Honest numbers", "Tells you the real odds",
+         "“Chance you’ll love it” was measured on viewers the models never saw, and it’s rounded down, never up."),
+        ("Over time", "Gets better with you",
+         "After 50 saves and skips, a model trained only on your choices joins in, and a live test checks the ranking."),
     ]
     methodology_html = (
         '<div class="profile-methodology">'
         '<div class="profile-insights-title">How iCinema works</div>'
         '<div class="how-list">'
-        + "".join(f'<div><div class="how-item-title">{html.escape(t)}</div><div class="how-item-copy">{html.escape(c)}</div></div>'
-                  for t, c in how)
+        + "".join(f'<div><div class="how-step">{html.escape(k)}</div><div class="how-item-title">{html.escape(t)}</div>'
+                  f'<div class="how-item-copy">{html.escape(c)}</div></div>' for k, t, c in how)
         + '</div>'
         + f'{proof_html}{live_html}'
         + '<div class="how-footnote">IMDb and Rotten Tomatoes scores come from OMDb (TMDB’s viewer rating when IMDb has none; '
@@ -1849,6 +1865,31 @@ def _clean_ranked(ranked, excluded):
     return out
 
 
+def card_reason_line(reasons):
+    """The strongest reason as one short line under the title, e.g. Because you loved “Up”."""
+    for r in reasons or []:
+        label = str(r.get("label", ""))
+        m = re.match(r"Loved by fans of “(.+)”", label)
+        if m:
+            return f"Because you loved “{m.group(1)}”"
+        if label:
+            return label
+    return ""
+
+
+def mood_reason(movie):
+    """'Fits your mood' when this movie is among the closest 10% to the words, else None."""
+    from src.mood import scores
+    from src.cf_model import _index
+    q = (st.session_state.get("mood_query") or "").strip()
+    sc = scores(q) if q else None
+    i = _index(movie) if sc is not None else None
+    import numpy as np
+    if i is None or sc[i] <= 0 or sc[i] < float(np.quantile(sc[sc > 0], 0.9)):
+        return None
+    return {"label": "Fits your mood", "text": f"Fans describe it the way you did: “{q[:40]}”."}
+
+
 def _mood_line():
     """Row note while a mood is set, or "" (only if the words matched something)."""
     from src.mood import scores
@@ -2057,11 +2098,14 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             availability_score=context.get("availability_alignment",0.5),
             components=context,
         ), payload)
+        if (_mr := mood_reason(movie)):
+            reasons = [_mr] + reasons
         pill_labels = dict(st.session_state.get("showroom_pill_labels") or {})
         row_taken = {label for key, label in pill_labels.items()
                      if key.startswith(f"{row_name}::") and key != slot_key and label}
         pill_text, pill_label = match_pill(match, reasons, taken=row_taken, head=fit_head(payload, match),
                                            limit=19 if undo_title else None)
+        pill_text = fit_head(payload, match)     # the why is shown in words under the title
         pill_labels[slot_key] = pill_label
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
@@ -2106,7 +2150,12 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     display_movie["title"] = preferred_title(movie, identity.get("display_title") or display_movie.get("title", ""))
     if identity.get("year"):
         display_movie["year"] = identity["year"]
-    movie_thumb(display_movie, identity.get("poster_url") or movie.get("poster_url"))
+    _art = get_landscape_art(movie.get("title", ""), int(movie.get("year") or 0), int(movie.get("tmdb_id") or 0)) \
+        if tmdb_catalog_configured() else None
+    movie_thumb(display_movie, _art or identity.get("poster_url") or movie.get("poster_url"), landscape=bool(_art))
+    _why = card_reason_line(reasons)
+    if _why:
+        st.markdown(f'<div class="card-why">{html.escape(_why)}</div>', unsafe_allow_html=True)
 
     rating_parts = ratings_text(card_ratings(movie, live_rating))
     rating_class = "ratings" if rating_parts else "ratings muted"
@@ -2285,6 +2334,8 @@ def render_tonight_pick_fragment():
                 f"None of your top matches stream on {shown} right now, so here’s your best overall match")
     else:
         note = "Your single best match right now"
+    if _mood_line():
+        note = _mood_line().replace("Your best fits for", "Your best match for")
     head, picker = st.columns([3.4, 1.1], gap="medium", vertical_alignment="bottom")
     with head:
         st.markdown(
@@ -2927,6 +2978,7 @@ def render_showroom_fragment(p):
         st.session_state.recommendation_context=recommendation_context
         record_impressions(st.session_state,recommendation_context)
         identity_by_title=get_movie_identity_batch(visible_identity_keys)
+        get_landscape_batch(visible_identity_keys)   # warms the cache so each card's 16:9 art loads at once
         showroom_poster_map={title: data.get("poster_url") for title, data in identity_by_title.items()}
         live_rating_keys=tuple((movie["title"], int(movie.get("year") or 0), (identity_by_title.get(movie["title"], {}) or {}).get("imdb_id") or "") for movie in metadata_movies)
         live_ratings_by_title=get_live_ratings_batch(live_rating_keys)
@@ -3021,11 +3073,6 @@ def render_showroom_fragment(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        from src.mood import available as _mood_ready
-        if _mood_ready():
-            with st.container(key="mood_box"):
-                st.text_input("What are you in the mood for?", key="mood_query", label_visibility="collapsed",
-                              placeholder="In the mood for something? Try “slow-burn, twist ending”")
         render_tonight_pick_fragment()
         for row_index,row_name in enumerate(row_specs):
             choices=row_choices.get(row_name,[])
@@ -3185,13 +3232,21 @@ elif screen=="profile":
 elif screen=="showroom":
     logo()
     p=current_profile()
-    st.markdown(
-        '<div class="showroom-header">'
-        '<div class="showroom-heading">Your Showroom of Movies</div>'
-        '<div class="showroom-intro">Picked for you, and sharper with every choice you make</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    from src.mood import available as _mood_ready
+    _hl, _hr = st.columns([1.55, 1], gap="large", vertical_alignment="bottom")
+    with _hl:
+        st.markdown(
+            '<div class="showroom-header">'
+            '<div class="showroom-heading">Your Showroom of Movies</div>'
+            '<div class="showroom-intro">Picked for you, and sharper with every choice you make</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    if _mood_ready():
+        with _hr:
+            with st.container(key="mood_box"):
+                st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
+                              placeholder="Search by mood, like “slow-burn, twist ending”")
 
     render_showroom_fragment(p)
 
