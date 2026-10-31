@@ -55,6 +55,16 @@ def main():
     saves = [b for b in at.button if (b.key or "").startswith("save_Top Matches")]
     if saves:
         saves[0].click().run(); ok &= check(at, "Save in live test")
+    # Shows view (only when the TV model passed its test)
+    try:
+        from src import tv
+        if tv.available():
+            at.session_state["media_view"] = "Shows"
+            at.run(); ok &= check(at, "Showroom (Shows)")
+            at.session_state["media_view"] = "Home"
+            at.run(); ok &= check(at, "Showroom (Home)")
+    except Exception as e:
+        print("Shows view                ERROR:", e); ok = False
     print("All screens OK" if ok else "Some screens failed")
     sys.exit(0 if ok else 1)
 

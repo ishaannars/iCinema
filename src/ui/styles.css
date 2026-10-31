@@ -5282,3 +5282,34 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 /* Mood search: a display face, still clean. */
 .st-key-mood_box input,.st-key-mood_box input::placeholder{font-family:"Space Grotesk",var(--ui-font) !important;
     font-size:.95rem !important;letter-spacing:-.01em;}
+
+/* ---- Batch 7: one switch, three sections ---- */
+.st-key-media_view_box{margin:-.4rem 0 .9rem !important;}
+.st-key-media_view_box [data-testid="stButtonGroup"] button,.st-key-explore_lens_box [data-testid="stButtonGroup"] button{
+    border-radius:999px !important;font-family:var(--ui-font) !important;font-size:.82rem !important;min-height:2rem !important;}
+.st-key-explore_lens_box{margin:-.2rem 0 .35rem !important;}
+.explore-note{margin:0 0 .9rem !important;}
+/* Home / Movies / Shows and the explore lenses: radio buttons drawn as one segmented pill control. */
+.st-key-media_view_box [data-testid="stRadio"] > div,.st-key-explore_lens_box [data-testid="stRadio"] > div{
+    display:inline-flex !important;gap:.25rem !important;padding:.22rem !important;border-radius:999px !important;
+    background:rgba(255,255,255,.05) !important;border:1px solid rgba(169,173,183,.18) !important;}
+.st-key-media_view_box [data-testid="stRadio"] label,.st-key-explore_lens_box [data-testid="stRadio"] label{
+    margin:0 !important;padding:.34rem .95rem !important;border-radius:999px !important;cursor:pointer;}
+.st-key-media_view_box [data-testid="stRadio"] label > div:first-child,
+.st-key-explore_lens_box [data-testid="stRadio"] label > div:first-child{display:none !important;}   /* hide the dots */
+.st-key-media_view_box [data-testid="stRadio"] label:has(input:checked),
+.st-key-explore_lens_box [data-testid="stRadio"] label:has(input:checked){background:rgba(243,240,234,.14) !important;}
+.st-key-media_view_box [data-testid="stRadio"] label p,.st-key-explore_lens_box [data-testid="stRadio"] label p{
+    font-family:var(--ui-font) !important;font-size:.84rem !important;font-weight:600 !important;color:var(--ivory) !important;}
+/* Home · Movies · Shows and the explore lenses: radios drawn as a segmented control. */
+.st-key-media_view_box div[role="radiogroup"],.st-key-explore_lens_box div[role="radiogroup"]{
+    display:inline-flex !important;gap:.25rem !important;padding:.22rem !important;border-radius:999px !important;
+    background:rgba(255,255,255,.05) !important;border:1px solid rgba(169,173,183,.18) !important;}
+.st-key-media_view_box div[role="radiogroup"] label,.st-key-explore_lens_box div[role="radiogroup"] label{
+    margin:0 !important;padding:.32rem .95rem !important;border-radius:999px !important;cursor:pointer;}
+.st-key-media_view_box div[role="radiogroup"] label > div:first-child,
+.st-key-explore_lens_box div[role="radiogroup"] label > div:first-child{display:none !important;}   /* hide the dot */
+.st-key-media_view_box div[role="radiogroup"] label:has(input:checked),
+.st-key-explore_lens_box div[role="radiogroup"] label:has(input:checked){background:rgba(243,240,234,.14) !important;}
+.st-key-media_view_box div[role="radiogroup"] label p,.st-key-explore_lens_box div[role="radiogroup"] label p{
+    font-family:var(--ui-font) !important;font-size:.84rem !important;font-weight:600 !important;margin:0 !important;}
