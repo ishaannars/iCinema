@@ -32,6 +32,13 @@ def _card(ctx, slot, entry):
         return False
     title = show["title"]
     top = max(1, -(-100 * rank // max(total, 1)))
+    # Real IMDb and RT scores (OMDb, via the show's IMDb id); TMDB's score only if IMDb has none.
+    from src.live_ratings import get_live_ratings_batch
+    from src.ui.cards import card_ratings, ratings_text
+    from src.ui.mood_time import fmt
+    live = (get_live_ratings_batch(((title, int(show.get("year") or 0), show.get("imdb_id") or ""),)) or {}).get(title) or {}
+    parts = ratings_text(card_ratings(dict(show, tmdb_vote=show.get("tmdb_vote")), live))
+    ratings = " · ".join(parts) or "Ratings unavailable"
     with st.container(key=f"showroom_controls_tv_{slot}"):
         pill, skip = st.columns([3.2, 1], gap="small")
         with pill:
@@ -40,8 +47,8 @@ def _card(ctx, slot, entry):
                 if anchor:
                     rows.append(("Fans like you", f"People who loved {anchor} loved this show"))
                 rows.append(("Mix", "Fans like you 80% · popularity 20%, both tested on held-out viewers"))
-                if isinstance(show.get("tmdb_vote"), (int, float)) and show["tmdb_vote"] > 0:
-                    rows.append(("Ratings", f"Viewers {show['tmdb_vote']:.1f}/10 on TMDB"))
+                if parts:
+                    rows.append(("Ratings", ratings))
                 st.markdown(
                     f'<div class="why-pop-head">Top {top}% for you</div><div class="why-pop-rows">'
                     + "".join(f'<div class="why-pop-row"><span class="why-pop-k">{html.escape(k)}</span>'
@@ -53,8 +60,8 @@ def _card(ctx, slot, entry):
     art = ctx["movie_thumb"](dict(show, year=""), show.get("backdrop_url") or show.get("poster_url"),
                              landscape=True, return_html=True)
     meta = [str(x) for x in (show.get("year") or "", ", ".join(show.get("tags", [])[:2])) if x]
-    vote = show.get("tmdb_vote")
-    ratings = f"Viewers {vote:.1f}/10" if isinstance(vote, (int, float)) and vote > 0 else "Ratings unavailable"
+    if show.get("episode_runtime"):
+        meta.append(f"{fmt(show['episode_runtime'])} episodes")
     watch = tv.show_watch(show["tmdb_id"])
     st.markdown(ctx["card_html"](f"tv-premise-{slot}", art, title, show, {},
                                  f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
@@ -75,8 +82,13 @@ def render_shows(ctx, count):
     ss = st.session_state
     acted = set(ss.saved) | set(ss.seen) | set(ss.dismissed) | set(ss.get("disliked") or ())
     picks = tv.viewer_shows(ctx["signals"](), exclude=acted)
+    spec = ctx.get("spec") or {}
+    spec = ctx.get("spec") or {}
+    note = "Shows loved by fans of the movies you love"
+    if spec.get("mood") or spec.get("label"):
+        note = "Matching " + " · ".join(x for x in (f"“{spec['mood']}”" if spec.get("mood") else "", spec.get("label", "")) if x)
     st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">Shows for You</div>'
-                '<div class="row-model-note">Shows loved by fans of the movies you love</div></div>', unsafe_allow_html=True)
+                f'<div class="row-model-note">{html.escape(note)}</div></div>', unsafe_allow_html=True)
     if not picks:
         st.caption("Like or save a few movies and your shows appear here.")
         return
@@ -87,6 +99,12 @@ def render_shows(ctx, count):
             while shown < count and i < len(picks):
                 entry = picks[i]
                 i += 1
+                info = tv.show_details(entry[0])
+                if not info or not tv.matches_mood(info, spec.get("mood", "")):
+                    continue
+                from src.ui.mood_time import fits
+                if not fits(info.get("episode_runtime"), spec, show=True):
+                    continue
                 with cols[c]:
                     if _card(ctx, shown, entry):
                         shown += 1

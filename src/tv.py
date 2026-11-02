@@ -89,10 +89,26 @@ def show_details(name):
     genres = [TV_GENRES[g] for g in item.get("genre_ids") or [] if g in TV_GENRES]
     art = _best_landscape(_request(f"/tv/{sid}/images", {"include_image_language": "en,null"}))
     poster = f"{TMDB_IMAGE_BASE}{item['poster_path']}" if item.get("poster_path") else None
+    details = _request(f"/tv/{sid}", {"append_to_response": "external_ids,keywords"}) or {}
+    runs = [int(x) for x in details.get("episode_run_time") or [] if x]
+    keywords = [k.get("name", "") for k in ((details.get("keywords") or {}).get("results") or [])]
     return {"title": item.get("name") or name, "year": int(str(item.get("first_air_date") or "0")[:4] or 0),
             "tmdb_id": sid, "media": "tv", "external": True, "genre": genres[0] if genres else "Drama",
             "tags": list(dict.fromkeys(genres)), "overview": item.get("overview") or "", "poster_url": poster,
-            "backdrop_url": art, "tmdb_vote": item.get("vote_average"), "tmdb_vote_count": item.get("vote_count")}
+            "backdrop_url": art, "tmdb_vote": item.get("vote_average"), "tmdb_vote_count": item.get("vote_count"),
+            "episode_runtime": min(runs) if runs else None, "imdb_id": (details.get("external_ids") or {}).get("imdb_id"),
+            "keywords": keywords[:20], "origin": list(item.get("origin_country") or [])}
+
+
+def matches_mood(show, words):
+    """Shows aren't in the tested mood model, so a mood matches their genres, keywords, and summary words."""
+    if not words:
+        return True
+    text = " ".join([show.get("title", ""), " ".join(show.get("tags") or []), " ".join(show.get("keywords") or []),
+                     show.get("overview") or ""]).lower()
+    if "anime" in words and "JP" in (show.get("origin") or []) and "Animation" in (show.get("tags") or []):
+        return True
+    return any(w in text for w in words.split())
 
 
 @st.cache_data(ttl=60 * 60 * 12, show_spinner=False)

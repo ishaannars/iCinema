@@ -55,16 +55,13 @@ def main():
     saves = [b for b in at.button if (b.key or "").startswith("save_Top Matches")]
     if saves:
         saves[0].click().run(); ok &= check(at, "Save in live test")
-    # Shows view (only when the TV model passed its test)
+    # Mood plus time in one field ("funny, under 2 hours") still renders every section.
     try:
-        from src import tv
-        if tv.available():
-            at.session_state["media_view"] = "Shows"
-            at.run(); ok &= check(at, "Showroom (Shows)")
-            at.session_state["media_view"] = "Home"
-            at.run(); ok &= check(at, "Showroom (Home)")
+        at.session_state["mood_query"] = "funny, under 2 hours"
+        at.run(); ok &= check(at, "Showroom (mood + time)")
+        at.session_state["mood_query"] = ""
     except Exception as e:
-        print("Shows view                ERROR:", e); ok = False
+        print("Mood + time               ERROR:", e); ok = False
     print("All screens OK" if ok else "Some screens failed")
     sys.exit(0 if ok else 1)
 

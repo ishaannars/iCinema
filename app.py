@@ -1149,31 +1149,29 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                "item-kNN": "item-kNN won the benchmark from just a few likes"}.get(_short_cf, "")
     from src import ltr as _ltr_mod
     _ltr_on = _ltr_mod.available()
-    _segments = [("Learned ranker" if _ltr_on else "People like you", _fans, "seg-fans"), ("What you told us", _cont, "seg-you")]
-    if learned.ready:
-        _segments.append(("Just you", round(_p_share * 100), "seg-personal"))
-    bar = "".join(f'<span class="mix-seg {c}" style="width:{w}%"><span>{html.escape(n)} {w}%</span></span>' for n, w, c in _segments)
+    _names = {"routed": _short_cf, "item_knn": "item-kNN", "rp3beta": "RP3beta", "ease": "EASE",
+              "content": "content", "popularity": "popularity"}
+    _shares = ", ".join(f"{_names.get(k, k)} {v:.0%}" for k, v in
+                        sorted((_ltr_mod.result().get("feature_shares") or {}).items(), key=lambda kv: -kv[1]) if v > 0.005)
+    # Each row: on/off, the technique (data-like), its share of the score, and its job in plain words.
     items = [
-        ((True, "Learned ranker", "One model that weighs six others, learned from 3,000 MovieLens viewers: "
-          + ", ".join(f"{ {'routed': _short_cf + ' (routed)', 'item_knn': 'item-kNN', 'rp3beta': 'RP3beta', 'ease': 'EASE', 'content': 'content', 'popularity': 'popularity'}.get(k, k)} {v:.0%}"
-                      for k, v in sorted((_ltr_mod.result().get('feature_shares') or {}).items(), key=lambda kv: -kv[1]) if v > 0.005) + ".")
+        ((True, "Learned ranker · gradient boosting", f"{_fans}%", f"Combines the models below, learned from 3,000 viewers: {_shares}.")
          if _ltr_on else
-         (True, "People like you", f"{scale['users'] or 'MovieLens'} fans who loved what you loved. Ranked by {_short_cf}: {_why_cf}.")),
-        (True, "What you told us", "Your genres and answers, matched to each movie’s genres and fan tags."),
-        (_nr_on(), "Brand-new movies", "Too new for fan ratings, so they’re placed by their director, cast, and studio."),
-        (_tv_on(), "TV shows",
-         "Loved by fans of your movies: item-kNN on 1.7M Amazon Reviews 2023 fans, blended 80/20 with popularity."),
-        (_mood_on, "Your mood", "Filtering by fan tags right now." if _mood_on else "Type a mood above to filter by it."),
-        (learned.ready, "Just you",
-         f"Learning from your own {learned.samples} saves and skips." if learned.ready else _personal_need(learned, decisions)),
+         (True, f"Collaborative filtering · {_short_cf}", f"{_fans}%", f"Matches you with {scale['users'] or 'MovieLens'} fans who loved what you loved: {_why_cf}.")),
+        (True, "Content model · TF-IDF + SVD", f"{_cont}%", "Your answers matched to each movie’s genres and fan tags."),
+        (learned.ready, "Personal model · logistic regression", f"{round(_p_share * 100)}%" if learned.ready else "",
+         f"Trained on your own {learned.samples} saves and skips." if learned.ready else _personal_need(learned, decisions)),
+        (_nr_on(), "Cold-start model · ridge regression", "", "Places new releases by their director, cast, and studio."),
+        (_tv_on(), "TV model · item-kNN + popularity", "", "Shows loved by fans of your movies (Amazon Reviews 2023), 80/20 with popularity."),
+        (_mood_on, "Mood search · fan-tag TF-IDF", "", "Filtering by your words right now." if _mood_on else "Type a mood above to use it."),
     ]
     models_html = (
         '<div class="model-status-panel"><div class="model-panel-title">How your picks are made</div>'
-        f'<div class="mix-bar">{bar}</div>'
         + "".join(f'<div class="model-row"><span class="model-dot{" on" if on else ""}"></span>'
                   f'<span class="model-name">{html.escape(name)}</span>'
-                  f'<span class="model-note">{html.escape(note)}</span></div>' for on, name, note in items)
-        + f'<div class="model-panel-foot">Mix chosen in tests on MovieLens viewers the models never saw.{_ltr_note()}</div></div>'
+                  f'<span class="model-share">{share}</span>'
+                  f'<span class="model-note">{html.escape(note)}</span></div>' for on, name, share, note in items)
+        + f'<div class="model-panel-foot">Shares chosen in tests on MovieLens viewers the models never saw.{_ltr_note()}</div></div>'
     )
 
     def _stat(value, title, note):
@@ -1895,11 +1893,27 @@ def _clean_ranked(ranked, excluded):
 
 
 
+def _mood_spec():
+    """The search field split into a mood (for the mood model) and a time limit (a runtime filter)."""
+    from src.ui.mood_time import parse
+    return parse(st.session_state.get("mood_query") or "")
+
+
+def _time_filter(items, spec, cap=80):
+    """Keep (match, movie) items whose runtime fits the time limit; the models' order is unchanged."""
+    from src.ui.mood_time import fits
+    if not (spec.get("max") or spec.get("min")) or not items:
+        return items
+    head = items[:cap]
+    ids = get_movie_identity_batch(tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for _, m in head))
+    return [it for it in head if fits((ids.get(it[1]["title"]) or {}).get("runtime"), spec)]
+
+
 def mood_reason(movie):
     """'Fits your mood' when this movie is among the closest 10% to the words, else None."""
     from src.mood import scores
     from src.cf_model import _index
-    q = (st.session_state.get("mood_query") or "").strip()
+    q = _mood_spec()["mood"]
     sc = scores(q) if q else None
     i = _index(movie) if sc is not None else None
     import numpy as np
@@ -1911,8 +1925,10 @@ def mood_reason(movie):
 def _mood_line():
     """Row note while a mood is set, or "" (only if the words matched something)."""
     from src.mood import scores
-    q = (st.session_state.get("mood_query") or "").strip()
-    return f"Your best fits for “{q[:40]}”" if q and scores(q) is not None else ""
+    spec = _mood_spec()
+    q, t = spec["mood"], spec["label"]
+    head = f"Your best fits for “{q[:40]}”" if q and scores(q) is not None else ("Your best fits" if t else "")
+    return f"{head} · {t}" if head and t else head
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -2174,7 +2190,12 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     # Like streaming apps: art, then what you decide on (year, two genres), then ratings and where to watch.
     # Why it's here lives in the % pill, so the card stays two short lines.
     rating_parts = ratings_text(card_ratings(movie, live_rating))
-    meta = [str(x) for x in (_year, genre_pair(movie)) if x]
+    from src.ui.mood_time import fmt as _fmt_rt
+    _label = {"Critically Acclaimed": "Critics’ pick", "Hidden Gems": "Hidden gem", "Recent Releases for You": "New release",
+              "Classics for You": "Classic", "International Films for You": "International",
+              "Documentaries for You": "Documentary", "Something Different": "Something new"}.get(row_name, "")
+    meta = [str(x) for x in (_label if row_name != "Top Matches for You" else "", _year, genre_pair(movie),
+                               _fmt_rt(identity.get("runtime"))) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
     if availability.get("status") in {"unknown", "unavailable"}:
@@ -2507,7 +2528,8 @@ def _saved_tab():
                                             or saved_poster_map.get(m["title"]), landscape=True, return_html=True)
                     st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), m, identity,
                                           library_lines_html(m, identity, saved_live_map,
-                                                             watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services")))),
+                                                             watch_line_html(saved_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))),
+                                          lines_in_panel=True),   # just the art and two buttons; tap for details
                                 unsafe_allow_html=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
@@ -2565,7 +2587,7 @@ def _seen_tab():
                     _art_html = movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url")
                                             or seen_poster_map.get(m["title"]), landscape=True, return_html=True)
                     st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), m, identity,
-                                          library_lines_html(m, identity, seen_live_map)),
+                                          library_lines_html(m, identity, seen_live_map), lines_in_panel=True),
                                 unsafe_allow_html=True)
                     # Hover × in the poster's top-right corner: remove an accidental Seen.
                     st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
@@ -2668,7 +2690,7 @@ def render_showroom_fragment(p):
             except Exception:
                 external_pool = []
         candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
-        _mq = (st.session_state.get("mood_query") or "").strip()
+        _mq = _mood_spec()["mood"]
         if _mq:
             from src.mood import top_rows as _mood_rows
             from src.cf_model import movie_at as _movie_at
@@ -2699,7 +2721,8 @@ def render_showroom_fragment(p):
         # Live interleaving test: only viewers routed to RP3beta get two different rankings.
         il_on=interleave_eligible(_signals)
         from src.mood import scores as _mood_scores
-        _mood_q=(st.session_state.get("mood_query") or "").strip()
+        _tspec=_mood_spec()
+        _mood_q=_tspec["mood"]
         _mood=_mood_scores(_mood_q) if _mood_q else None
         if _mood is not None:
             il_on=False      # a mood changes Top Matches on purpose, so the live test sits it out
@@ -2900,6 +2923,7 @@ def render_showroom_fragment(p):
                 _first=sorted(_hit,key=lambda j:0.5*_frank[j]+0.5*_mrank[j])
                 _hs=set(_hit)
                 top_all=[top_all[j] for j in _first]   # only movies that fit the mood, even after many Skips
+        top_all=_time_filter(top_all,_tspec)
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(
             tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
@@ -2966,6 +2990,7 @@ def render_showroom_fragment(p):
                 ordered=list(top_matches_ordered)
             else:
                 ordered=_row_candidates(row_name,reserved)
+            ordered=_time_filter(ordered,_tspec)    # "under 2 hours": a filter; order stays the models'
             # One movie per series across the Showroom, so rows don't fill up with sequels.
             picks=[]
             for item in ordered:
@@ -2985,8 +3010,8 @@ def render_showroom_fragment(p):
             need=4-len(row_choices[row_name])
             if need<=0 or row_name in ADAPTIVE_ROWS:
                 continue
-            fallback=[item for item in ranked if item[1]["title"] not in reserved
-                      and _franchise(item[1]["title"]) not in reserved_series]
+            fallback=_time_filter([item for item in ranked if item[1]["title"] not in reserved
+                                   and _franchise(item[1]["title"]) not in reserved_series],_tspec)
             extra=fallback[:need]
             reserved_series.update(_franchise(m["title"]) for _,m in extra)
             row_choices[row_name].extend(extra)
@@ -3129,86 +3154,71 @@ def render_showroom_fragment(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        # Like the 2025 Netflix home: one mixed Home, with Movies and Shows shortcuts on top.
-        # Home: Tonight's Show (the hero pick), Top Matches, Shows for You, and More to explore.
-        # Movies: the same without shows. Shows: a full Shows for You. Never more than three rows.
+        # One unified guide, like the Apple TV app's Home: no toggles. Tonight's Show, Top Picks,
+        # Shows for You, and More to explore (critics' picks, hidden gems and your fourth row mixed in
+        # one row, each card labeled), so there are never more than three rows under the hero.
         from src import tv as _tv
-        _view = (st.session_state.get("media_view") or "Home") if _tv.available() else "Movies"
-        if _view == "Both":
-            _view = "Home"
-        if _view != "Shows":
-            render_tonight_pick_fragment()
-        _explore = list(row_specs[1:])
-        _lens = st.session_state.get("explore_lens")
-        if _lens not in _explore and _explore:
-            _lens = _explore[0]
-        _shows_ctx = {"movie_thumb": movie_thumb, "card_html": card_html, "watch_line_html": watch_line_html,
-                      "record_event": record_event, "queue_profile_save": queue_profile_save, "signals": _cf_signals}
-        if _view == "Shows":
-            from src.ui.shows import render_shows
-            render_shows(_shows_ctx, 8)
-        _draw = []
-        if _view in ("Home", "Movies"):
-            _draw.append((0, row_specs[0]))
-            if _explore:
-                _draw.append((row_specs.index(_lens), _lens))
-        for row_index,row_name in _draw:
-            if _view == "Home" and row_index != 0:
-                from src.ui.shows import render_shows
-                render_shows(_shows_ctx, 4)      # shows sit between Top Matches and More to explore
-            choices=row_choices.get(row_name,[])
-            row_class = "showroom-row first" if row_index == 0 else "showroom-row"
-            row_notes={
-                "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
-                "Critically Acclaimed":"Highly rated movies that still fit what you like",
-                "Hidden Gems":"Less-known movies you’re likely to love",
-                "Something Different":"Outside your usual genres, but still likely to click",
-                **{name: note for name, note in ADAPTIVE_NOTES.items()},
-            }
-            if row_name == "Top Matches for You":
-                st.markdown(
-                    f'<div class="{row_class} showroom-row-header">'
-                    f'<div class="showroom-row-title">{row_name}</div>'
-                    f'<div class="row-model-note">{html.escape(_mood_note) if (_mood_note:=_mood_line()) else row_notes[row_name]}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">More to explore</div></div>',
-                            unsafe_allow_html=True)
-                with st.container(key="explore_lens_box"):
-                    st.radio("Explore", _explore, index=_explore.index(_lens), key="explore_lens", horizontal=True,
-                             label_visibility="collapsed", on_change=_mark_showroom_fast,
-                             format_func=lambda r: {"Critically Acclaimed": "Critics’ picks"}.get(r, r))
-                st.markdown(f'<div class="row-model-note explore-note">{html.escape(row_notes[row_name])}</div>', unsafe_allow_html=True)
-            if not choices:
-                st.caption("Refreshing personalized matches…")
-                continue
-            # Fit floor: past this rank a movie is less likely to be loved than an average one,
-            # so the row shows fewer cards instead of padding (Top Matches is always shown).
-            _floor = fit_floor()
-            _pays = st.session_state.get("showroom_payloads") or {}
-            _slots = st.session_state.get("showroom_slots") or {}
-            def _strong(i):
-                pay = _pays.get(_slots.get(_showroom_slot_key(row_name, i))) or {}
+        render_tonight_pick_fragment()
+        row_notes={
+            "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
+            "Critically Acclaimed":"Highly rated movies that still fit what you like",
+            "Hidden Gems":"Less-known movies you’re likely to love",
+            "Something Different":"Outside your usual genres, but still likely to click",
+            **{name: note for name, note in ADAPTIVE_NOTES.items()},
+        }
+        _floor = fit_floor()
+
+        def _strong_slots(row_name, n):
+            """Slots in a row worth showing; weak picks are swapped for the next strong one first."""
+            pays = st.session_state.get("showroom_payloads") or {}
+            def ok(i):
+                slots = st.session_state.get("showroom_slots") or {}
+                pay = pays.get(slots.get(_showroom_slot_key(row_name, i))) or {}
                 top = pay.get("fit_top_pct")
-                # Rows with their own within-kind test (Top Matches, Critically Acclaimed, Hidden Gems,
-                # Something Different) show their best fits. Untested adaptive rows show only strong fits.
                 return row_name == "Top Matches for You" or _floor is None or not isinstance(top, (int, float)) or top <= _floor
-            # A weak pick is swapped for the next strong one in this row's queue, so rows stay full when they can.
-            for i in range(len(choices)):
-                if not _strong(i) and _advance_showroom_slot(row_name, i):
-                    _slots = st.session_state.get("showroom_slots") or {}
-            kept = [i for i in range(len(choices)) if _strong(i)]
-            if not kept:
-                st.caption("No strong fits here yet. Like or save a few more movies and this row fills in.")
-                continue
-            with st.container(key=f"showroom_swipe_{row_index}"):
-                cols=st.columns(4)
-                for c, i in enumerate(kept[:4]):
+            for i in range(n):
+                if not ok(i):
+                    _advance_showroom_slot(row_name, i)
+            slots = st.session_state.get("showroom_slots") or {}
+            return [i for i in range(n) if ok(i) and slots.get(_showroom_slot_key(row_name, i))]
+
+        def _header(title, note):
+            st.markdown(f'<div class="showroom-row showroom-row-header"><div class="showroom-row-title">{title}</div>'
+                        f'<div class="row-model-note">{html.escape(note)}</div></div>', unsafe_allow_html=True)
+
+        def _draw_cards(key, cells):
+            with st.container(key=f"showroom_swipe_{key}"):
+                cols = st.columns(4)
+                for c, (rname, rindex, slot) in enumerate(cells[:4]):
                     with cols[c]:
-                        render_showroom_card_fragment(row_name,row_index,i)
-                        render_card_actions(row_name,row_index,i)
+                        render_showroom_card_fragment(rname, rindex, slot)
+                        render_card_actions(rname, rindex, slot)
+
+        top_name = row_specs[0]
+        _header("Top Picks for You", _mood_line() or row_notes[top_name])
+        top_slots = _strong_slots(top_name, len(row_choices.get(top_name, [])))
+        if top_slots:
+            _draw_cards(0, [(top_name, 0, i) for i in top_slots])
+        else:
+            st.caption("Refreshing personalized matches…")
+
+        if _tv.available():
+            from src.ui.shows import render_shows
+            render_shows({"movie_thumb": movie_thumb, "card_html": card_html, "watch_line_html": watch_line_html,
+                          "record_event": record_event, "queue_profile_save": queue_profile_save, "signals": _cf_signals,
+                          "spec": _mood_spec()}, 4)
+
+        explore = [(r, row_specs.index(r)) for r in row_specs[1:]]
+        pools = {r: _strong_slots(r, len(row_choices.get(r, []))) for r, _ in explore}
+        cells, depth = [], 0
+        while len(cells) < 4 and any(len(v) > depth for v in pools.values()):
+            for r, idx in explore:
+                if len(pools[r]) > depth and len(cells) < 4:
+                    cells.append((r, idx, pools[r][depth]))
+            depth += 1
+        if cells:
+            _header("More to explore", "Critics’ picks, hidden gems, and something new, all chosen for you")
+            _draw_cards("explore", cells)
         _remember_shown(row_choices)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
         st.markdown(
@@ -3235,17 +3245,7 @@ def render_showroom_fragment(p):
             st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(_lst)} movies.</div>',
                         unsafe_allow_html=True)
         # One row of three matching pills.
-        edit, move, reset, _ = st.columns([1.5, 1.5, 1.3, 2.2], gap="small")
-        with move:
-            with st.popover("Move my profile", use_container_width=True):
-                try:
-                    _host = st.context.headers.get("host") or "icinema.streamlit.app"
-                except Exception:
-                    _host = "icinema.streamlit.app"
-                st.markdown('<div class="why-pop-head" style="font-size:1rem">Open this link on your other device</div>'
-                            '<div class="why-pop-line">It carries your likes, saves, and answers. No account, nothing personal. '
-                            'Anyone with the link can load this profile.</div>', unsafe_allow_html=True)
-                st.code(f"https://{_host}/?p={_encode_profile_link(profile_snapshot())}", language=None)
+        edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
         with edit:
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
             st.button("Edit my answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),
@@ -3260,6 +3260,18 @@ def render_showroom_fragment(p):
                   help="Counts like visits and saves, tied to a random ID. Never movie titles, names, emails, or location.")
         st.markdown('<div class="privacy-note">Your profile stays in this browser. iCinema has no accounts '
                     'and never sells your data.</div>', unsafe_allow_html=True)
+        # A utility, not a profile action: a quiet link under the privacy line.
+        with st.container(key="move_profile_link"):
+            with st.popover("Move it to another device →"):
+                try:
+                    _host = st.context.headers.get("host") or "icinema.streamlit.app"
+                except Exception:
+                    _host = "icinema.streamlit.app"
+                st.markdown('<div class="why-pop-head" style="font-size:1rem">Open this link on your other device</div>'
+                            '<div class="why-pop-line">It carries your likes, saves, and answers. No account, nothing personal. '
+                            'Anyone with the link can load this profile.</div>', unsafe_allow_html=True)
+                st.code(f"https://{_host}/?p={_encode_profile_link(profile_snapshot())}", language=None)
+
 
 
     # tabs9: counts beside the fixed tab labels, found by tab id (labels never change, so
@@ -3282,8 +3294,8 @@ screen=st.session_state.screen
 
 if screen=="welcome":
     logo()
-    st.markdown('<div class="hero-title">Always find your next great watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">Picks you’ll love, where to watch them tonight, and better every time you use it.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-title">Always something great to watch.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">Less scrolling, more watching. Nine models learn what you love and find your next movie or show, where to stream it, and how likely you are to love it, getting sharper every time you use it.</div>',unsafe_allow_html=True)
     st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
     st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
 
@@ -3347,16 +3359,12 @@ elif screen=="showroom":
             with st.container(key="mood_box"):
                 _active = bool((st.session_state.get("mood_query") or "").strip())
                 st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
-                              placeholder="Find your mood: feel-good, mind-bending, anime…")
+                              placeholder="What’s your mood? Try “funny, under 2 hours”",
+                              help="A mood (feel-good, mind-bending, anime) and, if you like, how long: “under 90 min”, “short”, “something long”.")
                 if _active:
                     st.button("✕", key="mood_clear", help="Clear the mood",
                               on_click=lambda: st.session_state.update(mood_query=""))
 
-    from src import tv as _tv_mod
-    if _tv_mod.available():
-        with st.container(key="media_view_box"):
-            st.radio("Show", ["Home", "Movies", "Shows"], key="media_view", horizontal=True,
-                     label_visibility="collapsed", on_change=_mark_showroom_fast)
     render_showroom_fragment(p)
 
 # Persist the latest profile/history after the page has processed this run.

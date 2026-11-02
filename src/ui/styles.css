@@ -5313,3 +5313,46 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .st-key-explore_lens_box div[role="radiogroup"] label:has(input:checked){background:rgba(243,240,234,.14) !important;}
 .st-key-media_view_box div[role="radiogroup"] label p,.st-key-explore_lens_box div[role="radiogroup"] label p{
     font-family:var(--ui-font) !important;font-size:.84rem !important;font-weight:600 !important;margin:0 !important;}
+
+/* ---- Batch 8: unified Showroom, calmer Profile, iPhone ---- */
+/* Equal rhythm on every card: the same gap above the art (after the pill row) as before Save / Seen. */
+[class*="st-key-showroom_controls_"]{margin-bottom:.55rem !important;}
+.card-text > label.art-toggle{margin:0 0 .55rem !important;}
+.card-text > div:last-child{margin-bottom:.55rem !important;}
+[class*="st-key-showroom_swipe_"]{margin-bottom:.4rem !important;}
+/* Saved / Seen: art and two buttons only; details live in the tap panel. */
+.panel-lines{margin:.1rem 0 .45rem;}
+.panel-lines > div{margin:0 0 .25rem !important;}
+/* Profile chips: smaller, centered monospace. */
+.profile-chip,.profile-analysis-row{font-size:.74rem !important;justify-content:center !important;text-align:center !important;
+    padding:.28rem .62rem !important;min-height:0 !important;}
+.profile-chip-wrap,.profile-analysis{align-items:center !important;}
+/* How your picks are made: technique, share, job. */
+.model-status-panel .model-name{min-width:17rem !important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace !important;
+    font-size:.8rem !important;font-weight:600 !important;}
+.model-status-panel .model-share{min-width:2.8rem;text-align:right;color:var(--ivory);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;}
+/* Move my profile: a quiet text link under the privacy line. */
+.st-key-move_profile_link [data-testid="stPopover"] > div > button,.st-key-move_profile_link [data-testid="stPopover"] button{
+    width:auto !important;border:0 !important;background:transparent !important;padding:0 !important;min-height:0 !important;
+    height:auto !important;color:var(--muted) !important;box-shadow:none !important;}
+.st-key-move_profile_link [data-testid="stPopover"] button p{font-size:.82rem !important;font-weight:500 !important;
+    text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(169,173,183,.4);}
+.st-key-move_profile_link [data-testid="stPopover"] button svg{display:none !important;}
+/* Mood field: one calm line, never cut off. */
+.st-key-mood_box input{text-overflow:ellipsis;}
+
+/* iPhone and small screens: two cards per row, comfortable tap targets, nothing cut off. */
+@media (max-width: 640px){
+    [class*="st-key-showroom_swipe_"] > div > [data-testid="stHorizontalBlock"],
+    [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]:first-of-type{flex-wrap:wrap !important;gap:.75rem !important;}
+    [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="stColumn"],
+    [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]:first-of-type > [data-testid="column"]{
+        flex:1 1 calc(50% - .5rem) !important;min-width:calc(50% - .5rem) !important;max-width:calc(50% - .375rem) !important;}
+    div.stButton > button{min-height:44px !important;}
+    .hero-title{font-size:2.3rem !important;}
+    .showroom-row-title{font-size:1.45rem !important;}
+    .model-status-panel .model-row{flex-wrap:wrap !important;}
+    .model-status-panel .model-name{min-width:0 !important;}
+    [data-baseweb="tab-list"]{overflow-x:auto !important;}
+}

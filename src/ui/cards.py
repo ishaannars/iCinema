@@ -29,9 +29,9 @@ def card_ratings(movie, live_rating):
 
 
 def ratings_text(ratings):
-    """'IMDb 7.1 · RT 88%', 'IMDb 7.1 · No RT', or 'Viewers 7.9/10 · No RT'."""
+    """'IMDb 7.1 · RT 88%', 'IMDb 7.1 · No RT', or 'TMDB 7.9 · No RT' when IMDb has no score."""
     audience = (f"IMDb {ratings['imdb']:.1f}" if ratings.get("imdb") else
-                (f"Viewers {ratings['tmdb_vote']:.1f}/10" if ratings.get("tmdb_vote") else None))
+                (f"TMDB {ratings['tmdb_vote']:.1f}" if ratings.get("tmdb_vote") else None))
     critics = f"RT {int(ratings['rt'])}%" if ratings.get("rt") else "No RT"
     if not audience and critics == "No RT":
         return []  # nothing to show; the card says "Ratings unavailable"
@@ -126,7 +126,7 @@ def match_label(match):
     return "Worth a look"
 
 
-def card_html(toggle_id, art_html, title, movie, identity, lines_html):
+def card_html(toggle_id, art_html, title, movie, identity, lines_html, lines_in_panel=False):
     """One card in one block: tap the art to open the full story under it, then the info lines and a
     short description. Keeping it all in one block is what makes the tap work and the spacing even."""
     dm = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
@@ -139,9 +139,10 @@ def card_html(toggle_id, art_html, title, movie, identity, lines_html):
             f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{art_html}</label>'
             f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
             + (f'<div class="premise-tag">{html.escape(tag)}</div>' if tag else "")
+            + (f'<div class="panel-lines">{lines_html}</div>' if lines_in_panel else "")
             + f'<div class="premise-copy">{html.escape(short)}</div></div>'
-            f'{lines_html}'
-            '</div>')
+            + ("" if lines_in_panel else lines_html)
+            + '</div>')
 
 
 def premise_panel(toggle_id, title, movie, identity):
@@ -156,7 +157,9 @@ def premise_panel(toggle_id, title, movie, identity):
 def library_lines_html(movie, identity, live_map, watch_html=""):
     """Year and genres, ratings, where to watch: the same lines as a Showroom card."""
     year = identity.get("year") or movie.get("year")
-    meta = [str(x) for x in (year, genre_pair(movie)) if x]
+    from src.ui.mood_time import fmt
+    rt = identity.get("runtime") or movie.get("runtime")
+    meta = [str(x) for x in (year, genre_pair(movie), fmt(rt) if rt else (f"{fmt(movie.get('episode_runtime'))} episodes" if movie.get("episode_runtime") else "")) if x]
     parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
     return (f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
             f'<div class="ratings">{" · ".join(parts) or "Ratings unavailable"}</div>'

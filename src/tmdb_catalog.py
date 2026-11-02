@@ -561,6 +561,7 @@ def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
         "tagline": (payload.get("tagline") or "").strip() or None,
         "overview": (payload.get("overview") or "").strip() or None,
         "release_date": release or None,
+        "runtime": int(payload.get("runtime") or 0) or None,
         "studios": [c.get("name") for c in (payload.get("production_companies") or []) if c.get("name")][:3],
     }
 
