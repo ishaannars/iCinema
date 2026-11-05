@@ -165,13 +165,11 @@ def analytics_insights(events):
         if e.get("title") in saved_titles
     }
 
-    exploratory_rows = {
-        "Hidden Gems",
-        "Something Different",
-        "Critically Acclaimed",
-    }
+    # Discovery: saves from any Showroom row beyond Top Picks and Tonight's Show
+    # (Critically Acclaimed, Hidden Gems, the fourth row, Shows for You).
+    main_rows = {"Top Matches for You", "Tonight's Show"}
     exploratory_saves = [
-        e for e in saves if e.get("row") in exploratory_rows
+        e for e in saves if e.get("row") and e.get("row") not in main_rows
     ]
 
     unique_impressions = {

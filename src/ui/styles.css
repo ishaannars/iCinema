@@ -5547,3 +5547,73 @@ div.stButton>button:focus-visible,[data-testid="stPopover"] button:focus-visible
     .model-status-panel .model-share{margin-right:0 !important;}
     .model-status-panel .model-note{flex:0 0 100% !important;padding-left:1.3rem !important;margin-top:.2rem !important;}
 }
+
+/* ---- Batch 10: Profile, library cards, streaming line ---- */
+/* Profile: one column, one rhythm. Sections share the same title, spacing, and left edge. */
+.pf{max-width:820px !important;}
+.pf-summary{font-family:var(--ui-font);color:var(--muted);font-size:.9rem;line-height:1.4;margin:.35rem 0 0;}
+.pf-section{margin:2rem 0 0;padding:1.6rem 0 0;border-top:1px solid var(--border);}
+.pf-title{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-size:1.15rem;font-weight:700;letter-spacing:-.015em;margin:0 0 .3rem;}
+.pf-sub{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;line-height:1.45;margin:0 0 1rem;}
+.pf-foot{font-family:var(--ui-font);color:var(--muted2);font-size:.78rem;line-height:1.5;margin:.9rem 0 0;}
+.pf-note{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;line-height:1.5;margin:1rem 0 0;}
+/* Models: status dot, plain name over the technique, weight, and job, all on fixed columns. */
+.pf-models{display:flex;flex-direction:column;}
+.pf-model{display:flex;align-items:center;gap:1rem;padding:.75rem 0;border-top:1px solid rgba(169,173,183,.10);}
+.pf-model:first-child{border-top:0;padding-top:.2rem;}
+.pf-dot{flex:0 0 .6rem;width:.6rem;height:.6rem;border-radius:50%;background:rgba(169,173,183,.35);}
+.pf-dot.on{background:#0A84FF;box-shadow:0 0 0 0 rgba(10,132,255,.55);animation:pf-pulse 2s ease-out infinite;}
+@keyframes pf-pulse{0%{box-shadow:0 0 0 0 rgba(10,132,255,.55);}70%{box-shadow:0 0 0 .5rem rgba(10,132,255,0);}100%{box-shadow:0 0 0 0 rgba(10,132,255,0);}}
+@media (prefers-reduced-motion: reduce){.pf-dot.on{animation:none;}}
+.pf-model-main{flex:0 0 15rem;min-width:0;}
+.pf-model-name{font-family:var(--ui-font);color:var(--ivory);font-size:.92rem;font-weight:650;line-height:1.3;}
+.pf-model-tech{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted2);font-size:.75rem;line-height:1.35;margin-top:.12rem;}
+.pf-model-share{flex:0 0 3rem;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ivory);
+    font-size:.92rem;font-weight:600;font-variant-numeric:tabular-nums;}
+.pf-model-note{flex:1 1 0;min-width:0;font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.45;}
+/* Taste: labels on one fixed column, chips beside them, even gaps. */
+.pf-taste .profile-block{display:flex !important;align-items:baseline !important;gap:1rem !important;margin:0 0 .85rem !important;padding:0 !important;}
+.pf-taste .profile-block + .profile-block{margin-top:0 !important;}
+.pf-taste .profile-label{flex:0 0 9.5rem !important;margin:0 !important;font-size:.75rem !important;line-height:1.9rem !important;white-space:nowrap;}
+.pf-taste .profile-chip-wrap{flex:1 1 0 !important;gap:.45rem !important;justify-content:flex-start !important;}
+.pf-taste .profile-chip{min-height:1.9rem !important;padding:.3rem .7rem !important;font-size:.8rem !important;}
+/* Stats: four equal cards. */
+.pf-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;}
+.pf-stats .insight-card{min-height:0 !important;padding:.95rem 1rem !important;margin:0 !important;}
+.pf-stats .insight-value{font-size:1.35rem !important;font-variant-numeric:tabular-nums;}
+.pf-stats .insight-title{font-family:var(--ui-font);color:var(--ivory);font-size:.84rem;font-weight:650;margin:.3rem 0 .2rem;}
+.pf-stats .insight-label{font-size:.78rem !important;line-height:1.4 !important;}
+/* How it works: two by two, then the tested results. */
+.pf-how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.1rem 2rem;margin:.4rem 0 0;}
+.pf-how-title{font-family:var(--ui-font);color:var(--ivory);font-size:.92rem;font-weight:650;margin:0 0 .25rem;}
+.pf-how-copy{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.5;}
+.pf-proof-lead{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;margin:1.6rem 0 .6rem;}
+.pf .stat-row{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:1.5rem !important;margin:0 !important;}
+.pf .stat-num{font-variant-numeric:tabular-nums;}
+.pf .stat-label{font-size:.82rem !important;line-height:1.45 !important;}
+.pf .how-footnote{font-size:.78rem !important;margin:.7rem 0 0 !important;}
+
+/* Streaming line: wraps inside its card, each service stays whole, "+ N more" stays readable. */
+.card-text .watch-availability,.panel-lines .watch-availability{white-space:normal !important;overflow-wrap:break-word !important;
+    word-break:normal !important;max-width:100% !important;}
+.watch-availability a.watch-link{white-space:nowrap !important;}
+
+/* Seen: one calm action row, two icon toggles and What's next, all the same height. */
+[class*="st-key-seenrow_"]{margin:.1rem 0 0 !important;}
+[class*="st-key-seenrow_"] div.stButton>button,[class*="st-key-seenrow_"] [data-testid="stPopover"] button{
+    height:2.4rem !important;min-height:2.4rem !important;padding:0 .6rem !important;border-radius:999px !important;}
+[class*="st-key-seenrow_"] div.stButton>button p,[class*="st-key-seenrow_"] [data-testid="stPopover"] button p{font-size:.84rem !important;margin:0 !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button svg{display:none !important;}
+[class*="st-key-seenrow_"] [class*="st-key-whatsnext_"]{margin:0 !important;}
+
+@media (max-width: 640px){
+    .pf-model{flex-wrap:wrap;gap:.35rem 1rem;}
+    .pf-model-main{flex:1 1 0;}
+    .pf-model-note{flex:0 0 100%;padding-left:1.6rem;}
+    .pf-taste .profile-block{flex-direction:column !important;gap:.35rem !important;}
+    .pf-taste .profile-label{flex:none !important;line-height:1.3 !important;}
+    .pf-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pf-how,.pf .stat-row{grid-template-columns:1fr !important;}
+    [class*="st-key-seenrow_"] div.stButton>button,[class*="st-key-seenrow_"] [data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}
+}
+.meta-part{white-space:nowrap;}

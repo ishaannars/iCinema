@@ -8,7 +8,7 @@ from src.ui.mood_time import fits, parse  # noqa: E402
 
 def test_parse_mood_and_time():
     p = parse("funny, under 2 hours")
-    assert p["mood"] == "funny" and p["max"] == 120 and p["label"] == "under 2h"
+    assert p["mood"] == "funny" and p["max"] == 120 and p["label"] == "under 120 min"
     assert parse("dark thriller under 90 min")["max"] == 90
     assert parse("something long")["min"] == 150 and parse("something long")["mood"] == ""
     assert parse("anime short episodes")["episodes"] == 35 and parse("anime short episodes")["mood"] == "anime"
@@ -32,7 +32,7 @@ def test_bare_length_is_a_time_limit():
 def test_chips_remove_one_part_at_a_time():
     from src.ui.mood_time import chips
     labels = dict(chips("funny, under 2 hours"))
-    assert set(labels) == {"funny", "Under 2h"}
+    assert set(labels) == {"funny", "Under 120 min"}
     assert parse(labels["funny"])["max"] == 120 and parse(labels["funny"])["mood"] == ""
-    assert parse(labels["Under 2h"])["mood"] == "funny" and parse(labels["Under 2h"])["max"] is None
+    assert parse(labels["Under 120 min"])["mood"] == "funny" and parse(labels["Under 120 min"])["max"] is None
     assert chips("") == []

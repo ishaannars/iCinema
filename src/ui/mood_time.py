@@ -106,10 +106,10 @@ def chips(query):
 
 
 def fmt(minutes):
+    """Runtimes in plain minutes, the way they read at a glance: "136 min"."""
     if not minutes:
         return ""
-    h, m = divmod(int(minutes), 60)
-    return f"{h}h {m:02d}m" if h and m else (f"{h}h" if h else f"{m}m")
+    return f"{int(minutes)} min"
 
 
 def fits(runtime, spec, show=False):

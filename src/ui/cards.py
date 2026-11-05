@@ -88,7 +88,7 @@ def fit_head(payload, match):
     even when the raw scores of top picks sit close together.
     """
     top = (payload or {}).get("fit_top_pct")
-    return f"Top {int(top)}%" if isinstance(top, (int, float)) else f"{int(match or 0)}%"
+    return f"Top {max(1, int(top))}% for you" if isinstance(top, (int, float)) else f"{int(match or 0)}% match"
 
 
 def fit_label(payload, match):
@@ -105,7 +105,7 @@ def match_pill(match, reasons, limit=None, taken=(), head=None):
     use keeps a row varied, e.g. one "Fans of “Spirited Away”" instead of four.
     """
     match = int(match or 0)
-    head = head or f"{match}%"
+    head = (head or f"{match}%").replace(" for you", "").replace(" match", "")
     room = (limit if limit is not None else PILL_BUDGET) - len(f"{head} · ")
     for reason in reasons or []:
         label = _short_reason(reason, room)
@@ -129,16 +129,22 @@ def match_label(match):
 def card_html(toggle_id, art_html, title, movie, identity, lines_html, lines_in_panel=False):
     """One card in one block: tap the art to open the longer synopsis under it, then the info lines.
     Keeping it all in one block is what makes the tap work and the spacing even."""
+    from src.descriptions import card_description
     dm = dict(movie, tagline=identity.get("tagline") or movie.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
-    full = expanded_card_description(dm)
+    full = card_description(dm)
     return ('<div class="card-text">'
             f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
-            f'<label class="art-toggle" for="{toggle_id}" title="Tap for the synopsis">{art_html}</label>'
+            f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{art_html}</label>'
             f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
             + (f'<div class="panel-lines">{lines_html}</div>' if lines_in_panel else "")
             + f'<div class="premise-copy">{html.escape(full)}</div></div>'
             + ("" if lines_in_panel else lines_html)
             + '</div>')
+
+
+def meta_html(parts):
+    """Year · genres · runtime, where each part stays whole when the line wraps."""
+    return " · ".join(f'<span class="meta-part">{html.escape(str(m))}</span>' for m in parts if m)
 
 
 def card_desc_html(movie, identity):
@@ -164,7 +170,7 @@ def library_lines_html(movie, identity, live_map, watch_html=""):
     rt = identity.get("runtime") or movie.get("runtime")
     meta = [str(x) for x in (year, genre_pair(movie), fmt(rt) if rt else (f"{fmt(movie.get('episode_runtime'))} episodes" if movie.get("episode_runtime") else "")) if x]
     parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
-    return (f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+    return (f'<div class="poster-caption-year card-year">{meta_html(meta)}</div>'
             f'<div class="ratings">{" · ".join(parts) or "Ratings unavailable"}</div>'
             + (f'<div class="watch-availability">{watch_html}</div>' if watch_html else ""))
 
@@ -175,7 +181,7 @@ def library_text_html(movie, identity, live_map, watch_html="", premise=""):
     meta = [str(x) for x in (year, genre_pair(movie)) if x]
     parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
     return ('<div class="card-text">' + premise +
-            f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+            f'<div class="poster-caption-year card-year">{meta_html(meta)}</div>'
             f'<div class="ratings">{" · ".join(parts) or "Ratings unavailable"}</div>'
             + (f'<div class="watch-availability">{watch_html}</div>' if watch_html else "")
             + '</div>')

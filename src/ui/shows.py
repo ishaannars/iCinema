@@ -9,7 +9,7 @@ import html
 import streamlit as st
 
 from src import tv
-from src.ui.cards import card_desc_html
+from src.ui.cards import meta_html
 
 
 def _act(ctx, kind, title, show):
@@ -65,8 +65,7 @@ def _card(ctx, slot, entry):
         meta.append(f"{fmt(show['episode_runtime'])} episodes")
     watch = tv.show_watch(show["tmdb_id"])
     st.markdown(ctx["card_html"](f"tv-premise-{slot}", art, title, show, {},
-                                 f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
-                                 + card_desc_html(show, {}) +
+                                 f'<div class="poster-caption-year card-year">{meta_html(meta)}</div>'
                                  f'<div class="ratings">{ratings}</div>'
                                  f'<div class="watch-availability">{ctx["watch_line_html"](watch, title, st.session_state.get("streaming_services"))}</div>'),
                 unsafe_allow_html=True)

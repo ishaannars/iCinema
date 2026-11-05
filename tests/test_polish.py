@@ -27,3 +27,21 @@ def test_no_raw_errors_and_no_purple():
     assert 'showErrorDetails = "none"' in (ROOT / ".streamlit" / "config.toml").read_text()
     css = (ROOT / "src" / "ui" / "styles.css").read_text()
     assert "92,111,168" not in css and "5C6FA8" not in css.upper()
+
+
+def test_runtimes_read_in_minutes():
+    from src.ui.mood_time import fmt
+    assert fmt(136) == "136 min" and fmt(None) == ""
+
+
+def test_fit_pill_says_what_the_rank_means():
+    from src.ui.cards import fit_head, match_pill
+    assert fit_head({"fit_top_pct": 4}, 80) == "Top 4% for you"
+    assert "for you for you" not in match_pill(80, [], head=fit_head({"fit_top_pct": 4}, 80))[0]
+
+
+def test_saves_from_every_discovery_row_count():
+    from src.analytics import analytics_insights
+    ev = [{"event": "save", "title": "A", "row": "Classics for You", "timestamp": 1, "session_id": "s"},
+          {"event": "save", "title": "B", "row": "Top Matches for You", "timestamp": 2, "session_id": "s"}]
+    assert analytics_insights(ev)["discovery_rate"] == 0.5
