@@ -18,15 +18,25 @@ import time
 from typing import Optional
 
 import numpy as np
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    brier_score_loss,
-    log_loss,
-    roc_auc_score,
-)
-from sklearn.model_selection import train_test_split
+
+# scikit-learn takes over a second to import, so it is loaded the first time a
+# model is trained instead of when the app starts.
+def _load_sklearn():
+    if "GradientBoostingClassifier" in globals():
+        return
+    from sklearn.ensemble import GradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, roc_auc_score
+    from sklearn.model_selection import train_test_split
+    globals().update(
+        GradientBoostingClassifier=GradientBoostingClassifier,
+        LogisticRegression=LogisticRegression,
+        accuracy_score=accuracy_score,
+        brier_score_loss=brier_score_loss,
+        log_loss=log_loss,
+        roc_auc_score=roc_auc_score,
+        train_test_split=train_test_split,
+    )
 
 
 FEATURE_NAMES = [
@@ -183,6 +193,7 @@ def _recency_weights(timestamps, half_life_days=RECENCY_HALF_LIFE_DAYS):
 
 
 def _split_indices(y, timestamps):
+    _load_sklearn()
     """Prefer a chronological holdout; fall back to stratification if necessary."""
     n = len(y)
     if n < 2:
@@ -217,6 +228,7 @@ def _split_indices(y, timestamps):
 
 
 def _evaluate_model(model, Xtr, ytr, Xte, yte, wtr=None):
+    _load_sklearn()
     model.fit(Xtr, ytr, sample_weight=wtr)
     prob = np.clip(model.predict_proba(Xte)[:, 1], 1e-5, 1 - 1e-5)
     pred = (prob >= 0.5).astype(int)

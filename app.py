@@ -1,4 +1,6 @@
 
+import time as _time
+_BOOT = _time.perf_counter()
 import html
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -22,7 +24,25 @@ from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarit
 from src.interleave import team_draft, TARGET_DECIDED
 from src.recommender import _calibrated_match_percent
 
-st.set_page_config(page_title="iCinema", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
+def _timing_on():
+    """Set ICINEMA_TIMING = true in Streamlit secrets to log where time goes (Manage app → Logs)."""
+    import os
+    if os.environ.get("ICINEMA_TIMING"):
+        return True
+    try:
+        return bool(st.secrets.get("ICINEMA_TIMING", False))
+    except Exception:
+        return False
+
+
+def _log_time(label, start):
+    if _timing_on():
+        import sys
+        print(f"[timing] {label}: {(_time.perf_counter() - start) * 1000:.0f} ms", file=sys.stderr, flush=True)
+
+
+_log_time("imports", _BOOT)
+st.set_page_config(page_title="iCinema", page_icon=str(Path(__file__).parent / "assets" / "favicon.png"), layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css
 from src.love import love_line, fit_floor
@@ -31,6 +51,7 @@ from src.ui.cards import (  # card and popup text, unit-tested in tests/test_car
     _PILL_SHORT,
     _short_reason,
     _short_title,
+    card_desc_html,
     card_html,
     card_ratings,
     card_reason_line,
@@ -67,7 +88,7 @@ defaults={
     "showroom_impression_keys":set(),"recommendation_context":{},
     "showroom_slots":{},"showroom_payloads":{},"showroom_row_queues":{},
     "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{},
-    "streaming_services":[]
+    "streaming_services":[],"mood_active":""
 }
 # Always mounted at the same spot so its iframe (and listeners) persist across reruns.
 scroll_keeper()
@@ -108,6 +129,7 @@ def profile_snapshot():
         "external_movies": st.session_state.external_movies,
         "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
         "streaming_services": list(st.session_state.get("streaming_services") or []),
+        "mood_active": str(st.session_state.get("mood_active") or "")[:120],
     }
 
 def restore_profile(data):
@@ -140,6 +162,8 @@ def restore_profile(data):
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
         st.session_state.streaming_services = list(data.get("streaming_services") or [])
+        st.session_state.mood_active = str(data.get("mood_active") or "")[:120]
+        st.session_state.pop("mood_input", None)
         st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
         if st.session_state.onboarding_complete:
             st.session_state.screen = "showroom"
@@ -834,7 +858,7 @@ def reset_profile_state():
     for k, v in defaults.items():
         st.session_state[k] = v.copy() if isinstance(v, (set, dict)) else (list(v) if isinstance(v, list) else v)
     st.session_state._last_persisted_profile = None
-    for key in ("tonight_services_picker", "tonight_last_skip", "tonight_pool", "showroom_undo", "showroom_pill_labels"):
+    for key in ("tonight_services_picker", "tonight_last_skip", "tonight_pool", "showroom_undo", "showroom_pill_labels", "mood_input"):
         st.session_state.pop(key, None)
     queue_profile_save()
 
@@ -1142,7 +1166,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _p_share = 0.22 if learned.ready else 0.0
     _fans = round((1 - CONTENT_WEIGHT) * (1 - _p_share) * 100)
     _cont = round(CONTENT_WEIGHT * (1 - _p_share) * 100)
-    _mood_on = bool((st.session_state.get("mood_query") or "").strip())
+    _mood_on = bool(_mood_text())
     _short_cf = _cf_name.split(" (")[0]
     _why_cf = {"EASE": "you’ve rated a lot, and EASE won the test for long histories",
                "RP3beta": "your likes are less mainstream, and RP3beta won that test",
@@ -1356,13 +1380,27 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
 import functools as _functools
 
 
+def _friendly_error(exc):
+    """Log the real error for the server logs; show the viewer a calm message instead of a traceback."""
+    if type(exc).__name__ in {"RerunException", "StopException"}:
+        raise exc
+    import sys
+    import traceback
+    print("iCinema error:", "".join(traceback.format_exception(exc)), file=sys.stderr, flush=True)
+    st.markdown('<div class="friendly-error">This part didn’t load. Refresh the page to try again. '
+                'Your picks, saves, and settings are kept.</div>', unsafe_allow_html=True)
+
+
 def _with_app_rerun(fn):
     """Run a full-app rerun requested by a button callback (callbacks themselves can't)."""
     @_functools.wraps(fn)
     def inner(*args, **kwargs):
         if st.session_state.pop("_app_rerun", False):
             st.rerun(scope="app")
-        return fn(*args, **kwargs)
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            _friendly_error(exc)
     return inner
 
 
@@ -1893,10 +1931,29 @@ def _clean_ranked(ranked, excluded):
 
 
 
+def _mood_text():
+    """The mood search the viewer applied. It stays until they clear it, across pages and visits."""
+    return " ".join(str(st.session_state.get("mood_active") or "").split())
+
+
+def _apply_mood():
+    """Enter in the search field: the typed words become the active mood."""
+    st.session_state.mood_active = " ".join(str(st.session_state.get("mood_input") or "").split())[:120]
+    queue_profile_save()
+
+
+def _set_mood(text):
+    """Chip ×, Clear, or an edit: rewrite the active mood and the field together."""
+    text = " ".join(str(text or "").split())[:120]
+    st.session_state.mood_active = text
+    st.session_state.mood_input = text
+    queue_profile_save()
+
+
 def _mood_spec():
     """The search field split into a mood (for the mood model) and a time limit (a runtime filter)."""
     from src.ui.mood_time import parse
-    return parse(st.session_state.get("mood_query") or "")
+    return parse(_mood_text())
 
 
 def _time_filter(items, spec, cap=80):
@@ -1929,6 +1986,32 @@ def _mood_line():
     q, t = spec["mood"], spec["label"]
     head = f"Your best fits for “{q[:40]}”" if q and scores(q) is not None else ("Your best fits" if t else "")
     return f"{head} · {t}" if head and t else head
+
+
+def render_mood_chips():
+    """What the search understood, as chips with ×. Each chip removes one part; Clear removes all."""
+    from src.ui.mood_time import chips
+    from src.mood import scores
+    active = _mood_text()
+    parts = chips(active)
+    if not parts:
+        return
+    try:
+        row = st.container(key="mood_chip_row", horizontal=True, gap="small")
+    except TypeError:          # older Streamlit: chips stack instead of sitting in one line
+        row = st.container(key="mood_chip_row")
+    with row:
+        for i, (label, rest) in enumerate(parts):
+            st.button(f"{label}  ×", key=f"mood_chip_{i}", help=f"Remove {label}",
+                      on_click=_set_mood, args=(rest,))
+        st.button("Clear", key="mood_reset", on_click=_set_mood, args=("",))
+    mood = _mood_spec()["mood"]
+    if mood and scores(mood) is None:
+        st.markdown(
+            f'<div class="mood-hint">No movies are described as “{html.escape(mood[:40])}” yet. '
+            'Try words like feel-good, mind-bending, or slow burn.</div>',
+            unsafe_allow_html=True,
+        )
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -1983,8 +2066,22 @@ def dislike_movie(title, movie=None):
     queue_profile_save()
 
 
+def _too_soon(slot_key, gap=0.8):
+    """A second tap on the same card within a moment is a double tap: ignore it so one tap = one action."""
+    import time as _t
+    now = _t.monotonic()
+    last = dict(st.session_state.get("_last_slot_tap") or {})
+    if now - last.get(slot_key, 0.0) < gap:
+        return True
+    last[slot_key] = now
+    st.session_state._last_slot_tap = last
+    return False
+
+
 def dislike_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
+    if _too_soon(slot_key):
+        return
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     if title:
@@ -1997,6 +2094,8 @@ def dislike_showroom_slot(row_name, slot_index):
 
 def skip_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
+    if _too_soon(slot_key):
+        return
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     movie = payload.get("movie")
@@ -2014,6 +2113,8 @@ def _mark_showroom_fast():
 
 def save_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
+    if _too_soon(slot_key):
+        return
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     movie = payload.get("movie")
@@ -2027,6 +2128,8 @@ def save_showroom_slot(row_name, slot_index):
 
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
+    if _too_soon(slot_key):
+        return
     title = (st.session_state.get("showroom_slots") or {}).get(slot_key)
     payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     movie = payload.get("movie")
@@ -2123,7 +2226,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             match_col, undo_col, skip_col = st.columns([2.75,0.62,0.90], gap="small")
             with undo_col:
                 st.button(
-                    "↶",
+                    ":material/undo:",
                     key=f"undo_{row_name}_{slot_index}_{title}",
                     help=f"Undo skip · bring back {undo_title}",
                     use_container_width=True,
@@ -2206,6 +2309,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             watch_html, availability_class = html.escape(_w), "watch-availability"
     st.markdown(card_html(_sid, _art_html, display_movie.get("title", ""), movie, identity,
         f'<div class="poster-caption-year card-year">{" · ".join(html.escape(m) for m in meta)}</div>'
+        + card_desc_html(movie, identity) +
         f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>'
         f'<div class="{availability_class}">{watch_html}</div>'), unsafe_allow_html=True)
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
@@ -2270,11 +2374,15 @@ def _sync_services_from_picker():
 
 
 def tonight_skip(title, movie):
+    if _too_soon("tonight"):
+        return
     skip_movie(title, movie)
     st.session_state.tonight_last_skip = title
 
 
 def tonight_dislike(title, movie):
+    if _too_soon("tonight"):
+        return
     dislike_movie(title, movie)
     st.session_state.tonight_last_skip = title
 
@@ -2293,6 +2401,8 @@ def _refresh_if_requested():
         st.rerun(scope="app")
 
 def tonight_save(title, movie):
+    if _too_soon("tonight"):
+        return
     save_movie(title, movie)
     st.session_state.tonight_last_skip = None
     _mark_showroom_fast()
@@ -2300,6 +2410,8 @@ def tonight_save(title, movie):
 
 
 def tonight_seen(title, movie):
+    if _too_soon("tonight"):
+        return
     mark_movie_seen(title, movie)
     st.session_state.tonight_last_skip = None
     _mark_showroom_fast()
@@ -2473,7 +2585,7 @@ def render_tonight_pick_fragment():
                               on_click=tonight_dislike, args=(title, movie))
                 with cols[4]:
                     if last_skip:
-                        st.button("↶ Undo", key=f"tonight_undo_{title}", use_container_width=True,
+                        st.button("Undo", key=f"tonight_undo_{title}", use_container_width=True,
                                   help=f"Bring back {last_skip}", on_click=tonight_undo)
     persist_from_fragment()
 
@@ -2590,7 +2702,7 @@ def _seen_tab():
                                           library_lines_html(m, identity, seen_live_map), lines_in_panel=True),
                                 unsafe_allow_html=True)
                     # Hover × in the poster's top-right corner: remove an accidental Seen.
-                    st.button("✕", key=f"unseen_{m['title']}", help="Remove from Seen",
+                    st.button("×", key=f"unseen_{m['title']}", help="Remove from Seen",
                               on_click=remove_from_seen, args=(m["title"],))
                     _r = (st.session_state.get("seen_rating") or {}).get(m["title"], 0)
                     with st.container(key=f"seenrate_{i}"):
@@ -2641,6 +2753,14 @@ def _seen_tab():
 
 
 def render_showroom_fragment(p):
+    _t = _time.perf_counter()
+    try:
+        _render_showroom(p)
+    finally:
+        _log_time("showroom (fast path)" if st.session_state.get("_timing_fast") else "showroom (full build)", _t)
+
+
+def _render_showroom(p):
     # Not a fragment: nesting card fragments inside a Showroom fragment let Streamlit
     # briefly draw the tabs twice after an app rerun.
     ensure_session(st.session_state)
@@ -2654,6 +2774,7 @@ def render_showroom_fragment(p):
     # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
     # row) is skipped. The next navigation or visit re-ranks with the new feedback.
     fast = st.session_state.pop("_showroom_fast", False) and bool(st.session_state.get("showroom_slots"))
+    st.session_state._timing_fast = fast
     if fast:
         row_choices = {}
         for key in (st.session_state.get("showroom_slots") or {}):
@@ -2727,6 +2848,19 @@ def render_showroom_fragment(p):
         if _mood is not None:
             il_on=False      # a mood changes Top Matches on purpose, so the live test sits it out
         cf_user_knn=user_vector(_signals,force_knn=True) if il_on else None
+
+        def _mood_first(items):
+            """Movies fans describe the way the viewer did move to the front; the row keeps its own rules."""
+            if _mood is None or not items:
+                return items
+            import numpy as _np
+            _pos=_mood[_mood>0]
+            if not len(_pos):
+                return items
+            _thr=float(_np.quantile(_pos,0.8))
+            hit=[it for it in items if (i:=_cf_idx(it[1])) is not None and _mood[i]>=_thr]
+            hit_ids={id(it) for it in hit}
+            return hit+[it for it in items if id(it) not in hit_ids]
         content_memo={}
         # Recent movies MovieLens fans haven't rated: placed by the new-release model (if it passed).
         from src.new_releases import viewer as _nr_viewer, affinity as _nr_affinity
@@ -2991,6 +3125,8 @@ def render_showroom_fragment(p):
             else:
                 ordered=_row_candidates(row_name,reserved)
             ordered=_time_filter(ordered,_tspec)    # "under 2 hours": a filter; order stays the models'
+            if row_name!="Top Matches for You":
+                ordered=_mood_first(ordered)        # a mood reaches every row, not only Top Picks
             # One movie per series across the Showroom, so rows don't fill up with sequels.
             picks=[]
             for item in ordered:
@@ -3291,81 +3427,83 @@ def render_showroom_fragment(p):
     pass  # saved once at the end of the full run
 
 screen=st.session_state.screen
+try:
 
-if screen=="welcome":
-    logo()
-    st.markdown('<div class="hero-title">Always something great to watch.</div>',unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">Less scrolling, more watching. Nine models learn what you love and find your next movie or show, where to stream it, and how likely you are to love it, getting sharper every time you use it.</div>',unsafe_allow_html=True)
-    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
-    st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
+    if screen=="welcome":
+        logo()
+        st.markdown('<div class="hero-title">Always something great to watch.</div>',unsafe_allow_html=True)
+        st.markdown('<div class="hero-subtitle">Less scrolling, more watching. Nine models learn what you love and find your next movie or show, where to stream it, and how likely you are to love it, getting sharper every time you use it.</div>',unsafe_allow_html=True)
+        st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
+        st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
 
-    # Show the product: what's big right now, the kind of movie iCinema finds for you.
-    _hits = _current_hits(6, set())
-    if len(_hits) >= 4:
-        st.markdown(
-            '<div class="home-strip">' + "".join(
-                f'<img src="{html.escape(str(m["poster_url"]), quote=True)}" alt="{html.escape(str(m.get("title", "")))}">'
-                for m in _hits if str(m.get("poster_url", "")).startswith("https://")) + '</div>',
-            unsafe_allow_html=True)
+        # Show the product: what's big right now, the kind of movie iCinema finds for you.
+        _hits = _current_hits(6, set())
+        if len(_hits) >= 4:
+            st.markdown(
+                '<div class="home-strip">' + "".join(
+                    f'<img src="{html.escape(str(m["poster_url"]), quote=True)}" alt="{html.escape(str(m.get("title", "")))}">'
+                    for m in _hits if str(m.get("poster_url", "")).startswith("https://")) + '</div>',
+                unsafe_allow_html=True)
 
-    # Proof, read from the results file so it always matches the README.
-    _off = load_offline_results() or {}
-    _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
-    _tested = _off.get("held_out_users")
-    if isinstance(_lift, (int, float)):
-        st.markdown(
-            '<div class="home-proof">'
-            f'<div class="home-proof-num">+{int(_lift)}%</div>'
-            f'<div class="home-proof-text"><strong>More first picks you’ll love than going with what’s popular.</strong>'
-            + (f'<span>Tested on {_tested:,} movie fans iCinema had never seen.</span>' if isinstance(_tested, int) else '')
-            + '</div></div>', unsafe_allow_html=True)
+        # Proof, read from the results file so it always matches the README.
+        _off = load_offline_results() or {}
+        _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
+        _tested = _off.get("held_out_users")
+        if isinstance(_lift, (int, float)):
+            st.markdown(
+                '<div class="home-proof">'
+                f'<div class="home-proof-num">+{int(_lift)}%</div>'
+                f'<div class="home-proof-text"><strong>More first picks you’ll love than going with what’s popular.</strong>'
+                + (f'<span>Tested on {_tested:,} movie fans iCinema had never seen.</span>' if isinstance(_tested, int) else '')
+                + '</div></div>', unsafe_allow_html=True)
 
-elif screen=="shelf":
-    render_shelf_fragment()
+    elif screen=="shelf":
+        render_shelf_fragment()
 
-elif screen=="taste":
-    render_taste_fragment()
+    elif screen=="taste":
+        render_taste_fragment()
 
-elif screen=="more":
-    render_more_fragment()
+    elif screen=="more":
+        render_more_fragment()
 
-elif screen=="profile":
-    logo()
-    p=current_profile()
-    render_cinema_profile(p)
+    elif screen=="profile":
+        logo()
+        p=current_profile()
+        render_cinema_profile(p)
 
-    with st.container(key="nav_row_profile"):
-        back, cont, _ = st.columns([1, 2, 4], gap="small")
-        with back:
-            st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
-        with cont:
-            st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
+        with st.container(key="nav_row_profile"):
+            back, cont, _ = st.columns([1, 2, 4], gap="small")
+            with back:
+                st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
+            with cont:
+                st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
 
-elif screen=="showroom":
-    logo()
-    p=current_profile()
-    from src.mood import available as _mood_ready
-    _hl, _hr = st.columns([1.55, 1], gap="large", vertical_alignment="center")
-    with _hl:
-        st.markdown(
-            '<div class="showroom-header">'
-            '<div class="showroom-heading">Your Showroom of Movies</div>'
-            '<div class="showroom-intro">Picked for you, and sharper with every choice you make</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-    if _mood_ready():
-        with _hr:
-            with st.container(key="mood_box"):
-                _active = bool((st.session_state.get("mood_query") or "").strip())
-                st.text_input("Search by mood", key="mood_query", label_visibility="collapsed",
-                              placeholder="What’s your mood? Try “funny, under 2 hours”",
-                              help="A mood (feel-good, mind-bending, anime) and, if you like, how long: “under 90 min”, “short”, “something long”.")
-                if _active:
-                    st.button("✕", key="mood_clear", help="Clear the mood",
-                              on_click=lambda: st.session_state.update(mood_query=""))
+    elif screen=="showroom":
+        logo()
+        p=current_profile()
+        from src.mood import available as _mood_ready
+        _hl, _hr = st.columns([1.55, 1], gap="large", vertical_alignment="center")
+        with _hl:
+            st.markdown(
+                '<div class="showroom-header">'
+                '<div class="showroom-heading">Your Showroom of Movies</div>'
+                '<div class="showroom-intro">Picked for you, and sharper with every choice you make</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        if _mood_ready():
+            with _hr:
+                with st.container(key="mood_box"):
+                    if "mood_input" not in st.session_state:
+                        st.session_state.mood_input = _mood_text()
+                    st.text_input("Search by mood", key="mood_input", label_visibility="collapsed",
+                                  placeholder="What’s your mood? Try “funny, under 2 hours”",
+                                  on_change=_apply_mood)
+                    render_mood_chips()
 
-    render_showroom_fragment(p)
+        render_showroom_fragment(p)
+except Exception as _exc:
+    _friendly_error(_exc)
 
 # Persist the latest profile/history after the page has processed this run.
 persist_profile_if_needed()

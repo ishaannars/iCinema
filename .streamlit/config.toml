@@ -3,10 +3,11 @@ hideTopBar = true
 
 [client]
 toolbarMode = "minimal"
+showErrorDetails = "none"
 
 [theme]
 base = "dark"
 backgroundColor = "#111315"
 secondaryBackgroundColor = "#171A1F"
 textColor = "#F3F0EA"
-primaryColor = "#5C6FA8"
+primaryColor = "#F3F0EA"

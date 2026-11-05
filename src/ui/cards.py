@@ -127,22 +127,25 @@ def match_label(match):
 
 
 def card_html(toggle_id, art_html, title, movie, identity, lines_html, lines_in_panel=False):
-    """One card in one block: tap the art to open the full story under it, then the info lines and a
-    short description. Keeping it all in one block is what makes the tap work and the spacing even."""
-    dm = dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
+    """One card in one block: tap the art to open the longer synopsis under it, then the info lines.
+    Keeping it all in one block is what makes the tap work and the spacing even."""
+    dm = dict(movie, tagline=identity.get("tagline") or movie.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
     full = expanded_card_description(dm)
-    short = plain_premise(dm) or " ".join(str(dm.get("overview") or "").split()) or full
-    tag = " ".join(str(identity.get("tagline") or "").split())
-    tag = tag if 0 < len(tag) <= 80 else ""
     return ('<div class="card-text">'
             f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
-            f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{art_html}</label>'
+            f'<label class="art-toggle" for="{toggle_id}" title="Tap for the synopsis">{art_html}</label>'
             f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
-            + (f'<div class="premise-tag">{html.escape(tag)}</div>' if tag else "")
             + (f'<div class="panel-lines">{lines_html}</div>' if lines_in_panel else "")
-            + f'<div class="premise-copy">{html.escape(short)}</div></div>'
+            + f'<div class="premise-copy">{html.escape(full)}</div></div>'
             + ("" if lines_in_panel else lines_html)
             + '</div>')
+
+
+def card_desc_html(movie, identity):
+    """The card's one description: what the story is, then the hook (src/descriptions.card_description)."""
+    from src.descriptions import card_description
+    dm = dict(movie, tagline=identity.get("tagline") or movie.get("tagline"), overview=movie.get("overview") or identity.get("overview"))
+    return f'<div class="card-desc">{html.escape(card_description(dm))}</div>'
 
 
 def premise_panel(toggle_id, title, movie, identity):

@@ -321,3 +321,86 @@ def expanded_card_description(movie, max_chars=320):
         chosen.append(sentence)  # the first sentence is always kept whole
         total = projected
     return " ".join(chosen).strip()
+
+
+_STORY_OF = re.compile(r"^(?:[\w'’:&\- ]{1,40}\s)?(?:tells|is|follows)?\s*(?:the\s)?(?:true\s)?(?:story|stories|adventures?|tale|journey|saga|chronicle)\s+of\s+", re.I)
+_OPENER = re.compile(r"^(?:set in|in|on|at|during|after|before|following|years after|decades after|when|while|as)\b[^,]{2,90},\s+", re.I)
+_TRAIL = re.compile(r",\s+(?:only (?:for|to)|but|while|until|which|where|forcing|leading|and)\b|\s+(?:as they|as he|as she|before|after|until)\s+")
+
+
+def _setup_line(sentence, limit):
+    """Rewrite one plot sentence as a plain setup line: who, and what they set out to do."""
+    t = " ".join(str(sentence or "").split()).rstrip(".;:, ")
+    if not t:
+        return ""
+    m = _OPENER.match(t)
+    if m and len(t[m.end():].split()) >= 6:
+        t = t[m.end():]
+    m = _STORY_OF.match(t)
+    if m and re.search(r"\s(?:who|as (?:he|she|they))\s", t[m.end():]):
+        t = t[m.end():]
+        t = re.sub(r"\s+(?:who|as (?:he|she|they))\s+", " ", t, count=1)
+    # "Paddington, now settled with the Browns, picks up..." -> "Paddington picks up..."
+    m = re.match(r"^([^,]{2,40}),\s+[^,]{3,110},\s+(.+)$", t)
+    if m and len(m.group(1).split()) <= 5 and not m.group(2)[:1].isupper():
+        t = f"{m.group(1)} {m.group(2)}"
+    if len(t) > limit - 1:
+        cuts = [mm.start() for mm in _TRAIL.finditer(t) if mm.start() <= limit - 1]
+        cuts = [c for c in cuts if len(t[:c].split()) >= 6]
+        if not cuts:   # last resort: stop before a plain "and <verb>" joining two actions
+            cuts = [mm.start() for mm in re.finditer(r"\s+and\s+(?=[a-z]+\s)", t)
+                    if mm.start() <= limit - 1 and len(t[:mm.start()].split()) >= 8]
+        if not cuts:
+            return ""
+        t = t[:max(cuts)].rstrip(" ,;:")
+    t = t[:1].upper() + t[1:]
+    line = clean_movie_copy(t, ensure_terminal=True)
+    return line if 30 <= len(line) <= limit and len(line.split()) >= 6 else ""
+
+
+def card_description(movie, limit=160):
+    """The one description on a card: what the story is, then the hook. Complete sentences, no spoilers.
+
+    The setup is the best plot line (quick_card_description). When it leaves room, the hook is the
+    movie's own tagline, or the opening clause of the next plot sentence. Nothing is cut mid-sentence,
+    and nothing here repeats the "why it's here" reasons in the Match popup.
+    """
+    movie = movie or {}
+    setup = quick_card_description(movie, limit=limit)
+    full0 = clean_movie_copy(movie.get("overview"), ensure_terminal=False)
+    tag0 = _tidy(movie.get("tagline"))
+    if full0:
+        whole = clean_movie_copy(re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full0)[0], ensure_terminal=True)
+        core = setup.rstrip(".!?")
+        if core and core in whole and not whole.startswith(core[:12]) and len(whole) <= limit:
+            setup = whole          # the line began mid-sentence (e.g. after "J."); use the whole sentence
+    imperative = re.match(r"^(?:follow|witness|experience|join|discover|meet)\b", setup, re.I)
+    if full0 and (len(setup) < 60 or setup == _details_line(movie) or setup == tag0 or imperative):
+        first0 = re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full0)[0]
+        better = _setup_line(first0, limit)
+        if better:
+            setup = better
+    if setup == _details_line(movie) and full0:
+        wider = _setup_line(re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full0)[0], 200) or quick_card_description(movie, limit=200)
+        if wider != _details_line(movie):
+            return wider
+    if len(setup) > limit + 10:
+        head = re.split(r";\s+|\s+[–—]\s+", setup)[0].rstrip(" .,")
+        setup = clean_movie_copy(head, ensure_terminal=True) if len(head) >= 40 else setup
+    if len(setup) >= limit - 25 or setup == _details_line(movie):
+        return setup
+    room = limit - len(setup) - 1
+    tagline = _tidy(movie.get("tagline"))
+    if (tagline and 12 <= len(tagline) <= room and len(tagline.split()) >= 3
+            and not _MARKETING.search(tagline) and tagline.casefold().rstrip(".!?") not in setup.casefold()):
+        return f"{setup} {tagline}"
+    full = clean_movie_copy(movie.get("overview"), ensure_terminal=False)
+    sentences = [x.strip() for x in re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full) if x.strip()] if full else []
+    first = clean_movie_copy(sentences[0], ensure_terminal=False).casefold() if sentences else ""
+    if len(sentences) >= 2 and (setup.casefold().rstrip(".!?") in first or setup == _setup_line(sentences[0], limit)):
+        nxt = sentences[1]
+        if nxt.split()[0].casefold().strip(",") not in _HOOK_PRONOUN_START and not _is_scene_setting(nxt):
+            nxt = clean_movie_copy(nxt, ensure_terminal=True)
+            if len(nxt) <= room:
+                return f"{setup} {nxt}"
+    return setup

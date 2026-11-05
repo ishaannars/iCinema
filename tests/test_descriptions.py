@@ -58,3 +58,30 @@ def test_every_line_is_complete_and_fits():
     for m in movies:
         out = card(m, LIMIT)
         assert out[-1] in ".!?" and len(out) <= LIMIT + 30, out
+
+
+def test_card_description_is_setup_then_hook():
+    from src.descriptions import card_description
+    m = {"title": "The Matrix", "genre": "Sci-Fi", "year": 1999, "tagline": "Welcome to the Real World.",
+         "overview": "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group "
+                     "of underground insurgents fighting the vast and powerful computers who now rule the earth."}
+    out = card_description(m)
+    assert out.startswith("A computer hacker joins") and out.endswith("Welcome to the Real World.")
+    assert len(out) <= 170
+
+
+def test_card_description_drops_the_aside_and_keeps_complete_sentences():
+    from src.descriptions import card_description
+    m = {"title": "Paddington 2", "genre": "Comedy", "year": 2017, "tagline": "",
+         "overview": "Paddington, now happily settled with the Brown family and a popular member of the local "
+                     "community, picks up a series of odd jobs to buy the perfect present for his Aunt Lucy's "
+                     "100th birthday, only for the gift to be stolen."}
+    out = card_description(m)
+    assert out.startswith("Paddington picks up") and out.endswith(".") and "comedy film from" not in out
+
+
+def test_card_description_keeps_initials_together():
+    from src.descriptions import card_description
+    m = {"title": "Oppenheimer", "genre": "Drama", "year": 2023, "tagline": "The world forever changes.",
+         "overview": "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II."}
+    assert card_description(m).startswith("The story of J. Robert Oppenheimer")

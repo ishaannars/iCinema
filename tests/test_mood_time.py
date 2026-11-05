@@ -20,3 +20,19 @@ def test_fits():
     assert fits(110, spec) and not fits(130, spec) and not fits(None, spec)
     assert fits(None, parse("funny"))                      # no time limit: everything passes
     assert fits(25, parse("short episodes"), show=True) and not fits(60, parse("short episodes"), show=True)
+
+
+def test_bare_length_is_a_time_limit():
+    assert parse("2 hours")["max"] == 120 and parse("2 hours")["mood"] == ""
+    assert parse("90-minute comedy")["max"] == 90 and parse("90-minute comedy")["mood"] == "comedy"
+    assert parse("2h 30m")["max"] == 150 and parse("an hour")["max"] == 60
+    assert parse("funny movie around 2 hours")["mood"] == "funny"
+
+
+def test_chips_remove_one_part_at_a_time():
+    from src.ui.mood_time import chips
+    labels = dict(chips("funny, under 2 hours"))
+    assert set(labels) == {"funny", "Under 2h"}
+    assert parse(labels["funny"])["max"] == 120 and parse(labels["funny"])["mood"] == ""
+    assert parse(labels["Under 2h"])["mood"] == "funny" and parse(labels["Under 2h"])["max"] is None
+    assert chips("") == []
