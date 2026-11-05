@@ -45,7 +45,7 @@ _log_time("imports", _BOOT)
 st.set_page_config(page_title="iCinema", page_icon=str(Path(__file__).parent / "assets" / "favicon.png"), layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css
-from src.love import love_line, fit_floor
+from src.love import love_line, fit_floor, test_viewers as love_test_viewers
 from src.ui.cards import (  # card and popup text, unit-tested in tests/test_cards.py
     PILL_BUDGET,
     _PILL_SHORT,
@@ -53,6 +53,7 @@ from src.ui.cards import (  # card and popup text, unit-tested in tests/test_car
     _short_title,
     card_desc_html,
     card_html,
+    score_mix,
     meta_html,
     card_ratings,
     card_reason_line,
@@ -70,6 +71,7 @@ from src.ui.cards import (  # card and popup text, unit-tested in tests/test_car
     profile_analysis_html,
     profile_chip_html,
     ratings_text,
+    why_models,
     why_rows,
     why_sentences,
     with_live_ratings,
@@ -102,6 +104,21 @@ for k,v in defaults.items():
 
 PROFILE_STORAGE_KEY = "icinema_profile_v1"
 
+def _compact_events(events, keep_actions=1500, keep_impressions=300):
+    """What this browser keeps: every recent choice, the latest impressions, numbers rounded to 4 places.
+    Impressions are 16 per page view, so keeping all of them made every save slow to write."""
+    events = list(events or [])
+    imp_idx = [i for i, e in enumerate(events) if e.get("event") == "impression"][-keep_impressions:]
+    act_idx = [i for i, e in enumerate(events) if e.get("event") != "impression"][-keep_actions:]
+    out = []
+    for i in sorted(set(imp_idx) | set(act_idx)):
+        e = dict(events[i])
+        if isinstance(e.get("context"), dict):
+            e["context"] = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in e["context"].items()}
+        out.append({k: (round(v, 4) if isinstance(v, float) and k != "timestamp" else v) for k, v in e.items()})
+    return out
+
+
 def profile_snapshot():
     return {
         "version": 1,
@@ -128,10 +145,15 @@ def profile_snapshot():
         "imported_seen": sorted(st.session_state.get("imported_seen") or set()),
         "imported_disliked": sorted(st.session_state.get("imported_disliked") or set()),
         "external_movies": st.session_state.external_movies,
-        "analytics_events": list(st.session_state.get("analytics_events", []))[-2000:],
+        "analytics_events": _compact_events(st.session_state.get("analytics_events", [])),
         "streaming_services": list(st.session_state.get("streaming_services") or []),
         "mood_active": str(st.session_state.get("mood_active") or "")[:120],
     }
+
+def _snapshot_signature(snapshot):
+    import hashlib
+    return hashlib.md5(json.dumps(snapshot, sort_keys=True, default=str).encode()).hexdigest()
+
 
 def restore_profile(data):
     if not isinstance(data, dict):
@@ -184,7 +206,7 @@ if not st.session_state.get("_storage_hydrated", False):
     restored = restore_profile(_stored.get("value")) if _stored.get("value") else False
     st.session_state._storage_hydrated = True
     st.session_state._fade_in_once = True
-    st.session_state._last_persisted_profile = json.dumps(profile_snapshot(), sort_keys=True, default=str) if restored else None
+    st.session_state._last_persisted_profile = _snapshot_signature(profile_snapshot()) if restored else None
 
 # Move my profile: a link from another device asks before replacing this browser's profile.
 from src.profile_link import decode as _decode_profile_link, encode as _encode_profile_link
@@ -198,7 +220,7 @@ if _incoming and st.session_state.get("_link_handled") != _incoming:
                     'It replaces the profile saved in this browser.</div>', unsafe_allow_html=True)
         _a, _b, _ = st.columns([1.2, 1, 5], gap="small")
         with _a:
-            if st.button("Load my profile", type="primary", key="link_load"):
+            if st.button("Load My Profile", type="primary", key="link_load"):
                 restore_profile({**profile_snapshot(), **_data, "external_movies": {**st.session_state.external_movies,
                                                                                     **(_data.get("external_movies") or {})}})
                 st.session_state._link_handled = _incoming
@@ -226,11 +248,15 @@ st.markdown('<style>' + ('.stApp [data-testid="stMainBlockContainer"], .stApp .b
 
 _pending_profile = st.session_state.get("_pending_profile_save")
 
-def _snapshot_signature(snapshot):
-    return json.dumps(snapshot, sort_keys=True, default=str)
-
 def persist_profile_if_needed():
+    """Write the profile to this browser only after something the viewer did changed it.
+
+    Building and comparing the full snapshot on every render (including every card rerun)
+    used to cost more than the click itself, so it now runs only when a change is queued.
+    """
     if not st.session_state.get("_storage_hydrated", False):
+        return
+    if not st.session_state.get("_pending_profile_save") and st.session_state.get("_last_persisted_profile") is not None:
         return
     snapshot = profile_snapshot()
     serialized = _snapshot_signature(snapshot)
@@ -239,7 +265,7 @@ def persist_profile_if_needed():
         # creating a new component instance on every ordinary render.
         browser_storage("set_silent", PROFILE_STORAGE_KEY, value=snapshot, key="icinema_profile_saver")
         st.session_state._last_persisted_profile = serialized
-        st.session_state._pending_profile_save = None
+    st.session_state._pending_profile_save = None
 
 def persist_from_fragment():
     """Save only during fragment-only reruns (e.g. Skip).
@@ -260,7 +286,7 @@ def queue_profile_save():
     visually stable and prevents the brief black/blank transition that can
     happen when explicit reruns are stacked on top of widget reruns.
     """
-    st.session_state._pending_profile_save = profile_snapshot()
+    st.session_state._pending_profile_save = True
 
 RECOGNIZABLE_SHELF_TITLES = [
     "Dune: Part Two", "Blade Runner 2049", "The Prestige", "Prisoners",
@@ -1035,10 +1061,25 @@ def cached_semantic_scores(movies, profile):
     return {id(m): by_title.get(m.get("title"), 0.5) for m in movies}
 
 
+def _cached_insights(events):
+    """Profile stats, recomputed only when a new event arrives (not on every rerun)."""
+    labels = [e for e in events if e.get("event") != "impression"]
+    key = (len(labels), float((labels[-1] if labels else {}).get("timestamp") or 0))
+    memo = st.session_state.get("_insights_memo")
+    if memo and memo[0] == key:
+        return memo[1]
+    out = analytics_insights(events)
+    st.session_state._insights_memo = (key, out)
+    return out
+
+
 def learning_model_for(events):
     """Train the Save/Skip model only when feedback changed since the last run."""
     events = list(events or [])
-    signature = (len(events), events[-1].get("timestamp") if events else None)
+    # Only choices change the model. Impressions arrive on every page view, so keying on all
+    # events used to retrain it (gradient boosting included) on nearly every click.
+    labels = [e for e in events if e.get("event") not in ("impression",)]
+    signature = (len(labels), labels[-1].get("timestamp") if labels else None)
     cache = st.session_state.get("_learning_model_cache")
     if cache and cache[0] == signature:
         return cache[1]
@@ -1118,7 +1159,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         for label, content, wrapper_class in sections
     )
     events=list(st.session_state.get("analytics_events") or [])
-    insights=analytics_insights(events)
+    insights=_cached_insights(events)
     learned=learning_model_for(events)
     conf=profile_confidence_label(p)
     signals=sum((p.get("behavior_counts") or {}).values()) + len((p.get("controls") or {}).get("selected_genres",[]) or []) + len((p.get("controls") or {}).get("priorities",[]) or [])
@@ -1180,7 +1221,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
          "Matches your answers to each movie’s genres and fan tags."),
         (learned.ready, "Your own choices", f"Personal model · {(learned.model_name or 'logistic regression').lower()}",
          f"{round(_p_share * 100)}%" if learned.ready else "",
-         f"Trained on your {learned.samples} saves and skips." if learned.ready else _personal_need(learned, decisions)),
+         f"Trained on your {learned.samples} saves and skips so far." if learned.ready else _personal_need(learned, decisions)),
         (_nr_on(), "New releases", "Cold-start model · ridge regression", "",
          "Places brand-new movies by their director, cast, and studio."),
         (_tv_on(), "Shows", "TV model · item-kNN + popularity", "",
@@ -1224,14 +1265,12 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         _stat(_or_learning("saved_to_seen_rate", lambda v: f"{v*100:.0f}%"), "Saves you watched",
               "Saved movies you later marked Seen."),
         _stat(_or_learning("discovery_rate", lambda v: f"{v*100:.0f}%"), "Saves beyond Top Picks",
-              "Found in Critics’ picks, Hidden gems, your fourth row, or Shows."),
+              "Found in More to explore or Shows for You."),
     ]
     # Only stats with real values; "Learning" placeholders repeated six times read as noise.
     insight_cards = [c for c in insight_cards if '>Learning<' not in c]
     insight_html = "".join(insight_cards)
 
-    ranking=ranking_metrics(events)
-    calib=calibration_metrics(events)
     lm=learned.metrics or {}
     offline=load_offline_results()
 
@@ -1293,27 +1332,23 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             rows_part = (f", and its rows put {recall_lift}% more movies you’d love in the top 10"
                          if recall_lift is not None else "")
             hits_part = (f" ({cf_hit:.1%} vs {pop_hit:.1%})" if isinstance(cf_hit, (int, float)) and isinstance(pop_hit, (int, float)) else "")
-            stats = [(f"+{pick_lift}%", f"more often, Tonight’s Show is a movie test viewers rated 4+ stars, "
-                                         f"vs. the most popular movie{hits_part}")]
+            cards_p = [(f"+{pick_lift}%", "Better first pick",
+                        f"Tonight’s Show vs. the most popular movie{hits_part}: share of test viewers who rated it 4+ stars.")]
             if recall_lift is not None:
-                stats.append((f"+{recall_lift}%", "more 4+ star movies in each row’s top 10 than a most-popular list"))
-            stats.append((f"{users:,}", "test viewers the models never saw, starting from just 3 likes each"))
+                cards_p.append((f"+{recall_lift}%", "Better rows", "More 4+ star movies in each row’s top 10 than a most-popular list."))
+            cards_p.append((f"{users:,}", "Test viewers", "Never seen by the models. Each started from just 3 likes."))
             proof_html = (
-                '<div class="pf-proof-lead">Tested before launch on movie fans the models never saw.</div>'
-                '<div class="stat-row">' + "".join(f'<div><div class="stat-num">{html.escape(n)}</div>'
-                                                   f'<div class="stat-label">{html.escape(l)}</div></div>' for n, l in stats)
-                + '</div>'
-                f'<div class="how-footnote">{html.escape(significance_note)}</div>'
+                '<div class="pf-subtitle">Tested before launch</div>'
+                '<div class="pf-stats pf-proof">' + "".join(_stat(v, t, n) for v, t, n in cards_p) + '</div>'
+                f'<div class="pf-foot">{html.escape(significance_note)}</div>'
             )
 
     live_html = ""
     if learned.ready:
         auc, n_test = lm.get("auc"), int(lm.get("test_samples") or 0)
-        acc_part = (f" On your newest {n_test} choices it predicted your saves well above chance (AUC {auc:.2f})."
-                    if isinstance(auc, (int, float)) and n_test >= 30 else
-                    " Its accuracy is shown once it has 30 newer choices to check against.")
-        live_html = ('<div class="pf-note">Your personal model is on, trained on '
-                     f'{learned.samples} of your saves and skips.{acc_part}</div>')
+        if isinstance(auc, (int, float)) and n_test >= 30:
+            live_html = (f'<div class="pf-note">On your newest {n_test} choices, your own model predicted your saves '
+                         f'well above chance (AUC {auc:.2f}).</div>')
 
     from src.new_releases import available as _nr_ready
     from src.mood import available as _mood_on
@@ -1321,22 +1356,34 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _ease_on = _history_cut()[0] is not None
     _fans = scale["users"] or "MovieLens"
     _n_movies = scale["movies"] or "thousands of"
-    how = [
-        ("Learns from fans like you",
-         f"{_fans} movie fans’ ratings show what people with your likes love next."),
-        ("Knows every movie",
-         f"Genres and fan tags of {_n_movies} movies"
-         + (", plus director, cast, and studio for new releases." if _nr_ready() else ".")),
-        ("Gives every row a job",
-         "Top picks, critics’ picks, hidden gems, and a row you choose. One movie per series, no repeats."),
-        ("Gets better with you",
-         "After 50 saves and skips, a model trained only on your choices joins in."),
+    _personal_state = (f"Your own model is on, learned from {learned.samples} of your saves and skips."
+                       if learned.ready else f"Your own model starts after 50 saves and skips ({min(decisions, 50)} so far).")
+    steps = [
+        ("Data", "What it learns from",
+         f"Ratings from {_fans} movie fans, and the genres and fan tags of {_n_movies} movies"
+         + (", plus director, cast, and studio for new releases." if _nr_ready() else "."),
+         "MovieLens 32M · Wikidata · TMDB for posters only"),
+        ("Models", "How it scores each movie",
+         "Fan models find people who loved what you loved. A content model reads what each movie is like. "
+         "A learned ranker weighs them, and after 50 choices your own model joins in.",
+         "item-kNN · RP3beta · EASE · TF-IDF + SVD · gradient boosting · logistic regression"),
+        ("Testing", "How it was checked",
+         "Before launch, every model was scored on movie fans it had never seen, starting from just 3 likes each. "
+         "A model only ships if it beats the simpler option.",
+         "held-out viewers · NDCG@10 · Recall@10 · bootstrap significance"),
+        ("Showroom", "What you see",
+         "Each row has one job, there’s one movie per series, and “chance you’ll love it” is calibrated on test "
+         "viewers and rounded down.",
+         "calibration error under 1% · mood and time filters"),
     ]
     methodology_html = (
         '<div class="pf-section"><div class="pf-title">How iCinema works</div>'
-        '<div class="pf-how">'
-        + "".join(f'<div class="pf-how-item"><div class="pf-how-title">{html.escape(t)}</div>'
-                  f'<div class="pf-how-copy">{html.escape(c)}</div></div>' for t, c in how)
+        '<div class="pf-sub">From raw data to the four movies in each row.</div>'
+        '<div class="pf-steps">'
+        + "".join(f'<div class="pf-step"><div class="pf-step-n">{i}</div><div class="pf-step-body">'
+                  f'<div class="pf-step-k">{html.escape(k)}</div><div class="pf-step-title">{html.escape(t)}</div>'
+                  f'<div class="pf-step-copy">{html.escape(c)}</div><div class="pf-step-data">{html.escape(d)}</div></div></div>'
+                  for i, (k, t, c, d) in enumerate(steps, 1))
         + '</div>'
         + f'{proof_html}{live_html}'
         + '<div class="pf-foot">IMDb and Rotten Tomatoes scores come from OMDb. Movies you pass over step back each visit, '
@@ -1355,13 +1402,26 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     heading_class = "tab-primary-heading profile-heading-aligned" if tab_heading else "profile-heading"
     profile_heading_html = f'<div class="{heading_class}">Your Cinema Profile</div>' if show_heading else ""
 
-    _summary = (f'<div class="pf-summary">Built from {_n} movie{"s" if _n != 1 else ""} and {decisions} '
-                f'choice{"s" if decisions != 1 else ""} · Profile strength: {html.escape(str(conf))}</div>')
+    # A live readout of what the models are computing from: each onboarding step, then every choice since.
+    _ss = st.session_state
+    _g, _r = len(_ss.get("genres") or []), len(_ss.get("more_of") or [])
+    _sv, _sk = int(insights.get("saves") or 0), int(insights.get("skips") or 0)
+    _sn, _dl = len(_ss.get("seen") or ()), len(_ss.get("disliked") or ())
+    _lk = len(set(_ss.get("likes") or ()) | set(_ss.get("favorites") or ()))
+    _inputs = [(_lk, "movie", "movies", "liked"), (_g, "genre", "genres", ""), (2, "slider", "sliders", ""), (_r, "row pick", "row picks", ""),
+               (_sv, "save", "saves", ""), (_sk, "skip", "skips", ""), (_sn, "seen", "seen", ""),
+               (_dl, "not for me", "not for me", "")]
+    _parts = [f"{n} {one if n == 1 else many}" + (f" {tail}" if tail else "") for n, one, many, tail in _inputs if n]
+    _summary = (
+        '<div class="pf-readout"><span class="pf-dot on"></span>'
+        f'<span class="pf-readout-k">Computed from</span><span class="pf-readout-v">{html.escape(" · ".join(_parts))}</span>'
+        '<span class="pf-readout-t">updates with every choice</span></div>'
+    ) if _parts else ""
     _page = (
         f'<div class="profile-wrap pf">'
         f'{profile_heading_html}{_summary}'
         f'{models_html}'
-        f'<div class="pf-section"><div class="pf-title">Your taste</div><div class="pf-taste">{section_html}</div></div>'
+        f'<div class="pf-section"><div class="pf-title">What you like</div><div class="pf-taste">{section_html}</div></div>'
         f'{insights_section}'
         f'</div>'
     )
@@ -1440,7 +1500,7 @@ def render_shelf_fragment():
                 st.button(
                     "×",
                     key=f"shelfskip_{i}_{movie.get('tmdb_id') or title}",
-                    help="Haven't seen it, show another",
+                    help="Haven’t seen it? Show another.",
                     on_click=skip_shelf_movie,
                     args=(i,),
                 )
@@ -1467,7 +1527,7 @@ def render_shelf_fragment():
         st.markdown(
             '<div class="search-shell">'
             '<div class="search-shell-title">Don’t see one you like?</div>'
-            '<div class="search-shell-copy">Search for a movie you already enjoy</div>'
+            '<div class="search-shell-copy">Search for a movie you already enjoy.</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -1536,9 +1596,9 @@ def render_shelf_fragment():
 
             if not matches and not already_selected_matches:
                 if tmdb_catalog_configured():
-                    st.caption("No movie matches found")
+                    st.caption("No matches yet. Try another spelling or a shorter title.")
                 else:
-                    st.caption("TMDB search is unavailable, showing matches from the current iCinema catalog only")
+                    st.caption("Search is offline for a moment, so these matches come from iCinema’s own catalog.")
 
         choice_movie = st.session_state.search_selected_movie
         if choice_movie:
@@ -1590,7 +1650,7 @@ def render_shelf_fragment():
             with c1:
                 st.caption(note)
             with c2:
-                st.button("Undo import", key="undo_import", on_click=undo_letterboxd_import, use_container_width=True)
+                st.button("Undo Import", key="undo_import", on_click=undo_letterboxd_import, use_container_width=True)
 
     with st.container(key="step1_selections"):
         _selected_set = st.session_state.likes | st.session_state.favorites
@@ -1644,7 +1704,7 @@ def render_taste_fragment():
     st.markdown(
         '<div class="step2-header">'
         '<div class="step2-title">Step 2 of 3 — Tailor Your Preferences</div>'
-        '<div class="step2-subtitle">Choose what matters most when deciding what to watch</div>'
+        '<div class="step2-subtitle">Choose what matters most when you pick something to watch.</div>'
         '</div>'
         '<div class="step2-question">Which matters more?</div>',
         unsafe_allow_html=True,
@@ -1684,7 +1744,7 @@ def render_taste_fragment():
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="step2-question step2-question-next">What do you like to watch?</div>', unsafe_allow_html=True)
-    st.markdown('<div class="genre-helper">Select up to five genres</div>', unsafe_allow_html=True)
+    st.markdown('<div class="genre-helper">Select up to five genres.</div>', unsafe_allow_html=True)
     selected=set(st.session_state.genres)
     genre_cols=st.columns(7, gap="small")
     for i,genre in enumerate(GENRES):
@@ -1748,13 +1808,13 @@ def render_more_fragment():
     logo()
     st.markdown(
         '<div class="page-top-heading">Step 3 of 3 — Shape Your Showroom</div>'
-        '<div class="page-top-subtitle step3-subtitle">What should iCinema lean toward? Choose any that you want to see more often</div>',
+        '<div class="page-top-subtitle step3-subtitle">What should iCinema lean toward? Choose any you’d like to see more often.</div>',
         unsafe_allow_html=True,
     )
 
     descriptions = {
-        "Hidden Gems": "Less obvious titles that still fit what you like",
-        "Critically Acclaimed": "Titles with especially strong critical reception",
+        "Hidden Gems": "Less-known titles that still fit what you like",
+        "Critically Acclaimed": "Rotten Tomatoes 75%+ and IMDb 7.5+",
         "Recent Releases": "Newer films and recent additions",
         "International Films": "Stories and filmmakers from around the world",
         "Classics": "Established favorites across earlier eras",
@@ -2247,19 +2307,36 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             with st.popover(pill_text, use_container_width=True):
                 _love = love_line(payload.get("fit_top_pct"))
                 _odds = _love.replace("If you watch it: about ", "About ").replace(" chance you'll love it", " chance you’ll love it") if _love else ""
+                _mix = score_mix(payload, CONTENT_WEIGHT)
+                _mix_html = ("".join(
+                    f'<div class="mix-row"><div class="mix-name">{html.escape(n)}<span>{html.escape(t)}</span></div>'
+                    f'<div class="mix-track"><div class="mix-fill" style="width:{max(3, round(sh * 100))}%"></div></div>'
+                    f'<div class="mix-pct">{round(sh * 100)}%</div></div>' for n, t, sh in _mix))
+                _off = load_offline_results() or {}
+                _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
+                _users = _off.get("held_out_users")
+                _proof = (f"Tested on {_users:,} movie fans the models never saw: their first pick was a 4+ star movie "
+                          f"{int(_lift)}% more often than the most popular one."
+                          if isinstance(_lift, (int, float)) and isinstance(_users, int) else "")
+                _odds_note = (f" The chance above was measured on {_love_n:,} test viewers and is rounded down."
+                              if _odds and (_love_n := love_test_viewers()) else "")
                 st.markdown(
+                    '<div class="why-pop-kicker">Why it’s here</div>'
                     f'<div class="why-pop-head">{html.escape(fit_head(payload, match))}</div>'
-                    + (f'<div class="why-pop-odds">{html.escape(_odds)}</div>' if _odds else "")
-                    + '<div class="why-pop-rows">'
+                    + (f'<div class="why-pop-odds">{html.escape(_odds)} if you watch it</div>' if _odds else "")
+                    + (f'<div class="why-pop-sec">What decided it</div><div class="mix">{_mix_html}</div>' if _mix_html else "")
+                    + '<div class="why-pop-sec">What each model saw</div><div class="why-pop-rows">'
                     + "".join(f'<div class="why-pop-row"><span class="why-pop-k">{html.escape(k)}</span>'
-                              f'<span class="why-pop-v">{html.escape(v)}</span></div>' for k, v in why_rows(reasons, movie, live_rating, payload))
-                    + '</div>',
+                              f'<span class="why-pop-v">{html.escape(v)}</span></div>'
+                              for k, v in why_rows(reasons, movie, live_rating, payload, row_name))
+                    + '</div>'
+                    f'<div class="why-pop-foot">{html.escape(_proof + _odds_note)}</div>',
                     unsafe_allow_html=True,
                 )
                 st.button(
-                    "Not for me",
+                    ":material/thumb_down:",
                     key=f"dislike_{row_name}_{slot_index}_{title}",
-                    help="Hide this movie and show fewer like it. Undo brings it back.",
+                    help="Not for me: hide it and show fewer like it. Undo brings it back.",
                     on_click=dislike_showroom_slot,
                     args=(row_name, slot_index),
                 )
@@ -2560,7 +2637,7 @@ def render_tonight_pick_fragment():
             last_skip = st.session_state.get("tonight_last_skip")
             with st.container(key=f"tonight_actions_{title}"):
                 # Save · Seen · Skip · thumbs-down, then Undo when there is something to undo.
-                cols = st.columns([1, 1, 1, 0.42, 1, 1.78], gap="small")
+                cols = st.columns([1, 1, 1, 0.55, 1, 1.65], gap="small")
                 with cols[0]:
                     st.button("Save", key=f"tonight_save_{title}", use_container_width=True,
                               on_click=tonight_save, args=(title, movie))
@@ -2571,8 +2648,8 @@ def render_tonight_pick_fragment():
                     st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
                               on_click=tonight_skip, args=(title, movie))
                 with cols[3]:
-                    st.button("Not for me", key=f"tonight_dislike_{title}",
-                              help="Not for me: hide this movie and show fewer like it.",
+                    st.button(":material/thumb_down:", key=f"tonight_dislike_{title}", use_container_width=True,
+                              help="Not for me: hide it and show fewer like it.",
                               on_click=tonight_dislike, args=(title, movie))
                 with cols[4]:
                     if last_skip:
@@ -2614,7 +2691,7 @@ def _saved_tab():
     saved_live_map = get_live_ratings_batch(tuple((m["title"], int(m.get("year") or 0),
                                                   (saved_identity_map.get(m["title"], {}) or {}).get("imdb_id") or "")
                                                  for m in movies)) if movies else {}
-    if not movies:st.caption("Nothing saved yet.")
+    if not movies:st.caption("Nothing saved yet. Tap Save on any movie in the Showroom and it waits here.")
     else:
         cols=st.columns(4, gap="medium")
         for i,m in enumerate(movies):
@@ -2676,7 +2753,7 @@ def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
                 st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
                           on_click=save_movie, args=(nt, nmovie))
             with b:
-                st.button("Another pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
+                st.button("Another Pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
                           on_click=whats_next_another, args=(m["title"],))
 
 
@@ -2701,7 +2778,7 @@ def _seen_tab():
         if _m.get("media") == "tv" and _m.get("tmdb_id"):
             from src.tv import show_watch as _show_watch
             seen_watch_map[_m["title"]] = _show_watch(int(_m["tmdb_id"]))
-    if not movies:st.caption("Nothing marked as seen yet.")
+    if not movies:st.caption("Nothing here yet. Tap Seen on a movie you’ve watched and it lands here, with a pick for what to watch next.")
     else:
         # What's next: one personalized follow-up per Seen movie, never the same pick
         # twice on this tab, never something already saved, seen, skipped or disliked.
@@ -2875,6 +2952,8 @@ def _render_showroom(p):
         from src import ltr as _ltr
         ltr_aff=_ltr.viewer_scores(_signals) if _ltr.available() else None
         cf_by_title={}
+        personal_by_title={}
+        cf_source_by_title={}
         model_match_by_title={}
 
         def _safe_num(value, default=0):
@@ -2989,8 +3068,10 @@ def _render_showroom(p):
                     content_memo[id(movie)]=(base,dict(ml_context))
                     _ci=_cf_idx(movie) if ltr_aff is not None else None
                     cf=float(ltr_aff[_ci]) if _ci is not None else cf_affinity(movie,cf_user)
+                    cf_source_by_title[movie["title"]]="ranker" if _ci is not None else "fans"
                     if cf is None:
                         cf=_nr_affinity(movie,nr_view)
+                        cf_source_by_title[movie["title"]]="new" if cf is not None else None
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
                     if cf is not None:
                         base=CONTENT_WEIGHT*base+(1-CONTENT_WEIGHT)*cf
@@ -2998,6 +3079,7 @@ def _render_showroom(p):
                     learned_probability=predict_success(learning_result,ml_context)
                     if learned_probability is not None:
                         base=0.78*base+0.22*learned_probability
+                        personal_by_title[movie["title"]]=float(learned_probability)
                     # The % shown to users reflects the final blended ranking score.
                     display_match=_calibrated_match_percent(base,p)
                     base_memo[id(movie)]=(base,display_match)
@@ -3270,6 +3352,24 @@ def _render_showroom(p):
                 _pl["fit_top_pct"] = max(1, -(-100 * (_above + 1) // _pool))
                 _pl["fit_rank"] = int(_above + 1)
                 _pl["fit_pool"] = _pool
+        # What each model said about each movie, for the "why it's here" popup.
+        from src import cf_model as _cfm2
+        _full2, _ = _cfm2._history_cut()
+        _rk2 = _cfm2._ranker_for(_signals) if _signals else None
+        _cf_name = ("EASE" if _full2 is not None and _rk2 is _full2 else
+                    "RP3beta" if _rk2 is not None and _rk2 is _cfm2._load_rank() and _rk2 is not _cfm2._load() else "item-kNN")
+        _sems = sorted(v for v in semantic_by_id.values() if isinstance(v, (int, float)))
+        import bisect as _bis
+        for _t, _pl in payloads.items():
+            _pl["personal"] = personal_by_title.get(_t)
+            _cm = content_memo.get(id(_pl.get("movie")))
+            _pl["content"] = float(_cm[0]) if _cm else None
+            _pl["cf_source"] = cf_source_by_title.get(_t)
+            _pl["cf_name"] = _cf_name
+            _pl["personal_n"] = int(learning_result.samples or 0) if getattr(learning_result, "ready", False) else 0
+            _sv = _pl.get("semantic_similarity")
+            if _sems and isinstance(_sv, (int, float)):
+                _pl["tone_pct"] = int(round(100 * _bis.bisect_left(_sems, _sv) / len(_sems)))
         for _t, _ov in il_override.items():
             if _t in payloads:
                 payloads[_t].update({"match": _ov["match"], "cf": _ov["cf"], "fit_top_pct": _ov["top_pct"]})
@@ -3389,10 +3489,10 @@ def _render_showroom(p):
         edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
         with edit:
             # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
-            st.button("Edit my answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),
+            st.button("Edit My Answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),
                       help="Change your likes, genres, and other setup answers.")
         with reset:
-            if st.button("Reset profile", key="reset_profile_tab", use_container_width=True,
+            if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True,
                          help="Start over: clears your likes, saves, and answers in this browser."):
                 reset_profile_state()
                 st.rerun(scope="app")
@@ -3491,8 +3591,8 @@ try:
         with _hl:
             st.markdown(
                 '<div class="showroom-header">'
-                '<div class="showroom-heading">Your Showroom of Movies</div>'
-                '<div class="showroom-intro">Picked for you, and sharper with every choice you make</div>'
+                '<div class="showroom-heading">Your Showroom</div>'
+                '<div class="showroom-intro">Picked for you, and sharper with every choice you make.</div>'
                 '</div>',
                 unsafe_allow_html=True
             )

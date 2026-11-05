@@ -233,34 +233,55 @@ def profile_analysis_html(items):
     return "".join(f'<div class="profile-analysis-row">{item}</div>' for item in items)
 
 
-def why_rows(reasons, movie=None, live_rating=None, payload=None):
-    """Label/number pairs for the % popup. Every value is a number the models actually used."""
+_ROW_JOBS = {
+    "Top Matches for You": "Your highest-scoring movies right now",
+    "Critically Acclaimed": "A strong fit that also clears RT 75% and IMDb 7.5",
+    "Hidden Gems": "A strong fit that fewer people have found yet",
+    "Something Different": "Outside your usual genres, still a strong fit",
+    "Recent Releases for You": "A strong fit from the last few years",
+    "Classics for You": "A strong fit from before 2000",
+    "International Films for You": "A strong fit made outside the U.S.",
+    "Documentaries for You": "A documentary that fits what you like",
+    "Tonight's Show": "Your single best fit you can stream tonight",
+}
+
+
+def why_rows(reasons, movie=None, live_rating=None, payload=None, row_name=None):
+    """Label/value pairs for the "why it's here" popup: what each model said about this movie.
+
+    Every value is a number a model actually used for this movie, written for a person.
+    """
     payload = payload or {}
     rows = []
     rank, pool = payload.get("fit_rank"), payload.get("fit_pool")
     if isinstance(rank, int) and isinstance(pool, int) and pool > 0:
         rows.append(("Rank", f"#{rank:,} of {pool:,} movies scored for you"))
-    cf = payload.get("cf")
-    is_new = fan_percentile(movie) is None
+    cf, src = payload.get("cf"), payload.get("cf_source")
     anchor = next((re.match(r"Loved by fans of “(.+)”", str(r.get("label", ""))).group(1)
                    for r in reasons or [] if re.match(r"Loved by fans of “(.+)”", str(r.get("label", "")))), None)
     if isinstance(cf, (int, float)):
-        if is_new:
-            rows.append(("New release", f"Its makers sit closer to your likes than {int(round(cf * 100))}% of new releases"))
-        else:
-            from src import ltr as _l
-            rows.append(("Model score" if _l.available() else "Fans like you",
-                         (f"Above {int(round(cf * 100))}% of movies, from six models combined" if _l.available()
-                          else f"Closer to your likes than {int(round(cf * 100))}% of movies")
+        pct = int(round(cf * 100))
+        if src == "new" or (src is None and fan_percentile(movie) is None):
+            rows.append(("New release", f"Its director, cast, and studio sit closer to your likes than {pct}% of new releases"))
+        elif src == "ranker":
+            rows.append(("All models", f"Above {pct}% of movies once every model is weighed together"
                          + (f" · fans of {_short_title(anchor)} love it" if anchor else "")))
-    sem = payload.get("semantic_similarity")
+        else:
+            rows.append(("Fans like you", f"Closer to your likes than {pct}% of movies"
+                         + (f" · fans of {_short_title(anchor)} love it" if anchor else "")))
+    tone_pct = payload.get("tone_pct")
     tone = next((re.search(r"like “(.+?)”", str(r.get("text", ""))) for r in reasons or []
                  if str(r.get("label", "")).startswith("Feels like")), None)
-    if isinstance(sem, (int, float)) and sem > 0:
-        rows.append(("Tone", f"{int(round(sem * 100))}% match on genres and fan tags"
-                     + (f" · closest: {_short_title(tone.group(1))}" if tone else "")))
+    if isinstance(tone_pct, int):
+        rows.append(("Tone", f"Closer to your genres and fan tags than {tone_pct}% of movies"
+                     + (f" · feels like {_short_title(tone.group(1))}" if tone else "")))
+    personal, n = payload.get("personal"), int(payload.get("personal_n") or 0)
+    if isinstance(personal, (int, float)) and n:
+        rows.append(("Your choices", f"{int(round(personal * 100))}% chance you’d save it, learned from your {n} saves and skips"))
     if any(r.get("label") == "Fits your mood" for r in reasons or []):
-        rows.append(("Mood", "In the top 10% of fan-tag matches for your words"))
+        rows.append(("Mood", "Among the closest 10% of movies to the words you typed"))
+    if row_name in _ROW_JOBS:
+        rows.append(("This row", _ROW_JOBS[row_name]))
     rt = (live_rating or {}).get("rt")
     rt = rt if isinstance(rt, (int, float)) else (movie or {}).get("rt")
     imdb = (live_rating or {}).get("imdb")
@@ -269,7 +290,55 @@ def why_rows(reasons, movie=None, live_rating=None, payload=None):
                           (f"IMDb {imdb:.1f}" if isinstance(imdb, (int, float)) and imdb > 0 else None)) if x]
     if scores:
         rows.append(("Ratings", " · ".join(scores)))
-    return rows[:5] or [("Fit", "Ranked high by the models for what you’ve liked")]
+    return rows or [("Fit", "Ranked high by the models for what you’ve liked")]
+
+
+def score_mix(payload, content_weight, personal_weight=0.22):
+    """How much of this movie's final score came from each model: [(name, technique, share 0-1), ...].
+
+    Mirrors the scoring code exactly: content and the fan signal are blended by the tested content
+    weight, then the personal model (once trained) takes its tested share. Shares sum to 1.
+    """
+    payload = payload or {}
+    c, f, p = payload.get("content"), payload.get("cf"), payload.get("personal")
+    if not isinstance(c, (int, float)):
+        return []
+    src = payload.get("cf_source")
+    fan_name, fan_tech = {
+        "ranker": ("Fans like you", "learned ranker over item-kNN, RP3beta, EASE"),
+        "new": ("New-release model", "ridge regression on director, cast, studio"),
+    }.get(src, ("Fans like you", str(payload.get("cf_name") or "item-kNN")))
+    parts = []
+    if isinstance(f, (int, float)):
+        parts += [(fan_name, fan_tech, (1 - content_weight) * f), ("What it’s like", "content model, TF-IDF + SVD", content_weight * c)]
+    else:
+        parts += [("What it’s like", "content model, TF-IDF + SVD", c)]
+    if isinstance(p, (int, float)):
+        parts = [(n, t, (1 - personal_weight) * v) for n, t, v in parts] + [("Your choices", "your own logistic model", personal_weight * p)]
+    total = sum(max(0.0, v) for _, _, v in parts)
+    if total <= 0:
+        return []
+    return [(n, t, max(0.0, v) / total) for n, t, v in parts]
+
+
+def why_models(payload, reasons=None):
+    """One line naming the models that actually scored this movie."""
+    payload = payload or {}
+    src = payload.get("cf_source")
+    names = []
+    if src == "ranker":
+        names.append("a learned ranker over the fan models")
+    elif src == "fans":
+        names.append(f"fans like you ({payload.get('cf_name') or 'item-kNN'})")
+    elif src == "new":
+        names.append("the new-release model")
+    names.append("the tone model")
+    if isinstance(payload.get("personal"), (int, float)):
+        names.append("your own model")
+    if any(r.get("label") == "Fits your mood" for r in reasons or []):
+        names.append("mood search")
+    head = f"{len(names)} models scored this pick: " if len(names) > 1 else "Scored by "
+    return head + (", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else names[0]) + "."
 
 
 def why_sentences(reasons, movie=None, live_rating=None, limit=2):

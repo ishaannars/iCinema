@@ -45,3 +45,14 @@ def test_saves_from_every_discovery_row_count():
     ev = [{"event": "save", "title": "A", "row": "Classics for You", "timestamp": 1, "session_id": "s"},
           {"event": "save", "title": "B", "row": "Top Matches for You", "timestamp": 2, "session_id": "s"}]
     assert analytics_insights(ev)["discovery_rate"] == 0.5
+
+
+def test_score_mix_matches_the_scoring_blend():
+    from src.ui.cards import score_mix
+    mix = score_mix({"content": 0.6, "cf": 0.9, "personal": 0.7, "cf_source": "ranker"}, 0.2)
+    assert [n for n, _, _ in mix] == ["Fans like you", "What it’s like", "Your choices"]
+    assert abs(sum(s for _, _, s in mix) - 1) < 1e-9
+    fans, content, mine = (s for _, _, s in mix)
+    total = 0.78 * 0.8 * 0.9 + 0.78 * 0.2 * 0.6 + 0.22 * 0.7
+    assert abs(fans - 0.78 * 0.8 * 0.9 / total) < 1e-9 and abs(mine - 0.22 * 0.7 / total) < 1e-9
+    assert score_mix({"cf": 0.9}, 0.2) == []

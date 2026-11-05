@@ -60,3 +60,14 @@ def fit_floor():
             span = a["chance"] - b["chance"]
             return round(a["top_pct"] + (a["chance"] - avg) / span * (b["top_pct"] - a["top_pct"]), 1)
     return float(rows[-1]["top_pct"]) if rows[-1]["chance"] >= avg else float(rows[0]["top_pct"])
+
+
+@lru_cache(maxsize=1)
+def test_viewers():
+    """How many held-out viewers the love chance was measured on, or None."""
+    try:
+        d = json.loads(PATH.read_text())
+    except (OSError, ValueError):
+        return None
+    n = d.get("test_viewers")
+    return int(n) if d.get("ships") and isinstance(n, (int, float)) else None
