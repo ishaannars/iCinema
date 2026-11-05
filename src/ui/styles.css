@@ -5689,3 +5689,21 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 .pf-readout-t{color:var(--muted2);margin-left:auto;}
 @media (max-width: 640px){.pf-readout-t{margin-left:0;flex-basis:100%;padding-left:1.1rem;}}
 
+
+/* Fit popup, compact: each model's bar with what it saw right underneath. */
+.mix{gap:.35rem !important;margin-top:.9rem;}
+.mix-row{margin-top:.35rem;}
+.mix-name{flex-basis:12.5rem !important;}
+.mix-name span{display:inline !important;margin-left:.4rem;}
+.mix-detail{font-family:var(--ui-font);color:var(--muted);font-size:.8rem;line-height:1.4;margin:-.05rem 0 .25rem;}
+.mix-extra{margin-top:.3rem;}
+.why-pop-foot{margin-top:.8rem !important;}
+@media (max-width: 640px){.mix-name span{display:block !important;margin-left:0;}}
+/* Hidden freshness markers: present in the page, never take space. */
+[data-testid="stElementContainer"]:has(.sv-cur),[data-testid="stElementContainer"]:has(.tv-mark),
+.element-container:has(.sv-cur),.element-container:has(.tv-mark){display:none !important;}
+/* Fit popup, tighter: the technique sits beside each model's name, one line per model. */
+.mix-name{flex:0 0 13.5rem !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mix-name span{display:inline !important;margin:0 0 0 .45rem !important;}
+.mix{gap:.35rem !important;}
+@media (max-width: 640px){.mix-name{flex-basis:9rem !important;} .mix-name span{display:none !important;}}

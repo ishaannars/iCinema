@@ -51,6 +51,11 @@
       var i = Array.prototype.indexOf.call(doc.querySelectorAll('[data-testid="stTabs"] [role="tab"]'), t);
       var key = i === 1 ? "refresh_saved" : i === 2 ? "refresh_seen" : i === 3 ? "refresh_profile" : null;
       if (!key) return;
+      // Refresh only if something changed since this tab was drawn; otherwise switching is instant.
+      var cur = 0;
+      doc.querySelectorAll(".sv-cur").forEach(function (m) { cur = Math.max(cur, +m.getAttribute("data-v") || 0); });
+      var mark = doc.querySelector('.tv-mark[data-tab="' + i + '"]');
+      if (mark && (+mark.getAttribute("data-v") || 0) >= cur) return;
       setTimeout(function () {
         var b = doc.querySelector('[class*="st-key-' + key + '"] button');
         if (b) b.click();

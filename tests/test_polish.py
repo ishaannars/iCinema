@@ -56,3 +56,10 @@ def test_score_mix_matches_the_scoring_blend():
     total = 0.78 * 0.8 * 0.9 + 0.78 * 0.2 * 0.6 + 0.22 * 0.7
     assert abs(fans - 0.78 * 0.8 * 0.9 / total) < 1e-9 and abs(mine - 0.22 * 0.7 / total) < 1e-9
     assert score_mix({"cf": 0.9}, 0.2) == []
+
+
+def test_ratings_reason_follows_the_step2_answer():
+    from src.ui.cards import ratings_reason
+    assert "critics count more" in ratings_reason("RT 97%", 20)
+    assert "audiences count more" in ratings_reason("RT 97%", 80)
+    assert "equally" in ratings_reason("RT 97%", 50) and ratings_reason("", 50) == ""

@@ -273,11 +273,12 @@ def why_rows(reasons, movie=None, live_rating=None, payload=None, row_name=None)
     tone = next((re.search(r"like “(.+?)”", str(r.get("text", ""))) for r in reasons or []
                  if str(r.get("label", "")).startswith("Feels like")), None)
     if isinstance(tone_pct, int):
-        rows.append(("Tone", f"Closer to your genres and fan tags than {tone_pct}% of movies"
+        closeness = ("Very close to" if tone_pct >= 70 else "Close to" if tone_pct >= 40 else "A step outside")
+        rows.append(("Tone", f"{closeness} the genres and fan tags you like"
                      + (f" · feels like {_short_title(tone.group(1))}" if tone else "")))
     personal, n = payload.get("personal"), int(payload.get("personal_n") or 0)
     if isinstance(personal, (int, float)) and n:
-        rows.append(("Your choices", f"{int(round(personal * 100))}% chance you’d save it, learned from your {n} saves and skips"))
+        rows.append(("Your choices", f"{int(round(personal * 100))}% chance you’d save it, from your saves and skips"))
     if any(r.get("label") == "Fits your mood" for r in reasons or []):
         rows.append(("Mood", "Among the closest 10% of movies to the words you typed"))
     if row_name in _ROW_JOBS:
@@ -293,6 +294,17 @@ def why_rows(reasons, movie=None, live_rating=None, payload=None, row_name=None)
     return rows or [("Fit", "Ranked high by the models for what you’ve liked")]
 
 
+def ratings_reason(ratings_text, review_priority):
+    """The ratings line tied to the Step 2 answer that decides how much they count (critics vs. audiences)."""
+    if not ratings_text:
+        return ""
+    rp = int(review_priority if review_priority is not None else 50)
+    why = ("you chose strong reviews, so critics count more" if rp <= 35 else
+           "you chose easy to enjoy, so audiences count more" if rp >= 65 else
+           "critics and audiences count equally, as you chose")
+    return f"{ratings_text} · {why}"
+
+
 def score_mix(payload, content_weight, personal_weight=0.22):
     """How much of this movie's final score came from each model: [(name, technique, share 0-1), ...].
 
@@ -305,16 +317,16 @@ def score_mix(payload, content_weight, personal_weight=0.22):
         return []
     src = payload.get("cf_source")
     fan_name, fan_tech = {
-        "ranker": ("Fans like you", "learned ranker over item-kNN, RP3beta, EASE"),
-        "new": ("New-release model", "ridge regression on director, cast, studio"),
+        "ranker": ("Fans like you", "learned ranker"),
+        "new": ("New releases", "ridge regression"),
     }.get(src, ("Fans like you", str(payload.get("cf_name") or "item-kNN")))
     parts = []
     if isinstance(f, (int, float)):
-        parts += [(fan_name, fan_tech, (1 - content_weight) * f), ("What it’s like", "content model, TF-IDF + SVD", content_weight * c)]
+        parts += [(fan_name, fan_tech, (1 - content_weight) * f), ("What it’s like", "TF-IDF + SVD", content_weight * c)]
     else:
-        parts += [("What it’s like", "content model, TF-IDF + SVD", c)]
+        parts += [("What it’s like", "TF-IDF + SVD", c)]
     if isinstance(p, (int, float)):
-        parts = [(n, t, (1 - personal_weight) * v) for n, t, v in parts] + [("Your choices", "your own logistic model", personal_weight * p)]
+        parts = [(n, t, (1 - personal_weight) * v) for n, t, v in parts] + [("Your choices", "logistic regression", personal_weight * p)]
     total = sum(max(0.0, v) for _, _, v in parts)
     if total <= 0:
         return []

@@ -53,6 +53,7 @@ from src.ui.cards import (  # card and popup text, unit-tested in tests/test_car
     _short_title,
     card_desc_html,
     card_html,
+    ratings_reason,
     score_mix,
     meta_html,
     card_ratings,
@@ -287,6 +288,15 @@ def queue_profile_save():
     happen when explicit reruns are stacked on top of widget reruns.
     """
     st.session_state._pending_profile_save = True
+    st.session_state._state_ver = int(st.session_state.get("_state_ver") or 0) + 1
+
+
+def _ver_mark(tab=None):
+    """Hidden marker of how current this part of the page is. Opening a tab refreshes it only if
+    something changed since it was drawn, so switching tabs is instant when nothing did."""
+    v = int(st.session_state.get("_state_ver") or 0)
+    cls = f'tv-mark" data-tab="{tab}' if tab is not None else "sv-cur"
+    st.markdown(f'<span class="{cls}" data-v="{v}"></span>', unsafe_allow_html=True)
 
 RECOGNIZABLE_SHELF_TITLES = [
     "Dune: Part Two", "Blade Runner 2049", "The Prestige", "Prisoners",
@@ -1221,7 +1231,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
          "Matches your answers to each movie’s genres and fan tags."),
         (learned.ready, "Your own choices", f"Personal model · {(learned.model_name or 'logistic regression').lower()}",
          f"{round(_p_share * 100)}%" if learned.ready else "",
-         f"Trained on your {learned.samples} saves and skips so far." if learned.ready else _personal_need(learned, decisions)),
+         "Trained on your saves and skips, and retrained after each new one." if learned.ready else _personal_need(learned, decisions)),
         (_nr_on(), "New releases", "Cold-start model · ridge regression", "",
          "Places brand-new movies by their director, cast, and studio."),
         (_tv_on(), "Shows", "TV model · item-kNN + popularity", "",
@@ -1405,17 +1415,18 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     # A live readout of what the models are computing from: each onboarding step, then every choice since.
     _ss = st.session_state
     _g, _r = len(_ss.get("genres") or []), len(_ss.get("more_of") or [])
-    _sv, _sk = int(insights.get("saves") or 0), int(insights.get("skips") or 0)
-    _sn, _dl = len(_ss.get("seen") or ()), len(_ss.get("disliked") or ())
+    # Counts match what the viewer sees: the Saved and Seen tabs, and movies skipped or marked Not for me.
+    _dl = len(_ss.get("disliked") or ())
+    _sv, _sn = len(_ss.get("saved") or ()), len(_ss.get("seen") or ())
+    _sk = len(set(_ss.get("dismissed") or ()) - set(_ss.get("disliked") or ()))
     _lk = len(set(_ss.get("likes") or ()) | set(_ss.get("favorites") or ()))
-    _inputs = [(_lk, "movie", "movies", "liked"), (_g, "genre", "genres", ""), (2, "slider", "sliders", ""), (_r, "row pick", "row picks", ""),
-               (_sv, "save", "saves", ""), (_sk, "skip", "skips", ""), (_sn, "seen", "seen", ""),
-               (_dl, "not for me", "not for me", "")]
-    _parts = [f"{n} {one if n == 1 else many}" + (f" {tail}" if tail else "") for n, one, many, tail in _inputs if n]
+    _inputs = [(_lk, "movie liked", "movies liked"), (_g, "genre", "genres"), (2, "slider", "sliders"),
+               (_r, "row pick", "row picks"), (_sv, "saved", "saved"), (_sn, "seen", "seen"),
+               (_sk, "skipped", "skipped"), (_dl, "not for me", "not for me")]
+    _parts = [f"{n} {one if n == 1 else many}" for n, one, many in _inputs if n]
     _summary = (
         '<div class="pf-readout"><span class="pf-dot on"></span>'
-        f'<span class="pf-readout-k">Computed from</span><span class="pf-readout-v">{html.escape(" · ".join(_parts))}</span>'
-        '<span class="pf-readout-t">updates with every choice</span></div>'
+        f'<span class="pf-readout-k">Computed from</span><span class="pf-readout-v">{html.escape(" · ".join(_parts))}</span></div>'
     ) if _parts else ""
     _page = (
         f'<div class="profile-wrap pf">'
@@ -1465,7 +1476,8 @@ def render_live_profile():
     tab showing counts from when the Showroom was built. Rebuilding it from current state
     keeps the signals and the "x of 50" progress matching what you just did.
     """
-    st.button("Refresh", key="refresh_profile")     # hidden; clicked when the Profile tab opens
+    st.button("Refresh", key="refresh_profile")     # hidden; clicked when the Profile tab opens and is out of date
+    _ver_mark(3)
     render_cinema_profile(current_profile(), include_insights=True, show_heading=True, tab_heading=True)
 
 
@@ -2307,30 +2319,32 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             with st.popover(pill_text, use_container_width=True):
                 _love = love_line(payload.get("fit_top_pct"))
                 _odds = _love.replace("If you watch it: about ", "About ").replace(" chance you'll love it", " chance you’ll love it") if _love else ""
+                # One compact block: each model's share of this movie's score, with what it saw right under it.
+                _rows = dict(why_rows(reasons, movie, live_rating, payload, row_name))
+                _detail = {"Fans like you": _rows.get("Fans like you") or _rows.get("All models"),
+                           "New releases": _rows.get("New release"),
+                           "What it’s like": _rows.get("Tone"),
+                           "Your choices": _rows.get("Your choices")}
                 _mix = score_mix(payload, CONTENT_WEIGHT)
-                _mix_html = ("".join(
+                _mix_html = "".join(
                     f'<div class="mix-row"><div class="mix-name">{html.escape(n)}<span>{html.escape(t)}</span></div>'
                     f'<div class="mix-track"><div class="mix-fill" style="width:{max(3, round(sh * 100))}%"></div></div>'
-                    f'<div class="mix-pct">{round(sh * 100)}%</div></div>' for n, t, sh in _mix))
-                _off = load_offline_results() or {}
-                _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
-                _users = _off.get("held_out_users")
-                _proof = (f"Tested on {_users:,} movie fans the models never saw: their first pick was a 4+ star movie "
-                          f"{int(_lift)}% more often than the most popular one."
-                          if isinstance(_lift, (int, float)) and isinstance(_users, int) else "")
-                _odds_note = (f" The chance above was measured on {_love_n:,} test viewers and is rounded down."
-                              if _odds and (_love_n := love_test_viewers()) else "")
+                    f'<div class="mix-pct">{round(sh * 100)}%</div></div>'
+                    + (f'<div class="mix-detail">{html.escape(_detail[n])}</div>' if _detail.get(n) else "")
+                    for n, t, sh in _mix)
+                if _rows.get("Mood"):
+                    _mix_html += f'<div class="mix-detail mix-extra">Mood: {html.escape(_rows["Mood"])}</div>'
+                if (_rr := ratings_reason(_rows.get("Ratings"), st.session_state.get("review_priority"))):
+                    _mix_html += f'<div class="mix-detail mix-extra">Ratings: {html.escape(_rr)}</div>'
+                _rank, _pool = payload.get("fit_rank"), payload.get("fit_pool")
+                _head = fit_head(payload, match) + (f" · #{_rank} of {_pool:,}" if isinstance(_rank, int) and isinstance(_pool, int) else "")
                 st.markdown(
                     '<div class="why-pop-kicker">Why it’s here</div>'
-                    f'<div class="why-pop-head">{html.escape(fit_head(payload, match))}</div>'
+                    f'<div class="why-pop-head">{html.escape(_head)}</div>'
                     + (f'<div class="why-pop-odds">{html.escape(_odds)} if you watch it</div>' if _odds else "")
-                    + (f'<div class="why-pop-sec">What decided it</div><div class="mix">{_mix_html}</div>' if _mix_html else "")
-                    + '<div class="why-pop-sec">What each model saw</div><div class="why-pop-rows">'
-                    + "".join(f'<div class="why-pop-row"><span class="why-pop-k">{html.escape(k)}</span>'
-                              f'<span class="why-pop-v">{html.escape(v)}</span></div>'
-                              for k, v in why_rows(reasons, movie, live_rating, payload, row_name))
-                    + '</div>'
-                    f'<div class="why-pop-foot">{html.escape(_proof + _odds_note)}</div>',
+                    + (f'<div class="mix">{_mix_html}</div>' if _mix_html else "")
+                    + '<div class="why-pop-foot">Every number is from this movie’s own scores. The models and the chance '
+                    'were tested on movie fans they never saw.</div>',
                     unsafe_allow_html=True,
                 )
                 st.button(
@@ -2382,6 +2396,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         f'<div class="{availability_class}">{watch_html}</div>'), unsafe_allow_html=True)
     # Persist Skip / Undo during this card-only rerun without creating a visible loader.
     persist_from_fragment()
+    _ver_mark()
 
 
 def render_card_actions(row_name, row_index, slot_index):
@@ -2656,6 +2671,7 @@ def render_tonight_pick_fragment():
                         st.button("Undo", key=f"tonight_undo_{title}", use_container_width=True,
                                   help=f"Bring back {last_skip}", on_click=tonight_undo)
     persist_from_fragment()
+    _ver_mark()
 
 
 def _library_counts():
@@ -2676,6 +2692,7 @@ def _saved_tab():
     # Hidden refresh: switching to this tab clicks it (src/scroll_keeper_component), so a change made
     # on the other library tab shows up here without reloading the page.
     st.button("Refresh", key="refresh_saved")
+    _ver_mark(1)
     st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
     st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
     movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
@@ -2763,6 +2780,7 @@ def _seen_tab():
     # Hidden refresh: switching to this tab clicks it (src/scroll_keeper_component), so a change made
     # on the other library tab shows up here without reloading the page.
     st.button("Refresh", key="refresh_seen")
+    _ver_mark(2)
     st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
     st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
     movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
@@ -3612,6 +3630,7 @@ except Exception as _exc:
 
 # Persist the latest profile/history after the page has processed this run.
 persist_profile_if_needed()
+_ver_mark()
 st.session_state._in_full_run = False
 
 # V5.90 is implemented through CSS overrides injected above in the main style block.
