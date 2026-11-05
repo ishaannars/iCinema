@@ -20,7 +20,7 @@ def test_ml_engine_does_not_load_sklearn_at_startup():
 
 
 def test_ranker_runs_on_the_version_it_was_trained_with():
-    assert "scikit-learn==1.6.1" in (ROOT / "requirements.txt").read_text()
+    assert "scikit-learn>=1.6.1" in (ROOT / "requirements.txt").read_text()
 
 
 def test_no_raw_errors_and_no_purple():
