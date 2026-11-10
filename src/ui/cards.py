@@ -326,7 +326,7 @@ def score_mix(payload, content_weight, personal_weight=0.22):
     else:
         parts += [("What it’s like", "TF-IDF + SVD", c)]
     if isinstance(p, (int, float)):
-        parts = [(n, t, (1 - personal_weight) * v) for n, t, v in parts] + [("Your choices", "logistic regression", personal_weight * p)]
+        parts = [(n, t, (1 - personal_weight) * v) for n, t, v in parts] + [("Your choices", "personal model", personal_weight * p)]
     total = sum(max(0.0, v) for _, _, v in parts)
     if total <= 0:
         return []

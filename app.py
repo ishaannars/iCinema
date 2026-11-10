@@ -993,6 +993,8 @@ def _cf_signals():
                 continue   # "My taste changed": older saves, Seen and skips stop shaping picks
             if key == "seen" and rated.get(t) in (1, -1):
                 action = "like" if rated[t] == 1 else "dislike"   # a rated Seen is a real signal
+            elif key == "seen" and t in (st.session_state.get("seen_from_saved") or set()):
+                action = "save"    # saved, then watched: it keeps the positive signal it had in Saved
             out.append((m, action))
     for key, action in (("imported_seen", "seen"), ("imported_disliked", "dislike")):
         for t in st.session_state.get(key) or set():   # only filled if that signal passed its test
@@ -2765,7 +2767,7 @@ def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
                 unsafe_allow_html=True,
             )
             # Compact pills, about the poster's width, aligned under the poster.
-            a, b, _ = st.columns([1, 1.35, 4.2], gap="small")
+            a, b, _ = st.columns([1, 1.7, 3.3], gap="small")
             with a:
                 st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
                           on_click=save_movie, args=(nt, nmovie))
@@ -2804,13 +2806,22 @@ def _seen_tab():
         wn_blocked = (set(st.session_state.saved) | set(st.session_state.seen)
                       | set(st.session_state.dismissed) | set(st.session_state.get("disliked") or set()) | set(st.session_state.likes) | set(st.session_state.favorites))  # tabs9
         wn_offsets = st.session_state.get("whats_next_offset") or {}
-        wn_taken, wn_picks = set(), {}
-        for m in movies:
-            ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
-            if ranked:
-                pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
-                wn_picks[m["title"]] = pick
-                wn_taken.add(pick[0])
+        # What's next picks only change when the Seen list, the blocked set, or "Another pick" changes,
+        # so a thumbs tap reuses them instead of re-ranking every candidate for every Seen movie.
+        _wn_key = (tuple(m["title"] for m in movies), len(wn_blocked), hash(frozenset(wn_blocked)),
+                   tuple(sorted(wn_offsets.items())), len(wn_payloads))
+        _wn_memo = st.session_state.get("_whats_next_memo")
+        if _wn_memo and _wn_memo[0] == _wn_key:
+            wn_picks = dict(_wn_memo[1])
+        else:
+            wn_taken, wn_picks = set(), {}
+            for m in movies:
+                ranked = [(t, cf) for t, cf in whats_next_ranking(m, wn_payloads, wn_blocked) if t not in wn_taken]
+                if ranked:
+                    pick = ranked[int(wn_offsets.get(m["title"], 0)) % len(ranked)]
+                    wn_picks[m["title"]] = pick
+                    wn_taken.add(pick[0])
+            st.session_state._whats_next_memo = (_wn_key, dict(wn_picks))
         wn_identity = st.session_state.get("showroom_identity_cache") or {}
         cols=st.columns(4, gap="medium")
         for i,m in enumerate(movies):
@@ -2830,14 +2841,11 @@ def _seen_tab():
                                                              watch_line_html(seen_watch_map.get(m["title"]), m["title"], st.session_state.get("streaming_services"))),
                                           lines_in_panel=True),
                                 unsafe_allow_html=True)
-                    # Hover × in the poster's top-right corner: remove an accidental Seen.
-                    st.button("×", key=f"unseen_{m['title']}", help="Remove from Seen",
-                              on_click=remove_from_seen, args=(m["title"],))
                     _r = (st.session_state.get("seen_rating") or {}).get(m["title"], 0)
                     pick = wn_picks.get(m["title"])
                     # One calm row: two icon toggles (loved it / not for me) and What's next.
                     with st.container(key=f"seenrow_{i}"):
-                        up, down, nxt = st.columns([1, 1, 2.6], gap="small", vertical_alignment="center")
+                        up, down, nxt, rm = st.columns([1, 1, 2.4, 1], gap="small", vertical_alignment="center")
                         with up:
                             st.button(":material/thumb_up:", key=f"seenup_{m['title']}", help="Loved it",
                                       type="primary" if _r == 1 else "secondary", use_container_width=True,
@@ -2849,6 +2857,9 @@ def _seen_tab():
                         with nxt:
                             if pick:
                                 _whats_next_popover(i, m, pick, wn_payloads, wn_identity)
+                        with rm:
+                            st.button(":material/close:", key=f"unseen_{m['title']}", help="Remove from Seen",
+                                      use_container_width=True, on_click=remove_from_seen, args=(m["title"],))
     _library_counts()
 
 

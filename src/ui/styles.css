@@ -5707,3 +5707,25 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 .mix-name span{display:inline !important;margin:0 0 0 .45rem !important;}
 .mix{gap:.35rem !important;}
 @media (max-width: 640px){.mix-name{flex-basis:9rem !important;} .mix-name span{display:none !important;}}
+
+/* ---- Batch 11c ---- */
+/* Seen: remove sits in the action row as a fourth pill, so nothing floats over the poster or flashes on rerun. */
+[class*="st-key-seencard_"] [class*="st-key-unseen_"]{position:static !important;opacity:1 !important;width:100% !important;margin:0 !important;}
+[class*="st-key-unseen_"] button{width:100% !important;height:2.4rem !important;min-height:2.4rem !important;min-width:2.6rem !important;
+    background:transparent !important;border:1px solid rgba(169,173,183,.28) !important;backdrop-filter:none !important;border-radius:999px !important;}
+[class*="st-key-unseen_"] button [data-testid="stIconMaterial"],[class*="st-key-unseen_"] button p{font-size:1.1rem !important;color:var(--muted) !important;}
+[class*="st-key-unseen_"] button:hover [data-testid="stIconMaterial"]{color:var(--kinari) !important;}
+@media (max-width: 640px){[class*="st-key-unseen_"] button{height:44px !important;min-height:44px !important;}}
+/* What's next: full button labels. */
+[class*="st-key-whatsnext_save_"] button p,[class*="st-key-whatsnext_more_"] button p{white-space:nowrap !important;overflow:visible !important;}
+[class*="st-key-whatsnext_more_"] button,[class*="st-key-whatsnext_save_"] button{padding:0 .9rem !important;}
+
+/* Fit popup type: the app's own UI font everywhere; small labels in the same caps style as section labels. */
+.why-pop-kicker{font-family:var(--ui-font) !important;color:var(--muted2) !important;font-size:.75rem !important;font-weight:700 !important;
+    letter-spacing:.08em !important;text-transform:uppercase !important;margin:0 0 .35rem !important;}
+.why-pop-head{font-family:"Space Grotesk",var(--ui-font) !important;letter-spacing:-.02em !important;}
+.mix-name{flex:0 0 15rem !important;font-family:var(--ui-font) !important;}
+.mix-name span{font-family:var(--ui-font) !important;color:var(--muted2) !important;font-size:.75rem !important;font-weight:500 !important;
+    letter-spacing:.02em !important;}
+.mix-pct{font-family:var(--ui-font) !important;font-weight:600 !important;font-variant-numeric:tabular-nums !important;}
+.mix-detail{font-family:var(--ui-font) !important;}
