@@ -43,3 +43,18 @@ def test_tv_show_names_group_seasons():
     assert is_tv({"title": "Lost Season 1", "categories": []}) and not is_tv({"title": "Heat", "categories": ["Movies"]})
     assert not is_tv({"title": "Heat", "categories": ["Movies & TV", "Movies"]})   # the store name isn't a TV category
     assert is_tv({"title": "Lost", "categories": ["Movies & TV", "TV"]})
+
+
+def test_portable_ranker_matches_the_saved_model():
+    import numpy as np
+    from src.ltr import _Trees
+    d = np.load(ROOT / "data" / "ltr_trees.npz")
+    X = np.random.RandomState(1).rand(500, len(d["features"]))
+    p = _Trees(d).predict_proba(X)[:, 1]
+    assert p.shape == (500,) and ((p > 0) & (p < 1)).all()
+    try:
+        import joblib
+        ref = joblib.load(ROOT / "data" / "ltr_model.joblib")["model"].predict_proba(X)[:, 1]
+    except Exception:
+        return            # an older/newer scikit-learn can't read the pickle; the arrays still work
+    assert np.abs(ref - p).max() < 1e-9

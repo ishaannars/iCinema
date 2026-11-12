@@ -1620,7 +1620,7 @@ def render_shelf_fragment():
             st.markdown(
                 f'<div class="search-selected-card">'
                 f'<div class="search-selected-kicker">Selected title</div>'
-                f'<div class="search-selected-title">{html.escape(choice)}{html.escape(f" ({choice_movie.get('year')})") if choice_movie.get("year") else ""}</div>'
+                f'<div class="search-selected-title">{html.escape(choice)}{html.escape(" (" + str(choice_movie.get("year")) + ")") if choice_movie.get("year") else ""}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
