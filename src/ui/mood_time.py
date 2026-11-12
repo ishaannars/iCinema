@@ -15,7 +15,7 @@ _OVER = re.compile(r"\b(?:over|more than|longer than|at least)\s*" + _DUR, re.I)
 _BARE = re.compile(r"(?<![\w.])(?:about\s+|around\s+|roughly\s+)?" + _DUR, re.I)
 _WORDS = {"short episodes": ("episodes", 35), "short": ("max", 100), "quick": ("max", 100),
           "something long": ("min", 150), "long": ("min", 150), "epic": ("min", 150)}
-_FILLER = {"a", "an", "the", "movie", "movies", "film", "films", "something", "long", "for", "of", "or", "less", "max"}
+_FILLER = {"like", "a", "an", "the", "movie", "movies", "film", "films", "something", "long", "for", "of", "or", "less", "max"}
 
 
 def _dur_minutes(m):
@@ -34,10 +34,17 @@ def _cut(q, m):
     return (q[:m.start()] + " " + q[m.end():]).strip()
 
 
+_LIKE = re.compile(r"(?:\b(?:movies?|films?|shows?|something|anything)\s+)?\b(?:like|similar to)\s+(.+)$", re.I)
+
+
 def parse(query):
     """-> {"mood": str, "max": minutes or None, "min": minutes or None, "episodes": max episode minutes or None, "label": str}"""
     q = " ".join(str(query or "").split())
-    out = {"max": None, "min": None, "episodes": None}
+    out = {"max": None, "min": None, "episodes": None, "like": None}
+    m = _LIKE.search(q)
+    if m:
+        out["like"] = m.group(1).strip(" ,.;\"“”'")[:80] or None
+        q = q[:m.start()].strip(" ,")
     m = _UNDER.search(q)
     if m:
         out["max"] = _dur_minutes(m)
@@ -73,13 +80,15 @@ def parse(query):
         parts.append(f"over {fmt(out['min'])}")
     if out["episodes"]:
         parts.append("short episodes")
+    if out["like"]:
+        parts.insert(0, f"like {out['like']}")
     out["mood"] = mood
     out["label"] = " · ".join(parts)
     return out
 
 
-def compose(mood="", max_min=None, min_min=None, episodes=None):
-    """Write a spec back as search text that parse() reads the same way."""
+def compose(mood="", max_min=None, min_min=None, episodes=None, like=None):
+    """Write a spec back as search text that parse() reads the same way ("like X" always goes last)."""
     bits = [mood] if mood else []
     if max_min:
         bits.append(f"under {int(max_min)} min")
@@ -87,21 +96,26 @@ def compose(mood="", max_min=None, min_min=None, episodes=None):
         bits.append(f"over {int(min_min)} min")
     if episodes:
         bits.append("short episodes")
+    if like:
+        bits.append(f"like {like}")
     return ", ".join(bits)
 
 
 def chips(query):
     """What the field understood, as removable chips: [(label, text without this chip), ...]."""
     s = parse(query)
+    m, mx, mn, ep, lk = s["mood"], s["max"], s["min"], s["episodes"], s["like"]
     out = []
-    if s["mood"]:
-        out.append((s["mood"], compose("", s["max"], s["min"], s["episodes"])))
-    if s["max"]:
-        out.append((f"Under {fmt(s['max'])}", compose(s["mood"], None, s["min"], s["episodes"])))
-    if s["min"]:
-        out.append((f"Over {fmt(s['min'])}", compose(s["mood"], s["max"], None, s["episodes"])))
-    if s["episodes"]:
-        out.append(("Short episodes", compose(s["mood"], s["max"], s["min"], None)))
+    if lk:
+        out.append((f"Like {lk}", compose(m, mx, mn, ep, None)))
+    if m:
+        out.append((m, compose("", mx, mn, ep, lk)))
+    if mx:
+        out.append((f"Under {fmt(mx)}", compose(m, None, mn, ep, lk)))
+    if mn:
+        out.append((f"Over {fmt(mn)}", compose(m, mx, None, ep, lk)))
+    if ep:
+        out.append(("Short episodes", compose(m, mx, mn, None, lk)))
     return out
 
 

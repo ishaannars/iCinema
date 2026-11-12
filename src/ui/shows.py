@@ -27,7 +27,8 @@ def _act(ctx, kind, title, show):
 
 
 def _card(ctx, slot, entry):
-    name, score, rank, total, anchor = entry
+    name, score, rank, total, anchor = entry[:5]
+    fan_part, pop_part = (entry[5], entry[6]) if len(entry) >= 7 else (None, None)
     show = tv.show_details(name)
     if not show:
         return False
@@ -43,18 +44,29 @@ def _card(ctx, slot, entry):
     with st.container(key=f"showroom_controls_tv_{slot}"):
         pill, skip = st.columns([3.2, 1], gap="small")
         with pill:
-            with st.popover(f"Top {top}%", use_container_width=True):
-                rows = [("Rank", f"#{rank:,} of {total:,} shows scored for you")]
-                if anchor:
-                    rows.append(("Fans like you", f"People who loved {anchor} loved this show"))
-                rows.append(("Mix", "Fans like you 80% · popularity 20%, both tested on held-out viewers"))
+            with st.popover(f"Top {top}% for you", use_container_width=True):
+                # Same layout as the movie popup: each model's share of THIS show's score, then what it saw.
+                mix = []
+                if isinstance(fan_part, float) and isinstance(pop_part, float) and fan_part + pop_part > 0:
+                    tot = fan_part + pop_part
+                    fans_line = (f"People who loved {anchor} loved this show" if anchor
+                                 else "Loved by fans of the movies you love")
+                    mix = [("Fans like you", "item-kNN", fan_part / tot, fans_line),
+                           ("Popular right now", "popularity", pop_part / tot, "How widely watched it is, which kept the row reliable in testing")]
+                mix_html = "".join(
+                    f'<div class="mix-row"><div class="mix-name">{html.escape(n)}<span>{html.escape(t)}</span></div>'
+                    f'<div class="mix-track"><div class="mix-fill" style="width:{max(3, round(sh * 100))}%"></div></div>'
+                    f'<div class="mix-pct">{round(sh * 100)}%</div></div>'
+                    f'<div class="mix-detail">{html.escape(d)}</div>' for n, t, sh, d in mix)
                 if parts:
-                    rows.append(("Ratings", ratings))
+                    mix_html += f'<div class="mix-detail mix-extra">Ratings: {html.escape(ratings)}</div>'
                 st.markdown(
-                    f'<div class="why-pop-head">Top {top}% for you</div><div class="why-pop-rows">'
-                    + "".join(f'<div class="why-pop-row"><span class="why-pop-k">{html.escape(k)}</span>'
-                              f'<span class="why-pop-v">{html.escape(v)}</span></div>' for k, v in rows)
-                    + '</div>', unsafe_allow_html=True)
+                    '<div class="why-pop-kicker">Why it’s here</div>'
+                    f'<div class="why-pop-head">Top {top}% for you · #{rank:,} of {total:,}</div>'
+                    f'<div class="mix">{mix_html}</div>'
+                    '<div class="why-pop-foot">Every number is from this show’s own scores. The show model was tested on '
+                    'viewers it never saw (Amazon Reviews 2023).</div>',
+                    unsafe_allow_html=True)
         with skip:
             st.button("Skip", key=f"skip_tv_{slot}_{title}", use_container_width=True,
                       on_click=_act, args=(ctx, "skip", title, show))
@@ -86,29 +98,31 @@ def render_shows(ctx, count):
     spec = ctx.get("spec") or {}
     spec = ctx.get("spec") or {}
     note = "Shows loved by fans of the movies you love"
-    if spec.get("mood") or spec.get("label"):
-        note = "Matching " + " · ".join(x for x in (f"“{spec['mood']}”" if spec.get("mood") else "", spec.get("label", "")) if x)
+    _lab = " · ".join(x for x in (spec.get("label") or "").split(" · ") if x and not x.startswith("like "))
+    if spec.get("mood") or _lab:
+        note = "Matching " + " · ".join(x for x in (f"“{spec['mood']}”" if spec.get("mood") else "", _lab) if x)
     st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">Shows for You</div>'
                 f'<div class="row-model-note">{html.escape(note)}</div></div>', unsafe_allow_html=True)
     if not picks:
         st.caption("Like or save a few movies and your shows appear here.")
         return
-    shown, i = 0, 0
-    while shown < count and i < len(picks):
-        cols = st.columns(4)
-        for c in range(4):
-            while shown < count and i < len(picks):
-                entry = picks[i]
-                i += 1
-                info = tv.show_details(entry[0])
-                if not info or not tv.matches_mood(info, spec.get("mood", "")):
-                    continue
-                from src.ui.mood_time import fits
-                if not fits(info.get("episode_runtime"), spec, show=True):
-                    continue
-                with cols[c]:
-                    if _card(ctx, shown, entry):
-                        shown += 1
-                        break
-            if shown >= count:
-                break
+    with st.container(key="showroom_swipe_tv"):    # same grid as the movie rows on every screen size
+        shown, i = 0, 0
+        while shown < count and i < len(picks):
+            cols = st.columns(4)
+            for c in range(4):
+                while shown < count and i < len(picks):
+                    entry = picks[i]
+                    i += 1
+                    info = tv.show_details(entry[0])
+                    if not info or not tv.matches_mood(info, spec.get("mood", "")):
+                        continue
+                    from src.ui.mood_time import fits
+                    if not fits(info.get("episode_runtime"), spec, show=True):
+                        continue
+                    with cols[c]:
+                        if _card(ctx, shown, entry):
+                            shown += 1
+                            break
+                if shown >= count:
+                    break

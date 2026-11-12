@@ -71,7 +71,8 @@ def viewer_shows(signals, exclude=()):
     for rank, j in enumerate(ranked, start=1):
         if names[j].casefold() in skip:
             continue
-        out.append((names[j], float(blend[j]), rank, len(ranked), (best.get(j) or (0, None))[1]))
+        out.append((names[j], float(blend[j]), rank, len(ranked), (best.get(j) or (0, None))[1],
+                    float((1 - a) * fan_pct[j]), float(a * pop[j])))
         if len(out) >= 40:
             break
     return out

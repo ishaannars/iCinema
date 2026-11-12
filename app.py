@@ -1155,7 +1155,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     matters_text = " ".join(p["matters"]).casefold()
     mix = [b for b in p["balance"] if not ("review" in b.casefold() and "review" in matters_text)]
     _n = int(p.get("movies_used") or 0)
-    _early = (f'<span class="profile-chip profile-chip-muted">Like or save {3 - _n} more movie{"s" if 3 - _n != 1 else ""} to see your tone and patterns</span>'
+    _early = (f'<span class="pf-empty">Like or save {3 - _n} more movie{"s" if 3 - _n != 1 else ""} to see your tone and patterns</span>'
               if _n < 3 else "")
     sections = [
         ("You enjoy" if p["traits"] else "Your tone", profile_chip_html(p["traits"]) or _early, "profile-chip-wrap"),
@@ -2045,11 +2045,51 @@ def mood_reason(movie):
     return {"label": "Fits your mood", "text": f"Fans describe it the way you did: “{q[:40]}”."}
 
 
+def _like_source():
+    """The movie behind "like X" in the search, resolved once: catalog, then the viewer's own titles, then TMDB."""
+    q = (_mood_spec().get("like") or "").strip()
+    if not q:
+        return None
+    memo = dict(st.session_state.get("_like_memo") or {})
+    if q.casefold() in memo:
+        return memo[q.casefold()]
+    ext = st.session_state.external_movies
+    found = get_movie(q, ext)
+    if not found:
+        pool = list(CATALOG) + list(ext.values())
+        qq = q.casefold()
+        hits = [m for m in pool if qq in str(m.get("title", "")).casefold()]
+        found = min(hits, key=lambda m: len(str(m.get("title", "")))) if hits else None
+    if not found and tmdb_catalog_configured():
+        try:
+            res = search_movies(q, 1)
+            found = res[0] if res else None
+        except Exception:
+            found = None
+    memo[q.casefold()] = found
+    st.session_state._like_memo = memo
+    return found
+
+
+def _like_score(movie, source):
+    """Same tested blend as What's next: how closely fans link it to `source`, plus your own match."""
+    sim = item_similarity(movie, source)
+    if sim is None:
+        same_genre = 1.0 if movie.get("genre") and movie.get("genre") == source.get("genre") else 0.0
+        sim = 0.5 * same_genre + 0.5 * _tag_overlap(movie, source)
+    return sim
+
+
 def _mood_line():
     """Row note while a mood is set, or "" (only if the words matched something)."""
     from src.mood import scores
     spec = _mood_spec()
     q, t = spec["mood"], spec["label"]
+    src = _like_source()
+    if src:
+        t = " · ".join(x for x in t.split(" · ") if not x.startswith("like "))
+        head = (f"More like {src['title']}" + (f", for “{q[:30]}”" if q and scores(q) is not None else ""))
+        return f"{head} · {t}" if t else head
     head = f"Your best fits for “{q[:40]}”" if q and scores(q) is not None else ("Your best fits" if t else "")
     return f"{head} · {t}" if head and t else head
 
@@ -2078,6 +2118,35 @@ def render_mood_chips():
             'Try words like feel-good, mind-bending, or slow burn.</div>',
             unsafe_allow_html=True,
         )
+
+
+_MOOD_PRESETS = [("Feel-good", "feel-good"), ("Mind-bending", "mind-bending"), ("Funny", "funny"),
+                 ("Dark and tense", "dark tense"), ("Thought-provoking", "thought-provoking"),
+                 ("Under 2 hours", "under 2 hours"), ("Like your last save", None)]
+
+
+def render_mood_suggestions():
+    """One-tap starting points under the empty search field. A mood preset shows only if fans actually
+    use those words, so every chip changes the picks; "Like your last save" follows the movie you saved last."""
+    from src.mood import scores
+    opts = []
+    for label, text in _MOOD_PRESETS:
+        if text is None:
+            last = next((e.get("title") for e in reversed(st.session_state.get("analytics_events") or [])
+                         if e.get("event") == "save" and e.get("title")), None)
+            if last:
+                opts.append((f"Like {last[:28]}", f"like {last}"))
+        elif text.startswith("under") or scores(text) is not None:
+            opts.append((label, text))
+    if not opts:
+        return
+    try:
+        row = st.container(key="mood_suggest_row", horizontal=True, gap="small")
+    except TypeError:
+        row = st.container(key="mood_suggest_row")
+    with row:
+        for i, (label, text) in enumerate(opts):
+            st.button(label, key=f"mood_suggest_{i}", on_click=_set_mood, args=(text,))
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -3173,6 +3242,12 @@ def _render_showroom(p):
                 _first=sorted(_hit,key=lambda j:0.5*_frank[j]+0.5*_mrank[j])
                 _hs=set(_hit)
                 top_all=[top_all[j] for j in _first]   # only movies that fit the mood, even after many Skips
+        _src=_like_source()
+        if _src and top_all:
+            # "like X": Top Picks re-ranks by the What's next blend (fans who loved X, plus your own match).
+            _sk=_src.get("title")
+            top_all=[x for x in top_all if x[1].get("title")!=_sk]
+            top_all=sorted(top_all,key=lambda x:-(WHATS_NEXT_SIM*_like_score(x[1],_src)+(1-WHATS_NEXT_SIM)*float(x[0] or 0)/100.0))
         top_all=_time_filter(top_all,_tspec)
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(
@@ -3243,6 +3318,14 @@ def _render_showroom(p):
             ordered=_time_filter(ordered,_tspec)    # "under 2 hours": a filter; order stays the models'
             if row_name!="Top Matches for You":
                 ordered=_mood_first(ordered)        # a mood reaches every row, not only Top Picks
+                if _src:
+                    # "like X" reaches every row too: the closest fifth moves up, each row keeps its own rules.
+                    _sims=[(_like_score(m,_src),k) for k,(_,m) in enumerate(ordered) if m.get("title")!=_src.get("title")]
+                    if _sims:
+                        import numpy as _np
+                        _cut=float(_np.quantile([v for v,_ in _sims],0.8))
+                        _close={k for v,k in _sims if v>=_cut}
+                        ordered=[ordered[k] for k in sorted(_close)]+[it for k,it in enumerate(ordered) if k not in _close and it[1].get("title")!=_src.get("title")]
             # One movie per series across the Showroom, so rows don't fill up with sequels.
             picks=[]
             for item in ordered:
@@ -3616,24 +3699,24 @@ try:
         logo()
         p=current_profile()
         from src.mood import available as _mood_ready
-        _hl, _hr = st.columns([1.55, 1], gap="large", vertical_alignment="center")
-        with _hl:
-            st.markdown(
-                '<div class="showroom-header">'
-                '<div class="showroom-heading">Your Showroom</div>'
-                '<div class="showroom-intro">Picked for you, and sharper with every choice you make.</div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            '<div class="showroom-header">'
+            '<div class="showroom-heading">Your Showroom</div>'
+            '<div class="showroom-intro">Picked for you, and sharper with every choice you make.</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
         if _mood_ready():
-            with _hr:
-                with st.container(key="mood_box"):
-                    if "mood_input" not in st.session_state:
-                        st.session_state.mood_input = _mood_text()
-                    st.text_input("Search by mood", key="mood_input", label_visibility="collapsed",
-                                  placeholder="What’s your mood? Try “funny, under 2 hours”",
-                                  on_change=_apply_mood)
+            with st.container(key="mood_box"):
+                if "mood_input" not in st.session_state:
+                    st.session_state.mood_input = _mood_text()
+                st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
+                              placeholder="A mood, a time, or a movie you loved",
+                              on_change=_apply_mood)
+                if _mood_text():
                     render_mood_chips()
+                else:
+                    render_mood_suggestions()
 
         render_showroom_fragment(p)
 except Exception as _exc:

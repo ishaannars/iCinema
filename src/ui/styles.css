@@ -5729,3 +5729,46 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
     letter-spacing:.02em !important;}
 .mix-pct{font-family:var(--ui-font) !important;font-weight:600 !important;font-variant-numeric:tabular-nums !important;}
 .mix-detail{font-family:var(--ui-font) !important;}
+
+/* ---- Batch 20: search, shows popup, and the iPhone pass ---- */
+/* Search: one full-width field, one-tap starting points under it. */
+.st-key-mood_box{max-width:760px;margin:.4rem 0 1rem !important;}
+.st-key-mood_suggest_row{margin:.55rem 0 0 !important;gap:.4rem !important;flex-wrap:wrap !important;}
+.st-key-mood_suggest_row div.stButton{width:auto !important;}
+[class*="st-key-mood_suggest_"]:not(.st-key-mood_suggest_row) button{height:2.1rem !important;min-height:2.1rem !important;padding:0 .85rem !important;
+    border-radius:999px !important;background:transparent !important;border:1px solid rgba(169,173,183,.28) !important;}
+[class*="st-key-mood_suggest_"]:not(.st-key-mood_suggest_row) button p{font-size:.82rem !important;font-weight:600 !important;color:var(--muted) !important;white-space:nowrap !important;}
+[class*="st-key-mood_suggest_"]:not(.st-key-mood_suggest_row) button:hover p{color:var(--kinari) !important;}
+
+/* Profile chips use the app's UI font (the monospace face stays only in model labels). */
+.profile-chip,.pf-taste .profile-chip{font-family:var(--ui-font) !important;letter-spacing:-.005em !important;}
+
+@media (max-width: 640px){
+    /* Fit pill and Skip stay on one line inside every card, movies and shows alike. */
+    [class*="st-key-showroom_controls_"] [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:nowrap !important;gap:.35rem !important;}
+    [class*="st-key-showroom_controls_"] [data-testid="column"]:first-child,[class*="st-key-showroom_controls_"] [data-testid="stColumn"]:first-child{flex:1 1 auto !important;min-width:0 !important;width:auto !important;}
+    [class*="st-key-showroom_controls_"] [data-testid="column"]:last-child,[class*="st-key-showroom_controls_"] [data-testid="stColumn"]:last-child{flex:0 0 3.1rem !important;min-width:3.1rem !important;width:3.1rem !important;}
+    [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button{padding:0 .3rem !important;overflow:hidden !important;}
+    [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button p{font-size:.75rem !important;letter-spacing:-.01em !important;white-space:nowrap !important;
+        overflow:hidden !important;text-overflow:clip !important;padding:0 !important;}
+    [class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{padding:0 !important;}
+    /* Cards in a row end level: actions sit at the bottom of equal-height columns. */
+    [class*="st-key-showroom_swipe_"] [data-testid="stHorizontalBlock"]{align-items:stretch !important;}
+    [class*="st-key-showroom_swipe_"] [data-testid="column"] > div,[class*="st-key-showroom_swipe_"] [data-testid="stColumn"] > div{height:100%;display:flex;flex-direction:column;}
+    [class*="st-key-movie_actions_"]{margin-top:auto !important;}
+    /* Step 2 genres: a tidy grid of three instead of one long list. */
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-genre_"]){flex-direction:row !important;flex-wrap:wrap !important;gap:.45rem !important;}
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-genre_"]) > div{flex:0 0 calc(33.333% - .3rem) !important;min-width:0 !important;width:auto !important;}
+    [class*="st-key-genre_"] button{max-width:none !important;aspect-ratio:auto !important;height:2.75rem !important;min-height:44px !important;margin:0 0 .45rem !important;}
+    /* Step 2 scales: a compact list. */
+    .pref-scale-clicks div.stButton>button{height:44px !important;min-height:44px !important;}
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-review_scale_"]),[data-testid="stHorizontalBlock"]:has([class*="st-key-adventure_scale_"]){gap:.4rem !important;}
+    /* Step 3 cards: the description stays inside its card. */
+    [class*="st-key-priority_card_"] button{height:auto !important;min-height:4.6rem !important;padding:.85rem 2.6rem .85rem 1rem !important;}
+    [class*="st-key-priority_card_"] button p{white-space:normal !important;text-align:left !important;}
+    [class*="st-key-priority_card_"]{margin-bottom:.6rem !important;}
+    /* Showroom header to search: one even gap. */
+    .showroom-header{margin-bottom:.6rem !important;}
+    .st-key-mood_box{margin:.2rem 0 .8rem !important;}
+}
+.pf-empty{font-family:var(--ui-font);color:var(--muted2);font-size:.86rem;line-height:1.9rem;}

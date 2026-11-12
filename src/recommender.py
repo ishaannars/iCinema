@@ -171,6 +171,7 @@ def _priority_signal(movie, profile):
     tags = set(movie.get("tags", []))
     priorities = set(profile.get("controls", {}).get("priorities") or profile.get("priorities", []))
     priorities.discard("Balanced recommendations")
+    priorities.discard("A mix of every kind")
     if not priorities:
         return 0.5
 
@@ -375,7 +376,7 @@ def build_profile(
         for group,label in mapping:
             if strongest in group: matters.append(label); break
 
-    priorities=list((more_of or [])[:4]) if more_of else ["Balanced recommendations"]
+    priorities=list((more_of or [])[:4]) if more_of else ["A mix of every kind"]
     patterns=[]
     if any(t in top_traits for t in ["Suspenseful","Tense","Psychological","Dark"]): patterns.append("Leans toward higher-tension stories")
     if any(t in top_traits for t in ["Character-driven","Emotional","Heartfelt","Moving"]): patterns.append("Responds to character-focused stories")
@@ -394,7 +395,7 @@ def build_profile(
              else f"So far you lean toward {genre_text} titles.")
     review_clause="Strong critical reception plays a larger role in what iCinema surfaces." if review_priority<=35 else ("Entertainment value carries more weight than critical reception in your recommendations." if review_priority>=65 else "Your profile balances critical reception with entertainment value.")
     discovery_clause="The model stays close to the kinds of movies you already like." if adventure<=30 else ("The model has more room to surface unfamiliar genres, eras, languages, and styles." if adventure>=70 else "The model balances familiar choices with room for discovery.")
-    selected_priorities=[x for x in (more_of or []) if x and x!="Balanced recommendations"]
+    selected_priorities=[x for x in (more_of or []) if x and x not in ("Balanced recommendations","A mix of every kind")]
     _nouns={"Critically Acclaimed":"critically acclaimed films","Hidden Gems":"hidden gems","Recent Releases":"recent releases",
             "International Films":"international films","Classics":"classics","Documentaries":"documentaries"}
     _names=[_nouns.get(x, x.lower()) for x in selected_priorities]

@@ -29,12 +29,11 @@ def card_ratings(movie, live_rating):
 
 
 def ratings_text(ratings):
-    """'IMDb 7.1 · RT 88%', 'IMDb 7.1 · No RT', or 'TMDB 7.9 · No RT' when IMDb has no score."""
+    """'IMDb 7.1 · RT 88%', just 'IMDb 7.1' when RT has no score, or 'TMDB 7.9' when IMDb has none.
+    A missing score is simply left out, so cards only show what's known."""
     audience = (f"IMDb {ratings['imdb']:.1f}" if ratings.get("imdb") else
                 (f"TMDB {ratings['tmdb_vote']:.1f}" if ratings.get("tmdb_vote") else None))
-    critics = f"RT {int(ratings['rt'])}%" if ratings.get("rt") else "No RT"
-    if not audience and critics == "No RT":
-        return []  # nothing to show; the card says "Ratings unavailable"
+    critics = f"RT {int(ratings['rt'])}%" if ratings.get("rt") else None
     return [x for x in (audience, critics) if x]
 
 
@@ -188,7 +187,7 @@ def library_text_html(movie, identity, live_map, watch_html="", premise=""):
 
 
 def library_ratings_html(movie, identity, live_map):
-    """Same ratings line as the Showroom cards (IMDb · RT, 'No RT', or viewer score)."""
+    """Same ratings line as the Showroom cards (IMDb · RT, or whichever of them is known)."""
     parts = ratings_text(card_ratings(movie, (live_map or {}).get(movie["title"]) or {}))
     return (f'<div class="ratings library-ratings">{" · ".join(parts)}</div>' if parts
             else '<div class="ratings library-ratings muted">Ratings unavailable</div>')

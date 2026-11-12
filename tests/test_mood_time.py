@@ -36,3 +36,13 @@ def test_chips_remove_one_part_at_a_time():
     assert parse(labels["funny"])["max"] == 120 and parse(labels["funny"])["mood"] == ""
     assert parse(labels["Under 120 min"])["mood"] == "funny" and parse(labels["Under 120 min"])["max"] is None
     assert chips("") == []
+
+
+def test_search_understands_movies_like():
+    from src.ui.mood_time import chips
+    p = parse("funny, under 2 hours, like The Office")
+    assert p["like"] == "The Office" and p["mood"] == "funny" and p["max"] == 120
+    labels = dict(chips("funny, like Inception"))
+    assert parse(labels["Like Inception"])["like"] is None and parse(labels["funny"])["like"] == "Inception"
+    assert parse("movies like Se7en")["like"] == "Se7en" and parse("movies like Se7en")["mood"] == ""
+    assert parse("like")["mood"] == ""
