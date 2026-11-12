@@ -5822,3 +5822,101 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 /* Every popover pill (fit pill, What's next, services): label centered, no chevron pushing it off center. */
 [data-testid="stPopover"] > div > button [data-testid="stIconMaterial"]{display:none !important;}
 [data-testid="stPopover"] > div > button,[data-testid="stPopover"] > button{justify-content:center !important;}
+
+/* ---- Batch 24: buttons, services, Tonight's Show, Saved and Seen ---- */
+/* Every button: one line, centered both ways, no clipped words. */
+div.stButton>button,[data-testid="stPopover"] button{padding-top:0 !important;padding-bottom:0 !important;}
+div.stButton>button p,[data-testid="stPopover"] button p{line-height:1.15 !important;white-space:nowrap !important;
+    overflow:visible !important;text-overflow:clip !important;margin:0 auto !important;}
+div.stButton>button [data-testid="stMarkdownContainer"],[data-testid="stPopover"] button [data-testid="stMarkdownContainer"]{
+    display:flex !important;align-items:center !important;justify-content:center !important;width:100% !important;}
+/* Saved: Mark Seen and Remove share the card width with room for the full label. */
+[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button{padding:0 .5rem !important;}
+[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.84rem !important;}
+/* Seen: three equal icon pills, then What's Next across the full card. */
+[class*="st-key-seenrow_"]{margin:.15rem 0 .45rem !important;}
+[class*="st-key-seenup_"] button,[class*="st-key-seendown_"] button,[class*="st-key-unseen_"] button{width:100% !important;}
+[class*="st-key-whatsnext_"] [data-testid="stPopover"],[class*="st-key-whatsnext_"] [data-testid="stPopover"] button{width:100% !important;}
+[class*="st-key-whatsnext_"] [data-testid="stPopover"] button{height:2.4rem !important;min-height:2.4rem !important;border-radius:999px !important;}
+@media (max-width: 640px){[class*="st-key-whatsnext_"] [data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}}
+
+/* Choose Your Services: the same quiet pill as the search suggestions, and chips that match them. */
+.st-key-services_picker [data-testid="stPopover"] button{height:2.1rem !important;min-height:2.1rem !important;padding:0 .95rem !important;
+    border-radius:999px !important;background:transparent !important;border:1px solid rgba(169,173,183,.28) !important;}
+.st-key-services_picker [data-testid="stPopover"] button p{font-size:.84rem !important;font-weight:600 !important;color:var(--muted) !important;}
+.st-key-services_picker [data-testid="stPopover"] button:hover p{color:var(--kinari) !important;}
+[data-testid="stPopoverBody"] [data-testid="stPills"] button{height:2.1rem !important;min-height:2.1rem !important;padding:0 .85rem !important;
+    border-radius:999px !important;background:transparent !important;border:1px solid rgba(169,173,183,.28) !important;}
+[data-testid="stPopoverBody"] [data-testid="stPills"] button p{font-size:.84rem !important;font-weight:600 !important;color:var(--muted) !important;}
+[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="true"],
+[data-testid="stPopoverBody"] [data-testid="stPills"] button[kind*="Active"]{background:var(--kinari) !important;border-color:var(--kinari) !important;}
+[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="true"] p,
+[data-testid="stPopoverBody"] [data-testid="stPills"] button[kind*="Active"] p{color:#111315 !important;}
+.services-help{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;margin:0 0 .65rem;}
+
+/* Tonight's Show: the chance reads as information, ratings keep their real casing, reasons stay short. */
+.tonight-match{border:0 !important;background:transparent !important;padding:0 !important;color:var(--kinari) !important;
+    font-family:var(--ui-font) !important;font-size:.95rem !important;font-weight:650 !important;}
+.tonight-meta .no-caps,.card-year .no-caps{text-transform:none !important;letter-spacing:0 !important;}
+.tonight-why{font-size:.86rem !important;line-height:1.45 !important;}
+
+/* ---- Batch 24: button text, library cards, Tonight's Show, services ---- */
+/* Every button label: one line box, no stray paragraph margin, so it sits in the optical center. */
+div.stButton>button,[data-testid="stPopover"] button{line-height:1 !important;}
+div.stButton>button p,[data-testid="stPopover"] button p,div.stButton>button [data-testid="stMarkdownContainer"] p{
+    margin:0 !important;padding:0 !important;line-height:1.15 !important;}
+div.stButton>button [data-testid="stMarkdownContainer"],[data-testid="stPopover"] button [data-testid="stMarkdownContainer"]{
+    display:flex !important;align-items:center !important;justify-content:center !important;margin:0 !important;}
+
+/* Seen: three equal icon pills, then What's Next full width, same height. */
+[class*="st-key-seenrow_"] [data-testid="stHorizontalBlock"]{gap:.45rem !important;flex-wrap:nowrap !important;}
+[class*="st-key-seenrow_"] [data-testid="column"],[class*="st-key-seenrow_"] [data-testid="stColumn"]{min-width:0 !important;flex:1 1 0 !important;}
+[class*="st-key-seenup_"] button,[class*="st-key-seendown_"] button,[class*="st-key-unseen_"] button{
+    width:100% !important;min-width:0 !important;height:2.4rem !important;min-height:2.4rem !important;padding:0 !important;}
+[class*="st-key-seennext_"]{margin-top:.45rem !important;}
+[class*="st-key-seennext_"] [data-testid="stPopover"] button{width:100% !important;height:2.4rem !important;min-height:2.4rem !important;
+    border-radius:999px !important;border:1px solid rgba(169,173,183,.28) !important;background:transparent !important;}
+[class*="st-key-seennext_"] [data-testid="stPopover"] button p{font-size:.86rem !important;font-weight:650 !important;white-space:nowrap !important;}
+
+/* Saved: both actions fit their labels ("Mark Seen" never clips). */
+[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button{height:2.4rem !important;min-height:2.4rem !important;padding:0 .5rem !important;}
+[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.86rem !important;white-space:nowrap !important;
+    overflow:visible !important;text-overflow:clip !important;}
+
+/* What's Next popover: the same pill buttons as everywhere, the poster a touch larger. */
+[class*="st-key-whatsnext_save_"] button,[class*="st-key-whatsnext_more_"] button{height:2.4rem !important;min-height:2.4rem !important;
+    padding:0 1.1rem !important;border-radius:999px !important;}
+
+/* Tonight's Show: ratings keep their own casing; the chance is a quiet fact, not a fake button. */
+.tonight-meta .no-caps{text-transform:none !important;letter-spacing:.01em !important;}
+.tonight-match{display:inline-flex !important;align-items:center !important;gap:.45rem !important;border:0 !important;background:transparent !important;
+    padding:0 !important;font-family:var(--ui-font) !important;font-size:.92rem !important;font-weight:650 !important;color:var(--kinari) !important;}
+.tonight-match::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--koke);flex:0 0 .5rem;}
+[class*="st-key-tonight_save_"] button,[class*="st-key-tonight_seen_"] button,[class*="st-key-tonight_skip_"] button,
+[class*="st-key-tonight_undo_"] button,[class*="st-key-tonight_dislike_"] button{height:2.4rem !important;min-height:2.4rem !important;}
+
+/* Choose Your Services: the same quiet outline pill as the rest of the app; chips match the search chips. */
+.st-key-services_picker [data-testid="stPopover"] button{height:2.4rem !important;min-height:2.4rem !important;padding:0 1rem !important;
+    border-radius:999px !important;border:1px solid rgba(169,173,183,.28) !important;background:transparent !important;}
+.st-key-services_picker [data-testid="stPopover"] button p{font-size:.86rem !important;font-weight:600 !important;color:var(--muted) !important;
+    letter-spacing:0 !important;}
+.st-key-services_picker [data-testid="stPopover"] button:hover p{color:var(--kinari) !important;}
+div[data-testid="stPopoverBody"]:has([data-testid="stPills"]){max-width:34rem !important;padding:1rem 1.1rem !important;}
+div[data-testid="stPopoverBody"] .services-help{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;margin:0 0 .7rem;}
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button{height:2.1rem !important;min-height:2.1rem !important;padding:0 .85rem !important;
+    border-radius:999px !important;border:1px solid rgba(169,173,183,.28) !important;background:transparent !important;}
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button p{font-size:.82rem !important;font-weight:600 !important;color:var(--muted) !important;}
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button[kind="pillsActive"],
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-pressed="true"],
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="true"]{background:var(--kinari) !important;border-color:var(--kinari) !important;}
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button[kind="pillsActive"] p,
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-pressed="true"] p,
+div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="true"] p{color:#111315 !important;}
+
+/* Search starting points stay on one tidy line when there's room. */
+.st-key-mood_suggest_row{row-gap:.45rem !important;}
+@media (max-width: 640px){
+    [class*="st-key-seenup_"] button,[class*="st-key-seendown_"] button,[class*="st-key-unseen_"] button,
+    [class*="st-key-seennext_"] [data-testid="stPopover"] button,[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button,
+    .st-key-services_picker [data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}
+}

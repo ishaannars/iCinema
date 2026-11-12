@@ -941,7 +941,7 @@ def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landsc
     if return_html:      # the caller puts the art in the same block as the card's text (one block, even spacing)
         return poster_html
     if toggle_id:
-        poster_html = f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{poster_html}</label>'
+        poster_html = f'<label class="art-toggle" for="{toggle_id}" aria-label="Show the story">{poster_html}</label>'
     st.markdown(
         poster_html
         + f'<div class="{caption_class}{" art-titled" if art_has_title else ""}">{title_html}{year_html}</div>',
@@ -2214,7 +2214,7 @@ def dislike_movie(title, movie=None):
     queue_profile_save()
 
 
-def _too_soon(slot_key, gap=0.8):
+def _too_soon(slot_key, gap=0.4):
     """A second tap on the same card within a moment is a double tap: ignore it so one tap = one action."""
     import time as _t
     now = _t.monotonic()
@@ -2544,14 +2544,14 @@ def _sync_services_from_picker():
 
 
 def tonight_skip(title, movie):
-    if _too_soon("tonight"):
+    if _too_soon(f"tonight_skip:{title}"):
         return
     skip_movie(title, movie)
     st.session_state.tonight_last_skip = title
 
 
 def tonight_dislike(title, movie):
-    if _too_soon("tonight"):
+    if _too_soon(f"tonight_dislike:{title}"):
         return
     dislike_movie(title, movie)
     st.session_state.tonight_last_skip = title
@@ -2571,7 +2571,7 @@ def _refresh_if_requested():
         st.rerun(scope="app")
 
 def tonight_save(title, movie):
-    if _too_soon("tonight"):
+    if _too_soon(f"tonight_save:{title}"):
         return
     save_movie(title, movie)
     st.session_state.tonight_last_skip = None
@@ -2580,7 +2580,7 @@ def tonight_save(title, movie):
 
 
 def tonight_seen(title, movie):
-    if _too_soon("tonight"):
+    if _too_soon(f"tonight_seen:{title}"):
         return
     mark_movie_seen(title, movie)
     st.session_state.tonight_last_skip = None
@@ -2701,7 +2701,11 @@ def render_tonight_pick_fragment():
         if poster_url else '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
     )
     ratings = ratings_text(card_ratings(movie, live_rating))
-    meta = " · ".join(str(x) for x in [year, genre] + ratings if x)
+    # Same line as every card: year · two genres · minutes, then ratings in their own casing (IMDb, RT).
+    _rt_min = int((identity or {}).get("runtime") or movie.get("runtime") or 0)
+    _meta_parts = [str(year) if year else "", genre_pair(movie) or genre, f"{_rt_min} min" if _rt_min else ""]
+    meta_html_line = (meta_html([x for x in _meta_parts if x])
+                      + (f' · <span class="no-caps">{html.escape(" · ".join(ratings))}</span>' if ratings else ""))
 
     watch_html = watch_line_html(availability, movie.get("title", ""), services)
     options = watch_options(availability, movie.get("title", ""), services, limit=1)
@@ -2713,7 +2717,13 @@ def render_tonight_pick_fragment():
         availability_score=context.get("availability_alignment", 0.5),
         components=context,
     ), payload, limit=2)
-    why_html = "".join(f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong> · {html.escape(r["text"])}</div>'
+    def _why_text(r):
+        # "Loved by fans of X" already says it; skip the sentence that repeats it.
+        t = str(r.get("text") or "")
+        if str(r.get("label", "")).startswith("Loved by fans") and "loved" in t.casefold():
+            return " · similar tone too" if "similar tone" in t else ""
+        return f" · {t}" if t else ""
+    why_html = "".join(f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong>{html.escape(_why_text(r))}</div>'
                        for r in reasons)
 
     _love = love_line(payload.get("fit_top_pct"))
@@ -2728,7 +2738,7 @@ def render_tonight_pick_fragment():
             st.markdown(
                 '<div class="tonight-stack">'
                 f'<div class="tonight-title">{html.escape(str(display_title))}</div>'
-                f'<div class="tonight-meta">{html.escape(meta)}</div>'
+                f'<div class="tonight-meta">{meta_html_line}</div>'
                 f'<div class="tonight-badges"><span class="tonight-match">{html.escape(tonight_badge)}</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
                 f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview")), limit=160))}</div>'
@@ -2845,7 +2855,7 @@ def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
                 f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
                 f'<div class="whatsnext-info">'
                 f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
-                f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, nmovie.get("genre")] if x))}'
+                f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, genre_pair(nmovie) or nmovie.get("genre")] if x))}'
                 f' · {fit_head(npay, npay.get("match"))}</div>'
                 f'<div class="whatsnext-why">{html.escape(why)}</div>'
                 f'</div></div>',
@@ -2938,8 +2948,9 @@ def _seen_tab():
                     _r = (st.session_state.get("seen_rating") or {}).get(m["title"], 0)
                     pick = wn_picks.get(m["title"])
                     # One calm row: two icon toggles (loved it / not for me) and What's next.
+                    # Two calm rows that fit any card width: the three icon pills, then What's Next.
                     with st.container(key=f"seenrow_{i}"):
-                        up, down, nxt, rm = st.columns([1, 1, 2.4, 1], gap="small", vertical_alignment="center")
+                        up, down, rm = st.columns(3, gap="small", vertical_alignment="center")
                         with up:
                             st.button(":material/thumb_up:", key=f"seenup_{m['title']}", help="Loved it",
                                       type="primary" if _r == 1 else "secondary", use_container_width=True,
@@ -2948,12 +2959,12 @@ def _seen_tab():
                             st.button(":material/thumb_down:", key=f"seendown_{m['title']}", help="Not for me",
                                       type="primary" if _r == -1 else "secondary", use_container_width=True,
                                       on_click=rate_seen, args=(m["title"], -1))
-                        with nxt:
-                            if pick:
-                                _whats_next_popover(i, m, pick, wn_payloads, wn_identity)
                         with rm:
                             st.button(":material/close:", key=f"unseen_{m['title']}", help="Remove from Seen",
                                       use_container_width=True, on_click=remove_from_seen, args=(m["title"],))
+                    if pick:
+                        with st.container(key=f"seennext_{i}"):
+                            _whats_next_popover(i, m, pick, wn_payloads, wn_identity)
     _library_counts()
 
 
@@ -3561,6 +3572,21 @@ def _render_showroom(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        # The search sits inside the Showroom tab: it only changes Showroom rows, so Saved, Seen and
+        # Profile stay clean. One keyed slot holds chips or suggestions, so the layout never shifts.
+        from src.mood import available as _mood_ready
+        if _mood_ready():
+            with st.container(key="mood_box"):
+                if "mood_input" not in st.session_state:
+                    st.session_state.mood_input = _mood_text()
+                st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
+                              placeholder="A mood, a time, or a movie you loved",
+                              on_change=_apply_mood)
+                with st.container(key="mood_under"):
+                    if _mood_text():
+                        render_mood_chips()
+                    else:
+                        render_mood_suggestions()
         # One unified guide, like the Apple TV app's Home: no toggles. Tonight's Show, Top Picks,
         # Shows for You, and More to explore (critics' picks, hidden gems and your fourth row mixed in
         # one row, each card labeled), so there are never more than three rows under the hero.
@@ -3762,20 +3788,6 @@ try:
             '</div>',
             unsafe_allow_html=True
           )
-          if _mood_ready():
-            with st.container(key="mood_box"):
-                if "mood_input" not in st.session_state:
-                    st.session_state.mood_input = _mood_text()
-                st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
-                              placeholder="A mood, a time, or a movie you loved",
-                              on_change=_apply_mood)
-                # One keyed slot for chips or suggestions: the page below keeps the same position on every
-                # run, so Streamlit never shows a faded copy of the tabs while the new picks load.
-                with st.container(key="mood_under"):
-                    if _mood_text():
-                        render_mood_chips()
-                    else:
-                        render_mood_suggestions()
 
         with st.container(key="showroom_body"):
             render_showroom_fragment(p)

@@ -133,7 +133,7 @@ def card_html(toggle_id, art_html, title, movie, identity, lines_html, lines_in_
     full = card_description(dm)
     return ('<div class="card-text">'
             f'<input class="card-hook-box" type="checkbox" id="{toggle_id}">'
-            f'<label class="art-toggle" for="{toggle_id}" title="Tap for the story">{art_html}</label>'
+            f'<label class="art-toggle" for="{toggle_id}" aria-label="Show the story">{art_html}</label>'
             f'<div class="premise-panel"><div class="premise-title">{html.escape(str(title))}</div>'
             + (f'<div class="panel-lines">{lines_html}</div>' if lines_in_panel else "")
             + f'<div class="premise-copy">{html.escape(full)}</div></div>'
