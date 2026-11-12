@@ -229,7 +229,7 @@ if _incoming and st.session_state.get("_link_handled") != _incoming:
                 st.session_state._last_persisted_profile = None    # the end of the next run saves it to this browser
                 st.rerun()
         with _b:
-            if st.button("Not now", key="link_skip"):
+            if st.button("Not Now", key="link_skip"):
                 st.session_state._link_handled = _incoming
                 st.query_params.clear()
                 st.rerun()
@@ -2149,6 +2149,19 @@ def render_mood_suggestions():
             st.button(label, key=f"mood_suggest_{i}", on_click=_set_mood, args=(text,))
 
 
+_BUILD_KEYS = ("showroom_slots", "showroom_payloads", "showroom_row_queues", "recommendation_context",
+               "tonight_pool", "tonight_deep_pool", "interleave_teams")
+
+
+def _build_key():
+    """Everything a Showroom build depends on. Any choice changes it, so a reused build is never stale."""
+    ss = st.session_state
+    return (_mood_text(), tuple(sorted(ss.likes)), tuple(sorted(ss.favorites)), tuple(ss.genres),
+            ss.review_priority, ss.adventure, tuple(ss.more_of), len(ss.saved), len(ss.seen), len(ss.dismissed),
+            len(ss.get("disliked") or ()), tuple(ss.get("streaming_services") or ()),
+            len([e for e in (ss.get("analytics_events") or []) if e.get("event") != "impression"]))
+
+
 def _showroom_slot_key(row_name, slot_index):
     return f"{row_name}::{int(slot_index)}"
 
@@ -2258,8 +2271,8 @@ def save_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    _advance_showroom_slot(row_name, slot_index)
-    _mark_showroom_fast()
+    if not _advance_showroom_slot(row_name, slot_index):
+        st.session_state._app_rerun = True
 
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -2273,8 +2286,8 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    _advance_showroom_slot(row_name, slot_index)
-    _mark_showroom_fast()
+    if not _advance_showroom_slot(row_name, slot_index):
+        st.session_state._app_rerun = True
 
 def _showroom_cached_metadata(movie):
     """Use initial batch metadata; fetch only the replacement card on cache miss."""
@@ -2465,7 +2478,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         f'<div class="poster-caption-year card-year">{meta_html(meta)}</div>'
         f'<div class="ratings">{" · ".join(rating_parts) or "Ratings unavailable"}</div>'
         f'<div class="{availability_class}">{watch_html}</div>'), unsafe_allow_html=True)
-    # Persist Skip / Undo during this card-only rerun without creating a visible loader.
+    # Save / Seen live inside the card too, so every tap on a card reruns only that card. The Saved and
+    # Seen tabs pick the change up when you open them (version check in src/scroll_keeper_component).
+    render_card_actions(row_name, row_index, slot_index)
+    # Persist Skip / Save / Seen / Undo during this card-only rerun without creating a visible loader.
     persist_from_fragment()
     _ver_mark()
 
@@ -2573,7 +2589,7 @@ def tonight_seen(title, movie):
 
 
 def _render_services_picker(services):
-    label = f"Your services · {len(services)}" if services else "Choose your services"
+    label = f"Your Services · {len(services)}" if services else "Choose Your Services"
     if "tonight_services_picker" not in st.session_state:
         st.session_state.tonight_services_picker = list(services)
     with st.container(key="services_picker"), st.popover(label, use_container_width=True):
@@ -2766,7 +2782,7 @@ def _saved_tab():
     _ver_mark(1)
     st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
     st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
-    movies=[m for t in st.session_state.saved if (m := resolve_history_movie(t))]
+    movies=[m for t in _newest_first(st.session_state.saved, ("save",)) if (m := resolve_history_movie(t))]
     saved_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies if m.get("media") != "tv")
     saved_identity_map = get_movie_identity_batch(saved_identity_keys)
     saved_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
@@ -2821,7 +2837,7 @@ def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
     why = (f"Viewers who loved “{m['title']}” tend to love this too."
            if used_cf else f"Shares the genre and tone of “{m['title']}”.")
     with st.container(key=f"whatsnext_{i}"):
-        with st.popover("What’s next", use_container_width=True):
+        with st.popover("What’s Next", use_container_width=True):
             img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
                    if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
             st.markdown(
@@ -2845,6 +2861,15 @@ def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
                           on_click=whats_next_another, args=(m["title"],))
 
 
+def _newest_first(titles, kinds):
+    """Saved and Seen in the order you did it, newest first (imported titles without a date go last)."""
+    when = {}
+    for e in st.session_state.get("analytics_events") or []:
+        if e.get("event") in kinds and e.get("title") in titles:
+            when[e["title"]] = max(when.get(e["title"], 0.0), float(e.get("timestamp") or 0))
+    return sorted(titles, key=lambda t: (-when.get(t, 0.0), str(t).casefold()))
+
+
 @st.fragment
 def _seen_tab():
     """Seen tab. A fragment, so its buttons rerun only this tab: the open tab never changes."""
@@ -2854,7 +2879,7 @@ def _seen_tab():
     _ver_mark(2)
     st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
     st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
-    movies=[m for t in st.session_state.seen if (m := resolve_history_movie(t))]
+    movies=[m for t in _newest_first(st.session_state.seen, ("seen",)) if (m := resolve_history_movie(t))]
     seen_identity_keys=tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies if m.get("media") != "tv")
     seen_identity_map = get_movie_identity_batch(seen_identity_keys)
     seen_poster_map = get_poster_batch(tuple((m["title"], int(m.get("year") or 0)) for m in movies))
@@ -2953,6 +2978,14 @@ def _render_showroom(p):
     # Save / Seen reuse the current ranking: the page reruns so the Saved / Seen tabs
     # update, but the heavy rebuild (candidate fetch, scoring ~700 movies, ranking every
     # row) is skipped. The next navigation or visit re-ranks with the new feedback.
+    # Changing or clearing the search goes back to a Showroom built a moment ago instead of re-ranking
+    # ~700 movies again: the last few builds are kept, keyed by everything that shapes them.
+    _bk = _build_key()
+    _hit = (st.session_state.get("_build_cache") or {}).get(_bk)
+    if _hit and not st.session_state.get("_showroom_fast"):
+        for _k, _v in _hit.items():
+            st.session_state[_k] = _v
+        st.session_state._showroom_fast = True
     fast = st.session_state.pop("_showroom_fast", False) and bool(st.session_state.get("showroom_slots"))
     st.session_state._timing_fast = fast
     if fast:
@@ -3488,6 +3521,9 @@ def _render_showroom(p):
         st.session_state.showroom_payloads=payloads
         st.session_state.showroom_row_queues=queues
         st.session_state.showroom_slots=slots
+        _cache = dict(st.session_state.get("_build_cache") or {})
+        _cache[_bk] = {k: st.session_state.get(k) for k in _BUILD_KEYS}
+        st.session_state._build_cache = dict(list(_cache.items())[-4:])     # the last 4 builds
         identity_cache=dict(st.session_state.get("showroom_identity_cache") or {})
         identity_cache.update(identity_by_title)
         st.session_state.showroom_identity_cache=identity_cache
@@ -3545,7 +3581,6 @@ def _render_showroom(p):
                 for c, (rname, rindex, slot) in enumerate(cells[:4]):
                     with cols[c]:
                         render_showroom_card_fragment(rname, rindex, slot)
-                        render_card_actions(rname, rindex, slot)
 
         top_name = row_specs[0]
         _header("Top Picks for You", _mood_line() or row_notes[top_name])
@@ -3615,7 +3650,7 @@ def _render_showroom(p):
                     'and never sells your data.</div>', unsafe_allow_html=True)
         # A utility, not a profile action: a quiet link under the privacy line.
         with st.container(key="move_profile_link"):
-            with st.popover("Move it to another device →"):
+            with st.popover("Move to Another Device"):
                 try:
                     _host = st.context.headers.get("host") or "icinema.streamlit.app"
                 except Exception:
@@ -3699,26 +3734,33 @@ try:
         logo()
         p=current_profile()
         from src.mood import available as _mood_ready
-        st.markdown(
+        # Header and search live in one fixed container: whatever the search shows (chips or suggestions),
+        # the tabs below never change position, so a rerun never leaves a faded copy of them behind.
+        with st.container(key="showroom_top"):
+          st.markdown(
             '<div class="showroom-header">'
             '<div class="showroom-heading">Your Showroom</div>'
             '<div class="showroom-intro">Picked for you, and sharper with every choice you make.</div>'
             '</div>',
             unsafe_allow_html=True
-        )
-        if _mood_ready():
+          )
+          if _mood_ready():
             with st.container(key="mood_box"):
                 if "mood_input" not in st.session_state:
                     st.session_state.mood_input = _mood_text()
                 st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
                               placeholder="A mood, a time, or a movie you loved",
                               on_change=_apply_mood)
-                if _mood_text():
-                    render_mood_chips()
-                else:
-                    render_mood_suggestions()
+                # One keyed slot for chips or suggestions: the page below keeps the same position on every
+                # run, so Streamlit never shows a faded copy of the tabs while the new picks load.
+                with st.container(key="mood_under"):
+                    if _mood_text():
+                        render_mood_chips()
+                    else:
+                        render_mood_suggestions()
 
-        render_showroom_fragment(p)
+        with st.container(key="showroom_body"):
+            render_showroom_fragment(p)
 except Exception as _exc:
     _friendly_error(_exc)
 

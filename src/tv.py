@@ -78,11 +78,32 @@ def viewer_shows(signals, exclude=()):
     return out
 
 
+class _Unavailable(Exception):
+    """TMDB didn't answer; try again on the next run instead of caching a miss."""
+
+
+def details(name):
+    """show_details() that never raises: None when TMDB is briefly unavailable."""
+    for attempt in range(2):          # one quick retry: TMDB rate limits are short
+        try:
+            return show_details(name)
+        except _Unavailable:
+            if attempt == 0:
+                import time
+                time.sleep(0.35)
+    return None
+
+
 @st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
 def show_details(name):
     """TMDB details for a show by name: title, year, genres, overview, art, rating, where to watch."""
     from src.tmdb_catalog import _request, _best_landscape, TMDB_IMAGE_BASE
-    found = (_request("/search/tv", {"query": name, "include_adult": "false"}) or {}).get("results") or []
+    res = _request("/search/tv", {"query": name, "include_adult": "false"})
+    if res is None:
+        # A failed request (timeout, rate limit) must not be cached for a day as "no such show";
+        # raising keeps it out of the cache, and details() below turns it into a quiet skip.
+        raise _Unavailable(name)
+    found = res.get("results") or []
     if not found:
         return None
     item = max(found[:5], key=lambda x: (str(x.get("name", "")).casefold() == name.casefold(), x.get("popularity") or 0))

@@ -29,7 +29,7 @@ def _act(ctx, kind, title, show):
 def _card(ctx, slot, entry):
     name, score, rank, total, anchor = entry[:5]
     fan_part, pop_part = (entry[5], entry[6]) if len(entry) >= 7 else (None, None)
-    show = tv.show_details(name)
+    show = tv.details(name)
     if not show:
         return False
     title = show["title"]
@@ -106,6 +106,11 @@ def render_shows(ctx, count):
     if not picks:
         st.caption("Like or save a few movies and your shows appear here.")
         return
+    # Fetch the first dozen shows' details at once instead of one by one, so the row fills fast
+    # and a slow TMDB answer for one show can't leave the row with a single card.
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        list(pool.map(lambda e: tv.details(e[0]), picks[:12]))
     with st.container(key="showroom_swipe_tv"):    # same grid as the movie rows on every screen size
         shown, i = 0, 0
         while shown < count and i < len(picks):
@@ -114,14 +119,23 @@ def render_shows(ctx, count):
                 while shown < count and i < len(picks):
                     entry = picks[i]
                     i += 1
-                    info = tv.show_details(entry[0])
+                    info = tv.details(entry[0])
                     if not info or not tv.matches_mood(info, spec.get("mood", "")):
                         continue
                     from src.ui.mood_time import fits
                     if not fits(info.get("episode_runtime"), spec, show=True):
                         continue
                     with cols[c]:
-                        if _card(ctx, shown, entry):
+                        slot = st.empty()
+                        try:
+                            with slot.container():
+                                ok = _card(ctx, shown, entry)
+                        except Exception as exc:          # one bad show is skipped, never the whole row
+                            if type(exc).__name__ in {"RerunException", "StopException"}:
+                                raise
+                            slot.empty()
+                            ok = False
+                        if ok:
                             shown += 1
                             break
                 if shown >= count:

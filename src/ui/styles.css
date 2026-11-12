@@ -5772,3 +5772,53 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
     .st-key-mood_box{margin:.2rem 0 .8rem !important;}
 }
 .pf-empty{font-family:var(--ui-font);color:var(--muted2);font-size:.86rem;line-height:1.9rem;}
+
+/* ---- Batch 21: centered labels, a Seen row that fits its card ---- */
+/* Popover buttons (fit pills, What's next): no dropdown chevron, label exactly centered. */
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
+[class*="st-key-whatsnext_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button svg{display:none !important;}
+[data-testid="stPopover"] button > div,[data-testid="stPopover"] button [data-testid="stMarkdownContainer"]{
+    width:100% !important;display:flex !important;justify-content:center !important;align-items:center !important;margin:0 !important;}
+[data-testid="stPopover"] button p{margin:0 !important;text-align:center !important;width:100% !important;}
+/* Seen: four controls that fit inside the card width with even gaps. */
+[class*="st-key-seenrow_"] [data-testid="stHorizontalBlock"]{gap:.4rem !important;flex-wrap:nowrap !important;}
+[class*="st-key-seenrow_"] [data-testid="column"],[class*="st-key-seenrow_"] [data-testid="stColumn"]{min-width:0 !important;}
+[class*="st-key-seenup_"] button,[class*="st-key-seendown_"] button,[class*="st-key-unseen_"] button{min-width:0 !important;padding:0 !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button{padding:0 .5rem !important;min-width:0 !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button p{font-size:.84rem !important;white-space:nowrap !important;}
+
+/* ---- Batch 21: Seen action row fits its card, centered labels, no chevrons ---- */
+[class*="st-key-seenrow_"] [data-testid="stHorizontalBlock"]{gap:.4rem !important;flex-wrap:nowrap !important;width:100% !important;margin:0 !important;}
+[class*="st-key-seenrow_"] [data-testid="column"],[class*="st-key-seenrow_"] [data-testid="stColumn"]{min-width:0 !important;}
+[class*="st-key-seenrow_"] div.stButton>button,[class*="st-key-seenrow_"] [data-testid="stPopover"] button{
+    min-width:0 !important;width:100% !important;padding:0 .4rem !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button svg,
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"]{display:none !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button p{font-size:.8rem !important;font-weight:600 !important;width:100% !important;
+    text-align:center !important;margin:0 !important;white-space:nowrap !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button > div{width:100% !important;justify-content:center !important;}
+/* Every popover pill: label centered in the pill, nothing pushed aside by a hidden icon. */
+[data-testid="stPopover"] button > div,[data-testid="stPopover"] button [data-testid="stMarkdownContainer"]{width:100% !important;display:flex !important;justify-content:center !important;}
+
+/* ---- Batch 21 ---- */
+/* While a rerun is in flight, Streamlit keeps the previous run's elements on screen until it reaches them.
+   A leftover copy of the tabs showed up as a second, greyed tab bar; hide any stale copy of the tabs. */
+[data-stale="true"]:has([data-testid="stTabs"]),[data-stale="true"] [data-testid="stTabs"]{display:none !important;}
+
+/* Seen row: thumbs never overlap; every label and icon sits dead center. */
+[class*="st-key-seenrow_"] [data-testid="stHorizontalBlock"]{gap:.4rem !important;flex-wrap:nowrap !important;}
+[class*="st-key-seenup_"] button,[class*="st-key-seendown_"] button,[class*="st-key-unseen_"] button{min-width:0 !important;padding:0 !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button svg,
+[class*="st-key-whatsnext_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"]{display:none !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button,[class*="st-key-whatsnext_"] [data-testid="stPopover"] button{
+    justify-content:center !important;padding:0 .7rem !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button > div,[class*="st-key-whatsnext_"] [data-testid="stPopover"] button > div{
+    justify-content:center !important;width:100% !important;}
+[class*="st-key-seenrow_"] [data-testid="stPopover"] button p{white-space:nowrap !important;font-size:.84rem !important;text-align:center !important;}
+/* Every popover pill (fit pill, What's next, services): label centered, no chevron pushing it off center. */
+[data-testid="stPopover"] > div > button [data-testid="stIconMaterial"]{display:none !important;}
+[data-testid="stPopover"] > div > button,[data-testid="stPopover"] > button{justify-content:center !important;}

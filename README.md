@@ -4,9 +4,8 @@
 
 **Always something great to watch.** Less scrolling, more watching. Nine models learn what you love and find your next movie or show, where to stream it, and how likely you are to love it, getting sharper every time you use it. No account needed.
 
-// I built iCinema because I had this recurring problem of spending too much time deciding what to watch. Every model in it was tested on viewers it had never seen before it shipped, and the ones that didn't beat a simple baseline are reported below too.
+I built iCinema because I had this recurring problem of spending too much time deciding what to watch. Every model in it was tested on viewers it had never seen before it shipped, and the ones that didn't beat a simple baseline are reported below too.
 
-<!-- RECRUITER-TOP -->
 **[Try iCinema →](https://icinema.streamlit.app/)**
 
 ## Results
