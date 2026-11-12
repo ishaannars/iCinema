@@ -5934,3 +5934,8 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
     .st-key-search_card [data-testid="column"]:first-child,.st-key-search_card [data-testid="stColumn"]:first-child{flex:0 0 5rem !important;min-width:5rem !important;}
     [class*="st-key-search_card_save"] button,[class*="st-key-search_card_seen"] button{height:44px !important;min-height:44px !important;}
 }
+/* Search result: same card as Top Picks; the fit sits in the same pill shape (it isn't tappable here). */
+.search-fit-pill{height:2.25rem;display:flex;align-items:center;justify-content:center;border:1px solid rgba(169,173,183,.28);
+    border-radius:999px;font-family:var(--ui-font);font-size:.8rem;font-weight:700;color:var(--kinari);margin:0 0 .55rem;}
+.search-state{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;text-align:center;padding:.6rem 0;}
+.st-key-search_card{display:none !important;}

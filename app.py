@@ -1043,7 +1043,7 @@ def rate_seen(title, value):
     queue_profile_save()
 
 
-from src.descriptions import expanded_card_description, quick_card_description, tonight_description  # card text rules (unit-tested)
+from src.descriptions import card_description, expanded_card_description, quick_card_description, tonight_description  # card text rules (unit-tested)
 
 
 
@@ -2015,16 +2015,10 @@ def _apply_mood():
     except Exception:
         mood = spec["mood"]
     like = spec.get("like")
-    st.session_state.search_lookup = False
     if raw and mood and not like:
-        # A plain title ("Hokum", "The Prestige") is a lookup, not a mood: show that movie first,
-        # then the movies closest to it. Common fan words ("dark", "funny mystery") stay a mood.
-        from src.mood import is_mood_word
-        if not all(is_mood_word(w) for w in mood.split()):
-            hit = _strong_title(mood)
-            if hit:
-                like, mood = hit["title"], ""
-                st.session_state.search_lookup = True
+        hit = _lookup_title(mood)
+        if hit:
+            mood = hit["title"]          # a title search keeps the title as typed-and-found ("Hokum")
     tidy = compose(mood, spec["max"], spec["min"], spec["episodes"], like) if raw else ""
     st.session_state.mood_active = tidy
     st.session_state.mood_input = tidy
@@ -2039,10 +2033,31 @@ def _set_mood(text):
     queue_profile_save()
 
 
+def _lookup_title(words):
+    """The movie a search names when its words aren't moods ("Hokum", "The Prestige"), else None.
+    Remembered per query, so the lookup never repeats on every tap."""
+    from src.mood import is_mood_word
+    q = " ".join(str(words or "").split())
+    if not q or all(is_mood_word(w) for w in q.split()):
+        return None
+    memo = dict(st.session_state.get("_lookup_memo") or {})
+    if q.casefold() not in memo:
+        memo[q.casefold()] = _strong_title(q)
+        st.session_state._lookup_memo = memo
+    return memo[q.casefold()]
+
+
 def _mood_spec():
-    """The search field split into a mood (for the mood model) and a time limit (a runtime filter)."""
+    """The search field split into a mood (for the mood model), a time limit (a runtime filter), and a
+    movie: "like X" (reshape the Showroom around X) or a plain title (find it, plus one row like it)."""
     from src.ui.mood_time import parse
-    return parse(_mood_text())
+    spec = parse(_mood_text())
+    spec["lookup"] = False
+    if spec.get("mood") and not spec.get("like"):
+        hit = _lookup_title(spec["mood"])
+        if hit:
+            spec.update(like=hit["title"], mood="", lookup=True)
+    return spec
 
 
 def _time_filter(items, spec, cap=80):
@@ -2128,45 +2143,50 @@ def _strong_title(q):
 
 
 def render_search_card():
-    """The movie your search names, Apple-TV style: "Top result" for a title search, "Based on" for
-    "like X". Shows exactly which movie was understood (so "Dune" can't silently mean the wrong one),
-    where to stream it, how it fits you, and Save / Seen."""
+    """The movie your search names, drawn exactly like a Top Picks card (art, fit, year · genres ·
+    minutes, ratings, where to stream, tap the art for the story, Save / Seen), under a row title:
+    "Top result" for a title search, "Based on" for "like X"."""
     src = _like_source()
     if not src:
         return
-    title, year = src.get("title", ""), int(src.get("year") or 0)
-    ident = (get_movie_identity_batch(((title, year, int(src.get("tmdb_id") or 0)),)) or {}).get(title) or {}
-    poster = ident.get("poster_url") or src.get("poster_url")
-    live = (get_live_ratings_batch(((title, year, ident.get("imdb_id") or ""),)) or {}).get(title) or {}
-    watch = (get_watch_availability_batch(((title, year),), "US") or {}).get(title)
+    title, year, tid = src.get("title", ""), int(src.get("year") or 0), int(src.get("tmdb_id") or 0)
+    ident = (get_movie_identity_batch(((title, year, tid),)) or {}).get(title) or {}
+    art = (get_landscape_batch(((title, year, tid),)) or {}).get(title) or ident.get("poster_url") or src.get("poster_url")
+    live = (get_live_ratings_batch(((title, int(ident.get("year") or year), ident.get("imdb_id") or ""),)) or {}).get(title) or {}
+    watch = (get_watch_availability_batch(((title, int(ident.get("year") or year)),), "US") or {}).get(title)
     runtime = int(ident.get("runtime") or src.get("runtime") or 0)
-    meta = [str(ident.get("year") or year or ""), genre_pair(src) or src.get("genre") or "", f"{runtime} min" if runtime else ""]
-    ratings = " · ".join(ratings_text(card_ratings(src, live)))
-    pay = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
-    fit = fit_head(pay, pay.get("match")) if pay else ""
-    kicker = "Top result" if st.session_state.get("search_lookup") else "Based on"
-    state = ("Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen else "")
-    with st.container(key="search_card"):
-        art, body = st.columns([1, 5], gap="medium", vertical_alignment="center")
-        with art:
-            if poster:
-                st.markdown(f'<div class="search-card-poster"><img src="{html.escape(str(poster), quote=True)}" alt=""></div>',
-                            unsafe_allow_html=True)
-        with body:
-            st.markdown(
-                f'<div class="search-card-kicker">{kicker}</div>'
-                f'<div class="search-card-title">{html.escape(str(ident.get("display_title") or title))}</div>'
-                f'<div class="search-card-meta">{meta_html([x for x in meta if x])}'
-                + (f' · <span>{html.escape(ratings)}</span>' if ratings else "") + (f' · {html.escape(fit)}' if fit else "")
-                + (f' · {state}' if state else "") + '</div>'
-                f'<div class="search-card-watch">{watch_line_html(watch, title, st.session_state.get("streaming_services"))}</div>',
+    movie = dict(src, overview=src.get("overview") or ident.get("overview"), tagline=ident.get("tagline"))
+    meta = [str(ident.get("year") or year or ""), genre_pair(movie) or movie.get("genre") or "", f"{runtime} min" if runtime else ""]
+    ratings = " · ".join(ratings_text(card_ratings(movie, live))) or "Ratings unavailable"
+    fit = ""
+    cf = cf_affinity(movie, user_vector(_cf_signals()))
+    if isinstance(cf, float) and cf > 0.5:
+        fit = f"Top {max(1, round((1 - (cf - 0.5) * 2) * 100))}% for you"
+    lookup = _mood_spec().get("lookup")
+    note = ("The movie you searched for" if lookup else "The movie your search is built around")
+    st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">'
+                f'{"Top result" if lookup else "Based on"}</div><div class="row-model-note">{note}</div></div>',
                 unsafe_allow_html=True)
-            if not state:
-                a, b, _ = st.columns([1, 1, 3], gap="small")
+    cols = st.columns(4)
+    with cols[0]:
+        if fit:
+            st.markdown(f'<div class="search-fit-pill">{html.escape(fit)}</div>', unsafe_allow_html=True)
+        art_html = movie_thumb(dict(movie, year=""), art, landscape=True, return_html=True)
+        st.markdown(card_html("search-premise", art_html, ident.get("display_title") or title, movie, ident,
+                              f'<div class="poster-caption-year card-year">{meta_html([x for x in meta if x])}</div>'
+                              f'<div class="ratings">{html.escape(ratings)}</div>'
+                              f'<div class="watch-availability">{watch_line_html(watch, title, st.session_state.get("streaming_services"))}</div>'),
+                    unsafe_allow_html=True)
+        state = "Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen else ""
+        with st.container(key="movie_actions_search"):
+            if state:
+                st.markdown(f'<div class="search-state">In {state}</div>', unsafe_allow_html=True)
+            else:
+                a, b = st.columns(2, gap="small")
                 with a:
-                    st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, src))
+                    st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, movie))
                 with b:
-                    st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, src))
+                    st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
 
 
 def _like_sims(source):
@@ -2223,6 +2243,9 @@ def render_mood_chips():
     from src.mood import scores
     active = _mood_text()
     parts = chips(active)
+    _sp = _mood_spec()
+    if _sp.get("lookup") and _sp.get("like"):
+        parts = [(_sp["like"], "")]
     if not parts:
         return
     try:
@@ -2767,7 +2790,7 @@ def render_tonight_pick_fragment():
                 f"None of your top matches stream on {shown} right now, so here’s your best overall match")
     else:
         note = "Your single best match right now"
-    if _mood_line():
+    if _mood_line() and not _mood_spec().get("lookup"):
         note = _mood_line().replace("Your best fits for", "Your best match for")
     head, picker = st.columns([3.4, 1.1], gap="medium", vertical_alignment="bottom")
     with head:
@@ -2864,7 +2887,7 @@ def render_tonight_pick_fragment():
                 f'<div class="tonight-meta">{meta_html_line}</div>'
                 f'<div class="tonight-badges"><span class="tonight-match">{html.escape(tonight_badge)}</span>{fit}</div>'
                 f'<div class="tonight-line">{watch_html}</div>'
-                f'<div class="tonight-hook">{html.escape(tonight_description(dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview")), limit=160))}</div>'
+                f'<div class="tonight-hook">{html.escape(card_description(dict(movie, tagline=identity.get("tagline"), overview=movie.get("overview") or identity.get("overview"))))}</div>'
                 f'<div class="tonight-whys">{why_html}</div>'
                 '</div>',
                 unsafe_allow_html=True,
@@ -3180,7 +3203,7 @@ def _render_showroom(p):
         _extra_idx = _cf_top(user_vector(_cf_signals()), 150)
         _src0 = _like_source()
         if _src0:
-            _extra_idx = list(_like_sims(_src0).keys()) + _extra_idx
+            _extra_idx = list(_like_sims(_src0).keys())[:60] + _extra_idx   # the 60 closest are plenty for 4 picks
         for _r in _extra_idx:
             _m = _movie_at2(_r)
             if _m and _m["title"] and _m["title"].casefold() not in _have2:
@@ -3425,19 +3448,24 @@ def _render_showroom(p):
                 _hs=set(_hit)
                 top_all=[top_all[j] for j in _first]   # only movies that fit the mood, even after many Skips
         _src=_like_source()
+        _lookup=_mood_spec().get("lookup")
+        _personal_top=list(top_all)          # a title lookup leaves Tonight's Show as your personal best
         if _src and top_all:
             # "like X": Top Picks re-ranks by the What's next blend (fans who loved X, plus your own match).
             _sk=_src.get("title")
             top_all=[x for x in top_all if x[1].get("title")!=_sk]
             _scored=[(_like_score(x[1],_src),x) for x in top_all]
-            _close=[(v,x) for v,x in _scored if v>0.5]          # the movies actually close to what you searched
+            _close=[(v,x) for v,x in _scored if v>0.5 and float(x[0] or 0)>=45]   # close AND a real fit for you
             if len(_close)>=4:
                 _scored=_close
             # 80% how close it is, 20% how well it fits you: the What's Next blend that beat every lower
             # similarity weight on held-out viewers, so tonight's search leads and your profile still counts.
             top_all=[x for _,x in sorted(_scored,key=lambda t:-(WHATS_NEXT_SIM*t[0]+(1-WHATS_NEXT_SIM)*float(t[1][0] or 0)/100.0))]
+            # Shorts (under 40 minutes) can sit close to a movie in fan data but aren't what "like X" means.
+            _ids12=get_movie_identity_batch(tuple((m["title"],int(m.get("year") or 0),int(m.get("tmdb_id") or 0)) for _,m in top_all[:16]))
+            top_all=[x for x in top_all[:16] if int((_ids12.get(x[1]["title"]) or {}).get("runtime") or 999)>=40]+top_all[16:]
         top_all=_time_filter(top_all,_tspec)
-        tonight_pool=top_all[:40]
+        tonight_pool=(_time_filter(_personal_top,_tspec) if _lookup else top_all)[:40]
         tonight_watch=get_watch_availability_batch(
             tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
         ) if tonight_pool else {}
