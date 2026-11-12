@@ -392,3 +392,25 @@ def scores_with(model, signals):
         if idx is not None:
             scores[idx] = 0.0
     return scores
+
+
+def top_indices(taste, n=150):
+    """The n best-scoring movies for a viewer across the whole catalog (all 14,407), not just a page of
+    TMDB results. This is the retrieval step the offline tests already assumed: they rank every movie."""
+    if taste is None:
+        return []
+    s = taste.scores
+    n = min(int(n), int((s > 0).sum()))
+    if n <= 0:
+        return []
+    idx = np.argpartition(-s, n - 1)[:n]
+    return [int(i) for i in idx[np.argsort(-s[idx])]]
+
+
+def neighbors(movie, n=100):
+    """Indices of the movies fans link most closely to `movie` (its kNN neighbors), closest first."""
+    model = _load()
+    i = _index(movie)
+    if model is None or i is None or model.kind != "knn":
+        return []
+    return [int(j) for j in model.nbr[i][:n] if int(j) >= 0 and int(j) != i]

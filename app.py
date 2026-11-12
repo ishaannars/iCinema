@@ -1561,7 +1561,7 @@ def render_shelf_fragment():
                 local_titles = [title for title in searchable_titles() if q in title.lower()][:20]
                 matches = [get_movie(title) for title in local_titles if get_movie(title)]
             # Exact titles first, best-known breaks ties (search_rank.py); a typo falls back to close spellings.
-            matches = rerank(search_query, matches, known=lambda m: fan_percentile(m) is not None)[:8]
+            matches = rerank(search_query, matches, known=lambda m: fan_percentile(m) is not None)[:12]
             if not matches:
                 matches = fuzzy_titles(search_query)
                 did_you_mean = bool(matches)
@@ -3038,6 +3038,21 @@ def _render_showroom(p):
                 if _m and _m["title"] and _m["title"].casefold() not in _have:
                     candidate_pool.append(_m)
                     _have.add(_m["title"].casefold())
+        # Retrieval from the whole catalog: the fans-like-you model's own top 150 for this viewer, and for
+        # "like X" the 100 movies fans link most closely to X, join the pool before ranking. Without this,
+        # the true best matches could be missing simply because TMDB's pages didn't include them.
+        from src.cf_model import top_indices as _cf_top, neighbors as _cf_nbrs, movie_at as _movie_at2
+        _have2 = {str(m.get("title", "")).casefold() for m in candidate_pool}
+        _extra_idx = _cf_top(user_vector(_cf_signals()), 150)
+        _src0 = _like_source()
+        if _src0:
+            _extra_idx = _cf_nbrs(_src0, 100) + _extra_idx
+        for _r in _extra_idx:
+            _m = _movie_at2(_r)
+            if _m and _m["title"] and _m["title"].casefold() not in _have2:
+                _m["candidate_source"] = "catalog"
+                candidate_pool.append(_m)
+                _have2.add(_m["title"].casefold())
         ranked = rank_movies(
             candidate_pool,
             p,
@@ -3280,7 +3295,10 @@ def _render_showroom(p):
             # "like X": Top Picks re-ranks by the What's next blend (fans who loved X, plus your own match).
             _sk=_src.get("title")
             top_all=[x for x in top_all if x[1].get("title")!=_sk]
-            top_all=sorted(top_all,key=lambda x:-(WHATS_NEXT_SIM*_like_score(x[1],_src)+(1-WHATS_NEXT_SIM)*float(x[0] or 0)/100.0))
+            # On held-out viewers, ranking by similarity alone was the most accurate weight for
+            # "watch next after X" (data/blend_results.json: NDCG@10 0.101 at 1.0 vs 0.091 at 0.8),
+            # so "like X" is ordered by similarity; your own match only breaks ties.
+            top_all=sorted(top_all,key=lambda x:(-round(_like_score(x[1],_src),3),-float(x[0] or 0)))
         top_all=_time_filter(top_all,_tspec)
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(

@@ -121,3 +121,15 @@ def test_history_routing_is_off_unless_its_test_passed():
     if full is None:
         many = [({"title": t}, "like") for t in ("The Matrix", "Inception", "Up", "Heat")]
         assert cf._ranker_for(many) is cf._niche_ranker(many)
+
+
+def test_full_catalog_retrieval_and_neighbors():
+    from src.cf_model import _load, neighbors, top_indices, user_vector
+    if _load() is None:
+        return
+    movie = {"title": "The Matrix", "year": 1999}
+    near = neighbors(movie, 20)
+    assert near and len(near) <= 20
+    taste = user_vector([(movie, "favorite")])
+    top = top_indices(taste, 50)
+    assert top and len(top) <= 50 and all(taste.scores[top[k]] >= taste.scores[top[k + 1]] for k in range(len(top) - 1))
