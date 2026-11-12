@@ -5920,3 +5920,17 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
     [class*="st-key-seennext_"] [data-testid="stPopover"] button,[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button,
     .st-key-services_picker [data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}
 }
+
+/* Search result card: the movie your search names, in the same card language as Tonight's Show. */
+.st-key-search_card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02);padding:.9rem 1rem !important;margin:0 0 1.2rem !important;}
+.search-card-poster img{width:100%;max-width:6.5rem;aspect-ratio:2/3;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;}
+.search-card-kicker{font-family:var(--ui-font);color:var(--muted2);font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 .25rem;}
+.search-card-title{font-family:"Space Grotesk",var(--ui-font);color:var(--kinari);font-size:1.35rem;font-weight:700;letter-spacing:-.02em;margin:0 0 .3rem;}
+.search-card-meta{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.5;margin:0 0 .25rem;}
+.search-card-watch{margin:0 0 .6rem;}
+[class*="st-key-search_card_save"] button,[class*="st-key-search_card_seen"] button{height:2.4rem !important;min-height:2.4rem !important;border-radius:999px !important;}
+@media (max-width: 640px){
+    .st-key-search_card [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:nowrap !important;gap:.8rem !important;}
+    .st-key-search_card [data-testid="column"]:first-child,.st-key-search_card [data-testid="stColumn"]:first-child{flex:0 0 5rem !important;min-width:5rem !important;}
+    [class*="st-key-search_card_save"] button,[class*="st-key-search_card_seen"] button{height:44px !important;min-height:44px !important;}
+}

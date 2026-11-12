@@ -65,3 +65,20 @@ def affinity(movie, view):
     c = float(emb[i] @ v)
     pct = float(np.searchsorted(sorted_cos, c, side="right")) / max(len(sorted_cos), 1)
     return round(0.5 + 0.5 * (2 * pct - 1), 4)       # middle of the recent pack = 0.5
+
+
+def nearest(movie, n=100):
+    """For a recent movie fans haven't rated yet: the catalog movies closest to where the new-release
+    model placed it (same viewers-like-you space), as [(index, similarity 0-1)], closest first."""
+    d = _load()
+    if d is None or not movie:
+        return []
+    by_tmdb, emb, space = d
+    i = by_tmdb.get(int(movie.get("tmdb_id") or 0))
+    if i is None:
+        return []
+    v = emb[i] / max(float(np.linalg.norm(emb[i])), 1e-9)
+    cos = space @ v
+    top = np.argpartition(-cos, min(n, len(cos) - 1))[:n]
+    top = top[np.argsort(-cos[top])]
+    return [(int(j), float(0.5 + 0.5 * cos[j])) for j in top]

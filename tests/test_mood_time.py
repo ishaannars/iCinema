@@ -46,3 +46,12 @@ def test_search_understands_movies_like():
     assert parse(labels["Like Inception"])["like"] is None and parse(labels["funny"])["like"] == "Inception"
     assert parse("movies like Se7en")["like"] == "Se7en" and parse("movies like Se7en")["mood"] == ""
     assert parse("like")["mood"] == ""
+
+
+def test_search_reads_a_whole_sentence():
+    p = parse("I want a dakr movie like hokum I haven't seen yet")
+    assert p["like"] == "hokum" and p["mood"] == "dakr"
+    p = parse("show me something funny under 2 hours")
+    assert p["mood"] == "funny" and p["max"] == 120
+    assert parse("movies like The Lord of the Rings that I haven't watched")["like"] == "The Lord of the Rings"
+    assert parse("like Pride and Prejudice")["like"] == "Pride and Prejudice"

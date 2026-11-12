@@ -2003,8 +2003,31 @@ def _mood_text():
 
 
 def _apply_mood():
-    """Enter in the search field: the typed words become the active mood."""
-    st.session_state.mood_active = " ".join(str(st.session_state.get("mood_input") or "").split())[:120]
+    """Enter in the search field: the typed words become the active search, tidied the way a person
+    would read it back: typos in mood words fixed ("dakr" -> "dark"), chat words dropped ("I want a"),
+    and "I haven't seen yet" understood (every pick is already something you haven't marked Seen)."""
+    from src.ui.mood_time import parse, compose
+    raw = " ".join(str(st.session_state.get("mood_input") or "").split())[:120]
+    spec = parse(raw)
+    try:
+        from src.mood import correct
+        mood = correct(spec["mood"]) if spec["mood"] else ""
+    except Exception:
+        mood = spec["mood"]
+    like = spec.get("like")
+    st.session_state.search_lookup = False
+    if raw and mood and not like:
+        # A plain title ("Hokum", "The Prestige") is a lookup, not a mood: show that movie first,
+        # then the movies closest to it. Common fan words ("dark", "funny mystery") stay a mood.
+        from src.mood import is_mood_word
+        if not all(is_mood_word(w) for w in mood.split()):
+            hit = _strong_title(mood)
+            if hit:
+                like, mood = hit["title"], ""
+                st.session_state.search_lookup = True
+    tidy = compose(mood, spec["max"], spec["min"], spec["episodes"], like) if raw else ""
+    st.session_state.mood_active = tidy
+    st.session_state.mood_input = tidy
     queue_profile_save()
 
 
@@ -2060,6 +2083,13 @@ def _like_source():
         qq = q.casefold()
         hits = [m for m in pool if qq in str(m.get("title", "")).casefold()]
         found = min(hits, key=lambda m: len(str(m.get("title", "")))) if hits else None
+    if not found:
+        try:
+            from src.cf_model import fuzzy_titles
+            close = fuzzy_titles(q, n=1, cutoff=0.85)   # a typo in the title ("se7ven") still finds the movie
+            found = close[0] if close else None
+        except Exception:
+            found = None
     if not found and tmdb_catalog_configured():
         try:
             res = search_movies(q, 1)
@@ -2071,8 +2101,101 @@ def _like_source():
     return found
 
 
+def _strong_title(q):
+    """The movie a short query clearly names, or None. Only near-exact names count, so a mood never
+    turns into a random title."""
+    import difflib
+    q = " ".join(str(q).split())
+    if not q or len(q) > 60:
+        return None
+    m = get_movie(q, st.session_state.external_movies)
+    if m:
+        return m
+    pool = list(CATALOG) + list(st.session_state.external_movies.values())
+    exact = [x for x in pool if str(x.get("title", "")).casefold() == q.casefold()]
+    if exact:
+        return exact[0]
+    if tmdb_catalog_configured():
+        try:
+            res = search_movies(q, 3) or []
+        except Exception:
+            res = []
+        for r in res:
+            t = str(r.get("title", ""))
+            if difflib.SequenceMatcher(None, t.casefold(), q.casefold()).ratio() >= 0.85:
+                return r
+    return None
+
+
+def render_search_card():
+    """The movie your search names, Apple-TV style: "Top result" for a title search, "Based on" for
+    "like X". Shows exactly which movie was understood (so "Dune" can't silently mean the wrong one),
+    where to stream it, how it fits you, and Save / Seen."""
+    src = _like_source()
+    if not src:
+        return
+    title, year = src.get("title", ""), int(src.get("year") or 0)
+    ident = (get_movie_identity_batch(((title, year, int(src.get("tmdb_id") or 0)),)) or {}).get(title) or {}
+    poster = ident.get("poster_url") or src.get("poster_url")
+    live = (get_live_ratings_batch(((title, year, ident.get("imdb_id") or ""),)) or {}).get(title) or {}
+    watch = (get_watch_availability_batch(((title, year),), "US") or {}).get(title)
+    runtime = int(ident.get("runtime") or src.get("runtime") or 0)
+    meta = [str(ident.get("year") or year or ""), genre_pair(src) or src.get("genre") or "", f"{runtime} min" if runtime else ""]
+    ratings = " · ".join(ratings_text(card_ratings(src, live)))
+    pay = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    fit = fit_head(pay, pay.get("match")) if pay else ""
+    kicker = "Top result" if st.session_state.get("search_lookup") else "Based on"
+    state = ("Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen else "")
+    with st.container(key="search_card"):
+        art, body = st.columns([1, 5], gap="medium", vertical_alignment="center")
+        with art:
+            if poster:
+                st.markdown(f'<div class="search-card-poster"><img src="{html.escape(str(poster), quote=True)}" alt=""></div>',
+                            unsafe_allow_html=True)
+        with body:
+            st.markdown(
+                f'<div class="search-card-kicker">{kicker}</div>'
+                f'<div class="search-card-title">{html.escape(str(ident.get("display_title") or title))}</div>'
+                f'<div class="search-card-meta">{meta_html([x for x in meta if x])}'
+                + (f' · <span>{html.escape(ratings)}</span>' if ratings else "") + (f' · {html.escape(fit)}' if fit else "")
+                + (f' · {state}' if state else "") + '</div>'
+                f'<div class="search-card-watch">{watch_line_html(watch, title, st.session_state.get("streaming_services"))}</div>',
+                unsafe_allow_html=True)
+            if not state:
+                a, b, _ = st.columns([1, 1, 3], gap="small")
+                with a:
+                    st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, src))
+                with b:
+                    st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, src))
+
+
+def _like_sims(source):
+    """How close every known movie is to `source`, once per search: {catalog index: 0-1}.
+    Known movies use the fans-like-you neighbors; a new release fans haven't rated yet uses the
+    new-release model's placement (director, cast, studio) to find its closest known movies."""
+    key = (str(source.get("title")), int(source.get("tmdb_id") or 0))
+    memo = st.session_state.get("_like_sims_memo")
+    if memo and memo[0] == key:
+        return memo[1]
+    from src.cf_model import neighbors as _nb, _index as _ix
+    sims = {}
+    if _ix(source) is not None:
+        near = _nb(source, 100)
+        sims = {j: 0.5 + 0.5 * (1 - r / max(len(near), 1)) for r, j in enumerate(near)}
+    else:
+        from src.new_releases import nearest as _nr_near
+        sims = dict(_nr_near(source, 100))
+    st.session_state._like_sims_memo = (key, sims)
+    return sims
+
+
 def _like_score(movie, source):
-    """Same tested blend as What's next: how closely fans link it to `source`, plus your own match."""
+    """0-1: how close a movie is to the one you searched for."""
+    from src.cf_model import _index as _ix
+    sims = _like_sims(source)
+    i = _ix(movie)
+    if sims and i is not None:
+        return sims.get(i, 0.5)          # 0.5 = no closer than any other movie
     sim = item_similarity(movie, source)
     if sim is None:
         same_genre = 1.0 if movie.get("genre") and movie.get("genre") == source.get("genre") else 0.0
@@ -3057,7 +3180,7 @@ def _render_showroom(p):
         _extra_idx = _cf_top(user_vector(_cf_signals()), 150)
         _src0 = _like_source()
         if _src0:
-            _extra_idx = _cf_nbrs(_src0, 100) + _extra_idx
+            _extra_idx = list(_like_sims(_src0).keys()) + _extra_idx
         for _r in _extra_idx:
             _m = _movie_at2(_r)
             if _m and _m["title"] and _m["title"].casefold() not in _have2:
@@ -3306,10 +3429,13 @@ def _render_showroom(p):
             # "like X": Top Picks re-ranks by the What's next blend (fans who loved X, plus your own match).
             _sk=_src.get("title")
             top_all=[x for x in top_all if x[1].get("title")!=_sk]
-            # On held-out viewers, ranking by similarity alone was the most accurate weight for
-            # "watch next after X" (data/blend_results.json: NDCG@10 0.101 at 1.0 vs 0.091 at 0.8),
-            # so "like X" is ordered by similarity; your own match only breaks ties.
-            top_all=sorted(top_all,key=lambda x:(-round(_like_score(x[1],_src),3),-float(x[0] or 0)))
+            _scored=[(_like_score(x[1],_src),x) for x in top_all]
+            _close=[(v,x) for v,x in _scored if v>0.5]          # the movies actually close to what you searched
+            if len(_close)>=4:
+                _scored=_close
+            # 80% how close it is, 20% how well it fits you: the What's Next blend that beat every lower
+            # similarity weight on held-out viewers, so tonight's search leads and your profile still counts.
+            top_all=[x for _,x in sorted(_scored,key=lambda t:-(WHATS_NEXT_SIM*t[0]+(1-WHATS_NEXT_SIM)*float(t[1][0] or 0)/100.0))]
         top_all=_time_filter(top_all,_tspec)
         tonight_pool=top_all[:40]
         tonight_watch=get_watch_availability_batch(
@@ -3587,6 +3713,8 @@ def _render_showroom(p):
                         render_mood_chips()
                     else:
                         render_mood_suggestions()
+            if _mood_text():
+                render_search_card()
         # One unified guide, like the Apple TV app's Home: no toggles. Tonight's Show, Top Picks,
         # Shows for You, and More to explore (critics' picks, hidden gems and your fourth row mixed in
         # one row, each card labeled), so there are never more than three rows under the hero.

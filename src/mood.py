@@ -55,3 +55,46 @@ def top_rows(query, k=150):
         return []
     idx = np.argpartition(-s, min(k, len(s) - 1))[:k]
     return [int(i) for i in idx[np.argsort(-s[idx])] if s[i] > 0]
+
+
+def correct(text):
+    """Fix one-letter typos against the words fans actually use ("dakr" -> "dark", "fuuny" -> "funny").
+
+    Candidates are every word one edit away (a swap, a missing, extra, or wrong letter); the most
+    commonly used one wins. Words already known, short words, and anything with no close match pass through.
+    """
+    d = _load()
+    if d is None:
+        return text
+    vocab, idf = d[1], d[2]
+    letters = "abcdefghijklmnopqrstuvwxyz-"
+    out = []
+    for w in str(text).split():
+        lw = w.lower()
+        if lw in vocab or len(lw) < 4 or not lw.replace("-", "").isalpha():
+            out.append(w)
+            continue
+        splits = [(lw[:i], lw[i:]) for i in range(len(lw) + 1)]
+        edits = {a + b[1] + b[0] + b[2:] for a, b in splits if len(b) > 1}          # swapped letters
+        edits |= {a + b[1:] for a, b in splits if b}                                 # a letter too many
+        edits |= {a + c + b[1:] for a, b in splits if b for c in letters}            # a wrong letter
+        edits |= {a + c + b for a, b in splits for c in letters}                     # a missing letter
+        known = [e for e in edits if e in vocab]
+        out.append(min(known, key=lambda e: idf[vocab[e]]) if known else w)
+    return " ".join(out)
+
+
+def is_mood_word(word, common=0.35):
+    """True if fans use this word often enough to be a mood or genre ("dark", "funny", "mystery"),
+    not a rare tag that is really a title or a name ("hokum"). Common = the most-used 35% of tag words."""
+    d = _load()
+    if d is None:
+        return False
+    vocab, idf = d[1], d[2]
+    w = str(word).lower()
+    if w not in vocab:
+        return False
+    if not hasattr(is_mood_word, "_cut"):
+        import numpy as _np
+        is_mood_word._cut = float(_np.quantile(idf, common))
+    return float(idf[vocab[w]]) <= is_mood_word._cut

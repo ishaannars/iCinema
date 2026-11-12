@@ -37,3 +37,30 @@ def test_facts_tokens_cover_every_kind():
     t = tokens({"director": ["Q1"], "cast": ["Q2"], "company": ["Q3"], "genre": ["Q4"], "country": ["Q5"], "year": 2024})
     assert {x.split(":")[0] for x in t} == {"d", "c", "co", "g", "n", "y"}
     assert tokens({"genre": ["Q4"], "director": ["Q1"]}, genres_only=True) == ["g:Q4"]
+
+
+def test_new_release_finds_its_closest_known_movies():
+    import numpy as np
+    from src import new_releases as nr
+    if not nr.available():
+        return
+    tid = int(np.load(ROOT / "data" / "new_releases.npz")["tmdb_id"][0])
+    near = nr.nearest({"tmdb_id": tid}, 20)
+    assert len(near) == 20 and all(near[k][1] >= near[k + 1][1] for k in range(19))
+    assert nr.nearest({"tmdb_id": -1}) == []
+
+
+def test_mood_typos_are_fixed_against_fan_words():
+    from src import mood
+    if not mood.available():
+        return
+    assert mood.correct("dakr") == "dark" and mood.correct("fuuny") == "funny"
+    assert mood.correct("dark") == "dark"
+
+
+def test_mood_words_vs_titles():
+    from src import mood
+    if not mood.available():
+        return
+    assert mood.is_mood_word("dark") and mood.is_mood_word("mystery") and mood.is_mood_word("funny")
+    assert not mood.is_mood_word("hokum") and not mood.is_mood_word("oldboy")

@@ -34,17 +34,24 @@ def _cut(q, m):
     return (q[:m.start()] + " " + q[m.end():]).strip()
 
 
-_LIKE = re.compile(r"(?:\b(?:movies?|films?|shows?|something|anything)\s+)?\b(?:like|similar to)\s+(.+)$", re.I)
+_LIKE = re.compile(r"(?:\b(?:movies?|films?|shows?|something|anything)\s+)?\b(?:like|similar to)\s+(.+?)"
+                   r"(?=\s*(?:,|;|\bthat\b|\bwhich\b|\bbut\b|\bi\s+have|\bi\s+haven|\bi've|\bnot\s+seen|\bnew\s+to\s+me|$))", re.I)
+# "I haven't seen yet", "that I haven't watched", "new to me": already true of every pick, so just understood.
+_UNSEEN = re.compile(r"\b(?:that\s+|which\s+)?(?:i\s+(?:have\s+not|haven'?t|havent)\s+(?:seen|watched)(?:\s+(?:yet|before))?"
+                     r"|not\s+(?:seen|watched)(?:\s+yet)?|new\s+to\s+me|unseen)\b", re.I)
+_CHAT = {"i", "want", "wanna", "id", "i'd", "show", "me", "give", "find", "looking", "something", "some", "watch",
+         "tonight", "please", "to", "kind", "of", "sort", "really", "just", "maybe"}
 
 
 def parse(query):
     """-> {"mood": str, "max": minutes or None, "min": minutes or None, "episodes": max episode minutes or None, "label": str}"""
     q = " ".join(str(query or "").split())
     out = {"max": None, "min": None, "episodes": None, "like": None}
+    q = _UNSEEN.sub(" ", q)
     m = _LIKE.search(q)
     if m:
         out["like"] = m.group(1).strip(" ,.;\"“”'")[:80] or None
-        q = q[:m.start()].strip(" ,")
+        q = (q[:m.start()] + " " + q[m.end():]).strip(" ,")
     m = _UNDER.search(q)
     if m:
         out["max"] = _dur_minutes(m)
@@ -70,7 +77,8 @@ def parse(query):
             low = re.sub(rf"\b{re.escape(phrase)}\b", " ", low)
     mood = " ".join(re.sub(r"[,;]+", " ", low).split())
     mood = re.sub(r"^(and|with)\s+|\s+(and|with)$", "", mood).strip()
-    mood = " ".join(w for w in mood.split() if w not in {"movie", "movies", "film", "films"})
+    mood = " ".join(w for w in mood.split() if w not in {"movie", "movies", "film", "films", "show", "shows"} | _CHAT)
+    mood = re.sub(r"^(?:a|an|the)\s+", "", mood)
     if mood and all(w in _FILLER for w in mood.split()):
         mood = ""
     parts = []
