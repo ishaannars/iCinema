@@ -291,6 +291,23 @@ def queue_profile_save():
     st.session_state._state_ver = int(st.session_state.get("_state_ver") or 0) + 1
 
 
+def _lib_bump():
+    """A choice made on Saved or Seen (thumbs, Mark Seen, Remove): the Showroom re-ranks when you go back to it."""
+    st.session_state._lib_ver = int(st.session_state.get("_lib_ver") or 0) + 1
+
+
+def _saved_to_seen(title, movie):
+    mark_movie_seen(title, movie)
+    _lib_bump()
+
+
+def _lib_mark(showroom=False):
+    """Hidden marker for the library counter. The Showroom's copy says which library state it was ranked with."""
+    v = int(st.session_state.get("_lib_ver") or 0)
+    cls = 'lib-mark" data-tab="0' if showroom else "lib-cur"
+    st.markdown(f'<span class="{cls}" data-v="{v}"></span>', unsafe_allow_html=True)
+
+
 def _ver_mark(tab=None):
     """Hidden marker of how current this part of the page is. Opening a tab refreshes it only if
     something changed since it was drawn, so switching tabs is instant when nothing did."""
@@ -837,6 +854,7 @@ def save_movie(title, movie=None):
     queue_profile_save()
 
 def remove_saved_movie(title):
+    _lib_bump()
     st.session_state.saved.discard(title)
     queue_profile_save()
 
@@ -853,6 +871,7 @@ def mark_movie_seen(title, movie=None):
     queue_profile_save()
 
 def remove_from_seen(title):
+    _lib_bump()
     """Undo an accidental Seen: drop it and its model signal; restore it to Saved if it came from there."""
     st.session_state.seen.discard(title)
     st.session_state.seen_rating = {k: v for k, v in (st.session_state.get("seen_rating") or {}).items() if k != title}
@@ -1040,6 +1059,7 @@ def rate_seen(title, value):
     rated[title] = 0 if rated.get(title) == value else value
     rated = {k: v for k, v in rated.items() if v}
     st.session_state.seen_rating = rated
+    _lib_bump()
     queue_profile_save()
 
 
@@ -1208,7 +1228,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _p_share = 0.22 if learned.ready else 0.0
     _fans = round((1 - CONTENT_WEIGHT) * (1 - _p_share) * 100)
     _cont = round(CONTENT_WEIGHT * (1 - _p_share) * 100)
-    _mood_on = bool(_mood_text())
+    _mood_on = bool(_mood_spec().get("mood"))
     _short_cf = _cf_name.split(" (")[0]
     _why_cf = {"EASE": "you’ve rated a lot, and EASE won the test for long histories",
                "RP3beta": "your likes are less mainstream, and RP3beta won that test",
@@ -1222,16 +1242,23 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     # Each row: plain name, the technique underneath, its weight in your score, and its job.
     if _ltr_on:
         first = (True, "Best-of-all ranker", "Learned ranker · gradient boosting", f"{_fans}%",
-                 "Weighs the models below by what predicted 3,000 test viewers best.")
+                 "Combines the three fan models below, the content model, and popularity, weighted by what predicted 3,000 test viewers best.")
     else:
         first = (True, "Fans like you", f"Collaborative filtering · {_short_cf}", f"{_fans}%",
                  f"Finds {scale['users'] or 'MovieLens'} movie fans who loved what you loved.")
     _mq = _mood_spec()["mood"] if _mood_on else ""
+    # The ranker's three fan models, shown on their own lines so every model doing work is visible.
+    _fans_n = f"{scale['users']:,}" if isinstance(scale.get("users"), int) else (scale.get("users") or "MovieLens")
+    _inside = ([(True, "  · Fans like you", "item-kNN", "", f"Movies the same {_fans_n} fans loved together."),
+                (True, "  · Fans with less mainstream likes", "RP3beta", "", "A random-walk model that finds less obvious fan favorites."),
+                (True, "  · Fans with long histories", "EASE", "", "Learns from viewers who rated many movies, for detailed profiles.")]
+               if _ltr_on else [])
     items = [
         first,
+        *_inside,
         (True, "What each movie is like", "Content model · TF-IDF + SVD", f"{_cont}%",
          "Matches your answers to each movie’s genres and fan tags."),
-        (learned.ready, "Your own choices", f"Personal model · {(learned.model_name or 'logistic regression').lower()}",
+        (learned.ready, "Your own choices", f"Personal model · {(learned.model_name if learned.ready else 'logistic regression').lower()}",
          f"{round(_p_share * 100)}%" if learned.ready else "",
          "Trained on your saves and skips, and retrained after each new one." if learned.ready else _personal_need(learned, decisions)),
         (_nr_on(), "New releases", "Cold-start model · ridge regression", "",
@@ -1239,7 +1266,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         (_tv_on(), "Shows", "TV model · item-kNN + popularity", "",
          "Finds shows loved by fans of your movies."),
         (_mood_on, "Mood search", "Fan-tag TF-IDF", "",
-         (f"Using “{_mq[:30]}” right now." if _mq else "Using your time limit right now.") if _mood_on
+         (f"Using “{_mq[:30]}” right now." if _mq else "Off: your search is a title, not a mood.") if _mood_on
          else "Off until you type a mood in the Showroom."),
     ]
     _foot = "Weights were set in tests on movie fans the models never saw."
@@ -1250,7 +1277,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                       f"(NDCG@10 {_d['ndcg_learned']:.3f} vs {_d['ndcg_current_blend']:.3f}).")
     models_html = (
         '<div class="pf-section"><div class="pf-title">What’s choosing your picks</div>'
-        '<div class="pf-sub">Blue means running for you now. The percent is each model’s weight in your picks.</div>'
+        '<div class="pf-sub">A filled dot means running for you now. The percent is each model’s weight in your picks.</div>'
         '<div class="pf-models">'
         + "".join(f'<div class="pf-model"><span class="pf-dot{" on" if on else ""}"></span>'
                   f'<div class="pf-model-main"><div class="pf-model-name">{html.escape(name)}</div>'
@@ -2200,8 +2227,29 @@ def _like_sims(source):
     from src.cf_model import neighbors as _nb, _index as _ix
     sims = {}
     if _ix(source) is not None:
+        # Fans' 100 closest movies, re-ranked: half how strongly the same fans loved both, half how alike the
+        # movies are (genres and fan tags), minus a light discount for the most popular titles. Fans alone
+        # drift to famous crowd-pleasers; tags alone drift to oddities; together they stay on target.
+        import numpy as _np
+        from src import content_model as _cm
+        from src.cf_model import _load as _cfl
+        i = _ix(source)
         near = _nb(source, 100)
-        sims = {j: 0.5 + 0.5 * (1 - r / max(len(near), 1)) for r, j in enumerate(near)}
+        fan_rank = 1 - _np.arange(len(near)) / max(len(near), 1)
+        vecs, pop = _cm._load(), _cfl().fan_pct
+        if vecs is not None and len(near):
+            E, has = vecs
+            v = E[i]
+            if has[i] and float(_np.linalg.norm(v)) > 0:
+                cos = (E[near] @ v) / _np.maximum(_np.linalg.norm(E[near], axis=1) * _np.linalg.norm(v), 1e-9)
+                tag_rank = 1 - _np.argsort(_np.argsort(-cos)) / len(near)
+                score = 0.5 * fan_rank + 0.5 * tag_rank - 0.15 * pop[near]
+            else:
+                score = fan_rank - 0.15 * pop[near]
+        else:
+            score = fan_rank
+        order = _np.argsort(-score)
+        sims = {int(near[k]): 0.5 + 0.5 * (1 - r / max(len(near), 1)) for r, k in enumerate(order)}
     else:
         from src.new_releases import nearest as _nr_near
         sims = dict(_nr_near(source, 100))
@@ -2255,8 +2303,8 @@ def render_mood_chips():
     with row:
         for i, (label, rest) in enumerate(parts):
             st.button(f"{label}  ×", key=f"mood_chip_{i}", help=f"Remove {label}",
-                      on_click=_set_mood, args=(rest,))
-        st.button("Clear", key="mood_reset", on_click=_set_mood, args=("",))
+                      on_click=_set_mood_live, args=(rest,))
+        st.button("Clear", key="mood_reset", on_click=_set_mood_live, args=("",))
     mood = _mood_spec()["mood"]
     if mood and scores(mood) is None:
         st.markdown(
@@ -2292,7 +2340,7 @@ def render_mood_suggestions():
         row = st.container(key="mood_suggest_row")
     with row:
         for i, (label, text) in enumerate(opts):
-            st.button(label, key=f"mood_suggest_{i}", on_click=_set_mood, args=(text,))
+            st.button(label, key=f"mood_suggest_{i}", on_click=_set_mood_live, args=(text,))
 
 
 _BUILD_KEYS = ("showroom_slots", "showroom_payloads", "showroom_row_queues", "recommendation_context",
@@ -2306,6 +2354,74 @@ def _build_key():
             ss.review_priority, ss.adventure, tuple(ss.more_of), len(ss.saved), len(ss.seen), len(ss.dismissed),
             len(ss.get("disliked") or ()), tuple(ss.get("streaming_services") or ()),
             len([e for e in (ss.get("analytics_events") or []) if e.get("event") != "impression"]))
+
+
+def _commit_search(text):
+    """Run a search from the live field or a suggestion, then rebuild the Showroom around it."""
+    st.session_state.mood_input = " ".join(str(text or "").split())[:120]
+    _apply_mood()
+    st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1   # the field shows the tidy text
+    st.session_state._app_rerun = True
+
+
+def _set_mood_live(text):
+    """A chip, Clear, or a starting point tapped inside the search box: change the search, rebuild the Showroom."""
+    _set_mood(text)
+    st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1
+    st.session_state._app_rerun = True
+
+
+@st.fragment
+@_with_app_rerun
+def render_search_box():
+    """One search field that answers as you type, like the Apple TV app. Typing reruns only this box:
+    a "Search for …" line plus matching movies with their posters appear under it. Tap one (or the
+    Search line) to apply it; until then the Showroom underneath stays put."""
+    with st.container(key="mood_box"):
+        live = None
+        try:
+            from st_keyup import st_keyup
+            live = st_keyup("Search by mood, time, or a movie", value=_mood_text(), debounce=300,
+                            key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
+                            placeholder="A mood, a time, or a movie you loved", label_visibility="collapsed")
+        except Exception:
+            if "mood_input" not in st.session_state:
+                st.session_state.mood_input = _mood_text()
+            st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
+                          placeholder="A mood, a time, or a movie you loved", on_change=_apply_mood)
+        typed = " ".join(str(live or "").split())
+        with st.container(key="mood_under"):
+            if live is not None and typed and typed != _mood_text():
+                _render_live_suggestions(typed)
+            elif _mood_text():
+                render_mood_chips()
+            else:
+                render_mood_suggestions()
+
+
+def _render_live_suggestions(typed):
+    """Under the field while typing: "Search for …" first, then up to four movies with posters."""
+    st.button(f"Search for “{typed[:60]}”", key="live_search_go", on_click=_commit_search, args=(typed,))
+    from src.ui.mood_time import parse
+    spec = parse(typed)
+    q = spec.get("like") or spec.get("mood") or ""
+    hits = []
+    if len(q) >= 2 and tmdb_catalog_configured():
+        try:
+            hits = [m for m in (search_movies(q, 6) or []) if m.get("poster_url")][:4]
+        except Exception:
+            hits = []
+    if not hits:
+        return
+    st.markdown('<div class="live-hits-label">Movies</div>', unsafe_allow_html=True)
+    cols = st.columns(4, gap="small")
+    for k, m in enumerate(hits):
+        with cols[k]:
+            st.markdown(f'<div class="live-hit"><img src="{html.escape(str(m["poster_url"]), quote=True)}" alt=""></div>',
+                        unsafe_allow_html=True)
+            label = f'{m["title"]}' + (f' ({m["year"]})' if m.get("year") else "")
+            st.button(label[:42], key=f"live_hit_{k}", use_container_width=True, on_click=_commit_search,
+                      args=(("like " + m["title"]) if spec.get("like") else m["title"],))
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -2936,6 +3052,7 @@ def _saved_tab():
     # on the other library tab shows up here without reloading the page.
     st.button("Refresh", key="refresh_saved")
     _ver_mark(1)
+    _lib_mark()
     st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
     st.markdown('<div class=\"tab-primary-heading saved-tab-heading\">Saved</div>', unsafe_allow_html=True)
     movies=[m for t in _newest_first(st.session_state.saved, ("save",)) if (m := resolve_history_movie(t))]
@@ -2973,8 +3090,8 @@ def _saved_tab():
                                 unsafe_allow_html=True)
                     saved_actions = st.columns(2, gap="small")
                     with saved_actions[0]:
-                        st.button("Mark Seen", key=f"savedseen_{m['title']}", use_container_width=True,
-                                  on_click=mark_movie_seen, args=(m["title"], m))
+                        st.button("Seen", key=f"savedseen_{m['title']}", use_container_width=True,
+                                  on_click=_saved_to_seen, args=(m["title"], m))
                     with saved_actions[1]:
                         st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
                                   on_click=remove_saved_movie, args=(m["title"],))
@@ -3033,6 +3150,7 @@ def _seen_tab():
     # on the other library tab shows up here without reloading the page.
     st.button("Refresh", key="refresh_seen")
     _ver_mark(2)
+    _lib_mark()
     st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
     st.markdown('<div class=\"tab-primary-heading\">Seen</div>', unsafe_allow_html=True)
     movies=[m for t in _newest_first(st.session_state.seen, ("seen",)) if (m := resolve_history_movie(t))]
@@ -3059,7 +3177,8 @@ def _seen_tab():
         # What's next picks only change when the Seen list, the blocked set, or "Another pick" changes,
         # so a thumbs tap reuses them instead of re-ranking every candidate for every Seen movie.
         _wn_key = (tuple(m["title"] for m in movies), len(wn_blocked), hash(frozenset(wn_blocked)),
-                   tuple(sorted(wn_offsets.items())), len(wn_payloads))
+                   tuple(sorted(wn_offsets.items())), len(wn_payloads),
+                   tuple(sorted((st.session_state.get("seen_rating") or {}).items())))
         _wn_memo = st.session_state.get("_whats_next_memo")
         if _wn_memo and _wn_memo[0] == _wn_key:
             wn_picks = dict(_wn_memo[1])
@@ -3465,7 +3584,7 @@ def _render_showroom(p):
             _ids12=get_movie_identity_batch(tuple((m["title"],int(m.get("year") or 0),int(m.get("tmdb_id") or 0)) for _,m in top_all[:16]))
             top_all=[x for x in top_all[:16] if int((_ids12.get(x[1]["title"]) or {}).get("runtime") or 999)>=40]+top_all[16:]
         top_all=_time_filter(top_all,_tspec)
-        tonight_pool=(_time_filter(_personal_top,_tspec) if _lookup else top_all)[:40]
+        tonight_pool=top_all[:40]       # any search (mood, time, a title, "like X") reaches Tonight's Show too
         tonight_watch=get_watch_availability_batch(
             tuple((m["title"],int(m.get("year") or 0)) for _,m in tonight_pool),"US"
         ) if tonight_pool else {}
@@ -3726,21 +3845,13 @@ def _render_showroom(p):
 
     with tabs[0]:
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
+        st.button("Refresh", key="refresh_showroom")   # hidden; clicked when you return here after rating on Saved/Seen
+        _lib_mark(showroom=True)
         # The search sits inside the Showroom tab: it only changes Showroom rows, so Saved, Seen and
         # Profile stay clean. One keyed slot holds chips or suggestions, so the layout never shifts.
         from src.mood import available as _mood_ready
         if _mood_ready():
-            with st.container(key="mood_box"):
-                if "mood_input" not in st.session_state:
-                    st.session_state.mood_input = _mood_text()
-                st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
-                              placeholder="A mood, a time, or a movie you loved",
-                              on_change=_apply_mood)
-                with st.container(key="mood_under"):
-                    if _mood_text():
-                        render_mood_chips()
-                    else:
-                        render_mood_suggestions()
+            render_search_box()
             if _mood_text():
                 render_search_card()
         # One unified guide, like the Apple TV app's Home: no toggles. Tonight's Show, Top Picks,

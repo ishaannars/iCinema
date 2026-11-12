@@ -133,3 +133,11 @@ def test_full_catalog_retrieval_and_neighbors():
     taste = user_vector([(movie, "favorite")])
     top = top_indices(taste, 50)
     assert top and len(top) <= 50 and all(taste.scores[top[k]] >= taste.scores[top[k + 1]] for k in range(len(top) - 1))
+
+
+def test_title_match_never_jumps_to_a_different_year():
+    from src.cf_model import _index, _load, movie_at
+    if _load() is None:
+        return
+    i = _index({"title": "Oldboy", "year": 2003})
+    assert i is None or movie_at(i)["year"] in (2002, 2003, 2004)

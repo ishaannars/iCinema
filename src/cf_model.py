@@ -155,9 +155,21 @@ def _index(movie):
         return model.by_tmdb[tmdb_id]
     key = _norm_title(movie.get("title", ""))
     year = int(movie.get("year") or 0)
-    for y in (year, year - 1, year + 1, 0):  # tolerate off-by-one release years
+    for y in (year, year - 1, year + 1):  # tolerate off-by-one release years
         if (key, y) in model.by_title:
             return model.by_title[(key, y)]
+    # Same film, spelled differently ("Oldboy" vs "Old Boy"): compare titles with spaces and punctuation removed.
+    if not hasattr(model, "by_compact"):
+        model.by_compact = {}
+        for (k, y), j in model.by_title.items():
+            model.by_compact.setdefault((re.sub(r"[^a-z0-9]", "", k), y), j)
+    ck = re.sub(r"[^a-z0-9]", "", key)
+    for y in (year, year - 1, year + 1):
+        if (ck, y) in model.by_compact:
+            return model.by_compact[(ck, y)]
+    # Only without a year may a bare title match; with a year, "Oldboy" (2003) must never become the 2013 remake.
+    if not year and (key, 0) in model.by_title:
+        return model.by_title[(key, 0)]
     return None
 
 

@@ -5939,3 +5939,37 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
     border-radius:999px;font-family:var(--ui-font);font-size:.8rem;font-weight:700;color:var(--kinari);margin:0 0 .55rem;}
 .search-state{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;text-align:center;padding:.6rem 0;}
 .st-key-search_card{display:none !important;}
+
+/* ---- Batch 29: live search ---- */
+/* The search field is a small typing component; undo the rules that hide the invisible storage bridge. */
+.st-key-mood_box div[data-testid="stCustomComponentV1"],.st-key-mood_box div[data-testid="stCustomComponentV1"] iframe,
+.st-key-mood_box [class*="st-key-mood_live_"],.st-key-mood_box [class*="st-key-mood_live_"] iframe,
+[class*="st-key-movie_search_live"] div[data-testid="stCustomComponentV1"],[class*="st-key-movie_search_live"] iframe{
+    position:static !important;visibility:visible !important;opacity:1 !important;pointer-events:auto !important;
+    width:100% !important;max-width:none !important;min-width:0 !important;overflow:visible !important;}
+.st-key-mood_box div[data-testid="stCustomComponentV1"] iframe,.st-key-mood_box [class*="st-key-mood_live_"] iframe{
+    height:46px !important;min-height:46px !important;max-height:none !important;}
+.st-key-mood_box div[data-testid="stCustomComponentV1"],.st-key-mood_box [class*="st-key-mood_live_"]{height:auto !important;min-height:46px !important;max-height:none !important;}
+/* While typing: "Search for …" then matching movies with posters, in the app's chip and card style. */
+.st-key-live_search_go button{height:2.3rem !important;min-height:2.3rem !important;padding:0 1rem !important;border-radius:999px !important;
+    background:transparent !important;border:1px solid rgba(169,173,183,.35) !important;margin:.5rem 0 .2rem !important;}
+.st-key-live_search_go button p{font-size:.86rem !important;font-weight:600 !important;color:var(--kinari) !important;}
+.live-hits-label{font-family:var(--ui-font);color:var(--muted2);font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:.8rem 0 .45rem;}
+.live-hit img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:12px;border:1px solid var(--border);display:block;margin:0 0 .4rem;}
+[class*="st-key-live_hit_"] button{height:auto !important;min-height:2.2rem !important;padding:.35rem .5rem !important;border-radius:12px !important;
+    background:transparent !important;border:1px solid rgba(169,173,183,.22) !important;}
+[class*="st-key-live_hit_"] button p{font-size:.8rem !important;font-weight:600 !important;white-space:normal !important;line-height:1.25 !important;text-align:center !important;}
+@media (max-width: 640px){
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-live_hit_"]){flex-wrap:wrap !important;flex-direction:row !important;gap:.5rem !important;}
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-live_hit_"]) > div{flex:0 0 calc(50% - .25rem) !important;min-width:0 !important;}
+}
+
+/* ---- Batch 30 ---- */
+.st-key-refresh_showroom{display:none !important;}
+[data-testid="stElementContainer"]:has(.lib-cur),[data-testid="stElementContainer"]:has(.lib-mark),
+.element-container:has(.lib-cur),.element-container:has(.lib-mark){display:none !important;}
+/* Seen: What's Next sits right under the thumbs row, with the same small gap as Save/Seen under a card. */
+[class*="st-key-seennext_"]{margin-top:-.55rem !important;}
+/* Saved: both actions keep their full label on narrow cards. */
+[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button{padding:0 .4rem !important;}
+[class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.84rem !important;letter-spacing:-.005em !important;}

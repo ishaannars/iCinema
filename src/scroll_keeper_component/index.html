@@ -49,8 +49,20 @@
       var t = e.target && e.target.closest && e.target.closest('[data-testid="stTabs"] [role="tab"]');
       if (!t) return;
       var i = Array.prototype.indexOf.call(doc.querySelectorAll('[data-testid="stTabs"] [role="tab"]'), t);
-      var key = i === 1 ? "refresh_saved" : i === 2 ? "refresh_seen" : i === 3 ? "refresh_profile" : null;
+      var key = i === 0 ? "refresh_showroom" : i === 1 ? "refresh_saved" : i === 2 ? "refresh_seen" : i === 3 ? "refresh_profile" : null;
       if (!key) return;
+      if (i === 0) {
+        // Back on the Showroom: re-rank only if you rated, marked Seen, or removed something on Saved/Seen.
+        var lib = 0;
+        doc.querySelectorAll(".lib-cur").forEach(function (m) { lib = Math.max(lib, +m.getAttribute("data-v") || 0); });
+        var sm = doc.querySelector('.lib-mark[data-tab="0"]');
+        if (sm && (+sm.getAttribute("data-v") || 0) >= lib) return;
+        setTimeout(function () {
+          var b = doc.querySelector('[class*="st-key-refresh_showroom"] button');
+          if (b) b.click();
+        }, 0);
+        return;
+      }
       // Refresh only if something changed since this tab was drawn; otherwise switching is instant.
       var cur = 0;
       // The newest version anywhere on the page: a change made inside one tab (e.g. Mark Seen on Saved)
