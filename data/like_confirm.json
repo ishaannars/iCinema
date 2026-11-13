@@ -18,5 +18,25 @@
    -0.0106
   ]
  },
- "ship": false
+ "ship": false,
+ "by_popularity_of_loved_movies": {
+  "niche (least popular 25%)": {
+   "viewers": 750,
+   "fans_only": 0.0651,
+   "rerank": 0.063,
+   "rerank_no_discount": 0.0625
+  },
+  "middle 50%": {
+   "viewers": 1495,
+   "fans_only": 0.0931,
+   "rerank": 0.0834,
+   "rerank_no_discount": 0.085
+  },
+  "mainstream (most popular 25%)": {
+   "viewers": 755,
+   "fans_only": 0.1452,
+   "rerank": 0.1109,
+   "rerank_no_discount": 0.1145
+  }
+ }
 }

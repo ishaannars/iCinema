@@ -13,6 +13,9 @@ X"). Target = the movies they went on to love (held-out ratings of 4+). Rules wr
 4. B stays in the app only if it beats A on test NDCG@10 with a paired-bootstrap 95% interval
    above zero. Otherwise the app goes back to A. The popularity discount is also reported
    separately (B without the discount), so its effect is visible on its own.
+5. Descriptive only (it cannot change rule 4): results split by how popular each viewer's loved
+   movies are. Offline metrics reward popular picks, so this shows whether B helps viewers who
+   go on to love less-known movies, which a single average can hide.
 Writes data/like_confirm.json; the app reads its "ship" field.
 """
 import argparse
@@ -84,6 +87,14 @@ def main():
     rB0, rC = run(tst, tb, te, rerank(0.0)), run(tst, tb, te, content_only)
     d, lo, hi, _ = paired_bootstrap(rB[:, 1], rA[:, 1], np.mean)
     ship = bool(lo > 0)
+    counts = np.bincount(train["item"], minlength=n_items)
+    loved_pop = np.array([np.median(counts[list(te[u])]) for u in tst])
+    q1, q3 = np.quantile(loved_pop, [0.25, 0.75])
+    bands = {"niche (least popular 25%)": loved_pop <= q1, "middle 50%": (loved_pop > q1) & (loved_pop < q3),
+             "mainstream (most popular 25%)": loved_pop >= q3}
+    by_band = {name: {"viewers": int(m.sum()), "fans_only": round(float(rA[m, 1].mean()), 4),
+                      "rerank": round(float(rB[m, 1].mean()), 4), "rerank_no_discount": round(float(rB0[m, 1].mean()), 4)}
+               for name, m in bands.items()}
     out = {
         "method": " ".join(__doc__.split("\n\n")[1:3]).replace("\n", " "),
         "test_viewers": len(tst),
@@ -92,6 +103,7 @@ def main():
         "hit@1": {"fans_only": round(float(rA[:, 2].mean()), 4), "rerank": round(float(rB[:, 2].mean()), 4)},
         "rerank_vs_fans_only": {"diff": round(d, 4), "ci95": [round(lo, 4), round(hi, 4)]},
         "ship": ship,
+        "by_popularity_of_loved_movies": by_band,
     }
     print(json.dumps(out, indent=1))
     (ROOT / "data" / "like_confirm.json").write_text(json.dumps(out, indent=1))
