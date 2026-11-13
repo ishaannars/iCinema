@@ -1,0 +1,143 @@
+{
+ "method": "    python training/evaluate_knobs.py --data-dir ml-32m Same 1-in-5 MovieLens 32M sample, time split, shipped ranking and 3 random likes per viewer as training/evaluate_rows.py; 3,000 validation and 3,000 different test viewers. Rules written before running:",
+ "rows": {
+  "Critically Acclaimed": {
+   "validation_hit@10": {
+    "0.0": 0.5438,
+    "0.1": 0.5258,
+    "0.2": 0.5013,
+    "0.3": 0.4842,
+    "0.4": 0.4762,
+    "0.5": 0.4677,
+    "0.6": 0.4537,
+    "0.8": 0.4206
+   },
+   "best_weight": 0.0,
+   "current_weight": 0.3,
+   "test_hit@10": {
+    "best": 0.5201,
+    "current": 0.4952
+   },
+   "viewers": 1967,
+   "diff": 0.0249,
+   "ci95": [
+    0.0066,
+    0.0432
+   ],
+   "change": true,
+   "use": 0.0
+  },
+  "Hidden Gems": {
+   "validation_hit@10": {
+    "0.0": 0.1133,
+    "0.1": 0.0142,
+    "0.2": 0.012,
+    "0.3": 0.0115,
+    "0.4": 0.0109,
+    "0.5": 0.0082,
+    "0.6": 0.0082,
+    "0.8": 0.0099
+   },
+   "best_weight": 0.0,
+   "current_weight": 0.28,
+   "test_hit@10": {
+    "best": 0.1251,
+    "current": 0.011
+   },
+   "viewers": 1823,
+   "diff": 0.1141,
+   "ci95": [
+    0.0998,
+    0.1284
+   ],
+   "change": true,
+   "use": 0.0
+  },
+  "Something Different": {
+   "validation_hit@10": {
+    "0.0": 0.3917,
+    "0.1": 0.3917,
+    "0.2": 0.3917,
+    "0.3": 0.3917,
+    "0.4": 0.3917,
+    "0.5": 0.3917,
+    "0.6": 0.3917,
+    "0.8": 0.3917
+   },
+   "best_weight": 0.0,
+   "current_weight": 0.2,
+   "test_hit@10": {
+    "best": 0.3697,
+    "current": 0.3697
+   },
+   "viewers": 2478,
+   "diff": 0.0,
+   "ci95": [
+    0.0,
+    0.0
+   ],
+   "change": false,
+   "use": 0.2
+  }
+ },
+ "variety": {
+  "curve": {
+   "1.0": {
+    "hit@10": 0.37,
+    "similarity_top4": 0.423,
+    "diff_vs_no_variety": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "0.9": {
+    "hit@10": 0.3437,
+    "similarity_top4": 0.15,
+    "diff_vs_no_variety": -0.0263,
+    "ci95": [
+     -0.0453,
+     -0.008
+    ]
+   },
+   "0.8": {
+    "hit@10": 0.3373,
+    "similarity_top4": 0.145,
+    "diff_vs_no_variety": -0.0327,
+    "ci95": [
+     -0.0523,
+     -0.0127
+    ]
+   },
+   "0.74": {
+    "hit@10": 0.334,
+    "similarity_top4": 0.145,
+    "diff_vs_no_variety": -0.036,
+    "ci95": [
+     -0.0547,
+     -0.016
+    ]
+   },
+   "0.6": {
+    "hit@10": 0.33,
+    "similarity_top4": 0.145,
+    "diff_vs_no_variety": -0.04,
+    "ci95": [
+     -0.06,
+     -0.0207
+    ]
+   },
+   "0.5": {
+    "hit@10": 0.3293,
+    "similarity_top4": 0.145,
+    "diff_vs_no_variety": -0.0407,
+    "ci95": [
+     -0.0603,
+     -0.0213
+    ]
+   }
+  },
+  "current": 0.74,
+  "use": 1.0
+ }
+}

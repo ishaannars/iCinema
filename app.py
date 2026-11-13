@@ -1160,6 +1160,22 @@ def _tested_blend_weights():
 CONTENT_WEIGHT, WHATS_NEXT_SIM = _tested_blend_weights()
 
 
+def _tested_knobs():
+    """Row mixes and the variety step from training/evaluate_knobs.py (data/knobs_results.json).
+    Until that test has run, the original settings stay."""
+    out = {"rows": {}, "variety": 0.74}
+    try:
+        d = json.loads((Path(__file__).resolve().parent / "data" / "knobs_results.json").read_text())
+        out["rows"] = {k: float(v["use"]) for k, v in (d.get("rows") or {}).items()}
+        out["variety"] = float((d.get("variety") or {}).get("use", 0.74))
+    except Exception:
+        pass
+    return out
+
+
+_KNOBS = _tested_knobs()
+
+
 @st.cache_data(show_spinner=False)
 def load_offline_results():
     """MovieLens evaluation written by training/train_cf.py (data/cf_results.json)."""
@@ -3559,9 +3575,11 @@ def _render_showroom(p):
                 if row_name=="Top Matches for You":
                     objective=base+0.06*_pop_now(movie)   # current movies surface; fit still dominates
                 elif row_name=="Critically Acclaimed":
-                    objective=0.70*base+0.30*section
+                    _w=_KNOBS["rows"].get("Critically Acclaimed",0.30)
+                    objective=(1-_w)*base+_w*section
                 elif row_name=="Hidden Gems":
-                    objective=0.72*base+0.28*section
+                    _w=_KNOBS["rows"].get("Hidden Gems",0.28)
+                    objective=(1-_w)*base+_w*section
                 elif row_name in ADAPTIVE_ROWS:
                     # The row's kind is the hard filter; within it, your personal fit decides.
                     objective=base+(0.06*_pop_now(movie) if row_name=="Recent Releases for You" else 0.0)
@@ -3569,7 +3587,8 @@ def _render_showroom(p):
                     cf_v=cf_by_title.get(movie["title"])
                     sem=semantic_by_id.get(id(movie),0.5)
                     seren=max(0.0,min(1.0,((cf_v if cf_v is not None else 0.5)-sem+1.0)/2.0))
-                    objective=0.55*base+0.25*seren+0.20*section
+                    _w=_KNOBS["rows"].get("Something Different",0.20)
+                    objective=(0.75-_w)*base+0.25*seren+_w*section
                 # Freshness for returning viewers: discount ignored repeats, lightly vary near-ties.
                 objective-=FATIGUE_STEP*min(fatigue.get(movie["title"],0),FATIGUE_CAP)
                 objective+=VARIETY_SPREAD*visit_variety(movie["title"])
@@ -3586,7 +3605,7 @@ def _render_showroom(p):
             if row_name=="Top Matches for You":
                 # Top Matches is exactly your best fits, in order, so no later row can hold a better match.
                 return [(display_match,movie) for _,_,display_match,movie in scored]
-            diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=0.74)
+            diversified=mmr_rerank(scored,limit=min(12,len(scored)),relevance_lambda=_KNOBS["variety"])
             chosen={item[3]["title"] for item in diversified}
             ordered=diversified+[item for item in scored if item[3]["title"] not in chosen]
             return [(display_match,movie) for _,_,display_match,movie in ordered]
