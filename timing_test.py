@@ -75,7 +75,7 @@ def report():
             text += "\n- Small sample. A significance test runs automatically once 10 people have done both."
     body = README.read_text()
     i, j = body.index(START) + len(START), body.index(END)
-    README.write_text(body[:i] + "\n" + text + "\n" + body[j:])
+    README.write_text(body[:i] + "\n## Decision time\n\n" + text + "\n\nProtocol in [TIMING_TEST.md](TIMING_TEST.md).\n" + body[j:])
     print(text)
 
 

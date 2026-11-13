@@ -1971,6 +1971,8 @@ def live_test_line():
     except Exception:
         return None
     target = int(r.get("target_decided_visits") or TARGET_DECIDED)
+    if r.get("status") != "finished" and not int(r.get("decided_visits") or 0):
+        return ""                       # nothing decided yet: say nothing rather than "0 of 200"
     if r.get("status") != "finished":
         return (f"Live test running: {int(r.get('decided_visits') or 0)} of {target}. For viewers with less mainstream likes, "
                 "Top Matches mixes picks from two ranking methods and counts which one gets more saves.")
@@ -2046,7 +2048,7 @@ def _apply_mood():
         hit = _lookup_title(mood)
         if hit:
             mood = hit["title"]          # a title search keeps the title as typed-and-found ("Hokum")
-    tidy = compose(mood, spec["max"], spec["min"], spec["episodes"], like) if raw else ""
+    tidy = compose(mood, spec["max"], spec["min"], spec["episodes"], like, spec.get("avoid") or []) if raw else ""
     st.session_state.mood_active = tidy
     st.session_state.mood_input = tidy
     queue_profile_save()
@@ -2087,9 +2089,31 @@ def _mood_spec():
     return spec
 
 
+def _avoid_filter(items, spec):
+    """"not too violent", "nothing scary": drop movies fans describe that way (the closest fifth to those
+    words, by the same tested mood model). Everything else keeps the models' order."""
+    words = spec.get("avoid") or []
+    if not words or not items:
+        return items
+    from src.mood import scores, correct
+    from src.cf_model import _index as _ix
+    import numpy as _np
+    sc = scores(correct(" ".join(words)))
+    if sc is None:
+        return items
+    pos = sc[sc > 0]
+    if not len(pos):
+        return items
+    cut = float(_np.quantile(pos, 0.8))
+    kept = [it for it in items if (i := _ix(it[1])) is None or sc[i] < cut]
+    return kept if len(kept) >= 4 else items
+
+
 def _time_filter(items, spec, cap=80):
-    """Keep (match, movie) items whose runtime fits the time limit; the models' order is unchanged."""
+    """Keep (match, movie) items whose runtime fits the time limit, minus anything you asked to avoid;
+    the models' order is unchanged."""
     from src.ui.mood_time import fits
+    items = _avoid_filter(items, spec)
     if not (spec.get("max") or spec.get("min")) or not items:
         return items
     head = items[:cap]
@@ -2216,6 +2240,27 @@ def render_search_card():
                     st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
 
 
+def _similar_weights():
+    """(content weight, popularity discount) for "like X", from the held-out test
+    (training/confirm_similar.py). If that test kept fans-only ordering, so does the app."""
+    try:
+        d = json.loads((Path(__file__).resolve().parent / "data" / "similar_confirm.json").read_text())
+        if not d.get("ship"):
+            return 0.0, 0.0
+        c = d.get("chosen") or {}
+        return float(c.get("content_weight", 0.5)), float(c.get("popularity_discount", 0.15))
+    except Exception:
+        return 0.5, 0.15          # until the test is run
+
+
+def _like_rerank_ships():
+    """True unless the held-out test (training/confirm_like.py -> data/like_confirm.json) rejected the re-rank."""
+    try:
+        return bool(json.loads((Path(__file__).resolve().parent / "data" / "like_confirm.json").read_text()).get("ship", True))
+    except Exception:
+        return True
+
+
 def _like_sims(source):
     """How close every known movie is to `source`, once per search: {catalog index: 0-1}.
     Known movies use the fans-like-you neighbors; a new release fans haven't rated yet uses the
@@ -2237,15 +2282,18 @@ def _like_sims(source):
         near = _nb(source, 100)
         fan_rank = 1 - _np.arange(len(near)) / max(len(near), 1)
         vecs, pop = _cm._load(), _cfl().fan_pct
+        if not _like_rerank_ships():
+            vecs = None          # the held-out test said fans alone rank better, so use fan order
         if vecs is not None and len(near):
             E, has = vecs
             v = E[i]
             if has[i] and float(_np.linalg.norm(v)) > 0:
                 cos = (E[near] @ v) / _np.maximum(_np.linalg.norm(E[near], axis=1) * _np.linalg.norm(v), 1e-9)
                 tag_rank = 1 - _np.argsort(_np.argsort(-cos)) / len(near)
-                score = 0.5 * fan_rank + 0.5 * tag_rank - 0.15 * pop[near]
+                w, pdisc = _similar_weights()
+                score = (1 - w) * fan_rank + w * tag_rank - pdisc * pop[near]
             else:
-                score = fan_rank - 0.15 * pop[near]
+                score = fan_rank - _similar_weights()[1] * pop[near]
         else:
             score = fan_rank
         order = _np.argsort(-score)

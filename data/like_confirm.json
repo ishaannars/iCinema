@@ -1,0 +1,22 @@
+{
+ "method": "    python training/confirm_like.py --data-dir ml-32m Same 1-in-5 MovieLens 32M sample, time split, and 3,000 validation / 3,000 test viewers as training/evaluate_blends.py. Source movie = each viewer's most recent liked movie (\"I just watched X\"). Target = the movies they went on to love (held-out ratings of 4+). Rules written before running:",
+ "test_viewers": 3000,
+ "ndcg@10": {
+  "fans_only": 0.0992,
+  "rerank": 0.0852,
+  "rerank_no_discount": 0.0868,
+  "content_only": 0.0307
+ },
+ "hit@1": {
+  "fans_only": 0.121,
+  "rerank": 0.093
+ },
+ "rerank_vs_fans_only": {
+  "diff": -0.014,
+  "ci95": [
+   -0.0174,
+   -0.0106
+  ]
+ },
+ "ship": false
+}

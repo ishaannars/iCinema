@@ -123,9 +123,6 @@ Offline wins don't always hold up with real people, so routing is also being tes
 The rule was written before launch, in `src/interleave.py`: the first 200 decided visits, a two-sided binomial test at 0.05, skips and "Not for me" as guardrails, and no peeking. The report shows progress only until all 200 are in.
 
 <!-- LIVE_TEST:START -->
-**Running: 0 of 200 decided visits. No result is read before then.**
-
-0 visits have had interleaving on so far. Only visits where one ranker earned more saves count.
 <!-- LIVE_TEST:END -->
 
 ## Beyond accuracy
@@ -153,13 +150,8 @@ Checked October 2026. iCinema doesn't claim to be the only option.
 | Reelgood | Browsing across 150+ services, with recommendations after you create an account and add your services | The same personal picks with no account |
 | Your streaming app's home screen | Picks from that one service's catalog | Picks across every service you pay for, with a reason for each one |
 
-## Decision time
-
 <!-- DECISION_TIME:START -->
-_Not measured yet. Run `python timing_test.py` with at least one person (protocol in `TIMING_TEST.md`)._
 <!-- DECISION_TIME:END -->
-
-The test compares iCinema with browsing a streaming app, timed until a person would press play. Protocol in [TIMING_TEST.md](TIMING_TEST.md).
 
 ## Results detail
 

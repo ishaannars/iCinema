@@ -273,6 +273,8 @@ def live_result_text(il):
 
 def live_test_block():
     il = json.loads((ROOT / "data" / "interleave_results.json").read_text())
+    if il.get("status") != "finished" and not int(il.get("decided_visits") or 0):
+        return ""          # nothing to report yet: the README shows the method, not a zero
     lines = [f"**{live_result_text(il)}.**", ""]
     if il["status"] == "finished":
         g = il.get("guardrails") or {}
