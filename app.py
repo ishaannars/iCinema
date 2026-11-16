@@ -1288,8 +1288,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                   for i, (k, t, c, d) in enumerate(steps, 1))
         + '</div>'
         + f'{proof_html}{live_html}'
-        + '<div class="pf-foot">IMDb and Rotten Tomatoes scores come from OMDb. Movies you pass over step back each visit, '
-        'so new picks keep surfacing.</div></div>'
+        + '</div>'
     )
 
     insights_section = (
@@ -1383,9 +1382,11 @@ def render_shelf_fragment():
         (m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in shelf_movies
     ))
     shelf_box = st.container(key="step1_shelf")
-    cols=shelf_box.columns(5, gap="small")
+    cols=None
     for i,movie in enumerate(shelf_movies):
         title=movie["title"]
+        if i%5==0:
+            cols=shelf_box.columns(5, gap="small")   # one row at a time: phones wrap it two across, in order
         with cols[i%5]:
             with st.container(key=f"shelf_card_{i}"):
                 # Skip is a small × on the artwork, so each card has just two actions underneath.
@@ -2559,7 +2560,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         _lv = love_line(payload.get("fit_top_pct"))
         _lvm = re.search(r"(\d+)%", _lv or "")
         if _lvm:
-            pill_text = f"{_lvm.group(1)}% chance"   # calibrated: the share of similar picks viewers loved
+            pill_text = f"{_lvm.group(1)}% match"    # the calibrated chance you'll love it; the popup says so in full
         pill_labels[slot_key] = pill_label
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
@@ -3912,9 +3913,8 @@ try:
     if screen=="welcome":
         logo()
         st.markdown('<div class="hero-title">Your next great watch, across every service.</div>',unsafe_allow_html=True)
-        st.markdown('<div class="hero-subtitle">Tell iCinema a few movies you love and what matters to you in three quick steps. Then search by mood, time, or a movie you just finished. Every pick is ranked for you across your services, with the odds you’ll love it, and Tonight’s Show gives you one best pick on the services you pay for.</div>',unsafe_allow_html=True)
+        st.markdown('<div class="hero-subtitle">Three quick steps, then one best pick tonight on the services you pay for, with the odds you’ll love it. Search by mood or a movie you just finished.</div>',unsafe_allow_html=True)
         st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
-        st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
 
         # Show the product: what's big right now, the kind of movie iCinema finds for you.
         _hits = _current_hits(6, set())
@@ -3932,9 +3932,9 @@ try:
         if isinstance(_lift, (int, float)):
             st.markdown(
                 '<div class="home-proof">'
-                f'<div class="home-proof-num">+{int(_lift)}%</div>'
-                f'<div class="home-proof-text"><strong>More first picks you’ll love than going with the most popular movie.</strong>'
-                + (f'<span>Checked on {_tested:,} real movie fans: iCinema saw just 3 of their likes and guessed what they loved next.</span>' if isinstance(_tested, int) else '')
+                f'<div class="home-proof-num">{1 + _lift / 100:.1f}×</div>'
+                f'<div class="home-proof-text"><strong>as likely to pick a movie you’ll love as the most popular choice.</strong>'
+                + (f'<span>Tested on {_tested:,} movie fans the models never saw, from just 3 likes each · statistically significant</span>' if isinstance(_tested, int) else '')
                 + '</div></div>', unsafe_allow_html=True)
 
     elif screen=="shelf":

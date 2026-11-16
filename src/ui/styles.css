@@ -4529,3 +4529,38 @@ div[class*="st-key-priority_card_"]{margin-bottom:.5rem !important;}
 /* Selected starting points: filled, so it's clear what's on; tap again to turn off. */
 [class*="st-key-mood_suggest_on_"] button{background:var(--kinari) !important;border-color:var(--kinari) !important;}
 [class*="st-key-mood_suggest_on_"] button p{color:#111315 !important;}
+
+/* ---- Final polish ---- */
+/* No dark bar over the page when scrolling: Streamlit's header stays invisible. */
+header[data-testid="stHeader"]{background:transparent !important;height:0 !important;min-height:0 !important;box-shadow:none !important;}
+[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none !important;}
+/* Match pill: the same type as the year · genre line (small caps, spaced), never clipped. */
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button p{
+    font-family:var(--ui-font) !important;font-size:.72rem !important;font-weight:700 !important;
+    letter-spacing:.06em !important;text-transform:uppercase !important;color:var(--muted) !important;}
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button{padding:0 .4rem !important;}
+/* Home proof: one big number, then the sentence. */
+.home-proof-num{font-size:2.6rem !important;letter-spacing:-.03em !important;}
+/* Step 3: an even grid of equal cards, title on top, description under it, check in the corner. */
+[class*="st-key-priority_card_"] div.stButton>button,[class*="st-key-priority_card_"] button{
+    height:6.2rem !important;min-height:6.2rem !important;align-items:flex-start !important;padding:.85rem 2.4rem .85rem 1rem !important;
+    border-radius:16px !important;}
+[class*="st-key-priority_card_"] button p{color:var(--muted) !important;font-weight:500 !important;}
+[class*="st-key-priority_card_"] button p strong{color:var(--kinari) !important;font-weight:700 !important;}
+[class*="st-key-priority_card_active_"] button{border-color:var(--koke) !important;background:rgba(139,125,58,.10) !important;}
+@media (max-width: 640px){
+    [class*="st-key-priority_card_"] div.stButton>button,[class*="st-key-priority_card_"] button{height:6.6rem !important;min-height:6.6rem !important;padding:.7rem 2rem .7rem .8rem !important;}
+    /* Tonight's Show: poster on top, text full width below, so nothing runs past the card. */
+    [class*="st-key-tonight_hero_"] [data-testid="stHorizontalBlock"]{flex-direction:column !important;flex-wrap:nowrap !important;gap:.6rem !important;}
+    [class*="st-key-tonight_hero_"] [data-testid="stHorizontalBlock"] > div{width:100% !important;min-width:0 !important;flex:1 1 auto !important;}
+    [class*="st-key-tonight_hero_"] img{max-height:9rem !important;}
+    [class*="st-key-tonight_hero_"] *{overflow-wrap:anywhere;}
+    [class*="st-key-tonight_hero_"] [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:wrap !important;}
+    [class*="st-key-tonight_hero_"] [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] > div{flex:1 1 calc(50% - .4rem) !important;width:auto !important;}
+    /* Top Picks: the match pill takes the room it needs; Skip stays compact. */
+    [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button p{font-size:.68rem !important;letter-spacing:.04em !important;}
+    /* Step 1: two posters across, each filling its half. */
+    [class*="st-key-step1_shelf"] [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:wrap !important;gap:.6rem !important;}
+    [class*="st-key-step1_shelf"] [data-testid="stHorizontalBlock"] > div{flex:0 0 calc(50% - .3rem) !important;min-width:0 !important;width:auto !important;}
+    [class*="st-key-step1_shelf"] img{width:100% !important;}
+}
