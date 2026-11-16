@@ -87,7 +87,13 @@ def fit_head(payload, match):
     even when the raw scores of top picks sit close together.
     """
     top = (payload or {}).get("fit_top_pct")
-    return f"Top {max(1, int(top))}% for you" if isinstance(top, (int, float)) else f"{int(match or 0)}% match"
+    if isinstance(top, (int, float)):
+        from src.love import love_chance
+        c = love_chance(top)
+        if c is not None:
+            return f"{c}% love chance"     # calibrated on held-out viewers; the rank is in the popup
+        return f"Top {max(1, int(top))}% for you"
+    return f"{int(match or 0)}% match"
 
 
 def fit_label(payload, match):

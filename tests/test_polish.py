@@ -36,7 +36,9 @@ def test_runtimes_read_in_minutes():
 
 def test_fit_pill_says_what_the_rank_means():
     from src.ui.cards import fit_head, match_pill
-    assert fit_head({"fit_top_pct": 4}, 80) == "Top 4% for you"
+    from src.love import love_chance
+    c = love_chance(4)
+    assert fit_head({"fit_top_pct": 4}, 80) == (f"{c}% love chance" if c is not None else "Top 4% for you")
     assert "for you for you" not in match_pill(80, [], head=fit_head({"fit_top_pct": 4}, 80))[0]
 
 

@@ -4450,3 +4450,82 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
 /* Saved: both actions keep their full label on narrow cards. */
 [class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button{padding:0 .4rem !important;}
 [class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.84rem !important;letter-spacing:-.005em !important;}
+
+/* ---- Compact layout pass ---- */
+/* Tonight's Show: one compact card, not a tall panel. */
+[class*="st-key-tonight_hero_"] img{max-width:7.5rem !important;height:auto !important;}
+[class*="st-key-tonight_hero_"]{padding-top:.7rem !important;padding-bottom:.7rem !important;}
+.tonight-hook{display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;margin:.2rem 0 .3rem !important;}
+.tonight-why{margin:0 0 .35rem !important;}
+.tonight-stack{gap:.25rem !important;}
+/* Cards: where to stream stays on one line (first service + "more"); the full list is one tap away. */
+[class*="st-key-showroom_swipe_"] .watch-availability{display:-webkit-box !important;-webkit-line-clamp:1 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;}
+/* Fit pill: the app font, centered, never clipped. */
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button p{font-family:var(--ui-font) !important;font-weight:650 !important;
+    font-size:.84rem !important;letter-spacing:-.005em !important;white-space:nowrap !important;overflow:visible !important;}
+/* Profile before the Showroom: the model list opens on tap. */
+.pf-collapse{margin:1rem 0 0;}
+.pf-collapse > summary{cursor:pointer;list-style:none;font-family:var(--ui-font);font-size:.92rem;font-weight:650;color:var(--kinari);
+    padding:.7rem 1rem;border:1px solid rgba(169,173,183,.28);border-radius:999px;display:inline-block;}
+.pf-collapse > summary::-webkit-details-marker{display:none;}
+.pf-collapse[open] > summary{margin-bottom:.8rem;}
+/* Step 3: each card is a normal, self-sizing button with its text inside. */
+div[class*="st-key-priority_card_"] div.stButton > button,div[class*="st-key-priority_card_"] button{
+    height:auto !important;min-height:3.6rem !important;max-height:none !important;display:block !important;
+    padding:.75rem 2.6rem .75rem 1rem !important;line-height:1.3 !important;overflow:visible !important;}
+div[class*="st-key-priority_card_"] button p,div[class*="st-key-priority_card_"] button div{position:static !important;transform:none !important;
+    white-space:normal !important;text-align:left !important;margin:0 !important;height:auto !important;}
+div[class*="st-key-priority_card_"]{margin-bottom:.5rem !important;}
+@media (max-width: 640px){
+    /* Step 1 shelf: two cards per row instead of one tall card. */
+    .st-key-step1_shelf [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:wrap !important;gap:.6rem !important;}
+    .st-key-step1_shelf [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    .st-key-step1_shelf [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{flex:0 0 calc(50% - .3rem) !important;min-width:0 !important;width:auto !important;}
+    [class*="st-key-shelf_card_"] [data-testid="stHorizontalBlock"]{flex-wrap:nowrap !important;gap:.35rem !important;}
+    [class*="st-key-shelf_card_"] [data-testid="stHorizontalBlock"] > div{flex:1 1 0 !important;min-width:0 !important;}
+    [class*="st-key-like_"] button p,[class*="st-key-fav_"] button p{font-size:.78rem !important;}
+    /* Fit pill on phones: same label as desktop, sized to fit. */
+    [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button p{font-size:.74rem !important;}
+    [class*="st-key-tonight_hero_"] img{max-width:5.5rem !important;}
+    [class*="st-key-tonight_hero_"] [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:nowrap !important;gap:.8rem !important;}
+    [class*="st-key-tonight_hero_"] [data-testid="stHorizontalBlock"] > div:first-child{flex:0 0 5.5rem !important;min-width:5.5rem !important;}
+}
+
+/* ---- Compact layout pass ---- */
+/* Fit pill: the app's UI font, one weight, never clipped. */
+[class*="st-key-showroom_controls_"] [data-testid="stPopover"] button p,[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{
+    font-family:var(--ui-font) !important;font-weight:650 !important;letter-spacing:-.005em !important;font-size:.84rem !important;
+    white-space:nowrap !important;overflow:visible !important;text-overflow:clip !important;}
+/* Cards: streaming stays on one line ("On your services: Netflix + 3 more"); the full list is one tap away. */
+[class*="st-key-showroom_swipe_"] .watch-availability,[class*="st-key-showroom_body_"] .watch-availability{
+    display:-webkit-box !important;-webkit-line-clamp:1 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;}
+/* Tonight's Show: one compact card, the same height as the art. */
+.tonight-hook{display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;}
+.tonight-whys .tonight-why:nth-child(n+2){display:none !important;}
+[class*="st-key-tonight_hero_"] img{max-height:12rem !important;width:auto !important;max-width:100% !important;}
+/* Step 3: each choice is one readable card; the text always sits inside it. */
+[class*="st-key-priority_card_"] div.stButton>button,[class*="st-key-priority_card_"] button{
+    height:auto !important;min-height:3.6rem !important;max-height:none !important;padding:.7rem 2.4rem .7rem 1rem !important;
+    line-height:1.3 !important;display:flex !important;align-items:center !important;justify-content:flex-start !important;}
+[class*="st-key-priority_card_"] button [data-testid="stMarkdownContainer"]{justify-content:flex-start !important;width:100% !important;}
+[class*="st-key-priority_card_"] button p{line-height:1.3 !important;text-align:left !important;white-space:normal !important;margin:0 !important;font-size:.86rem !important;}
+[class*="st-key-priority_card_"] button p strong{display:block !important;font-size:.98rem !important;margin:0 0 .15rem !important;}
+[class*="st-key-priority_card_"]{margin-bottom:.45rem !important;}
+@media (max-width: 640px){
+    /* Step 1: two posters per row instead of one, so the shelf is half as long. */
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-like_"]){flex-direction:row !important;flex-wrap:wrap !important;gap:.6rem !important;}
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-like_"]) > div{flex:0 0 calc(50% - .3rem) !important;min-width:0 !important;width:auto !important;}
+    [class*="st-key-like_"] button,[class*="st-key-fav_"] button{height:2.4rem !important;min-height:2.4rem !important;}
+    [class*="st-key-like_"] button p,[class*="st-key-fav_"] button p{font-size:.8rem !important;}
+    /* Step 3: two choices per row. */
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-priority_card_"]){flex-direction:row !important;flex-wrap:wrap !important;gap:.5rem !important;}
+    [data-testid="stHorizontalBlock"]:has([class*="st-key-priority_card_"]) > div{flex:0 0 calc(50% - .25rem) !important;min-width:0 !important;width:auto !important;}
+    [class*="st-key-priority_card_"] button{padding:.6rem 1.6rem .6rem .7rem !important;min-height:4.6rem !important;}
+    [class*="st-key-priority_card_"] button p{font-size:.76rem !important;}
+    [class*="st-key-priority_card_"] button p strong{font-size:.86rem !important;}
+    /* Tonight's Show: art beside the text, smaller. */
+    [class*="st-key-tonight_hero_"] img{max-height:8rem !important;}
+}
+/* Selected starting points: filled, so it's clear what's on; tap again to turn off. */
+[class*="st-key-mood_suggest_on_"] button{background:var(--kinari) !important;border-color:var(--kinari) !important;}
+[class*="st-key-mood_suggest_on_"] button p{color:#111315 !important;}

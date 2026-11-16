@@ -1145,6 +1145,10 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                   f'<div class="pf-model-note">{html.escape(note)}</div></div>' for on, name, tech, share, note in items)
         + f'</div><div class="pf-foot">{html.escape(_foot)}</div></div>'
     )
+    if not include_insights:
+        # Before the Showroom, keep this page short: the model list opens on tap (it's always on the Profile tab).
+        models_html = ('<details class="pf-collapse"><summary>See the models choosing your picks</summary>'
+                       + models_html + '</details>')
 
     def _stat(value, title, note):
         return (f'<div class="insight-card"><div class="insight-value">{html.escape(str(value))}</div>'
@@ -2159,7 +2163,13 @@ def render_mood_chips():
     _sp = _mood_spec()
     if _sp.get("lookup") and _sp.get("like"):
         parts = [(_sp["like"], "")]
-    if not parts:
+    # Parts already shown as a selected starting point aren't repeated as chips.
+    preset_words = {w for _, t in _MOOD_PRESETS if t and not t.startswith(("under", "like ")) for w in t.split()}
+    mood_now = (_sp.get("mood") or "").split()
+    parts = [(lab, rest) for lab, rest in parts
+             if not (mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words)
+             and not (lab.startswith("Under ") and _sp.get("max") == 120)]
+    if not parts and not _mood_text():
         return
     try:
         row = st.container(key="mood_chip_row", horizontal=True, gap="small")
@@ -2184,10 +2194,42 @@ _MOOD_PRESETS = [("Feel-good", "feel-good"), ("Mind-bending", "mind-bending"), (
                  ("Under 2 hours", "under 2 hours"), ("Like your last save", None)]
 
 
+def _preset_active(text, spec):
+    """Is this starting point already part of the search?"""
+    if text.startswith("under"):
+        return spec.get("max") == 120
+    if text.startswith("like "):
+        return (spec.get("like") or "").casefold() == text[5:].casefold()
+    words = set((spec.get("mood") or "").split())
+    return bool(words) and set(text.split()) <= words
+
+
+def _toggle_preset(text):
+    """Tap a starting point to add it to the search; tap it again to take it out. Other parts stay."""
+    from src.ui.mood_time import parse, compose
+    spec = parse(_mood_text())
+    mood, mx, mn, ep, lk = spec["mood"], spec["max"], spec["min"], spec["episodes"], spec.get("like")
+    on = _preset_active(text, spec)
+    if text.startswith("under"):
+        mx = None if on else 120
+    elif text.startswith("like "):
+        lk = None if on else text[5:]
+    else:
+        words = mood.split()
+        if on:
+            words = [w for w in words if w not in set(text.split())]
+        else:
+            words += [w for w in text.split() if w not in words]
+        mood = " ".join(words)
+    _set_mood_live(compose(mood, mx, mn, ep, lk))
+
+
 def render_mood_suggestions():
-    """One-tap starting points under the empty search field. A mood preset shows only if fans actually
-    use those words, so every chip changes the picks; "Like your last save" follows the movie you saved last."""
+    """Starting points under the search field, always visible as toggles: tap to add, tap again to remove.
+    A mood shows only if fans actually use those words; "Like ..." follows the movie you saved last."""
     from src.mood import scores
+    from src.ui.mood_time import parse
+    spec = parse(_mood_text())
     opts = []
     for label, text in _MOOD_PRESETS:
         if text is None:
@@ -2205,7 +2247,9 @@ def render_mood_suggestions():
         row = st.container(key="mood_suggest_row")
     with row:
         for i, (label, text) in enumerate(opts):
-            st.button(label, key=f"mood_suggest_{i}", on_click=_set_mood_live, args=(text,))
+            on = _preset_active(text, spec)
+            st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}", type="primary" if on else "secondary",
+                      help=f"Remove {label}" if on else f"Add {label}", on_click=_toggle_preset, args=(text,))
 
 
 _BUILD_KEYS = ("showroom_slots", "showroom_payloads", "showroom_row_queues", "recommendation_context",
@@ -2248,20 +2292,20 @@ def render_search_box():
             from st_keyup import st_keyup
             live = st_keyup("Search by mood, time, or a movie", value=_mood_text(), debounce=300,
                             key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
-                            placeholder="A mood, a time, or a movie you loved", label_visibility="collapsed")
+                            placeholder="Try “funny, under 2 hours” or “like Inception”", label_visibility="collapsed")
         except Exception:
             if "mood_input" not in st.session_state:
                 st.session_state.mood_input = _mood_text()
             st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
-                          placeholder="A mood, a time, or a movie you loved", on_change=_apply_mood)
+                          placeholder="Try “funny, under 2 hours” or “like Inception”", on_change=_apply_mood)
         typed = " ".join(str(live or "").split())
         with st.container(key="mood_under"):
             if live is not None and typed and typed != _mood_text():
                 _render_live_suggestions(typed)
-            elif _mood_text():
-                render_mood_chips()
             else:
                 render_mood_suggestions()
+                if _mood_text():
+                    render_mood_chips()
 
 
 def _render_live_suggestions(typed):
@@ -2512,6 +2556,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         pill_text, pill_label = match_pill(match, reasons, taken=row_taken, head=fit_head(payload, match),
                                            limit=19 if undo_title else None)
         pill_text = fit_head(payload, match)     # the why is shown in words under the title
+        _lv = love_line(payload.get("fit_top_pct"))
+        _lvm = re.search(r"(\d+)%", _lv or "")
+        if _lvm:
+            pill_text = f"{_lvm.group(1)}% chance"   # calibrated: the share of similar picks viewers loved
         pill_labels[slot_key] = pill_label
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
@@ -2536,7 +2584,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                 if (_rr := ratings_reason(_rows.get("Ratings"), st.session_state.get("review_priority"))):
                     _mix_html += f'<div class="mix-detail mix-extra">Ratings: {html.escape(_rr)}</div>'
                 _rank, _pool = payload.get("fit_rank"), payload.get("fit_pool")
-                _head = fit_head(payload, match) + (f" · #{_rank} of {_pool:,}" if isinstance(_rank, int) and isinstance(_pool, int) else "")
+                _tp = (payload or {}).get("fit_top_pct")
+                # Plain words: where it ranked among the movies scored for you; the chance is the line below.
+                _head = (f"#{_rank} of {_pool:,} movies scored for you" if isinstance(_rank, int) and isinstance(_pool, int)
+                         else (f"Top {max(1, int(_tp))}% for you" if isinstance(_tp, (int, float)) else fit_head(payload, match)))
                 st.markdown(
                     '<div class="why-pop-kicker">Why it’s here</div>'
                     f'<div class="why-pop-head">{html.escape(_head)}</div>'
@@ -2830,7 +2881,7 @@ def render_tonight_pick_fragment():
             return " · similar tone too" if "similar tone" in t else ""
         return f" · {t}" if t else ""
     why_html = "".join(f'<div class="tonight-why"><strong>{html.escape(r["label"])}</strong>{html.escape(_why_text(r))}</div>'
-                       for r in reasons)
+                       for r in reasons[:1])        # one reason keeps the card compact; the rest live in the popups
 
     _love = love_line(payload.get("fit_top_pct"))
     _love_short = _love.replace("If you watch it: about ", "About ").replace(" chance you'll love it", " chance you’ll love it") if _love else ""
@@ -3861,7 +3912,7 @@ try:
     if screen=="welcome":
         logo()
         st.markdown('<div class="hero-title">Your next great watch, across every service.</div>',unsafe_allow_html=True)
-        st.markdown('<div class="hero-subtitle">Tell iCinema a few movies you love and what matters to you in three quick steps. Then search by mood, time, or a movie you just finished. Every pick is ranked for you across your services, with the odds you’ll love it.</div>',unsafe_allow_html=True)
+        st.markdown('<div class="hero-subtitle">Tell iCinema a few movies you love and what matters to you in three quick steps. Then search by mood, time, or a movie you just finished. Every pick is ranked for you across your services, with the odds you’ll love it, and Tonight’s Show gives you one best pick on the services you pay for.</div>',unsafe_allow_html=True)
         st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
         st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
 
@@ -3898,14 +3949,17 @@ try:
     elif screen=="profile":
         logo()
         p=current_profile()
-        render_cinema_profile(p)
-
+        st.markdown('<div class="page-top-heading">Your Showroom is ready</div>'
+                    '<div class="page-top-subtitle">Ten tested models will pick from what you told iCinema. '
+                    'Open the details below any time, or see them later in Profile.</div>', unsafe_allow_html=True)
         with st.container(key="nav_row_profile"):
             back, cont, _ = st.columns([1, 2, 4], gap="small")
             with back:
                 st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
             with cont:
                 st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
+        with st.expander("What iCinema learned, and which models will pick"):
+            render_cinema_profile(p)
 
     elif screen=="showroom":
         logo()
