@@ -1,0 +1,16 @@
+name: Model health
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+jobs:
+  canary:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python tools/canary.py

@@ -1,0 +1,272 @@
+{
+ "method": "Holm-Bonferroni across all held-out tests, family-wide 5%; p from bootstrap CI (normal approx.)",
+ "tests": 22,
+ "significant_alone": 21,
+ "significant_after_holm": 21,
+ "results": [
+  {
+   "test": "mood_confirm:result",
+   "diff": 0.632,
+   "ci95": [
+    0.6105,
+    0.654
+   ],
+   "p": 0.0,
+   "holm_threshold": 0.002272727272727273,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "history_routing_confirm:many_likes",
+   "diff": 0.017,
+   "ci95": [
+    0.0155,
+    0.0185
+   ],
+   "p": 2.5527870712647404e-109,
+   "holm_threshold": 0.002380952380952381,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "new_release_confirm:vs_popular",
+   "diff": 0.0868,
+   "ci95": [
+    0.0787,
+    0.0949
+   ],
+   "p": 6.098287766639283e-98,
+   "holm_threshold": 0.0025,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "history_routing_confirm:all",
+   "diff": 0.0159,
+   "ci95": [
+    0.0144,
+    0.0174
+   ],
+   "p": 7.136251467487992e-96,
+   "holm_threshold": 0.002631578947368421,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "new_release_confirm:vs_genres",
+   "diff": 0.0747,
+   "ci95": [
+    0.0673,
+    0.0821
+   ],
+   "p": 3.976870613445106e-87,
+   "holm_threshold": 0.002777777777777778,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:rows/Hidden Gems",
+   "diff": 0.1141,
+   "ci95": [
+    0.0998,
+    0.1284
+   ],
+   "p": 3.956182269978864e-55,
+   "holm_threshold": 0.0029411764705882353,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "blend_results:content_blend",
+   "diff": 0.014,
+   "ci95": [
+    0.0112,
+    0.0168
+   ],
+   "p": 1.1258564622752918e-22,
+   "holm_threshold": 0.003125,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "rows_results:rows/Hidden Gems",
+   "diff": 0.0691,
+   "ci95": [
+    0.0538,
+    0.085
+   ],
+   "p": 3.895715546800908e-18,
+   "holm_threshold": 0.0033333333333333335,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "love_chance:result",
+   "diff": -0.00708,
+   "ci95": [
+    -0.00873,
+    -0.00546
+   ],
+   "p": 2.1142153158860958e-17,
+   "holm_threshold": 0.0035714285714285718,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "like_confirm:rerank_vs_fans_only",
+   "diff": -0.014,
+   "ci95": [
+    -0.0174,
+    -0.0106
+   ],
+   "p": 6.996028369912715e-16,
+   "holm_threshold": 0.0038461538461538464,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "blend_results:whats_next",
+   "diff": 0.007,
+   "ci95": [
+    0.0051,
+    0.0091
+   ],
+   "p": 6.886054798474056e-12,
+   "holm_threshold": 0.004166666666666667,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "rows_results:rows/Critically Acclaimed",
+   "diff": 0.0824,
+   "ci95": [
+    0.058,
+    0.1057
+   ],
+   "p": 1.2731641474730834e-11,
+   "holm_threshold": 0.004545454545454546,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "rows_results:rows/Something Different",
+   "diff": 0.0605,
+   "ci95": [
+    0.042,
+    0.0783
+   ],
+   "p": 6.432176584137769e-11,
+   "holm_threshold": 0.005,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "tv_blend_confirm:result",
+   "diff": 0.0121,
+   "ci95": [
+    0.0084,
+    0.0159
+   ],
+   "p": 2.54438001565584e-10,
+   "holm_threshold": 0.005555555555555556,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:variety/curve/0.5",
+   "diff": -0.0407,
+   "ci95": [
+    -0.0603,
+    -0.0213
+   ],
+   "p": 4.297546635754534e-05,
+   "holm_threshold": 0.00625,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:variety/curve/0.6",
+   "diff": -0.04,
+   "ci95": [
+    -0.06,
+    -0.0207
+   ],
+   "p": 6.612293095194901e-05,
+   "holm_threshold": 0.0071428571428571435,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:variety/curve/0.74",
+   "diff": -0.036,
+   "ci95": [
+    -0.0547,
+    -0.016
+   ],
+   "p": 0.0002658244543866745,
+   "holm_threshold": 0.008333333333333333,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:variety/curve/0.8",
+   "diff": -0.0327,
+   "ci95": [
+    -0.0523,
+    -0.0127
+   ],
+   "p": 0.0012080623925267845,
+   "holm_threshold": 0.01,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:variety/curve/0.9",
+   "diff": -0.0263,
+   "ci95": [
+    -0.0453,
+    -0.008
+   ],
+   "p": 0.005710316910076778,
+   "holm_threshold": 0.0125,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "knobs_results:rows/Critically Acclaimed",
+   "diff": 0.0249,
+   "ci95": [
+    0.0066,
+    0.0432
+   ],
+   "p": 0.007655780735029215,
+   "holm_threshold": 0.016666666666666666,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "ltr_confirm:result",
+   "diff": 0.0041,
+   "ci95": [
+    0.0007,
+    0.0076
+   ],
+   "p": 0.01984448271986222,
+   "holm_threshold": 0.025,
+   "significant_after_holm": true,
+   "significant_alone": true
+  },
+  {
+   "test": "tv_confirm:result",
+   "diff": 0.001,
+   "ci95": [
+    -0.0032,
+    0.0053
+   ],
+   "p": 0.6446720014082168,
+   "holm_threshold": 0.05,
+   "significant_after_holm": false,
+   "significant_alone": false
+  }
+ ]
+}

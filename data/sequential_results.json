@@ -1,0 +1,23 @@
+{
+ "method": "    python training/benchmark_sequential.py --data-dir ml-32m Reviewers ask whether a sequential model was tried. This is the classic one that needs no GPU: a first-order Markov chain over each viewer's time-ordered likes (how often movie j is liked within the next 3 likes after movie i), blended with item-kNN so unseen transitions still score. Same 1-in-5 MovieLens 32M sample, time split, and 3,000 validation / 3,000 test viewers as benchmark_cf.py, scored from each viewer's 3 most recent likes. Rules written before running: the blend weight is picked on validation viewers, then compared once on test viewers with item-kNN alone (paired bootstrap). It is reported either way; it would only enter the app if it wins with a 95% interval above zero. Writes data/sequential_results.json. ",
+ "validation_ndcg@10": {
+  "0.0": 0.1146,
+  "0.2": 0.1238,
+  "0.4": 0.1279,
+  "0.6": 0.1302,
+  "0.8": 0.1314,
+  "1.0": 0.1249
+ },
+ "best_weight": 0.8,
+ "test_ndcg@10": {
+  "item_knn": 0.1134,
+  "best_blend": 0.1272,
+  "markov_chain_alone": 0.1205
+ },
+ "diff": 0.0138,
+ "ci95": [
+  0.0095,
+  0.0182
+ ],
+ "ship": true
+}

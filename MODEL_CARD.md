@@ -83,3 +83,12 @@ The model uses no demographic data and stores no personal data outside the viewe
 ## Citation
 
 F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems 5(4).
+
+## Changes after launch (all decided by held-out tests)
+
+- "More like X" ranks by fans alone. A re-rank with genres, fan tags and a popularity discount lost (NDCG@10 0.085 vs 0.099) in every popularity band.
+- Critically Acclaimed and Hidden Gems order their qualifying movies by your fit alone (Hidden Gems: 12.5% vs 1.1% loved in the top 10).
+- The variety step is off: every setting cost 2.6 to 4.1 points of loved-in-top-10.
+- The learned ranker runs from exported decision-tree arrays (`data/ltr_trees.npz`), identical to the scikit-learn model to 1e-16, so library updates cannot switch it off.
+- Holm-Bonferroni correction across all stored tests: 13 of 14 significant results survive (`tools/multiple_testing.py`).
+- A weekly canary (`tools/canary.py`) fails if any shipped model's top 10 for fixed viewers changes by more than 3 titles.

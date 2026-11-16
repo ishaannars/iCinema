@@ -116,6 +116,24 @@ First-pick hit rate for the shipped model from 3 random likes (7.7% overall).
 - New movies that aren't in MovieLens get no "viewers like you" score, so content alone ranks them.
 <!-- ERRORS:END -->
 
+## What I tried that lost
+
+Every idea had to beat what was already shipping, on viewers the models never saw, with the rule written before the test ran. These lost, and the app kept the simpler option.
+
+| Idea | Result on held-out viewers | Decision |
+|---|---|---|
+| "More like X": re-rank fans' picks with genres and fan tags, minus a popularity discount | NDCG@10 0.085 vs 0.099 for fans alone (95% CI −0.017 to −0.011); it lost in every popularity band, niche fans included | Kept fans alone |
+| Hidden Gems row: 28% weight on how little-known a movie is | 1.1% of the row's top 10 were loved, vs 12.5% when your fit decides the order | Fit decides the order |
+| Critically Acclaimed row: 30% weight on critics' score | 49.5% vs 52.0% loved in the top 10 with fit deciding the order | Fit decides the order |
+| Variety step that spreads out similar movies | Every setting cost 2.6 to 4.1 points of loved-in-top-10 (all significant) | Turned off; a live test can revisit it, since users often prefer variety |
+| Content model alone | NDCG@10 0.031, a third of fans alone | Used only inside the blend |
+
+**Testing many things at once.** With this many tests, one could pass by luck. `tools/multiple_testing.py` applies a Holm-Bonferroni correction across every stored result: 13 of the 14 wins that were significant on their own still are after the correction. The TV model alone (+0.001, p 0.64) was never significant, which is why shows use the tested fans-plus-popularity blend.
+
+## Monitoring and rollback
+
+A GitHub Action runs `tools/canary.py` every Monday. It scores eight fixed viewers and four moods with every shipped model and compares each top 10 with the saved set in `data/canary_expected.json`. If any check keeps fewer than 7 of its 10 titles, or a model fails to load, the job fails, and the last good commit is restored before anything else ships. This exists because a library update once switched the learned ranker off without an error; the canary would have flagged it the same week. After an intentional retrain, `python tools/canary.py --record` saves the new expected set.
+
 ## Live test
 
 Offline wins don't always hold up with real people, so routing is also being tested live. Routing only changes the ranking for viewers whose likes are less mainstream, so that's who the test covers. For them, Top Matches mixes picks from the routed ranking and from item-kNN alone (team-draft interleaving). Each card is credited to the ranker that picked it, and whichever earns more saves in a visit wins that visit. I chose interleaving over an A/B test because each viewer is their own control. Teams at Netflix and Microsoft report it needs far fewer users to detect the same difference. It measures engagement within a visit. Long-term retention needs an A/B test once there's enough traffic.
