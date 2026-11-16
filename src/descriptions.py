@@ -5,6 +5,15 @@ TMDB's tagline, or a plain description from the movie's own details.
 """
 import re
 
+_ABBREV = re.compile(r"\b(?:Lt|Dr|Mr|Mrs|Ms|St|Jr|Sr|Capt|Sgt|Gen|Col|Det|Prof|Rev|Gov|Sen|Mt|Ft|No|vs|Vol|Ave|Inc|Co|Corp|U\.S|U\.K|[A-Z])\.(?=\s)")
+
+
+def split_sentences(text):
+    """Sentences, without breaking at abbreviations ("Lt. Jim Gordon", "Dr. Strange", "J. Robert", "U.S. Army")."""
+    t = _ABBREV.sub(lambda m: m.group(0)[:-1] + "\u2024", str(text or ""))
+    parts = [x.strip() for x in re.split(r"(?<=[.!?])\s+", t) if x.strip()]
+    return [x.replace("\u2024", ".") for x in parts]
+
 
 def clean_movie_copy(text, ensure_terminal=True):
     """Normalize movie copy so UI summaries never end on awkward fragments."""
@@ -238,7 +247,7 @@ def quick_card_description(movie, limit=110):
     if why and len(why) <= limit + 30:
         return why
     full = clean_movie_copy(movie.get("overview") or movie.get("why"), ensure_terminal=False)
-    sentences = [s.strip().rstrip(".;:, ") for s in re.split(r"(?<=[.!?])\s+", full) if s.strip()] if full else []
+    sentences = [s.strip().rstrip(".;:, ") for s in split_sentences(full) if s.strip()] if full else []
 
     candidates = []
     for pos, sentence in enumerate(sentences[:4]):
@@ -278,7 +287,7 @@ def tonight_description(movie, limit=160):
     full = clean_movie_copy((movie or {}).get("overview"), ensure_terminal=False)
     if not full:
         return hook
-    sentences = [x.strip().rstrip(".;:, ") for x in re.split(r"(?<=[.!?])\s+", full) if x.strip()]
+    sentences = [x.strip().rstrip(".;:, ") for x in split_sentences(full) if x.strip()]
     if len(sentences) < 2:
         return hook
     first = clean_movie_copy(sentences[0], ensure_terminal=True)
@@ -310,7 +319,7 @@ def expanded_card_description(movie, max_chars=320):
         return "iCinema does not have a longer premise for this title yet."
     sentences = [
         clean_movie_copy(part, ensure_terminal=True)
-        for part in re.split(r"(?<=[.!?])\s+", full)
+        for part in split_sentences(full)
         if clean_movie_copy(part, ensure_terminal=False)
     ]
     chosen, total = [], 0
@@ -325,7 +334,8 @@ def expanded_card_description(movie, max_chars=320):
 
 _STORY_OF = re.compile(r"^(?:[\w'’:&\- ]{1,40}\s)?(?:tells|is|follows)?\s*(?:the\s)?(?:true\s)?(?:story|stories|adventures?|tale|journey|saga|chronicle)\s+of\s+", re.I)
 _OPENER = re.compile(r"^(?:set in|in|on|at|during|after|before|following|years after|decades after|when|while|as)\b[^,]{2,90},\s+", re.I)
-_TRAIL = re.compile(r",\s+(?:only (?:for|to)|but|while|until|which|where|forcing|leading|and)\b|\s+(?:as they|as he|as she|before|after|until)\s+")
+_TRAIL = re.compile(r",\s+(?:only (?:for|to)|but|while|until|which|where|forcing|leading|and)\b|\s+(?:as they|as he|as she|before|after|until)\s+"
+                    r"|\s+in (?:this|a|an)\s+(?:[a-z-]+\s+){0,3}(?:film|movie|tale|story|thriller|drama|comedy)\b")
 
 
 def _setup_line(sentence, limit):
@@ -337,19 +347,24 @@ def _setup_line(sentence, limit):
     if m and len(t[m.end():].split()) >= 6:
         t = t[m.end():]
     m = _STORY_OF.match(t)
-    if m and re.search(r"\s(?:who|as (?:he|she|they))\s", t[m.end():]):
+    stripped_story = False
+    if m and re.search(r"\s(?:who|as (?:he|she|they))\s", t[m.end():]) and "," not in t[m.end():].split(" who ")[0]:
         t = t[m.end():]
+        stripped_story = True
         t = re.sub(r"\s+(?:who|as (?:he|she|they))\s+", " ", t, count=1)
     # "Paddington, now settled with the Browns, picks up..." -> "Paddington picks up..."
     m = re.match(r"^([^,]{2,40}),\s+[^,]{3,110},\s+(.+)$", t)
-    if m and len(m.group(1).split()) <= 5 and not m.group(2)[:1].isupper():
+    if m and not stripped_story and len(m.group(1).split()) <= 5 and not m.group(2)[:1].isupper() \
+            and not re.match(r"^(?:a|an|the|his|her|their|my|your)\s", m.group(2), re.I):
         t = f"{m.group(1)} {m.group(2)}"
     if len(t) > limit - 1:
         cuts = [mm.start() for mm in _TRAIL.finditer(t) if mm.start() <= limit - 1]
         cuts = [c for c in cuts if len(t[:c].split()) >= 6]
         if not cuts:   # last resort: stop before a plain "and <verb>" joining two actions
             cuts = [mm.start() for mm in re.finditer(r"\s+and\s+(?=[a-z]+\s)", t)
-                    if mm.start() <= limit - 1 and len(t[:mm.start()].split()) >= 8]
+                    if mm.start() <= limit - 1 and len(t[:mm.start()].split()) >= 8
+                    # never strand an adjective: "in this dark and haunting film" must not end at "dark"
+                    and not re.search(r"\b(?:this|the|a|an|his|her|their|its|our|of|in|so|very)\s+\w+$", t[:mm.start()], re.I)]
         if not cuts:
             return ""
         t = t[:max(cuts)].rstrip(" ,;:")
@@ -368,20 +383,32 @@ def card_description(movie, limit=160):
     movie = movie or {}
     setup = quick_card_description(movie, limit=limit)
     full0 = clean_movie_copy(movie.get("overview"), ensure_terminal=False)
+    if full0:
+        # The first sentence introduces the characters; later ones assume you've read it ("Somerset
+        # researches each sin…"), so the description starts there whenever it can stand alone.
+        _first = split_sentences(full0)[0]
+        # A first sentence that already fits is used exactly as written: rewriting it (dropping an aside,
+        # trimming a clause) is only for sentences too long for the card, because rewrites can lose a
+        # list item ("a hit man, his partner, a boxer") or a name.
+        _whole = clean_movie_copy(_first, ensure_terminal=True)
+        _plain = 30 <= len(_whole) <= limit and not re.match(r"^(?:follow|witness|experience|join|discover|meet)\b", _whole, re.I)
+        _lead = _whole if _plain else (_setup_line(_first, limit) or (_whole if len(_whole) <= limit else ""))
+        if _lead and not re.match(r"^(?:he|she|they|his|her|their|it|its|this|these|but|and|so|then)\b", _lead, re.I):
+            setup = _lead
     tag0 = _tidy(movie.get("tagline"))
     if full0:
-        whole = clean_movie_copy(re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full0)[0], ensure_terminal=True)
+        whole = clean_movie_copy(split_sentences(full0)[0], ensure_terminal=True)
         core = setup.rstrip(".!?")
         if core and core in whole and not whole.startswith(core[:12]) and len(whole) <= limit:
             setup = whole          # the line began mid-sentence (e.g. after "J."); use the whole sentence
     imperative = re.match(r"^(?:follow|witness|experience|join|discover|meet)\b", setup, re.I)
     if full0 and (len(setup) < 60 or setup == _details_line(movie) or setup == tag0 or imperative):
-        first0 = re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full0)[0]
+        first0 = split_sentences(full0)[0]
         better = _setup_line(first0, limit)
         if better:
             setup = better
     if setup == _details_line(movie) and full0:
-        wider = _setup_line(re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full0)[0], 200) or quick_card_description(movie, limit=200)
+        wider = _setup_line(split_sentences(full0)[0], 200) or quick_card_description(movie, limit=200)
         if wider != _details_line(movie):
             return wider
     if len(setup) > limit + 10:
@@ -391,11 +418,13 @@ def card_description(movie, limit=160):
         return setup
     room = limit - len(setup) - 1
     tagline = _tidy(movie.get("tagline"))
-    if (tagline and 12 <= len(tagline) <= room and len(tagline.split()) >= 3
+    _tw = re.findall(r"[a-z']+", (tagline or "").casefold())
+    _repeats = any(" ".join(_tw[k:k + 3]) in setup.casefold() for k in range(max(0, len(_tw) - 2)))
+    if (tagline and not _repeats and 12 <= len(tagline) <= room and len(tagline.split()) >= 3
             and not _MARKETING.search(tagline) and tagline.casefold().rstrip(".!?") not in setup.casefold()):
         return f"{setup} {tagline}"
     full = clean_movie_copy(movie.get("overview"), ensure_terminal=False)
-    sentences = [x.strip() for x in re.split(r"(?<!\s[A-Z]\.)(?<=[.!?])\s+", full) if x.strip()] if full else []
+    sentences = [x.strip() for x in split_sentences(full) if x.strip()] if full else []
     first = clean_movie_copy(sentences[0], ensure_terminal=False).casefold() if sentences else ""
     if len(sentences) >= 2 and (setup.casefold().rstrip(".!?") in first or setup == _setup_line(sentences[0], limit)):
         nxt = sentences[1]

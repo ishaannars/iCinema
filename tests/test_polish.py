@@ -63,3 +63,61 @@ def test_ratings_reason_follows_the_step2_answer():
     assert "critics count more" in ratings_reason("RT 97%", 20)
     assert "audiences count more" in ratings_reason("RT 97%", 80)
     assert "equally" in ratings_reason("RT 97%", 50) and ratings_reason("", 50) == ""
+
+
+def test_no_stray_text_on_screen():
+    """Streamlit prints any bare string in app.py, so a docstring pushed below another line shows up as page text."""
+    import ast
+    tree = ast.parse((ROOT / "app.py").read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for k, st in enumerate(node.body):
+                assert not (k and isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant)
+                            and isinstance(st.value.value, str)), f"{node.name} line {st.lineno}"
+
+
+def test_module_level_code_only_uses_names_defined_above_it():
+    """app.py runs top to bottom: a helper used at module level must be imported or defined first."""
+    import ast
+    import builtins
+    tree = ast.parse((ROOT / "app.py").read_text())
+    known = set(dir(builtins)) | {"__file__", "__name__"}
+    funcs = {}
+    for f in tree.body:
+        if isinstance(f, ast.FunctionDef):
+            params = {a.arg for a in f.args.args + f.args.kwonlyargs}
+            stores = {n.id for n in ast.walk(f) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store)}
+            stores |= {n.name for n in ast.walk(f) if isinstance(n, (ast.FunctionDef, ast.ClassDef)) and n is not f}
+            stores |= {a.arg for n in ast.walk(f) if isinstance(n, (ast.FunctionDef, ast.Lambda)) and n is not f
+                       for a in n.args.args + n.args.kwonlyargs}
+            stores |= {n.name for n in ast.walk(f) if isinstance(n, ast.ExceptHandler) and n.name}
+            imported = {(a.asname or a.name).split(".")[0] for n in ast.walk(f) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
+            funcs[f.name] = {n.id for n in ast.walk(f) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)} \
+                - params - stores - imported - set(dir(builtins))
+    defined_funcs = set()
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)):
+            local = {n.id for n in ast.walk(node) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store)}
+            local |= {a.arg for n in ast.walk(node) if isinstance(n, (ast.Lambda, ast.FunctionDef)) for a in n.args.args}
+            for comp in ast.walk(node):
+                if isinstance(comp, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                    for g in comp.generators:
+                        local |= {x.id for x in ast.walk(g.target) if isinstance(x, ast.Name)}
+                if isinstance(comp, ast.ExceptHandler) and comp.name:
+                    local.add(comp.name)
+                if isinstance(comp, ast.NamedExpr):
+                    local.add(comp.target.id)
+            inner = {n for f in ast.walk(node) if isinstance(f, (ast.FunctionDef, ast.Lambda)) for n in ast.walk(f)}
+            for n in ast.walk(node):
+                if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load) and n not in inner:
+                    assert n.id in known or n.id in local, f"line {n.lineno}: {n.id} used before it is defined"
+                # A function called right here runs now, so the names it uses must already exist too.
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in funcs and n not in inner:
+                    for g in funcs[n.func.id]:
+                        assert g in known, f"line {n.lineno}: {n.func.id}() needs {g}, defined later"
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            known.add(node.name)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            known |= {(a.asname or a.name).split(".")[0] for a in node.names}
+        else:
+            known |= {n.id for n in ast.walk(node) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store)}

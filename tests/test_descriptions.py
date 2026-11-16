@@ -85,3 +85,25 @@ def test_card_description_keeps_initials_together():
     m = {"title": "Oppenheimer", "genre": "Drama", "year": 2023, "tagline": "The world forever changes.",
          "overview": "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II."}
     assert card_description(m).startswith("The story of J. Robert Oppenheimer")
+
+
+def test_card_descriptions_stay_whole_on_real_summaries():
+    from src.descriptions import card_description
+    cases = {
+        "Pulp Fiction": ("A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer "
+                         "converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that "
+                         "ingeniously trip back and forth in time.", "his philosophical partner"),
+        "Goodfellas": ("The true story of Henry Hill, a half-Irish, half-Sicilian Brooklyn kid who is adopted by neighbourhood "
+                       "gangsters at an early age and climbs the ranks of a Mafia family under the guidance of Jimmy Conway.",
+                       "Henry Hill, a half-Irish"),
+        "The Dark Knight": ("Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney "
+                            "Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets.",
+                            "Batman raises the stakes"),
+        "Se7en": ("Two homicide detectives are on a desperate hunt for a serial killer whose crimes are based on the seven "
+                  "deadly sins in this dark and haunting film. Somerset researches each sin in an effort to get inside the "
+                  "killer's mind.", "Two homicide detectives"),
+    }
+    for title, (overview, must) in cases.items():
+        out = card_description({"title": title, "genre": "Drama", "year": 2000, "overview": overview})
+        assert must in out, (title, out)
+        assert out[:1].isupper() and out.endswith((".", "!", "?")) and len(out) <= 170, (title, out)

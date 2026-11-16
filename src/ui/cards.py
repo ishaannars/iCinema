@@ -203,7 +203,8 @@ def concise_description(text, limit=138):
     if not text:
         return ""
 
-    sentences = re.split(r"(?<=[.!?])\s+", text)
+    from src.descriptions import split_sentences
+    sentences = split_sentences(text)
     first_sentence = sentences[0].strip() if sentences else text
     if len(first_sentence) <= limit:
         return first_sentence if first_sentence.endswith((".", "!", "?")) else first_sentence + "."
@@ -383,7 +384,8 @@ def plain_premise(movie):
     text = " ".join(str((movie or {}).get("overview") or "").split())
     if not text:
         return ""
-    first = re.split(r"(?<=[.!?])\s+", text)[0].strip()
+    from src.descriptions import split_sentences
+    first = (split_sentences(text) or [""])[0].strip()
     return first if 30 <= len(first) <= 220 else ""
 
 

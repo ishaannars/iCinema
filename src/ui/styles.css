@@ -30,59 +30,6 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
         line-height:1.58;
         letter-spacing:-.008em
     }
-.step-card{border:1px solid var(--border);background:var(--surface);border-radius:20px;padding:1.16rem 1.18rem;height:100%}
-.step-num,.section-kicker{
-        color:var(--muted2);
-        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.76rem;
-        text-transform:uppercase;
-        letter-spacing:.10em;
-        font-weight:760
-    }
-.step-card h3{font-size:1.08rem;margin:.35rem 0 .25rem}
-.step-card .muted{
-        color:var(--muted);
-        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.92rem;
-        font-weight:450;
-        line-height:1.5;
-        letter-spacing:-.005em
-    }
-.adapt-note{
-        border:1px solid var(--border);
-        border-radius:18px;
-        background:rgba(255,255,255,.018);
-        padding:1.28rem 1.3rem 1.24rem;
-        margin:2rem 0 1.7rem;
-        color:var(--muted);
-        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.92rem;
-        font-weight:450;
-        line-height:1.55;
-        letter-spacing:-.005em
-    }
-.adapt-note strong{
-        display:inline-block;
-        color:var(--ivory);
-        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:1.42rem;
-        line-height:1.2;
-        font-weight:760;
-        letter-spacing:-.018em;
-        text-transform:none;
-        margin-bottom:.55rem
-    }
-.adapt-note span{
-        display:block;
-        max-width:760px;
-        color:var(--muted);
-        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        font-size:.92rem;
-        font-weight:450;
-        line-height:1.5;
-        letter-spacing:-.005em
-    }
-.movie-card{margin-bottom:.55rem}
 .poster{
     width:100%;
     aspect-ratio:2 / 3;
@@ -131,14 +78,6 @@ h1,h2,h3,h4{letter-spacing:-.025em;color:var(--ivory);font-weight:760}
     margin-top:.08rem;
     margin-bottom:.32rem
 }
-.movie-description{
-    font-family:Georgia,"Times New Roman",serif;
-    color:var(--muted);
-    font-size:.88rem;
-    line-height:1.48;
-    font-weight:400;
-    margin-bottom:.45rem
-}
 .showroom-row{
     margin-top:1.65rem;
     margin-bottom:.45rem
@@ -183,14 +122,6 @@ div[data-testid="stMarkdownContainer"] p{
 .pref-scale-ends span:last-child{
     text-align:right;
 }
-.pref-scale-helper{
-    margin-top:.82rem;
-    color:var(--muted2);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:.86rem;
-    line-height:1.35;
-    font-weight:650;
-}
 .genre-helper{
     margin:.15rem 0 .72rem;
     color:var(--muted);
@@ -228,8 +159,6 @@ div[data-testid="stMarkdownContainer"] p{
     text-align:center !important;
     font-weight:700 !important;
 }
-
-.step3-grid-gap{height:.15rem}
 [class*="st-key-priority_card_"]{
     margin-bottom:1.15rem !important;
 }
@@ -272,7 +201,6 @@ div[data-testid="stMarkdownContainer"] p{
 }
 
 /* Step 1 — rating + search polish */
-.shelf-action-gap{height:.52rem}
 
 [class*="st-key-like_"] button,
 [class*="st-key-fav_"] button{
@@ -352,10 +280,6 @@ div[data-testid="stMarkdownContainer"] p{
     line-height:1.3;
     font-weight:800
 }
-.selection-area{
-    margin-top:1.1rem;
-    margin-bottom:1.25rem;
-}
 .selection-heading{
     color:var(--muted2);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -364,21 +288,6 @@ div[data-testid="stMarkdownContainer"] p{
     text-transform:uppercase;
     letter-spacing:.095em;
     margin-bottom:.5rem
-}
-.selection-grid{
-    display:flex;
-    flex-wrap:wrap;
-    gap:.5rem;
-}
-.selection-chip{
-    display:inline-flex;
-    flex-direction:column;
-    gap:.08rem;
-    padding:.52rem .7rem;
-    border:1px solid rgba(169,173,183,.22);
-    background:rgba(243,240,234,.04);
-    border-radius:13px;
-    min-width:130px;
 }
 .selection-title{
     color:var(--ivory);
@@ -428,7 +337,6 @@ div[data-testid="stTextInput"] input{
     font-weight:560 !important;
     letter-spacing:-.005em !important;
 }
-
 
 /* Front-page primary CTA refinement */
 .st-key-start_personalizing{
@@ -490,15 +398,6 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
 .showroom-tab-start{
     height:1.05rem;
 }
-.tab-section-heading{
-    color:var(--ivory);
-    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif);
-    font-size:1.65rem;
-    line-height:1.1;
-    font-weight:740;
-    letter-spacing:-.025em;
-    margin:0 0 .9rem;
-}
 .showroom-heading{
     color:var(--ivory);
     font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif);
@@ -545,10 +444,6 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     width:100% !important;
     text-align:center !important;
 }
-.showroom-skip-row{
-    height:.95rem;
-    margin-bottom:-.18rem;
-}
 [class*="st-key-skip_"]{
     margin-top:-.12rem !important;
     margin-bottom:-.38rem !important;
@@ -582,10 +477,6 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     min-width:max-content !important;
     text-align:center !important;
 }
-.movie-card-actions{
-    margin-top:.35rem;
-    margin-bottom:.22rem;
-}
 .profile-tab-reset{margin-top:1.2rem}
 .profile-wrap{
     width:100%;
@@ -596,10 +487,7 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     box-sizing:border-box;
     padding-bottom:.7rem;
 }
-.profile-heading,
-.profile-intro,
-.profile-grid,
-.profile-summary{
+.profile-heading{
     width:100%;
     max-width:760px;
     box-sizing:border-box;
@@ -612,19 +500,6 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-weight:760;
     letter-spacing:-.032em;
     margin:0 0 .58rem;
-}
-.profile-intro{
-    color:var(--muted);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    margin:0 0 1.55rem;
-    font-size:.94rem;
-    line-height:1.5;
-    font-weight:450;
-}
-.profile-grid{
-    display:grid;
-    grid-template-columns:1fr;
-    row-gap:0;
 }
 .profile-block{
     padding:0;
@@ -670,12 +545,6 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     font-weight:600;
     letter-spacing:-.008em;
 }
-.profile-analysis{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:.56rem;
-}
 .profile-analysis-row{
     display:inline-flex;
     align-items:center;
@@ -692,22 +561,6 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     line-height:1.28;
     font-weight:500;
     letter-spacing:-.006em;
-}
-.profile-summary{
-    margin-top:2rem;
-    margin-bottom:1.25rem;
-    border-top:1px solid var(--border);
-    padding-top:1.7rem;
-    color:var(--ivory);
-    font-family:Georgia,"Times New Roman",serif;
-    font-size:1.06rem;
-    line-height:1.6;
-    font-style:italic;
-    font-weight:400;
-}
-.profile-summary strong{
-    font-weight:400;
-    font-style:italic
 }
 .st-key-enter_showroom{
     margin-top:.55rem;
@@ -727,14 +580,13 @@ div[data-baseweb="slider"] [class*="thumbValue"]{
     margin:0 !important;
 }
 @media (max-width:800px){
-    .profile-grid{row-gap:0}
     .profile-block + .profile-block{margin-top:1.8rem}
     .profile-heading{font-size:1.8rem}
     .hero-title{font-size:2.8rem}
 }
 
 /* V5.27 unified iCinema typography */
-:root {
+:root{
     --ui-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 
@@ -743,7 +595,7 @@ h1, h2, h3, h4,
 [data-testid="stMarkdownContainer"] h1,
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3,
-[data-testid="stMarkdownContainer"] h4 {
+[data-testid="stMarkdownContainer"] h4{
     font-family:var(--ui-font) !important;
     letter-spacing:-.03em;
 }
@@ -753,7 +605,7 @@ div.stButton>button,
 div.stButton>button p,
 div[data-testid="stRadio"] label,
 div[data-testid="stCheckbox"] label,
-div[data-testid="stToggle"] label {
+div[data-testid="stToggle"] label{
     font-family:var(--ui-font) !important;
 }
 
@@ -761,33 +613,27 @@ div[data-testid="stToggle"] label {
 [data-testid="stCaptionContainer"],
 [data-testid="stCaptionContainer"] p,
 [data-testid="stMarkdownContainer"] p,
-div[data-testid="stTextInput"] input {
+div[data-testid="stTextInput"] input{
     font-family:var(--ui-font) !important;
 }
 
 /* Showroom section titles */
-.showroom-row h3 {
+.showroom-row h3{
     font-family:var(--ui-font) !important;
     font-weight:700 !important;
     letter-spacing:-.025em !important;
 }
 
 /* Movie descriptions now use the shared body font */
-.movie-description {
-    font-family:var(--ui-font) !important;
-    font-size:.88rem !important;
-    line-height:1.5 !important;
-    font-weight:400 !important;
-}
 
 /* Match + ratings stay within same UI system */
 .match,
-.ratings {
+.ratings{
     font-family:var(--ui-font) !important;
 }
 
 /* Profile value chips use the same UI font system as Steps 1 and 2 */
-.profile-chip {
+.profile-chip{
     font-family:var(--ui-font) !important;
     font-size:.9rem !important;
     font-weight:600 !important;
@@ -795,46 +641,26 @@ div[data-testid="stTextInput"] input {
 }
 
 /* Analytical profile text uses shared body font */
-.profile-analysis-row {
+.profile-analysis-row{
     font-family:var(--ui-font) !important;
 }
 
 /* Keep the final profile interpretation as the single editorial accent */
-.profile-summary {
-    font-family:Georgia,"Times New Roman",serif !important;
-    font-style:italic !important;
-    font-weight:400 !important;
-}
 
 /* Step 2 scale text follows the shared system */
-.pref-scale-ends,
-.pref-scale-helper {
+.pref-scale-ends{
     font-family:var(--ui-font) !important;
 }
 
 /* Step 3 rows */
-.step3-row-title,
-.step3-row-copy {
-    font-family:var(--ui-font) !important;
-}
 
 /* Front page: only this adaptive heading gets the emphasized special treatment */
-.adapt-note strong {
-    font-family:var(--ui-font) !important;
-    color:var(--ivory) !important;
-    font-size:.92rem !important;
-    font-weight:760 !important;
-    letter-spacing:-.018em !important;
-    text-transform:none !important;
-}
-
 
 /* V5.58 targeted typography polish — only user-requested elements */
 /* Showroom metadata/details use the same strong system-font treatment. */
 .match{font-weight:800 !important;letter-spacing:-.018em !important}
 .ratings{font-weight:700 !important;letter-spacing:-.006em !important}
 .watch-availability{font-family:var(--ui-font) !important;font-weight:700 !important;letter-spacing:-.006em !important}
-.movie-description{font-family:var(--ui-font) !important;font-weight:600 !important;letter-spacing:-.006em !important}
 
 /* Step 2 genre buttons only. */
 [class*="st-key-genre_"] button,
@@ -887,7 +713,6 @@ div[data-testid="stTextInput"] input {
     margin-top:.65rem;
     margin-bottom:.15rem;
 }
-
 
 /* V5.68 full polish: distinct Step 2 tiles, cleaner Step 3 selection, balanced rhythm */
 /* Step 2 genres are intentionally sharp mini-squares to distinguish this step. */
@@ -942,14 +767,12 @@ h1,h2,h3,h4{letter-spacing:-.025em}
 div[data-testid="stHeadingWithActionElements"]{margin-bottom:.12rem}
 div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 .pref-scale-wrap{margin:.42rem 0 .95rem !important}
-.pref-scale-helper{margin-top:1rem !important}
 .pref-scale-clicks{margin-top:.82rem !important;margin-bottom:1.7rem !important}
 .showroom-header{margin-bottom:1.1rem !important}
 .showroom-tab-start{height:.24rem !important}
 .showroom-row{margin-top:.82rem !important;margin-bottom:.06rem !important}
 .showroom-row h3{margin-bottom:.22rem !important}
 .poster-caption{margin-top:.46rem !important}
-.movie-card-actions{margin-top:.34rem !important}
 
 /* V5.73 Step 2 + analytical profile polish */
 .step2-header{margin:0 0 1.35rem}
@@ -982,14 +805,11 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 /* Keep the pre-Showroom analysis dense enough to fit comfortably on one screen. */
 .profile-wrap{max-width:760px !important;padding-bottom:.3rem !important}
 .profile-heading{font-size:1.88rem !important;margin-bottom:.34rem !important}
-.profile-intro{font-size:.86rem !important;line-height:1.4 !important;margin-bottom:.88rem !important}
 .profile-block + .profile-block{margin-top:1.22rem !important}
 .profile-label{font-size:.68rem !important;margin-bottom:.42rem !important}
 .profile-chip-wrap{column-gap:.5rem !important;row-gap:.44rem !important}
 .profile-chip{min-height:1.88rem !important;padding:.32rem .66rem !important;font-size:.83rem !important;border-radius:12px !important}
-.profile-analysis{gap:.4rem !important}
 .profile-analysis-row{min-height:1.88rem !important;padding:.32rem .66rem !important;font-size:.82rem !important;line-height:1.22 !important;border-radius:12px !important}
-.profile-summary{margin-top:1.2rem !important;margin-bottom:.72rem !important;padding-top:1.05rem !important;font-size:.96rem !important;line-height:1.48 !important}
 .st-key-enter_showroom{margin-top:.3rem !important}
 .st-key-enter_showroom button{min-height:3rem !important;padding:.68rem 1.35rem !important}
 @media (max-width:800px){
@@ -1003,8 +823,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 .match{margin-top:.28rem !important;margin-bottom:.04rem !important}
 .ratings{margin-top:.02rem !important;margin-bottom:.24rem !important}
 .watch-availability{margin:.24rem 0 .18rem !important;min-height:.96rem !important}
-.movie-description{margin-top:.12rem !important;margin-bottom:.34rem !important;line-height:1.45 !important}
-.movie-card-actions{margin-top:.28rem !important;margin-bottom:.18rem !important}
 .showroom-row{margin-top:.68rem !important;margin-bottom:.04rem !important}
 .showroom-row h3{margin-bottom:.14rem !important}
 
@@ -1015,19 +833,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     margin-bottom:.2rem !important;
 }
 /* Reserve a consistent description area so Save / Seen align across a row. */
-.movie-description{
-    min-height:3.95rem !important;
-    margin-top:.14rem !important;
-    margin-bottom:.38rem !important;
-    display:-webkit-box;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:3;
-    overflow:hidden;
-}
-.movie-card-actions{
-    margin-top:.3rem !important;
-    margin-bottom:.2rem !important;
-}
 /* V5.81 showroom card grid: normalize vertical content blocks across every movie card. */
 .poster-caption{
     min-height:4.45rem !important;
@@ -1067,21 +872,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     -webkit-line-clamp:2 !important;
     margin:.18rem 0 .18rem !important;
 }
-.movie-description{
-    min-height:4.5rem !important;
-    max-height:4.5rem !important;
-    line-height:1.45 !important;
-    margin-top:.08rem !important;
-    margin-bottom:.36rem !important;
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:3 !important;
-    overflow:hidden !important;
-}
-.movie-card-actions{
-    margin-top:.22rem !important;
-    margin-bottom:.2rem !important;
-}
 
 /* V5.83: tighter, more even Showroom metadata rhythm. */
 .poster-caption{
@@ -1117,16 +907,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     max-height:2.35rem !important;
     margin:.12rem 0 .14rem !important;
 }
-.movie-description{
-    min-height:4.35rem !important;
-    max-height:4.35rem !important;
-    margin-top:.04rem !important;
-    margin-bottom:.26rem !important;
-}
-.movie-card-actions{
-    margin-top:.12rem !important;
-    margin-bottom:.18rem !important;
-}
 
 /* Continue CTAs: larger physical target with restrained label size. */
 .st-key-continue_rate,
@@ -1153,16 +933,9 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 /* Keep the analysis compact enough for one view while using a more even rhythm. */
 .profile-wrap{padding-bottom:.18rem !important}
 .profile-heading{margin-bottom:.28rem !important}
-.profile-intro{margin-bottom:.7rem !important}
 .profile-block + .profile-block{margin-top:.92rem !important}
 .profile-label{margin-bottom:.34rem !important}
 .profile-chip-wrap{row-gap:.38rem !important}
-.profile-analysis{gap:.34rem !important}
-.profile-summary{
-    margin-top:.92rem !important;
-    margin-bottom:.58rem !important;
-    padding-top:.9rem !important;
-}
 /* Build Profile gets the same large-target / restrained-label treatment. */
 .st-key-build_profile{margin-top:.5rem !important}
 .st-key-build_profile button{
@@ -1179,24 +952,9 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 
 /* V5.77 Cinema Profile wording + balanced one-page rhythm */
 .profile-heading{margin-bottom:.32rem !important}
-.profile-intro{
-    margin-bottom:.72rem !important;
-    max-width:720px !important;
-    line-height:1.42 !important;
-}
-.profile-grid{padding-top:.82rem !important}
 .profile-block + .profile-block{margin-top:1.02rem !important}
 .profile-label{margin-bottom:.38rem !important}
 .profile-chip-wrap{row-gap:.4rem !important}
-.profile-analysis{gap:.36rem !important}
-.profile-summary{
-    margin-top:1.02rem !important;
-    margin-bottom:.66rem !important;
-    padding-top:.96rem !important;
-    max-width:760px !important;
-    font-size:.96rem !important;
-    line-height:1.5 !important;
-}
 
 /* V5.84 global spacing polish */
 /* One consistent logo-to-first-heading rhythm across every page. */
@@ -1259,17 +1017,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     margin:.3rem 0 .42rem !important;
     line-height:1.35 !important;
 }
-.movie-description{
-    min-height:4.85rem !important;
-    max-height:4.85rem !important;
-    line-height:1.48 !important;
-    margin-top:0 !important;
-    margin-bottom:.58rem !important;
-}
-.movie-card-actions{
-    margin-top:.42rem !important;
-    margin-bottom:.24rem !important;
-}
 
 /* V5.90 showroom text-fit polish: preserve alignment without clipping streaming or descriptions. */
 .watch-availability{
@@ -1280,19 +1027,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     display:-webkit-box !important;
     -webkit-box-orient:vertical !important;
     -webkit-line-clamp:2 !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-    overflow-wrap:anywhere !important;
-}
-.movie-description{
-    min-height:6.2rem !important;
-    max-height:6.2rem !important;
-    line-height:1.48 !important;
-    margin-top:0 !important;
-    margin-bottom:.58rem !important;
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:4 !important;
     overflow:hidden !important;
     text-overflow:ellipsis !important;
     overflow-wrap:anywhere !important;
@@ -1314,7 +1048,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
 }
 [class*="st-key-savedseen_"], [class*="st-key-unsave_"]{margin-top:.08rem !important}
 [class*="st-key-savedseen_"] button, [class*="st-key-unsave_"] button{min-height:2.6rem !important}
-.tab-section-heading{margin-bottom:1rem !important}
 
 /* V5.92 title/year rhythm: keep year directly under title without losing card alignment. */
 .poster-caption-title{
@@ -1376,18 +1109,6 @@ div[data-testid="stCaptionContainer"]{margin-top:.08rem;margin-bottom:.68rem}
     text-overflow:clip !important;
     overflow-wrap:anywhere !important;
 }
-.movie-description{
-    min-height:5.55rem !important;
-    max-height:none !important;
-    line-height:1.46 !important;
-    margin-top:0 !important;
-    margin-bottom:.52rem !important;
-    display:block !important;
-    overflow:visible !important;
-    text-overflow:clip !important;
-    overflow-wrap:anywhere !important;
-}
-
 
 /* V5.86 onboarding compactness + profile spacing + hidden persistence bridge */
 /* The localStorage component is functional-only; keep its iframe/container invisible so
@@ -1411,7 +1132,6 @@ div[data-testid="stCustomComponentV1"] iframe{
 }
 
 /* Step 1: slightly denser without changing the poster treatment. */
-.shelf-action-gap{height:.30rem !important}
 [class*="st-key-like_"] button,
 [class*="st-key-fav_"] button{
     min-height:1.92rem !important;
@@ -1422,7 +1142,6 @@ div[data-testid="stCustomComponentV1"] iframe{
     margin-bottom:.50rem !important;
     padding:1.05rem 1rem 1rem !important;
 }
-.selection-area{margin-top:.78rem !important;margin-bottom:.88rem !important}
 div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem !important}
 .st-key-continue_rate{margin-top:.32rem !important}
 
@@ -1432,7 +1151,6 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .step2-question{margin:.04rem 0 .48rem !important}
 .pref-scale-wrap{margin:.26rem 0 .54rem !important}
 .pref-scale-ends{margin-bottom:.34rem !important}
-.pref-scale-helper{margin-top:.52rem !important}
 .pref-scale-clicks{margin-top:.46rem !important;margin-bottom:1.02rem !important}
 .pref-scale-clicks div.stButton>button{
     min-height:3.35rem !important;
@@ -1445,34 +1163,20 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .st-key-continue_taste{margin-top:.26rem !important}
 
 /* Cinema Profile: slightly more breathing room than V5.77, while staying page-friendly. */
-.profile-intro{margin-bottom:.82rem !important}
-.profile-grid{padding-top:.96rem !important}
 .profile-block + .profile-block{margin-top:1.16rem !important}
 .profile-label{margin-bottom:.42rem !important}
-.profile-summary{
-    margin-top:1.12rem !important;
-    padding-top:1.02rem !important;
-    margin-bottom:.66rem !important;
-}
-
 
 /* V5.88 profile header alignment + durable Step 1 selections */
 .profile-wrap{
     margin-left:0 !important;
     padding-left:0 !important;
 }
-.profile-heading,
-.profile-intro,
-.profile-grid,
-.profile-summary{
+.profile-heading{
     margin-left:0 !important;
     padding-left:0 !important;
 }
 .profile-heading{
     margin-bottom:.72rem !important;
-}
-.profile-intro{
-    margin-top:0 !important;
 }
 
 /* V5.101 Cinema Profile spacing: shared by standalone profile and Showroom Profile tab. */
@@ -1481,13 +1185,6 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 }
 .profile-heading{
     margin-bottom:.78rem !important;
-}
-.profile-intro{
-    margin-bottom:1.18rem !important;
-    line-height:1.48 !important;
-}
-.profile-grid{
-    padding-top:.18rem !important;
 }
 .profile-block + .profile-block{
     margin-top:1.42rem !important;
@@ -1499,19 +1196,8 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     row-gap:.46rem !important;
     column-gap:.52rem !important;
 }
-.profile-analysis{
-    gap:.44rem !important;
-}
-.profile-summary{
-    margin-top:1.48rem !important;
-    padding-top:1.18rem !important;
-    margin-bottom:.88rem !important;
-    line-height:1.5 !important;
-}
 @media (max-width:800px){
-    .profile-intro{margin-bottom:1.02rem !important;}
     .profile-block + .profile-block{margin-top:1.22rem !important;}
-    .profile-summary{margin-top:1.28rem !important;padding-top:1.02rem !important;}
 }
 
 /* V5.94 Showroom vertical rhythm: balanced spacing without stretching cards */
@@ -1534,15 +1220,6 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     margin-top:.26rem !important;
     margin-bottom:.28rem !important;
     min-height:2.35rem !important;
-}
-.movie-description{
-    margin-top:.24rem !important;
-    margin-bottom:.36rem !important;
-    min-height:5.35rem !important;
-    line-height:1.42 !important;
-}
-.movie-card-actions{
-    margin-top:.28rem !important;
 }
 
 /* V5.96 Showroom action alignment: exact vertical slots keep every action row level. */
@@ -1573,17 +1250,6 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     box-sizing:border-box !important;
     overflow:hidden !important;
 }
-.movie-description{
-    height:5.05rem !important;
-    min-height:5.05rem !important;
-    max-height:5.05rem !important;
-    box-sizing:border-box !important;
-    overflow:hidden !important;
-}
-.movie-card-actions{
-    margin-top:.12rem !important;
-    margin-bottom:.08rem !important;
-}
 
 /* V5.97 tighter showroom vertical rhythm while preserving fixed alignment */
 .showroom-row{
@@ -1592,7 +1258,6 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 }
 .showroom-row.first{margin-top:.22rem !important}
 .showroom-row h3{margin-bottom:.34rem !important}
-
 
 /* V5.98 onboarding transition + spacing polish */
 /* Step 2: give the intro and first question a clearer visual break. */
@@ -1618,13 +1283,9 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 .showroom-row.first{
     margin-top:0 !important;
 }
-.tab-section-heading{
-    margin-top:0 !important;
-}
 
 /* V5.100 final onboarding + tab alignment polish */
 /* Step 1: pull Like/Favorite closer to the year without changing card sizing. */
-.shelf-action-gap{height:0 !important;}
 [class*="st-key-like_"],
 [class*="st-key-fav_"]{
     margin-top:-.24rem !important;
@@ -1641,29 +1302,7 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     margin-bottom:-1.2rem !important;
 }
 
-
 /* V5.102 compact showroom controls + tighter card rhythm */
-.showroom-top-controls{
-    margin-bottom:.12rem !important;
-}
-.match-pill{
-    width:100%;
-    min-height:1.5rem;
-    height:1.5rem;
-    border:1px solid #4A4F57;
-    border-radius:999px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-sizing:border-box;
-    padding:.14rem .34rem;
-    color:var(--ivory);
-    font-family:var(--ui-font);
-    font-size:.63rem;
-    font-weight:700;
-    line-height:1;
-    white-space:nowrap;
-}
 /* With match moved above the poster, keep title/year compact and pull ratings up. */
 .showroom-row ~ div .poster-caption,
 .poster-caption:not(.library-poster-caption){
@@ -1675,23 +1314,10 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     margin-bottom:.24rem !important;
 }
 /* Bring actions closer to the description while keeping exact alignment. */
-.movie-description{
-    height:4.55rem !important;
-    min-height:4.55rem !important;
-    max-height:4.55rem !important;
-}
-.movie-card-actions{
-    margin-top:.04rem !important;
-}
 [class*="st-key-skip_"]{
     margin-top:-.04rem !important;
     margin-bottom:-.16rem !important;
 }
-.showroom-skip-row{
-    height:1.52rem !important;
-    margin-bottom:0 !important;
-}
-
 
 /* V5.104 final control alignment + clean Showroom transition */
 /* Step 1: keep Like/Favorite close to the title/year block. */
@@ -1702,34 +1328,6 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
 
 /* iCinema Match and Skip share one clean horizontal control row.
    Match is intentionally more prominent, while Skip stays centered. */
-[data-testid="stMarkdownContainer"]:has(.match-pill){
-    margin:0 !important;
-    padding:0 !important;
-    min-height:1.95rem !important;
-    height:1.95rem !important;
-    display:flex !important;
-    align-items:center !important;
-}
-.match-pill{
-    width:100% !important;
-    min-height:1.95rem !important;
-    height:1.95rem !important;
-    padding:.22rem .58rem !important;
-    border-radius:999px !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    box-sizing:border-box !important;
-    font-family:var(--ui-font, -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif) !important;
-    color:var(--ivory) !important;
-    font-size:.72rem !important;
-    font-weight:700 !important;
-    letter-spacing:0 !important;
-    line-height:1 !important;
-    text-align:center !important;
-    margin:0 !important;
-    white-space:nowrap !important;
-}
 [class*="st-key-skip_"]{
     margin:0 !important;
     padding:0 !important;
@@ -1760,60 +1358,16 @@ div[data-testid="stTextInput"]{margin-top:.2rem !important;margin-bottom:.22rem 
     font-size:.72rem !important;
 }
 /* Keep the control row close to the poster. */
-.showroom-top-controls{
-    margin:0 0 .2rem !important;
-}
 
 /* V5.108 explainable ML + iCinema Insights */
-.model-status-line{
-    display:flex;
-    align-items:center;
-    gap:.42rem;
-    flex-wrap:wrap;
-    margin:.18rem 0 1.05rem;
-    font-family:var(--ui-font);
-    font-size:.72rem;
-    line-height:1.3;
-    letter-spacing:.004em;
-    color:var(--muted2);
-}
-.model-status-dot{
-    width:.38rem;
-    height:.38rem;
-    border-radius:999px;
-    background:var(--accent);
-    display:inline-block;
-    flex:0 0 auto;
-}
-.model-status-primary{
-    color:var(--ivory);
-    font-size:.74rem;
-    font-weight:680;
-    letter-spacing:-.006em;
-}
-.model-status-secondary{
-    color:var(--muted);
-    font-size:.72rem;
-    font-weight:500;
-}
-.model-status-separator{
-    color:rgba(169,173,183,.46);
-    padding:0 .04rem;
-}
-.profile-insights{width:100%;max-width:760px;margin-top:1.3rem;padding-top:1.18rem;border-top:1px solid var(--border)}
-.profile-insights-title{font-family:var(--ui-font);font-size:1rem;font-weight:760;color:var(--ivory);margin-bottom:.24rem;letter-spacing:-.015em}
-.profile-insights-copy{font-family:var(--ui-font);font-size:.78rem;line-height:1.4;color:var(--muted);margin-bottom:.82rem}
-.insight-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.62rem}
 .insight-card{border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.018);padding:.72rem .76rem;min-height:4.4rem}
 .insight-value{font-family:var(--ui-font);font-size:1.05rem;font-weight:780;color:var(--ivory);letter-spacing:-.02em}
 .insight-label{font-family:var(--ui-font);font-size:.66rem;line-height:1.28;color:var(--muted);margin-top:.25rem}
 .row-model-note{font-family:var(--ui-font);font-size:.72rem;line-height:1.3;color:var(--muted2);margin:-.04rem 0 .4rem}
 div[data-testid="stPopover"] button{min-height:1.7rem !important;padding:.18rem .58rem !important;font-size:.68rem !important;border-radius:999px !important;color:var(--muted) !important}
 div[data-testid="stPopover"] button p{font-size:.68rem !important;font-weight:650 !important;margin:0 !important}
-.why-reason{font-family:var(--ui-font);font-size:.77rem;line-height:1.42;color:var(--muted);margin:.22rem 0}
-@media(max-width:800px){.insight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* V5.111 — Match explanation, complete descriptions, and interaction stability */
+/* Match explanation, complete descriptions, and interaction stability */
 /* The iCinema Match pill is now the explanation control itself. */
 div[data-testid="stPopover"]{
     width:100% !important;
@@ -1857,26 +1411,8 @@ div[data-testid="stPopover"] button:hover{
     border-color:rgba(169,173,183,.58) !important;
     background:rgba(255,255,255,.028) !important;
 }
-.match-explain-title{
-    font-family:var(--ui-font);
-    color:var(--ivory);
-    font-size:.82rem;
-    font-weight:760;
-    letter-spacing:-.01em;
-    margin:0 0 .45rem;
-}
 /* Descriptions are generated as complete phrases and receive the same roomy slot
    on every card so no card looks clipped or shifts its action row. */
-.movie-description{
-    height:5.85rem !important;
-    min-height:5.85rem !important;
-    max-height:5.85rem !important;
-    line-height:1.42 !important;
-    margin-top:.18rem !important;
-    margin-bottom:.16rem !important;
-    overflow:hidden !important;
-    display:block !important;
-}
 /* The persistence bridge must never occupy a visible pixel during any rerun. */
 div[data-testid="stCustomComponentV1"],
 div[data-testid="stCustomComponentV1"] iframe,
@@ -1896,36 +1432,8 @@ iframe[src*="icinema_browser_storage"]{
     background:transparent !important;
 }
 
-
-/* V5.112 — cinematic running state + relaxed Match pill */
+/* cinematic running state + relaxed Match pill */
 /* Give the Match label enough room to breathe while preserving the compact card top row. */
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
-    align-items:center !important;
-    column-gap:.55rem !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    min-height:2.02rem !important;
-    height:2.02rem !important;
-    padding:.18rem .78rem !important;
-    border-radius:999px !important;
-    justify-content:center !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button span{
-    font-family:var(--ui-font) !important;
-    color:var(--ivory) !important;
-    font-size:.68rem !important;
-    font-weight:690 !important;
-    letter-spacing:-.006em !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-    text-align:center !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button{
-    min-height:2.02rem !important;
-    height:2.02rem !important;
-}
 
 /* Replace Streamlit's generic running indicator with a small iCinema screening cue.
    It appears only while Streamlit is actively executing a rerun. */
@@ -1992,67 +1500,13 @@ div[data-testid="stStatusWidget"]::after{
     div[data-testid="stStatusWidget"]::before{font-size:.64rem !important}
 }
 
-
-/* V5.114 — full Match label + complete aligned descriptions */
+/* full Match label + complete aligned descriptions */
 /* Give the Match popover enough room and disable Streamlit text ellipsis. */
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
-    align-items:center !important;
-    column-gap:.46rem !important;
-}
-.showroom-top-controls div[data-testid="stPopover"],
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    width:100% !important;
-    max-width:none !important;
-    min-width:0 !important;
-    overflow:visible !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    min-height:2.08rem !important;
-    height:2.08rem !important;
-    padding:.18rem .5rem !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button span{
-    display:block !important;
-    width:auto !important;
-    max-width:none !important;
-    min-width:max-content !important;
-    overflow:visible !important;
-    text-overflow:clip !important;
-    white-space:nowrap !important;
-    flex-shrink:0 !important;
-    font-size:.66rem !important;
-    font-weight:700 !important;
-    letter-spacing:-.008em !important;
-}
-.showroom-top-controls [class*="st-key-skip_"],
-.showroom-top-controls [class*="st-key-skip_"] button{
-    min-width:0 !important;
-    width:100% !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button{
-    min-height:2.08rem !important;
-    height:2.08rem !important;
-    padding:.16rem .34rem !important;
-}
 
 /* The concise description is capped in Python. Reserve enough room for that
    complete text at four-column card widths so no last line is hidden. */
-.movie-description{
-    height:7.65rem !important;
-    min-height:7.65rem !important;
-    max-height:7.65rem !important;
-    overflow:visible !important;
-    display:block !important;
-    line-height:1.42 !important;
-    margin-top:.18rem !important;
-    margin-bottom:.22rem !important;
-}
 
-
-/* V5.115 — final product spacing pass */
+/* final product spacing pass */
 /* All four Showroom tabs begin their first content heading at the same vertical position. */
 .showroom-tab-start{
     height:1.12rem !important;
@@ -2064,12 +1518,9 @@ div[data-testid="stStatusWidget"]::after{
     margin-top:0 !important;
     margin-bottom:.08rem !important;
 }
-.tab-section-heading,
+
 .profile-heading{
     margin-top:0 !important;
-}
-.tab-section-heading{
-    margin-bottom:.56rem !important;
 }
 /* Keep the Profile tab from inheriting any extra top offset compared with Showroom/Saved/Seen. */
 .profile-wrap{
@@ -2078,10 +1529,6 @@ div[data-testid="stStatusWidget"]::after{
 }
 .profile-heading{
     margin-bottom:.48rem !important;
-}
-.profile-intro{
-    margin-top:0 !important;
-    margin-bottom:.88rem !important;
 }
 
 /* Showroom section title + explanation read as one compact header block. */
@@ -2102,10 +1549,6 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 /* Keep controls close to the section explanation and poster. */
-.showroom-top-controls{
-    margin-top:0 !important;
-    margin-bottom:.18rem !important;
-}
 
 /* Refine card rhythm without changing the established alignment system. */
 .poster-caption{
@@ -2119,14 +1562,6 @@ div[data-testid="stStatusWidget"]::after{
 .watch-availability{
     margin-top:.16rem !important;
     margin-bottom:.16rem !important;
-}
-.movie-description{
-    margin-top:.12rem !important;
-    margin-bottom:.18rem !important;
-}
-.movie-card-actions{
-    margin-top:.1rem !important;
-    margin-bottom:.08rem !important;
 }
 
 /* Consistent top-page rhythm across onboarding and standalone profile screens. */
@@ -2147,8 +1582,7 @@ div[data-testid="stStatusWidget"]::after{
     margin-top:1.35rem !important;
 }
 
-
-/* V5.117 — final landing-page rhythm */
+/* final landing-page rhythm */
 body:has(.hero-title) .icinema-logo{
     margin-bottom:.62rem !important;
 }
@@ -2161,23 +1595,12 @@ body:has(.hero-title) .icinema-logo{
     margin-bottom:1.55rem !important;
     line-height:1.52 !important;
 }
-.step-card{
-    padding:1.1rem 1.16rem !important;
-}
-.adapt-note{
-    margin:1.35rem 0 .9rem !important;
-    padding:1.12rem 1.22rem 1.08rem !important;
-}
-.adapt-note strong{
-    margin-bottom:.38rem !important;
-}
 .st-key-start_personalizing{
     margin-top:.5rem !important;
     margin-bottom:0 !important;
 }
 
-
-/* V5.118 — exact tab-heading alignment + Match/Skip breathing room */
+/* exact tab-heading alignment + Match/Skip breathing room */
 /* Every tab now uses the same spacer + same heading class as its first content. */
 .showroom-tab-start{
     height:1.12rem !important;
@@ -2199,16 +1622,9 @@ body:has(.hero-title) .icinema-logo{
     margin-top:0 !important;
     padding-top:0 !important;
 }
-.profile-wrap .profile-intro{
-    margin-top:0 !important;
-}
 /* Add a little more breathing room between the Match control and Skip. */
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
-    column-gap:.72rem !important;
-}
 
-
-/* V5.119 — aligned Profile header, live learning signal, cinematic camera loader */
+/* aligned Profile header, live learning signal, cinematic camera loader */
 
 /* Profile title + subtitle are now in the same wrapper; lock them to one left edge. */
 .profile-wrap{
@@ -2217,8 +1633,7 @@ body:has(.hero-title) .icinema-logo{
     align-items:flex-start !important;
 }
 .profile-wrap .profile-heading,
-.profile-wrap .profile-heading-aligned,
-.profile-wrap .profile-intro{
+.profile-wrap .profile-heading-aligned{
     width:100% !important;
     max-width:760px !important;
     margin-left:0 !important;
@@ -2232,16 +1647,6 @@ body:has(.hero-title) .icinema-logo{
 }
 
 /* Keep the learning system visibly active with a calm, continuous lens-like glow. */
-.model-status-dot{
-    width:.42rem !important;
-    height:.42rem !important;
-    background:var(--accent) !important;
-    box-shadow:
-        0 0 0 2px rgba(243,240,234,.10),
-        0 0 7px rgba(243,240,234,.68),
-        0 0 14px rgba(243,240,234,.28) !important;
-    animation:icinema-learning-live 1.8s ease-in-out infinite !important;
-}
 @keyframes icinema-learning-live{
     0%,100%{
         opacity:.78;
@@ -2354,8 +1759,7 @@ div[data-testid="stStatusWidget"]{
     }
 }
 
-
-/* V5.120 — showroom header alignment, cleaner control row, logo-adjacent loader */
+/* showroom header alignment, cleaner control row, logo-adjacent loader */
 
 /* Use the exact same heading + note wrapper for all four showroom sections. */
 .showroom-row-header{
@@ -2375,62 +1779,8 @@ div[data-testid="stStatusWidget"]{
 }
 
 /* Keep Match and Skip distinct, aligned, and non-overlapping across card widths. */
-.showroom-top-controls{
-    margin-top:0 !important;
-    margin-bottom:.2rem !important;
-}
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
-    align-items:center !important;
-    column-gap:.42rem !important;
-}
-.showroom-top-controls [data-testid="column"]{
-    min-width:0 !important;
-}
-.showroom-top-controls div[data-testid="stPopover"],
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    width:100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
-    overflow:hidden !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    min-height:2rem !important;
-    height:2rem !important;
-    padding:.14rem .42rem !important;
-    justify-content:center !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button span{
-    width:100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
-    overflow:visible !important;
-    text-overflow:clip !important;
-    white-space:nowrap !important;
-    flex-shrink:1 !important;
-    font-size:.64rem !important;
-    font-weight:700 !important;
-    text-align:center !important;
-}
-.showroom-top-controls [class*="st-key-skip_"]{
-    margin:0 !important;
-    min-width:0 !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button{
-    min-height:2rem !important;
-    height:2rem !important;
-    padding:.14rem .26rem !important;
-    margin:0 !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button p{
-    font-size:.66rem !important;
-    font-weight:700 !important;
-    text-align:center !important;
-}
 
-/* V5.121 — refined film-camera loader beside the iCinema logo. */
+/* refined film-camera loader beside the iCinema logo. */
 div[data-testid="stStatusWidget"]{
     position:fixed !important;
     top:1.02rem !important;
@@ -2516,8 +1866,7 @@ div[data-testid="stStatusWidget"]::after{
     }
 }
 
-
-/* V5.122 — final compact Showroom spacing + collision-proof controls */
+/* final compact Showroom spacing + collision-proof controls */
 
 /* Give each section subtitle a little breathing room below the heading. */
 .showroom-row-header .tab-primary-heading,
@@ -2534,159 +1883,14 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 /* Keep Match and Skip fully contained inside each individual movie card. */
-.showroom-top-controls{
-    width:100% !important;
-    max-width:100% !important;
-    overflow:hidden !important;
-    margin:0 0 .18rem !important;
-}
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
-    width:100% !important;
-    max-width:100% !important;
-    display:grid !important;
-    grid-template-columns:minmax(0,2.75fr) minmax(3.25rem,1.05fr) !important;
-    gap:.46rem !important;
-    align-items:center !important;
-}
-.showroom-top-controls [data-testid="column"]{
-    width:auto !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    flex:none !important;
-    overflow:hidden !important;
-}
-.showroom-top-controls div[data-testid="stPopover"]{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    overflow:hidden !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    height:1.96rem !important;
-    min-height:1.96rem !important;
-    padding:.12rem .28rem !important;
-    overflow:hidden !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button span{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    overflow:visible !important;
-    text-overflow:clip !important;
-    white-space:nowrap !important;
-    font-size:.59rem !important;
-    line-height:1 !important;
-    letter-spacing:-.012em !important;
-    text-align:center !important;
-}
-.showroom-top-controls [class*="st-key-skip_"]{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    margin:0 !important;
-    overflow:hidden !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    height:1.96rem !important;
-    min-height:1.96rem !important;
-    padding:.12rem .2rem !important;
-    margin:0 !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button p{
-    font-size:.62rem !important;
-    line-height:1 !important;
-    margin:0 !important;
-    text-align:center !important;
-}
 
 /* Reduce unused description whitespace so actions sit closer while preserving row alignment. */
-.movie-description{
-    height:5.45rem !important;
-    min-height:5.45rem !important;
-    max-height:5.45rem !important;
-    overflow:hidden !important;
-    line-height:1.42 !important;
-    margin-top:.12rem !important;
-    margin-bottom:.08rem !important;
-}
-.movie-card-actions{
-    margin-top:0 !important;
-    margin-bottom:.06rem !important;
-}
 
-
-/* V5.123 — full Match label + compact expandable movie description */
+/* full Match label + compact expandable movie description */
 /* Guarantee enough visual width for the complete Match label. */
-.showroom-top-controls [data-testid="stHorizontalBlock"]{
-    column-gap:.46rem !important;
-}
-.showroom-top-controls [data-testid="column"]{
-    min-width:0 !important;
-}
-.showroom-top-controls div[data-testid="stPopover"]{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    overflow:visible !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] > button,
-.showroom-top-controls div[data-testid="stPopover"] button{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    height:1.96rem !important;
-    min-height:1.96rem !important;
-    padding:.12rem .34rem !important;
-    overflow:visible !important;
-}
-.showroom-top-controls div[data-testid="stPopover"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button span{
-    display:block !important;
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
-    overflow:visible !important;
-    text-overflow:clip !important;
-    white-space:nowrap !important;
-    flex-shrink:1 !important;
-    font-size:.575rem !important;
-    font-weight:700 !important;
-    letter-spacing:-.012em !important;
-    text-align:center !important;
-}
-.showroom-top-controls [class*="st-key-skip_"] button,
-.showroom-top-controls [class*="st-key-skip_"] button p{
-    font-size:.59rem !important;
-}
 
 /* One complete quick line stays visible; full plot lives in the expander below. */
-.movie-quick-description{
-    min-height:2.55rem !important;
-    max-height:2.55rem !important;
-    overflow:hidden !important;
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:2 !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.76rem !important;
-    line-height:1.38 !important;
-    font-weight:600 !important;
-    letter-spacing:-.006em !important;
-    margin:.12rem 0 .18rem !important;
-}
 /* Retire the old fixed plot slot now that descriptions are expandable. */
-.movie-description{
-    display:none !important;
-}
 /* Make the description expander read like a small text control, not a large panel. */
 div[data-testid="stExpander"]{
     border:0 !important;
@@ -2717,20 +1921,8 @@ div[data-testid="stExpander"] summary p{
 div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
     padding:.38rem 0 .12rem !important;
 }
-.movie-full-description{
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.72rem !important;
-    line-height:1.48 !important;
-    font-weight:500 !important;
-}
-.movie-card-actions{
-    margin-top:.02rem !important;
-    margin-bottom:.05rem !important;
-}
 
-
-/* V5.124 — compact controls + one-line expandable plot summary */
+/* compact controls + one-line expandable plot summary */
 
 /* Use the keyed Streamlit container to reliably pull controls toward the poster. */
 [class*="st-key-showroom_controls_"]{
@@ -2805,28 +1997,12 @@ div[data-testid="stExpander"] summary p{
 div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
     padding:.3rem 0 .1rem !important;
 }
-.movie-full-description{
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.70rem !important;
-    line-height:1.42 !important;
-    font-weight:500 !important;
-    letter-spacing:-.003em !important;
-    margin:0 !important;
-}
 
 /* Retire the separate quick-description block from earlier builds. */
-.movie-quick-description{
-    display:none !important;
-}
 
 /* Keep Save / Seen immediately below the collapsed summary. */
-.movie-card-actions{
-    margin-top:.04rem !important;
-    margin-bottom:.04rem !important;
-}
 
-/* V5.125 — final Showroom control spacing + clickable full-sentence summary */
+/* final Showroom control spacing + clickable full-sentence summary */
 
 /* Give the section explanation its own breathing room before movie controls. */
 .showroom-row-header{
@@ -2923,20 +2099,8 @@ div[data-testid="stExpander"] summary:hover p{
 div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
     padding:.34rem 0 .08rem !important;
 }
-.movie-full-description{
-    margin:0 !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.70rem !important;
-    line-height:1.45 !important;
-    font-weight:500 !important;
-}
-.movie-card-actions{
-    margin-top:.03rem !important;
-    margin-bottom:.04rem !important;
-}
 
-/* V5.126 — final Showroom control separation, equal row spacing, native summary toggle */
+/* final Showroom control separation, equal row spacing, native summary toggle */
 
 /* Every row gets the exact same subtitle-to-controls breathing room. */
 .showroom-row-header{
@@ -3003,44 +2167,6 @@ div[data-testid="stExpander"] [data-testid="stExpanderDetails"]{
 }
 
 /* Native clickable sentence: no Streamlit arrow, no marker, no extra label. */
-.movie-summary-details{
-    margin:.12rem 0 .08rem !important;
-    padding:0 !important;
-    border:0 !important;
-    background:transparent !important;
-}
-.movie-summary-details > summary{
-    list-style:none !important;
-    cursor:pointer !important;
-    margin:0 !important;
-    padding:0 !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.64rem !important;
-    line-height:1.25 !important;
-    font-weight:630 !important;
-    letter-spacing:-.004em !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-    min-height:1.48rem !important;
-}
-.movie-summary-details > summary::-webkit-details-marker{display:none !important;}
-.movie-summary-details > summary::marker{content:"" !important;display:none !important;}
-.movie-summary-details > summary:hover{color:var(--ivory) !important;}
-.movie-summary-details[open] > summary{
-    color:var(--ivory) !important;
-    margin-bottom:.34rem !important;
-}
-.movie-summary-details .movie-full-description{
-    margin:0 !important;
-    padding:.02rem 0 .08rem !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.68rem !important;
-    line-height:1.42 !important;
-    font-weight:500 !important;
-}
 
 /* Loader: only a camera inside a circular loading ring, next to the logo. */
 div[data-testid="stStatusWidget"]{
@@ -3104,8 +2230,7 @@ div[data-testid="stStatusWidget"]::after{
     100%{border-top-color:rgba(243,240,234,.95);border-right-color:rgba(169,173,183,.22);}
 }
 
-
-/* V5.127 — exact row-header spacing + truly centered control labels */
+/* exact row-header spacing + truly centered control labels */
 
 /* Use padding rather than margin so the subtitle-to-controls gap cannot collapse
    differently on the first Showroom row. */
@@ -3173,8 +2298,7 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1 !important;
 }
 
-
-/* V5.128 — full Match label + deterministic movie-card vertical slots */
+/* full Match label + deterministic movie-card vertical slots */
 
 /* MATCH PILL
    Keep the popover functionality, but remove the dropdown-chevron appearance. */
@@ -3281,26 +2405,10 @@ div[data-testid="stStatusWidget"]::after{
 
 /* SUMMARY SLOT
    Give the clickable witty sentence an identical row on every card. */
-.movie-summary-details{
-    min-height:1.72rem !important;
-    margin:0 0 .08rem !important;
-}
-.movie-summary-details > summary{
-    min-height:1.72rem !important;
-    max-height:1.72rem !important;
-    display:flex !important;
-    align-items:center !important;
-    overflow:hidden !important;
-}
 
 /* Buttons stay close to the collapsed summary but line up across all cards. */
-.movie-card-actions{
-    margin-top:.02rem !important;
-    margin-bottom:.04rem !important;
-}
 
-
-/* V5.129 — content-aware title/year and streaming/summary spacing */
+/* content-aware title/year and streaming/summary spacing */
 
 /* Let title height grow naturally up to two lines, with the year always
    directly underneath the actual title. */
@@ -3356,28 +2464,10 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 /* Keep the clickable one-line summary close to streaming with a consistent gap. */
-.movie-summary-details{
-    min-height:0 !important;
-    margin:0 0 .08rem !important;
-}
-.movie-summary-details > summary{
-    min-height:1.72rem !important;
-    max-height:none !important;
-    margin:0 !important;
-}
 
 /* Actions remain close to the summary. */
-.movie-card-actions{
-    margin-top:.02rem !important;
-    margin-bottom:.04rem !important;
-}
 
-
-/* V5.130 — compact Save / Seen action row */
-.movie-card-actions{
-    margin-top:.02rem !important;
-    margin-bottom:.02rem !important;
-}
+/* compact Save / Seen action row */
 
 /* Keep Save / Seen visually balanced but slightly shorter to save vertical space. */
 [class*="st-key-save_"],
@@ -3405,101 +2495,16 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 /* Pull the action row slightly closer to the collapsed summary without crowding it. */
-.movie-summary-details{
-    margin-bottom:.04rem !important;
-}
 
-
-/* V5.131 — data-driven Match explanation + two-line clickable movie summary */
-
-.match-reason{
-    padding:.44rem 0 .48rem !important;
-    border-bottom:1px solid rgba(169,173,183,.12) !important;
-}
-.match-reason:last-of-type{
-    border-bottom:0 !important;
-}
-.match-reason-label{
-    color:var(--ivory) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.69rem !important;
-    line-height:1.18 !important;
-    font-weight:760 !important;
-    letter-spacing:-.005em !important;
-    margin-bottom:.16rem !important;
-}
-.match-reason-copy{
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.66rem !important;
-    line-height:1.38 !important;
-    font-weight:500 !important;
-}
+/* data-driven Match explanation + two-line clickable movie summary */
 
 /* Checkbox-driven disclosure: the sentence itself is clickable and there is no arrow. */
-.movie-summary-toggle{
-    width:100% !important;
-    margin:.1rem 0 .06rem !important;
-    padding:0 !important;
-}
-.movie-summary-checkbox{
-    position:absolute !important;
-    opacity:0 !important;
-    pointer-events:none !important;
-    width:0 !important;
-    height:0 !important;
-}
-.movie-summary-label{
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:2 !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-height:2.42rem !important;
-    max-height:2.42rem !important;
-    overflow:hidden !important;
-    cursor:pointer !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.66rem !important;
-    line-height:1.34 !important;
-    font-weight:620 !important;
-    letter-spacing:-.004em !important;
-    margin:0 !important;
-    padding:0 !important;
-    box-sizing:border-box !important;
-}
-.movie-summary-label:hover{
-    color:var(--ivory) !important;
-}
-.movie-summary-toggle .movie-full-description{
-    display:none !important;
-    margin:.34rem 0 .06rem !important;
-    padding:.42rem .02rem .12rem !important;
-    border-top:1px solid rgba(169,173,183,.12) !important;
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.68rem !important;
-    line-height:1.44 !important;
-    font-weight:500 !important;
-}
-.movie-summary-checkbox:checked ~ .movie-full-description{
-    display:block !important;
-}
 
 /* Retire native-details styles from older versions. */
-.movie-summary-details{
-    display:none !important;
-}
 
 /* Preserve a clean gap before actions and prevent overlap. */
-.movie-card-actions{
-    margin-top:.06rem !important;
-    clear:both !important;
-}
 
-
-/* V5.139 — clean Showroom rebuild from stable V5.131 */
+/* clean Showroom rebuild from stable V5.131 */
 
 /* Uniform section heading rhythm. */
 .showroom-row-header{
@@ -3527,14 +2532,6 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 /* Match explanation note uses the product font system. */
-.match-model-note{
-    color:var(--muted2) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.62rem !important;
-    line-height:1.36 !important;
-    font-weight:500 !important;
-    margin:.42rem 0 0 !important;
-}
 
 /* Critical reset: normal document flow for the full Showroom card. */
 [class*="st-key-showroom_body_"]{
@@ -3609,35 +2606,6 @@ div[data-testid="stStatusWidget"]::after{
 }
 
 /* Clickable summary: one line collapsed, normal-flow expanded copy. */
-[class*="st-key-showroom_body_"] .movie-summary-toggle{
-    display:block !important;
-    position:static !important;
-    width:100% !important;
-    height:auto !important;
-    min-height:0 !important;
-    margin:0 0 .24rem !important;
-    padding:0 !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-label{
-    display:block !important;
-    width:100% !important;
-    height:auto !important;
-    min-height:0 !important;
-    max-height:none !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:hidden !important;
-    white-space:nowrap !important;
-    text-overflow:clip !important;
-    font-size:.56rem !important;
-    line-height:1.35 !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-toggle .movie-full-description{
-    position:static !important;
-    margin:.34rem 0 .06rem !important;
-    padding:.36rem 0 .04rem !important;
-    line-height:1.42 !important;
-}
 
 /* Save/Seen are normal flow. No auto-bottom alignment or artificial card height. */
 [class*="st-key-movie_actions_"]{
@@ -3665,8 +2633,7 @@ div[data-testid="stStatusWidget"]::after{
     max-width:92% !important;
 }
 
-
-/* V5.140 — Saved library action label fix */
+/* Saved library action label fix */
 [class*="st-key-savedseen_"],
 [class*="st-key-unsave_"]{
     min-width:0 !important;
@@ -3704,9 +2671,8 @@ div[data-testid="stStatusWidget"]::after{
     justify-content:center !important;
 }
 
+/* Saved heading breathing room */
 
-/* V5.141 — Saved heading breathing room */
-.st-key-saved_tab_header,
 .tab-primary-heading{
     scroll-margin-top:0;
 }
@@ -3720,8 +2686,7 @@ div[data-testid="stStatusWidget"]::after{
     margin-bottom:.78rem !important;
 }
 
-
-/* V5.142 — Saved action centering + unique natural summaries */
+/* Saved action centering + unique natural summaries */
 [class*="st-key-savedseen_"] button,
 [class*="st-key-unsave_"] button{
     display:grid !important;
@@ -3740,105 +2705,17 @@ div[data-testid="stStatusWidget"]::after{
     line-height:1 !important;
 }
 
+/* even spacing in Match explanation popover */
 
-/* V5.143 — even spacing in Match explanation popover */
-.match-explain-title{
-    margin:0 0 .72rem !important;
-    padding:0 !important;
-}
-.match-reason{
-    margin:0 !important;
-    padding:.52rem 0 .56rem !important;
-    border-bottom:1px solid rgba(169,173,183,.12) !important;
-}
-.match-reason:first-of-type{
-    padding-top:0 !important;
-}
-.match-reason:last-of-type{
-    border-bottom:0 !important;
-    padding-bottom:.52rem !important;
-}
-.match-reason-label{
-    margin:0 0 .22rem !important;
-    padding:0 !important;
-    line-height:1.2 !important;
-}
-.match-reason-copy{
-    margin:0 !important;
-    padding:0 !important;
-    line-height:1.4 !important;
-}
-.match-model-note{
-    margin:.58rem 0 0 !important;
-    padding:.56rem 0 0 !important;
-    border-top:1px solid rgba(169,173,183,.10) !important;
-    line-height:1.38 !important;
-}
-
-
-/* V5.144 — balanced Match panel + two-line movie summary */
+/* balanced Match panel + two-line movie summary */
 
 /* Give the Match explanation equal visual breathing room at the top and bottom. */
-.match-explain-title{
-    margin:.58rem 0 .72rem !important;
-    padding:0 !important;
-}
-.match-reason{
-    margin:0 !important;
-    padding:.52rem 0 .56rem !important;
-}
-.match-reason:first-of-type{
-    padding-top:0 !important;
-}
-.match-reason:last-of-type{
-    padding-bottom:.52rem !important;
-}
-.match-model-note{
-    margin:.58rem 0 .58rem !important;
-    padding:.56rem 0 0 !important;
-    border-top:1px solid rgba(169,173,183,.10) !important;
-}
 
 /* Let longer movie summaries use two clean lines instead of clipping. */
-[class*="st-key-showroom_body_"] .movie-summary-toggle{
-    margin:0 0 .24rem !important;
-}
-[class*="st-key-showroom_body_"] .movie-summary-label{
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:2 !important;
-    width:100% !important;
-    height:auto !important;
-    min-height:1.35rem !important;
-    max-height:2.72rem !important;
-    margin:0 !important;
-    padding:0 !important;
-    overflow:hidden !important;
-    white-space:normal !important;
-    text-overflow:clip !important;
-    font-size:.56rem !important;
-    line-height:1.36rem !important;
-}
 
+/* complete two-line witty summary */
 
-/* V5.145 — complete two-line witty summary */
-[class*="st-key-showroom_body_"] .movie-summary-label{
-    display:-webkit-box !important;
-    -webkit-box-orient:vertical !important;
-    -webkit-line-clamp:2 !important;
-    width:100% !important;
-    min-height:1.35rem !important;
-    max-height:2.76rem !important;
-    height:auto !important;
-    overflow:hidden !important;
-    white-space:normal !important;
-    text-overflow:clip !important;
-    font-size:.56rem !important;
-    line-height:1.38rem !important;
-}
-
-
-/* V5.146 — loading icon aligned directly to the right of iCinema logo */
+/* loading icon aligned directly to the right of iCinema logo */
 
 /* Keep the transient loader visually attached to the brand mark. */
 div[data-testid="stStatusWidget"]{
@@ -3859,21 +2736,16 @@ div[data-testid="stStatusWidget"]{
     }
 }
 
-
-/* V5.147 — Step 1 action breathing room */
-.shelf-action-gap{
-    height:.34rem !important;
-}
+/* Step 1 action breathing room */
 [class*="st-key-like_"],
 [class*="st-key-fav_"]{
     margin-top:0 !important;
 }
 
-
-/* V5.148 — compact Step 1 shelf */
+/* compact Step 1 shelf */
 
 /* Slightly scale the Step 1 movie cards down while preserving proportions. */
-.step1-shelf .poster,
+
 [class*="st-key-like_"] ~ * .poster{
     transform:scale(.92);
     transform-origin:top center;
@@ -3881,18 +2753,6 @@ div[data-testid="stStatusWidget"]{
 }
 
 /* Keep Step 1 title/year proportionally smaller and compact. */
-.step1-shelf .poster-caption-title,
-.step1-shelf .movie-title,
-.step1-shelf .shelf-title{
-    font-size:1.02rem !important;
-    line-height:1.15 !important;
-}
-.step1-shelf .poster-caption-year,
-.step1-shelf .movie-year,
-.step1-shelf .shelf-year{
-    font-size:.69rem !important;
-    line-height:1 !important;
-}
 
 /* Like / Favorite become slightly shorter while staying easy to tap. */
 [class*="st-key-like_"] button,
@@ -3910,20 +2770,13 @@ div[data-testid="stStatusWidget"]{
 }
 
 /* Preserve the new breathing room from V5.147, but keep it compact. */
-.shelf-action-gap{
-    height:.28rem !important;
-}
 
 /* Tighten horizontal spacing slightly across the Step 1 shelf. */
-.step1-shelf [data-testid="stHorizontalBlock"]{
-    column-gap:.72rem !important;
-}
 
-
-/* V5.149 — refined Step 1 scale + centered actions */
+/* refined Step 1 scale + centered actions */
 
 /* Scale Step 1 posters down slightly more than V5.148. */
-.step1-shelf .poster,
+
 [class*="st-key-like_"] ~ * .poster{
     transform:scale(.89) !important;
     transform-origin:top center !important;
@@ -3931,18 +2784,6 @@ div[data-testid="stStatusWidget"]{
 }
 
 /* Scale title/year proportionally. */
-.step1-shelf .poster-caption-title,
-.step1-shelf .movie-title,
-.step1-shelf .shelf-title{
-    font-size:.98rem !important;
-    line-height:1.14 !important;
-}
-.step1-shelf .poster-caption-year,
-.step1-shelf .movie-year,
-.step1-shelf .shelf-year{
-    font-size:.66rem !important;
-    line-height:1 !important;
-}
 
 /* Slightly smaller Like/Favorite buttons, with exact centered labels. */
 [class*="st-key-like_"] button,
@@ -3970,15 +2811,8 @@ div[data-testid="stStatusWidget"]{
 }
 
 /* Keep spacing compact but not cramped. */
-.shelf-action-gap{
-    height:.24rem !important;
-}
-.step1-shelf [data-testid="stHorizontalBlock"]{
-    column-gap:.66rem !important;
-}
 
-
-/* V5.150 — removable Step 1 selections */
+/* removable Step 1 selections */
 .selection-area-heading{
     margin-top:.78rem !important;
 }
@@ -4075,8 +2909,7 @@ div[data-testid="stStatusWidget"]{
     }
 }
 
-
-/* V5.151 — single camera loader directly beside the iCinema logo */
+/* single camera loader directly beside the iCinema logo */
 
 /* The app content is max-width 1240px and centered. Position the transient
    status widget from that same content edge, immediately after the logo. */
@@ -4165,111 +2998,23 @@ div[data-testid="stLoadingSpinner"],
     }
 }
 
+/* Profile methodology cards */
 
-/* V5.153 — Profile methodology cards */
-.profile-methodology{
-    width:100% !important;
-    max-width:760px !important;
-    margin-top:1.12rem !important;
-    padding-top:1.08rem !important;
-    border-top:1px solid var(--border) !important;
-}
-.methodology-grid{
-    display:grid !important;
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    gap:.62rem !important;
-}
-.methodology-card{
-    border:1px solid var(--border) !important;
-    border-radius:14px !important;
-    background:rgba(255,255,255,.018) !important;
-    padding:.76rem .8rem !important;
-    min-height:6.15rem !important;
-}
-.methodology-value{
-    font-family:var(--ui-font) !important;
-    color:var(--ivory) !important;
-    font-size:.78rem !important;
-    line-height:1.28 !important;
-    font-weight:760 !important;
-    letter-spacing:-.012em !important;
-    margin-bottom:.34rem !important;
-}
-.methodology-label{
-    font-family:var(--ui-font) !important;
-    color:var(--muted) !important;
-    font-size:.64rem !important;
-    line-height:1.42 !important;
-    font-weight:500 !important;
-}
-@media(max-width:800px){
-    .methodology-grid{grid-template-columns:1fr !important;}
-}
+/* clearly separate witty hook from expanded synopsis */
 
-
-/* V5.154 — clearly separate witty hook from expanded synopsis */
-.movie-full-description{
-    margin-top:.42rem !important;
-    padding-top:.48rem !important;
-    border-top:1px solid rgba(169,173,183,.13) !important;
-}
-.movie-synopsis-label{
-    color:var(--ivory) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.60rem !important;
-    line-height:1.2 !important;
-    font-weight:740 !important;
-    letter-spacing:.012em !important;
-    margin:0 0 .28rem !important;
-}
-.movie-synopsis-copy{
-    color:var(--muted) !important;
-    font-family:var(--ui-font) !important;
-    font-size:.66rem !important;
-    line-height:1.46 !important;
-    font-weight:500 !important;
-    margin:0 !important;
-    padding:0 !important;
-}
-
-/* V5.162 — visibly larger gap between the Cinema Profile title and learning-status row.
+/* visibly larger gap between the Cinema Profile title and learning-status row.
    Use the more-specific profile-wrap selectors so this overrides the earlier tab-heading rule. */
 .profile-wrap .profile-heading,
 .profile-wrap .profile-heading-aligned{
     margin-bottom:1.45rem !important;
 }
-.profile-wrap .model-status-line{
-    margin-top:0 !important;
-}
 
-
-/* V5.163 — explicit spacer between Cinema Profile heading and learning-status row.
+/* explicit spacer between Cinema Profile heading and learning-status row.
    This avoids Streamlit/global tab-heading margin rules overriding the intended gap. */
-.profile-heading-gap{
-    display:block !important;
-    height:.78rem !important;
-    min-height:.78rem !important;
-    width:100% !important;
-    flex:0 0 .78rem !important;
-}
 
-/* V5.155 — uniform learning-status text color */
-.model-status-line,
-.model-status-primary,
-.model-status-secondary,
-.model-status-separator{
-    color:var(--muted) !important;
-}
-.model-status-primary{
-    font-weight:680 !important;
-}
-.model-status-dot{
-    color:var(--accent) !important;
-    background:var(--accent) !important;
-}
+/* uniform learning-status text color */
 
-
-/* V5.165 — single, consistent iCinema camera loader.
+/* single, consistent iCinema camera loader.
    Keep transient status away from the logo and anchor it to the top-right of
    the centered product frame, where users expect passive system status. */
 div[data-testid="stStatusWidget"],
@@ -4353,26 +3098,12 @@ div[data-testid="stLoadingSpinner"],
 }
 
 /* Model diagnostics: 3 x 2 grid */
-.diag-subhead{font-family:var(--ui-font);font-size:.7rem;font-weight:760;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin:.9rem 0 .3rem;}
-.diag-subhead:first-of-type{margin-top:.2rem;}
-.diag-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
-@media(max-width:800px){.diag-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}
 
-/* V5.166 — Tonight's Pick: one confident answer, tastefully spaced */
+/* Tonight's Pick: one confident answer, tastefully spaced */
 @keyframes icinema-tonight-in{
     from{opacity:0;transform:translateY(6px)}
     to{opacity:1;transform:translateY(0)}
 }
-.tonight-header{margin:0 0 .9rem !important;}
-.tonight-kicker{
-    color:var(--muted2);font-family:var(--ui-font);font-size:.68rem;font-weight:760;
-    text-transform:uppercase;letter-spacing:.11em;margin:0 0 .3rem;
-}
-.tonight-heading{
-    color:var(--ivory);font-family:var(--ui-font);font-size:2rem;line-height:1.08;
-    font-weight:760;letter-spacing:-.03em;margin:0 0 .28rem;
-}
-.tonight-note{color:var(--muted);font-family:var(--ui-font);font-size:.8rem;line-height:1.4;margin:0;}
 [class*="st-key-tonight_hero"]{
     border:1px solid var(--border) !important;
     border-radius:22px !important;
@@ -4396,11 +3127,7 @@ div[data-testid="stLoadingSpinner"],
     font-family:var(--ui-font);font-size:.72rem;font-weight:720;margin:0 0 1rem;
 }
 .tonight-line{color:var(--muted);font-family:var(--ui-font);font-size:.8rem;line-height:1.45;font-weight:600;margin:0 0 .35rem;}
-.tonight-fit{color:var(--muted2);font-family:var(--ui-font);font-size:.72rem;font-weight:650;margin:0 0 1rem;}
-.tonight-fit.good{color:#9FB2E6;}
 .tonight-hook{color:var(--ivory);font-family:var(--ui-font);font-size:.95rem;line-height:1.45;font-weight:650;margin:0 0 .6rem;}
-.tonight-synopsis{color:var(--muted);font-family:var(--ui-font);font-size:.8rem;line-height:1.55;margin:0 0 1.1rem;max-width:560px;}
-.tonight-why-label{color:var(--muted2);font-family:var(--ui-font);font-size:.64rem;font-weight:760;text-transform:uppercase;letter-spacing:.1em;margin:0 0 .4rem;}
 .tonight-why{color:var(--muted);font-family:var(--ui-font);font-size:.76rem;line-height:1.45;margin:0 0 .3rem;}
 .tonight-why strong{color:var(--ivory);font-weight:700;}
 [class*="st-key-tonight_save_"] button,
@@ -4419,7 +3146,7 @@ div[data-testid="stLoadingSpinner"],
     .tonight-title{font-size:1.5rem;}
 }
 
-/* V5.169 — original card spacing restored; compact Tonight's Pick; one loader */
+/* original card spacing restored; compact Tonight's Pick; one loader */
 /* Tonight's Pick header uses the row-header style, with a tighter gap to its card. */
 .tonight-row-header{margin:0 !important;padding:0 !important;}
 [class*="st-key-tonight_hero"]{
@@ -4434,7 +3161,6 @@ div[data-testid="stLoadingSpinner"],
 .tonight-meta{font-size:.66rem !important;margin:0 !important;}
 .tonight-badges{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;}
 .tonight-match{height:1.55rem !important;font-size:.66rem !important;padding:0 .65rem !important;margin:0 !important;}
-.tonight-fit{font-size:.68rem !important;margin:0 !important;}
 .tonight-line{font-size:.72rem !important;margin:0 !important;}
 .tonight-hook{font-size:.82rem !important;line-height:1.42 !important;margin:0 !important;}
 .tonight-whys{display:flex;flex-direction:column;gap:.2rem;}
@@ -4482,19 +3208,14 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
     background:rgba(17,19,21,.96) !important;animation:icinema-loader-ring 1.1s linear infinite !important;
 }
 
-/* V5.170 — alignment, complete hooks, section breathing room, clear model status, profile rhythm */
+/* alignment, complete hooks, section breathing room, clear model status, profile rhythm */
 /* One left edge: titles, years, and metadata line up with the poster. */
 .poster-caption,.poster-caption:not(.library-poster-caption),.library-poster-caption{padding-left:0 !important;padding-right:0 !important;}
-.poster-caption-title,.poster-caption-year,.ratings,.watch-availability,.movie-summary-toggle,.movie-summary-label{margin-left:0 !important;padding-left:0 !important;}
+.poster-caption-title,.poster-caption-year,.ratings,.watch-availability{margin-left:0 !important;padding-left:0 !important;}
 /* Hooks are complete sentences up to three lines; never clipped. */
-.movie-summary-label,[class*="st-key-showroom_body_"] .movie-summary-label{
-    -webkit-line-clamp:3 !important;max-height:none !important;min-height:0 !important;overflow:visible !important;
-    white-space:normal !important;text-overflow:clip !important;
-}
 /* A little more room between the four Showroom sections. */
 .showroom-row-header:not(.tonight-row-header){margin-top:1.55rem !important;}
 /* Model status: two short, readable rows instead of one long line. */
-.model-status-panel{display:flex;flex-direction:column;gap:.38rem;margin:.1rem 0 1.35rem;max-width:760px;}
 .model-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-family:var(--ui-font);font-size:.76rem;line-height:1.35;}
 .model-dot{width:.42rem;height:.42rem;border-radius:999px;border:1px solid var(--muted2);flex:0 0 auto;}
 .model-dot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(243,240,234,.7);animation:icinema-learning-live 1.8s ease-in-out infinite;}
@@ -4503,21 +3224,17 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
 .model-progress{display:inline-block;width:5.5rem;height:.28rem;border-radius:999px;background:rgba(169,173,183,.18);overflow:hidden;}
 .model-progress span{display:block;height:100%;background:var(--accent);border-radius:999px;}
 /* Profile: heading → status → sections on one even rhythm. */
-.profile-heading-gap{height:.55rem !important;min-height:.55rem !important;flex-basis:.55rem !important;}
 .profile-wrap .profile-heading,.profile-wrap .profile-heading-aligned{margin-bottom:0 !important;}
-.profile-grid{padding-top:0 !important;}
 .profile-block + .profile-block{margin-top:1.05rem !important;}
 .profile-label{margin:0 0 .45rem !important;}
 .profile-chip-wrap{column-gap:.45rem !important;row-gap:.45rem !important;}
-.profile-summary{margin-top:1.35rem !important;padding-top:1.05rem !important;}
-.profile-methodology,.profile-insights{margin-top:1.35rem !important;padding-top:1.05rem !important;}
 
-/* V5.171 — model status uses the same type as the original status line */
+/* model status uses the same type as the original status line */
 .model-row{font-size:.72rem !important;line-height:1.35 !important;}
 .model-name{color:var(--muted) !important;font-size:.74rem !important;font-weight:680 !important;letter-spacing:-.006em !important;}
 .model-note{color:var(--muted) !important;font-size:.72rem !important;font-weight:500 !important;}
 
-/* V5.172 — visible camera loader (top bar stays hidden), popover rhythm, centered button labels, spacing */
+/* visible camera loader (top bar stays hidden), popover rhythm, centered button labels, spacing */
 /* Loader: Streamlit marks the app while a run is in progress; draw the same camera ring top-right. */
 .stApp::before,.stApp::after{content:"";position:fixed;z-index:999999;display:none;pointer-events:none;}
 .stApp[data-test-script-state="running"]::before,.stApp:has([data-stale="true"])::before{
@@ -4536,14 +3253,7 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
     .stApp[data-test-script-state="running"]::after,.stApp:has([data-stale="true"])::after{top:calc(1.92rem + .56rem);right:1.44rem;}
 }
 /* Match popover: percent, then "why", then well-spaced specific reasons. */
-.match-score{display:flex;align-items:baseline;gap:.45rem;margin:.35rem 0 .2rem;}
-.match-score-value{font-family:var(--ui-font);font-size:1.5rem;font-weight:800;letter-spacing:-.03em;color:var(--ivory);}
-.match-score-label{font-family:var(--ui-font);font-size:.7rem;font-weight:600;color:var(--muted);}
-.match-explain-title{margin:.1rem 0 .55rem !important;font-size:.78rem !important;}
-.match-reason{padding:.55rem 0 !important;}
-.match-reason-label{margin:0 0 .25rem !important;}
 /* A little more air between the one-line description and Save / Seen. */
-.movie-summary-toggle{margin-bottom:.62rem !important;}
 /* Button labels dead-center, vertically and horizontally. */
 [class*="st-key-save_"] button,[class*="st-key-seen_"] button,[class*="st-key-skip_"] button,[class*="st-key-undo_"] button,
 [class*="st-key-tonight_"] button,[class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button,
@@ -4560,10 +3270,7 @@ a.watch-link::after{content:" ↗";font-size:.8em;opacity:.6;}
 [class*="st-key-like_"] button p,[class*="st-key-fav_"] button p{margin:0 !important;padding:0 !important;line-height:1 !important;}
 /* Landing: a touch more room, and the note in the profile's editorial serif. */
 .hero-subtitle{margin-bottom:1.85rem !important;}
-.adapt-note{margin:1.65rem 0 1.25rem !important;padding:1.2rem 1.3rem 1.15rem !important;}
-.adapt-note span{font-family:Georgia,"Times New Roman",serif !important;font-style:italic !important;font-size:1rem !important;line-height:1.55 !important;}
 /* Profile: more room under the heading; the same gap above and below every section title. */
-.profile-heading-gap{height:1rem !important;min-height:1rem !important;flex-basis:1rem !important;}
 .profile-block + .profile-block{margin-top:.8rem !important;}
 .profile-label{margin:0 0 .8rem !important;line-height:1 !important;}
 /* Showroom: Tonight's Pick → Top Matches matches tabs → Tonight's Pick; rows slightly closer. */
@@ -4580,7 +3287,7 @@ div[data-testid="stPopoverBody"] [data-testid="stButtonGroup"] button p{
     font-family:var(--ui-font) !important;font-weight:760 !important;letter-spacing:-.02em !important;
 }
 
-/* V5.173 — optical left alignment for large headings + a bit more heading→description room */
+/* optical left alignment for large headings + a bit more heading→description room */
 /* Big bold glyphs carry left side-bearing; nudge so the letter edge lines up with the text below. */
 .hero-title,.showroom-heading,.showroom-row-title,.showroom-row-header .showroom-row-title,
 .tab-primary-heading,.page-top-heading,.step2-title,.profile-heading,.profile-wrap .profile-heading-aligned{
@@ -4590,7 +3297,7 @@ div[data-testid="stPopoverBody"] [data-testid="stButtonGroup"] button p{
 .showroom-heading,.page-top-heading,.step2-title{margin-bottom:.55rem !important;}
 .hero-subtitle{margin-top:.95rem !important;}
 
-/* V5.174 — fixed card slots so every Save / Seen row lines up; nothing clipped */
+/* fixed card slots so every Save / Seen row lines up; nothing clipped */
 /* Title + year: two-line slot; year hugs the title, spare room sits below it. */
 div .poster-caption:not(.library-poster-caption){
     height:3.95rem !important;min-height:3.95rem !important;max-height:3.95rem !important;
@@ -4608,12 +3315,6 @@ div .watch-availability{height:2.05rem !important;min-height:2.05rem !important;
     overflow:hidden !important;margin:0 0 .35rem !important;line-height:1.02rem !important;
     display:-webkit-box !important;-webkit-box-orient:vertical !important;-webkit-line-clamp:2 !important;}
 /* Description: exactly three lines of space; hooks are kept short enough to fit. */
-div .movie-summary-toggle{margin:0 0 .6rem !important;}
-div .movie-summary-label{
-    line-height:1.4em !important;height:4.2em !important;min-height:4.2em !important;max-height:4.2em !important;
-    display:-webkit-box !important;-webkit-box-orient:vertical !important;-webkit-line-clamp:3 !important;
-    overflow:hidden !important;
-}
 /* When the synopsis is opened, it expands below the fixed hook slot as before. */
 /* Tonight's Pick description uses the exact card-description type. */
 .tonight-hook{
@@ -4621,7 +3322,7 @@ div .movie-summary-label{
     line-height:1.4 !important;letter-spacing:-.004em !important;color:var(--muted) !important;
 }
 
-/* V5.175 — every action button label dead-center (same rule that already centered card Skip),
+/* every action button label dead-center (same rule that already centered card Skip),
    profile titles aligned with the text inside the bubbles. */
 [class*="st-key-save_"] button,[class*="st-key-seen_"] button,[class*="st-key-skip_"] button,
 [class*="st-key-undo_"] button,[class*="st-key-tonight_"] button,[class*="st-key-savedseen_"] button,
@@ -4638,7 +3339,7 @@ div .movie-summary-label{
 /* Section titles start where the bubble text starts (bubble border 1px + inner padding). */
 .profile-label{padding-left:calc(.66rem + 1px) !important;}
 
-/* V5.176 — the invisible profile-saver component no longer takes a layout row;
+/* the invisible profile-saver component no longer takes a layout row;
    Tonight's Show → Top Matches equals tabs → Tonight's Show. */
 div[data-testid="stElementContainer"]:has(iframe[title*="browser_storage"]),
 div[data-testid="stElementContainer"]:has(iframe[title*="icinema_"]),
@@ -4649,17 +3350,10 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-tonight_hero"]{margin-bottom:1.12rem !important;}
 .showroom-row-header.first{margin-top:0 !important;padding-top:0 !important;}
 
-/* V5.177 — consumer-friendly methodology; profile titles share the bubbles' left edge */
-.how-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
-.proof-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-.how-grid .methodology-card{min-height:0 !important;}
-.model-card-link{margin:.85rem 0 0 !important;}
-.live-model-copy{margin:.85rem 0 0 !important;color:var(--ivory) !important;}
-@media(max-width:800px){.how-grid,.proof-grid{grid-template-columns:1fr !important;}}
+/* consumer-friendly methodology; profile titles share the bubbles' left edge */
 .profile-label{padding-left:0 !important;}
 
-/* V5.177 — profile as a clean two-column list: label left, bubbles right; proof cards in 3 */
-.profile-grid{display:flex !important;flex-direction:column !important;gap:.7rem !important;}
+/* profile as a clean two-column list: label left, bubbles right; proof cards in 3 */
 .profile-block,.profile-block.full{
     display:grid !important;grid-template-columns:10.5rem minmax(0,1fr) !important;
     align-items:center !important;column-gap:1rem !important;margin:0 !important;padding:0 !important;
@@ -4670,27 +3364,21 @@ div.element-container:has(iframe[title*="browser_storage"]){
 @media(max-width:700px){
     .profile-block,.profile-block.full{grid-template-columns:1fr !important;row-gap:.45rem !important;}
 }
-.proof-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
-@media(max-width:800px){.proof-grid{grid-template-columns:1fr !important;}}
 
-/* V5.178 — insight cards: number → title → one sentence */
+/* insight cards: number → title → one sentence */
 .insight-title{font-family:var(--ui-font);font-size:.78rem;font-weight:700;color:var(--ivory);letter-spacing:-.01em;margin:.28rem 0 .18rem;line-height:1.25;}
 .insight-card .insight-label{margin-top:0 !important;}
-.stats-grid,.proof-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
-.how-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-@media(max-width:800px){.stats-grid,.proof-grid,.how-grid{grid-template-columns:1fr !important;}}
 
-/* V5.178 — Undo label matches the other Tonight's Show buttons */
+/* Undo label matches the other Tonight's Show buttons */
 [class*="st-key-tonight_undo_"] button p{font-weight:700 !important;}
 
-/* V5.179 — Step 1 Skip matches Like / Favorite */
+/* Step 1 Skip matches Like / Favorite */
 [class*="st-key-shelfskip_"] button{min-height:1.96rem !important;height:1.96rem !important;padding:0 .3rem !important;border-radius:999px !important;}
 [class*="st-key-shelfskip_"] button p{font-size:.69rem !important;font-weight:690 !important;}
 
-/* V5.180 — ratings source note under "How iCinema works" */
-.ratings-note{margin-top:.7rem !important;font-size:.74rem !important;color:var(--muted2) !important;}
+/* ratings source note under "How iCinema works" */
 
-/* V5.181 — "Not for me" controls, sized to sit quietly in existing space */
+/* "Not for me" controls, sized to sit quietly in existing space */
 [class*="st-key-dislike_"] button{min-height:1.9rem !important;height:1.9rem !important;border-radius:999px !important;
     padding:0 .8rem !important;margin-top:.35rem !important;}
 [class*="st-key-dislike_"] button p{font-size:.7rem !important;font-weight:700 !important;margin:0 !important;}
@@ -4698,7 +3386,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
     padding:0 !important;border-radius:999px !important;display:flex !important;align-items:center !important;justify-content:center !important;}
 [class*="st-key-tonight_dislike_"] button p{font-size:.85rem !important;margin:0 !important;line-height:1 !important;}
 
-/* V5.182 — professional outline thumbs-down icon instead of an emoji */
+/* professional outline thumbs-down icon instead of an emoji */
 [class*="st-key-dislike_"] button p::before,
 [class*="st-key-tonight_dislike_"] button p::before{
     content:"";display:inline-block;flex:0 0 auto;width:.95rem;height:.95rem;
@@ -4711,7 +3399,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-dislike_"] button:hover p::before,
 [class*="st-key-tonight_dislike_"] button:hover p::before{opacity:1;}
 
-/* V5.183 — "Not for me": icon and label share one vertical center */
+/* "Not for me": icon and label share one vertical center */
 [class*="st-key-dislike_"] button,
 [class*="st-key-tonight_dislike_"] button{display:inline-flex !important;align-items:center !important;justify-content:center !important;
     padding-top:0 !important;padding-bottom:0 !important;}
@@ -4728,10 +3416,10 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-tonight_dislike_"] button p::before{align-self:center !important;margin-top:0 !important;margin-bottom:0 !important;
     background-position:center !important;background-repeat:no-repeat !important;background-size:contain !important;}
 
-/* V5.184 — no page flash on Save / Seen: keep content fully visible while it refreshes */
+/* no page flash on Save / Seen: keep content fully visible while it refreshes */
 [data-stale="true"],div[data-stale="true"],.stale-element{opacity:1 !important;transition:none !important;filter:none !important;}
 
-/* V5.185 — library tabs: ratings, roomier rows, hover × to remove from Seen */
+/* library tabs: ratings, roomier rows, hover × to remove from Seen */
 [class*="st-key-savedcard_"],[class*="st-key-seencard_"]{margin-bottom:1.9rem !important;}
 [class*="st-key-seencard_"]{position:relative !important;}
 [class*="st-key-seencard_"] [class*="st-key-unseen_"]{
@@ -4748,7 +3436,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-unseen_"] button p{margin:0 !important;font-size:.8rem !important;line-height:1 !important;color:var(--ivory) !important;font-weight:600 !important;}
 .library-ratings{margin:.3rem 0 .35rem !important;}
 
-/* V5.186 — Step 2: same heading style and spacing for all three questions; Back buttons match */
+/* Step 2: same heading style and spacing for all three questions; Back buttons match */
 .step2-question-next{margin-top:2.1rem !important;}
 .step2-question{margin-bottom:.55rem !important;}
 .pref-scale-clicks{margin-bottom:0 !important;}
@@ -4756,7 +3444,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 [class*="st-key-back_"] button p{font-size:.76rem !important;font-weight:650 !important;}
 .st-key-edit_preferences button,.st-key-reset_profile_tab button{min-height:2.4rem !important;border-radius:999px !important;}
 
-/* V5.187 — tighter Step 1 shelf; one shared nav-button style and spacing on every page */
+/* tighter Step 1 shelf; one shared nav-button style and spacing on every page */
 /* Step 1: title/year hug the poster, actions hug the year, roomier gap before the next poster. */
 .st-key-step1_shelf [data-testid="stVerticalBlock"]{gap:.45rem !important;}
 .st-key-step1_shelf div .poster-caption:not(.library-poster-caption){
@@ -4784,14 +3472,14 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-nav_row_more{margin-top:-.9rem !important;}
 .st-key-nav_row_profile{margin-top:.15rem !important;}
 
-/* V5.188 — Step 1: smaller posters, and no overlap between the year and the action row.
+/* Step 1: smaller posters, and no overlap between the year and the action row.
    Streamlit gives every markdown block a -1rem bottom margin; the old spacer element used to
    absorb it, so without it the buttons slid up over the year. */
 .st-key-step1_shelf [data-testid="stMarkdown"],
 .st-key-step1_shelf [data-testid="stMarkdownContainer"],
 .st-key-step1_shelf [data-testid="stElementContainer"]:has([data-testid="stMarkdown"]){margin-bottom:0 !important;}
 .st-key-step1_shelf div .poster-caption:not(.library-poster-caption){margin:.5rem 0 .1rem !important;}
-/* V5.189 — five cards per row, full column width, close together; even action row. */
+/* five cards per row, full column width, close together; even action row. */
 .st-key-step1_shelf > div > [data-testid="stHorizontalBlock"]{column-gap:.8rem !important;}
 .st-key-step1_shelf [data-testid="stColumn"] [data-testid="stHorizontalBlock"],
 .st-key-step1_shelf [data-testid="column"] [data-testid="stHorizontalBlock"]{
@@ -4812,7 +3500,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 }
 .st-key-step1_shelf .poster-caption-title{font-size:1rem !important;}
 
-/* V5.190 — Step 1 "hamburger" cards: half-height poster crop, one-line titles,
+/* Step 1 "hamburger" cards: half-height poster crop, one-line titles,
    and three identical action-button slots so every row lines up exactly. */
 .st-key-step1_shelf .poster{aspect-ratio:16 / 9 !important;border-radius:14px !important;}
 .st-key-step1_shelf .poster.has-image img{
@@ -4844,7 +3532,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
     margin:0 !important;padding:0 !important;line-height:1 !important;
 }
 
-/* V5.191 — Step 1 landscape art (16:9) and even section rhythm.
+/* Step 1 landscape art (16:9) and even section rhythm.
    Every section boundary (shelf → search → selections → Continue) = 1rem flex gap + 1rem. */
 .st-key-step1_shelf{margin-bottom:-.95rem !important;}
 .st-key-step1_search,.st-key-step1_selections{margin-top:1rem !important;}
@@ -4865,7 +3553,7 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .st-key-step1_selections [class*="st-key-selection_card_"]{margin:0 !important;}
 .st-key-step1_selections div[data-testid="stCaptionContainer"]{margin:0 !important;}
 
-/* V5.192 — Seen tab "What's next" bubble */
+/* Seen tab "What's next" bubble */
 [class*="st-key-whatsnext_"]{margin-top:.15rem !important;}
 .whatsnext-kicker{font-family:var(--ui-font);color:var(--muted2);font-size:.62rem;font-weight:760;
     letter-spacing:.08em;text-transform:uppercase;margin:0 0 .6rem;}
@@ -4878,34 +3566,15 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .whatsnext-meta{font-family:var(--ui-font);color:var(--muted);font-size:.68rem;font-weight:650;margin:.2rem 0 .4rem;}
 .whatsnext-why{font-family:var(--ui-font);color:var(--muted);font-size:.7rem;line-height:1.42;font-weight:500;}
 
-/* V5.193 — What's next buttons: small pills scaled to the poster. */
+/* What's next buttons: small pills scaled to the poster. */
 [class*="st-key-whatsnext_save_"] button,[class*="st-key-whatsnext_more_"] button{
     height:1.75rem !important;min-height:1.75rem !important;padding:0 .7rem !important;border-radius:999px !important;
     display:flex !important;align-items:center !important;justify-content:center !important;}
 [class*="st-key-whatsnext_save_"] button *,[class*="st-key-whatsnext_more_"] button *{
     font-size:.68rem !important;font-weight:690 !important;line-height:1 !important;margin:0 !important;white-space:nowrap !important;}
 
-
 /* Home proof strip: the tested 3-like edge, front and center */
-.proof-strip{display:flex;align-items:center;gap:1rem;border:1px solid var(--border);border-left:3px solid var(--accent);
-  border-radius:14px;background:rgba(255,255,255,.03);padding:.85rem 1.1rem;margin:-1rem 0 1.6rem;max-width:760px}
-.proof-big{font-size:1.65rem;font-weight:800;letter-spacing:-.03em;color:var(--ivory);white-space:nowrap}
-.proof-copy{color:var(--muted);font-size:.92rem;line-height:1.45}
-.proof-copy b{color:var(--ivory);font-weight:650}
-@media(max-width:700px){.proof-strip{flex-direction:column;align-items:flex-start;gap:.3rem}}
-.proof-copy b{display:block;font-size:1rem;margin-bottom:.15rem}
-.proof-sub{display:block;font-size:.82rem;color:var(--muted)}
-.proof-strip{padding:.75rem 1.05rem !important}
-.proof-note{display:flex !important;align-items:center;gap:1.2rem}
-.proof-note .proof-big{font-size:2rem;font-weight:800;letter-spacing:-.035em;color:var(--ivory);white-space:nowrap;line-height:1}
-.proof-note strong{display:block !important;margin-bottom:.3rem !important}
-.proof-note span{display:block}
-@media(max-width:700px){.proof-note{flex-direction:column;align-items:flex-start;gap:.4rem}}
 /* Proof note: same UI font as the rest of the app, no italics for data */
-.adapt-note.proof-note span{font-family:var(--ui-font) !important;font-style:normal !important;font-size:.95rem !important;color:var(--muted) !important;line-height:1.5 !important}
-.adapt-note.proof-note strong{font-family:var(--ui-font) !important}
-.adapt-note.proof-note .proof-big{font-family:var(--ui-font) !important}
-.match-rank-note{font-family:var(--ui-font);font-size:.72rem;color:var(--muted);margin:-.2rem 0 .55rem}
 
 /* Smooth reload: delayed loader + one-time page fade-in */
 @keyframes icn-appear{from{opacity:0}to{opacity:1}}
@@ -4920,7 +3589,6 @@ div.element-container:has(iframe[title*="browser_storage"]){
 }
 
 /* Home proof card: say what the big number means. Tabs: no leftover focus bar after a click. */
-.proof-big-label{font-size:.72rem;font-weight:600;letter-spacing:0;line-height:1.2;color:var(--muted);margin-top:.25rem;max-width:8.5rem}
 [data-testid="stTabs"] [role="tab"]:focus:not(:focus-visible){outline:none !important;box-shadow:none !important}
 [class*="st-key-refresh_saved"],[class*="st-key-refresh_seen"]{display:none !important;}
 /* Home page as one flow: promise, proof, how it works, start */
@@ -4929,19 +3597,9 @@ div.element-container:has(iframe[title*="browser_storage"]){
 .home-proof-text{font-family:var(--ui-font);color:var(--muted);font-size:.98rem;line-height:1.45}
 .home-proof-text strong{display:block;color:var(--ivory);font-weight:700;font-size:1.02rem;margin-bottom:.15rem}
 .home-proof-text span{display:block}
-.home-steps-label{font-family:var(--ui-font);color:var(--muted2);font-size:.76rem;font-weight:760;letter-spacing:.1em;text-transform:uppercase;margin:0 0 .7rem}
-.home-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;margin-bottom:1.6rem}
-.home-step{border:1px solid var(--border);background:var(--surface);border-radius:18px;padding:1.05rem 1.1rem 1.1rem}
-.home-step-num{width:1.7rem;height:1.7rem;border-radius:999px;display:flex;align-items:center;justify-content:center;
-  background:rgba(243,240,234,.18);color:var(--ivory);font-family:var(--ui-font);font-weight:760;font-size:.82rem;margin-bottom:.7rem}
-.home-step-title{font-family:var(--ui-font);color:var(--ivory);font-weight:740;font-size:1.04rem;letter-spacing:-.015em;margin-bottom:.3rem}
-.home-step-body{font-family:var(--ui-font);color:var(--muted);font-size:.9rem;line-height:1.45}
-@media(max-width:800px){.home-steps{grid-template-columns:1fr}.home-proof{align-items:flex-start;flex-direction:column;gap:.4rem}}
-.profile-chip-muted{color:var(--muted) !important;font-weight:500 !important;border-style:dashed !important}
+@media(max-width:800px){.home-proof{align-items:flex-start;flex-direction:column;gap:.4rem}}
 
 /* Love chance: one quiet line under the match score and on Tonight's Show */
-.match-love,.tonight-love{font-family:var(--ui-font);color:var(--ivory);font-size:.84rem;font-weight:600;margin:.35rem 0 .2rem}
-.tonight-love{color:var(--muted);font-weight:560}
 
 /* A3: layouts that hold at every window width.
    1) Card rows: 2 per line on tablets, swipe on phones (above).
@@ -4973,11 +3631,8 @@ div.element-container:has(iframe[title*="browser_storage"]){
   [class*="st-key-tonight_actions_"] button p{font-size:.78rem !important;white-space:nowrap !important}
 }
 /* The love chance reuses the quiet rank-note style. */
-.match-rank-note{color:var(--ivory)}
 
 .privacy-note{font-family:var(--ui-font);color:var(--muted2);font-size:.72rem;line-height:1.4;margin:.2rem 0 .6rem;max-width:560px}
-[class*="st-key-seenrate_"] button{min-height:1.9rem !important;padding:.2rem .4rem !important}
-[class*="st-key-seenrate_"] button p{font-size:.72rem !important;white-space:nowrap !important}
 
 /* Phones: a calm 2 x 2 grid per row instead of a sideways swipe, so nothing hides off-screen. */
 @media (max-width: 640px){
@@ -4993,11 +3648,10 @@ div.element-container:has(iframe[title*="browser_storage"]){
 /* Buttons: label always centered, one calm size for small card actions. */
 div.stButton > button, [data-testid="stPopover"] > button{display:flex !important;align-items:center !important;justify-content:center !important}
 div.stButton > button > div, div.stButton > button p{width:100% !important;margin:0 !important;text-align:center !important;justify-content:center !important;line-height:1.1 !important}
-[class*="st-key-seenrate_"] [data-testid="stHorizontalBlock"]{gap:.45rem !important}
-[class*="st-key-seenrate_"] button,
+
 [class*="st-key-savedseen_"] button,[class*="st-key-unsave_"] button{
   min-height:1.85rem !important;height:1.85rem !important;padding:0 .6rem !important;border-radius:999px !important}
-[class*="st-key-seenrate_"] button p,
+
 [class*="st-key-savedseen_"] button p,[class*="st-key-unsave_"] button p{font-size:.72rem !important;font-weight:600 !important;white-space:nowrap !important}
 .watch-more{font-weight:600}
 
@@ -5061,8 +3715,6 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     border-radius:999px !important;min-height:2.6rem !important;height:2.6rem !important;padding:0 1rem !important;font-weight:600 !important;
 }
 .st-key-taste_changed,.st-key-taste_undo{margin:0 !important;}
-.proof-line{margin:.9rem 0 .4rem !important;line-height:1.5 !important;}
-.proof-line strong{color:var(--ivory);font-weight:700;}
 
 /* Home: headline, one line, the button, then the product itself. */
 .st-key-start_personalizing{margin-top:1.1rem !important;}
@@ -5082,20 +3734,10 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .st-key-mood_box input{border-radius:999px !important;padding-left:1.1rem !important;}
 
 /* Profile "How iCinema works": Apple-style list and stat row, no boxes. */
-.how-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.1rem 2.2rem;margin:.6rem 0 1.4rem;max-width:860px;}
-.how-item-title{font-family:var(--ui-font);color:var(--ivory);font-weight:700;font-size:1rem;letter-spacing:-.01em;margin-bottom:.2rem;}
-.how-item-copy{font-family:var(--ui-font);color:var(--muted);font-size:.92rem;line-height:1.45;}
-.stat-row{display:flex;gap:2.6rem;flex-wrap:wrap;margin:.4rem 0 .9rem;}
-.stat-num{font-family:var(--ui-font);color:var(--ivory);font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1.05;}
-.stat-label{font-family:var(--ui-font);color:var(--muted);font-size:.85rem;line-height:1.35;max-width:15rem;margin-top:.25rem;}
-.how-footnote{font-family:var(--ui-font);color:var(--muted2);font-size:.8rem;line-height:1.5;max-width:860px;margin-top:.3rem;}
-@media(max-width:800px){.how-list{grid-template-columns:1fr;}.stat-row{gap:1.4rem;}}
 
 /* Showroom cards use 16:9 key art like streaming apps, so a screen shows rows instead of one. */
 .poster.landscape{aspect-ratio:16 / 9 !important;border-radius:14px !important;}
 .poster.landscape img{object-fit:cover !important;border-radius:13px !important;}
-.card-why{font-family:var(--ui-font);color:var(--muted);font-size:.8rem;font-weight:600;line-height:1.3;
-    margin:.15rem 0 .35rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* Mood search sits in the page header, the same height as the title block's last line. */
 .st-key-mood_box{max-width:none !important;margin:0 0 1.25rem !important;}
@@ -5103,10 +3745,6 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 
 /* Profile: one type family and calm sizes throughout. */
 .profile-wrap, .profile-wrap *{font-family:var(--ui-font) !important;}
-.profile-summary, .profile-summary strong{font-style:normal !important;font-size:.98rem !important;line-height:1.55 !important;color:var(--muted) !important;}
-.how-step{font-family:var(--ui-font);color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.25rem;}
-.stat-row{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:1.6rem !important;max-width:860px;}
-@media(max-width:800px){.stat-row{grid-template-columns:1fr !important;}}
 
 /* ---- Showroom cards, Apple-style: art, one meta line, one why line, one watch line, one hook ---- */
 .poster.landscape{position:relative !important;background:#0d0f12 !important;}
@@ -5116,13 +3754,8 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     filter:drop-shadow(0 2px 8px rgba(0,0,0,.55));border-radius:0 !important;}
 [class*="st-key-showroom_swipe_"] .poster-caption.art-titled{display:none !important;}   /* the art carries the title; year is in the meta line */
 [class*="st-key-showroom_swipe_"] .poster-caption:not(.art-titled){height:auto !important;min-height:0 !important;margin:.55rem 0 0 !important;}
-.card-meta{margin:.55rem 0 .1rem !important;font-size:.8rem !important;font-weight:700 !important;color:var(--ivory) !important;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:auto !important;min-height:0 !important;}
-.card-why{margin:.1rem 0 .2rem !important;color:var(--muted) !important;}
 .watch-availability{white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;
     height:auto !important;min-height:0 !important;max-height:1.4rem !important;margin:.1rem 0 .15rem !important;font-size:.78rem !important;}
-.movie-summary-label{display:block !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;
-    height:auto !important;min-height:0 !important;max-height:1.4rem !important;font-size:.78rem !important;}
 
 /* Fit pill and Skip: small and quiet above the art; Skip reads as a text button. */
 [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button{min-height:1.75rem !important;height:1.75rem !important;
@@ -5134,16 +3767,10 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 /* Save is the one primary action; Seen is secondary. Smaller, rounder, calmer. */
 [class*="st-key-movie_actions_"] button{min-height:2rem !important;height:2rem !important;font-size:.78rem !important;border-radius:999px !important;}
 
-
 /* Mood search Clear sits inside the same pill row. */
-.st-key-mood_box [class*="st-key-mood_clear"] button{border:0 !important;background:transparent !important;color:var(--muted) !important;min-height:2.6rem !important;}
-.st-key-mood_box [class*="st-key-mood_clear"] button:hover{color:var(--ivory) !important;}
 
-/* ---- Batch 3 polish ---- */
+/* polish ---- */
 /* Card text: two short lines under the art, never cut mid-number. */
-.card-meta{font-size:.82rem !important;}
-.card-sub{font-family:var(--ui-font);color:var(--muted);font-size:.78rem;font-weight:600;line-height:1.35;
-    margin:.1rem 0 .55rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* Title on the art when there's no logo, so every card is the same height. */
 .poster .art-title-text{position:absolute;left:6%;right:6%;bottom:9%;font-family:var(--ui-font);font-weight:800;
     font-size:1.05rem;line-height:1.15;letter-spacing:-.02em;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.7);
@@ -5154,7 +3781,6 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .poster .art-logo,.poster .art-title-text{z-index:2;}
 /* Undo next to Skip reads as a word, same weight as Skip. */
 
-
 /* The % popover: one headline, the odds, two plain sentences. */
 .why-pop-head{font-family:var(--ui-font);color:var(--ivory);font-size:1.35rem;font-weight:800;letter-spacing:-.02em;margin:.1rem 0 .15rem;}
 .why-pop-odds{font-family:var(--ui-font);color:var(--ivory);font-size:.9rem;font-weight:600;margin:0 0 .7rem;}
@@ -5162,32 +3788,13 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 
 /* Mood search: one rounded field with an inline clear, quick moods below. */
 .st-key-mood_box{position:relative !important;}
-.st-key-mood_box [class*="st-key-mood_clear"]{position:absolute !important;right:.45rem;top:50%;transform:translateY(-50%);
-    width:auto !important;z-index:3;}
-.st-key-mood_box [class*="st-key-mood_clear"] button{min-height:1.8rem !important;height:1.8rem !important;width:1.8rem !important;
-    padding:0 !important;border-radius:999px !important;border:0 !important;background:rgba(255,255,255,.08) !important;
-    color:var(--muted) !important;font-size:.75rem !important;}
 .st-key-mood_box input{padding-right:2.8rem !important;}
-.st-key-mood_chips{margin:-.6rem 0 1.1rem !important;}
-.st-key-mood_chips button{min-height:1.7rem !important;height:1.7rem !important;font-size:.72rem !important;border-radius:999px !important;
-    background:transparent !important;border-color:rgba(169,173,183,.25) !important;color:var(--muted) !important;}
-.st-key-mood_chips button:hover{color:var(--ivory) !important;border-color:rgba(169,173,183,.5) !important;}
 
-/* ---- Batch 3b ---- */
-.card-hook{font-family:var(--ui-font);color:var(--muted);font-size:.8rem;line-height:1.35;margin:.15rem 0 .6rem;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* ---- */
 /* % popup: headline, odds, then label/fact rows anyone can scan. */
 .why-pop-head{font-size:1.25rem !important;}
 .why-pop-odds{font-size:.88rem !important;font-weight:600 !important;margin-bottom:.8rem !important;}
-.why-pop-rows{display:grid;gap:.45rem;margin:0 0 .8rem;border-top:1px solid rgba(169,173,183,.14);padding-top:.7rem;}
-.why-pop-row{display:grid;grid-template-columns:6.2rem 1fr;gap:.6rem;align-items:baseline;font-family:var(--ui-font);}
-.why-pop-k{color:var(--muted2);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
-.why-pop-v{color:var(--ivory);font-size:.88rem;font-weight:500;line-height:1.4;}
 /* Model status: two tidy rows. */
-.model-status-panel .model-row{display:flex !important;align-items:center !important;gap:.6rem !important;flex-wrap:nowrap !important;margin:.25rem 0 !important;}
-.model-status-panel .model-name{font-family:var(--ui-font);font-weight:700;font-size:.85rem;color:var(--ivory);white-space:nowrap;min-width:9.5rem;}
-.model-status-panel .model-note{font-family:var(--ui-font);font-size:.85rem;color:var(--muted);}
-.model-status-panel .model-progress{width:7rem;flex:0 0 7rem;}
 /* Profile buttons all the same weight. */
 .st-key-edit_preferences button p,.st-key-taste_changed button p,.st-key-taste_undo button p,.st-key-reset_profile_tab button p{
     font-weight:600 !important;font-size:.9rem !important;}
@@ -5197,24 +3804,14 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     border:1px solid rgba(169,173,183,.18) !important;}
 .st-key-mood_box input:focus{border-color:rgba(169,173,183,.45) !important;}
 
-/* ---- Batch 3c ---- */
+/* ---- */
 /* Year and genres in the original small, letter-spaced style; ratings in the original ratings style. */
 .card-year{margin:.6rem 0 .15rem !important;color:var(--muted) !important;}
 /* Two-line premise at a glance; tap it to read the whole thing in place. */
-.card-hook-toggle{margin:.2rem 0 .6rem;}
 .card-hook-box{position:absolute;opacity:0;pointer-events:none;width:0;height:0;}
-.card-hook-toggle .card-hook{display:-webkit-box !important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-    white-space:normal !important;cursor:pointer;margin:0 !important;font-size:.82rem !important;line-height:1.4 !important;
-    min-height:2.3rem;color:var(--muted) !important;}
-.card-hook-toggle .card-hook:hover{color:var(--ivory) !important;}
-.card-hook-full{display:none;font-family:var(--ui-font);color:var(--muted);font-size:.8rem;line-height:1.45;margin-top:.4rem;
-    padding-top:.4rem;border-top:1px solid rgba(169,173,183,.14);}
-.card-hook-box:checked ~ .card-hook-full{display:block;}
-.card-hook-box:checked ~ .card-hook{-webkit-line-clamp:unset;color:var(--ivory) !important;}
 /* Card text as one block with even, tight spacing. */
 .card-text > div{margin-top:0 !important;margin-bottom:.28rem !important;min-height:0 !important;height:auto !important;}
 .card-text .card-year{margin-top:.55rem !important;}
-.card-text .card-hook-toggle{margin:.35rem 0 .55rem !important;}
 
 /* Headings: Apple-clean, with a slightly sharper display face for a bit of edge. */
 @font-face{font-family:"iCinema Display";src:local("SF Pro Display"),local("Inter Tight");}
@@ -5222,7 +3819,7 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .step2-title,.profile-heading,.tonight-title{
     font-family:"Space Grotesk","iCinema Display",var(--ui-font) !important;letter-spacing:-.035em !important;}
 
-/* ---- Batch 4 polish ---- */
+/* polish ---- */
 /* Skip matches the fit pill: a compact outlined pill. */
 [class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button{border:1px solid rgba(169,173,183,.28) !important;
     background:transparent !important;border-radius:999px !important;color:var(--ivory) !important;}
@@ -5232,10 +3829,8 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 [class*="st-key-savedcard_"] .poster-caption:not(.art-titled),[class*="st-key-seencard_"] .poster-caption:not(.art-titled){
     height:auto !important;min-height:0 !important;margin:.55rem 0 0 !important;}
 /* Popup rows: wider label column so every row lines up. */
-.why-pop-row{grid-template-columns:7.2rem 1fr !important;}
-.why-pop-rows{gap:.5rem !important;}
 
-/* ---- Batch 4b polish ---- */
+/* polish ---- */
 .st-key-refresh_profile{display:none !important;}
 /* Tap the art to read the story: it opens right under the art, same type everywhere. */
 .art-toggle{display:block;cursor:pointer;}
@@ -5247,14 +3842,7 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     letter-spacing:-.01em;margin-bottom:.3rem;}
 .premise-copy{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.5;}
 /* What's shaping your picks */
-.model-panel-title{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-weight:700;font-size:1rem;margin:0 0 .5rem;}
-.model-status-panel .model-share{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ivory);font-size:.82rem;
-    min-width:3rem;text-align:right;}
-.model-status-panel .model-name{min-width:15rem !important;}
-.model-panel-foot{font-family:var(--ui-font);color:var(--muted2);font-size:.75rem;margin-top:.45rem;}
 /* The model's written read of you, set like a readout. */
-.profile-summary,.profile-summary strong{font-family:ui-monospace,SFMono-Regular,Menlo,"IBM Plex Mono",monospace !important;
-    font-size:.86rem !important;line-height:1.65 !important;letter-spacing:-.01em;color:var(--muted) !important;font-style:normal !important;}
 
 /* ---- 4b fix: one-block cards ---- */
 .card-text > .card-hook-box:checked ~ .premise-panel{display:block !important;}
@@ -5270,51 +3858,16 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 .profile-chip,.profile-analysis-row{font-family:ui-monospace,SFMono-Regular,Menlo,"IBM Plex Mono",monospace !important;
     font-weight:500 !important;font-size:.82rem !important;letter-spacing:-.01em !important;}
 /* How your picks are made: one bar with the real mix, then plain rows. */
-.mix-bar{display:flex;width:100%;max-width:760px;height:2rem;border-radius:999px;overflow:hidden;margin:.2rem 0 .9rem;
-    border:1px solid rgba(169,173,183,.2);}
-.mix-seg{display:flex;align-items:center;padding:0 .8rem;white-space:nowrap;overflow:hidden;}
-.mix-seg span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.76rem;color:var(--ivory);}
-.seg-fans{background:rgba(243,240,234,.55);} .seg-you{background:rgba(243,240,234,.28);} .seg-personal{background:rgba(243,240,234,.14);}
-.model-status-panel .model-name{min-width:10.5rem !important;}
-.model-status-panel .model-row{align-items:flex-start !important;}
 /* Tap panel: a charming line, then the story in brief. */
-.premise-tag{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-size:.88rem;font-style:italic;margin:0 0 .35rem;opacity:.9;}
 /* Mood search: a display face, still clean. */
 .st-key-mood_box input,.st-key-mood_box input::placeholder{font-family:"Space Grotesk",var(--ui-font) !important;
     font-size:.95rem !important;letter-spacing:-.01em;}
 
-/* ---- Batch 7: one switch, three sections ---- */
-.st-key-media_view_box{margin:-.4rem 0 .9rem !important;}
-.st-key-media_view_box [data-testid="stButtonGroup"] button,.st-key-explore_lens_box [data-testid="stButtonGroup"] button{
-    border-radius:999px !important;font-family:var(--ui-font) !important;font-size:.82rem !important;min-height:2rem !important;}
-.st-key-explore_lens_box{margin:-.2rem 0 .35rem !important;}
-.explore-note{margin:0 0 .9rem !important;}
-/* Home / Movies / Shows and the explore lenses: radio buttons drawn as one segmented pill control. */
-.st-key-media_view_box [data-testid="stRadio"] > div,.st-key-explore_lens_box [data-testid="stRadio"] > div{
-    display:inline-flex !important;gap:.25rem !important;padding:.22rem !important;border-radius:999px !important;
-    background:rgba(255,255,255,.05) !important;border:1px solid rgba(169,173,183,.18) !important;}
-.st-key-media_view_box [data-testid="stRadio"] label,.st-key-explore_lens_box [data-testid="stRadio"] label{
-    margin:0 !important;padding:.34rem .95rem !important;border-radius:999px !important;cursor:pointer;}
-.st-key-media_view_box [data-testid="stRadio"] label > div:first-child,
-.st-key-explore_lens_box [data-testid="stRadio"] label > div:first-child{display:none !important;}   /* hide the dots */
-.st-key-media_view_box [data-testid="stRadio"] label:has(input:checked),
-.st-key-explore_lens_box [data-testid="stRadio"] label:has(input:checked){background:rgba(243,240,234,.14) !important;}
-.st-key-media_view_box [data-testid="stRadio"] label p,.st-key-explore_lens_box [data-testid="stRadio"] label p{
-    font-family:var(--ui-font) !important;font-size:.84rem !important;font-weight:600 !important;color:var(--ivory) !important;}
-/* Home · Movies · Shows and the explore lenses: radios drawn as a segmented control. */
-.st-key-media_view_box div[role="radiogroup"],.st-key-explore_lens_box div[role="radiogroup"]{
-    display:inline-flex !important;gap:.25rem !important;padding:.22rem !important;border-radius:999px !important;
-    background:rgba(255,255,255,.05) !important;border:1px solid rgba(169,173,183,.18) !important;}
-.st-key-media_view_box div[role="radiogroup"] label,.st-key-explore_lens_box div[role="radiogroup"] label{
-    margin:0 !important;padding:.32rem .95rem !important;border-radius:999px !important;cursor:pointer;}
-.st-key-media_view_box div[role="radiogroup"] label > div:first-child,
-.st-key-explore_lens_box div[role="radiogroup"] label > div:first-child{display:none !important;}   /* hide the dot */
-.st-key-media_view_box div[role="radiogroup"] label:has(input:checked),
-.st-key-explore_lens_box div[role="radiogroup"] label:has(input:checked){background:rgba(243,240,234,.14) !important;}
-.st-key-media_view_box div[role="radiogroup"] label p,.st-key-explore_lens_box div[role="radiogroup"] label p{
-    font-family:var(--ui-font) !important;font-size:.84rem !important;font-weight:600 !important;margin:0 !important;}
+/* one switch, three sections ---- */
+/* Home / Movies / Shows and the explore lenses: radio buttons drawn as one segmented pill control. */   /* hide the dots */
+/* Home · Movies · Shows and the explore lenses: radios drawn as a segmented control. */   /* hide the dot */
 
-/* ---- Batch 8: unified Showroom, calmer Profile, iPhone ---- */
+/* unified Showroom, calmer Profile, iPhone ---- */
 /* Equal rhythm on every card: the same gap above the art (after the pill row) as before Save / Seen. */
 [class*="st-key-showroom_controls_"]{margin-bottom:.55rem !important;}
 .card-text > label.art-toggle{margin:0 0 .55rem !important;}
@@ -5326,12 +3879,8 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 /* Profile chips: smaller, centered monospace. */
 .profile-chip,.profile-analysis-row{font-size:.74rem !important;justify-content:center !important;text-align:center !important;
     padding:.28rem .62rem !important;min-height:0 !important;}
-.profile-chip-wrap,.profile-analysis{align-items:center !important;}
+.profile-chip-wrap{align-items:center !important;}
 /* How your picks are made: technique, share, job. */
-.model-status-panel .model-name{min-width:17rem !important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace !important;
-    font-size:.8rem !important;font-weight:600 !important;}
-.model-status-panel .model-share{min-width:2.8rem;text-align:right;color:var(--ivory);
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;}
 /* Move my profile: a quiet text link under the privacy line. */
 .st-key-move_profile_link [data-testid="stPopover"] > div > button,.st-key-move_profile_link [data-testid="stPopover"] button{
     width:auto !important;border:0 !important;background:transparent !important;padding:0 !important;min-height:0 !important;
@@ -5352,72 +3901,43 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
     div.stButton > button{min-height:44px !important;}
     .hero-title{font-size:2.3rem !important;}
     .showroom-row-title{font-size:1.45rem !important;}
-    .model-status-panel .model-row{flex-wrap:wrap !important;}
-    .model-status-panel .model-name{min-width:0 !important;}
     [data-baseweb="tab-list"]{overflow-x:auto !important;}
 }
 
-
-/* ---- Batch 9: final polish ---- */
+/* final polish ---- */
 /* Text floor: nothing readable is smaller than 12px. */
-.diag-subhead,
-.how-step,
+
 .insight-label,
-.match-model-note,
-.match-rank-note,
-.match-reason-copy,
-.match-reason-label,
-.match-score-label,
-.methodology-label,
 .model-name,
 .model-note,
 .model-row,
-.model-status-line,
-.model-status-primary,
-.model-status-secondary,
-.movie-full-description,
-.movie-summary-details .movie-full-description,
-.movie-summary-details > summary,
-.movie-summary-toggle .movie-full-description,
-.movie-synopsis-copy,
-.movie-synopsis-label,
 .pref-scale-clicks div.stButton>button,
 .pref-scale-clicks div.stButton>button p,
 .privacy-note,
 .profile-analysis-row,
 .profile-chip,
 .profile-label,
-.proof-big-label,
-.ratings-note,
 .row-model-note,
 .search-results-label,
 .search-selected-kicker,
 .selection-heading,
 .selection-state,
 .services-help,
-.st-key-mood_chips button,
 .st-key-search_add_favorite button,
 .st-key-search_add_like button,
 .st-key-step1_shelf [class*="st-key-fav_"] button *,
 .st-key-step1_shelf [class*="st-key-like_"] button *,
 .st-key-step1_shelf [class*="st-key-shelfskip_"] button *,
-.step1-shelf .movie-year,
-.step1-shelf .poster-caption-year,
-.step1-shelf .shelf-year,
-.tonight-fit,
 .tonight-hook,
-.tonight-kicker,
 .tonight-line,
 .tonight-match,
 .tonight-meta,
 .tonight-why,
-.tonight-why-label,
 .watch-attribution,
 .whatsnext-kicker,
 .whatsnext-meta,
 .whatsnext-noimg,
 .whatsnext-why,
-.why-pop-k,
 [class*="st-key-dislike_"] button p,
 [class*="st-key-fav_"] button,
 [class*="st-key-fav_"] button p,
@@ -5431,11 +3951,9 @@ div.stButton > button > div, div.stButton > button p{width:100% !important;margi
 [class*="st-key-savedseen_"] button span,
 [class*="st-key-seen_"] button,
 [class*="st-key-seen_"] button p,
-[class*="st-key-seenrate_"] button p,
 [class*="st-key-selection_card_"] .selection-state,
 [class*="st-key-service_"] button p,
 [class*="st-key-shelfskip_"] button p,
-[class*="st-key-showroom_body_"] .movie-summary-label,
 [class*="st-key-showroom_swipe_"] button p,
 [class*="st-key-skip_"] button,
 [class*="st-key-skip_"] button p,
@@ -5452,11 +3970,7 @@ div[data-testid="stExpander"] summary p,
 div[data-testid="stPopover"] > button,
 div[data-testid="stPopover"] button,
 div[data-testid="stPopover"] button p{font-size:.78rem !important;}
-.match-pill,
-.showroom-top-controls [class*="st-key-skip_"] button,
-.showroom-top-controls [class*="st-key-skip_"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button p,
-.showroom-top-controls div[data-testid="stPopover"] button span,
+
 [class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button,
 [class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p,
 [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button,
@@ -5489,18 +4003,6 @@ div.stButton>button:focus-visible,[data-testid="stPopover"] button:focus-visible
 .premise-copy{font-size:.86rem !important;line-height:1.5 !important;}
 
 /* How your picks are made: one grid, so every dot, name, share, and note lines up. */
-.model-status-panel{gap:0 !important;}
-.model-status-panel .model-row{display:flex !important;align-items:baseline !important;flex-wrap:nowrap !important;gap:0 !important;
-    margin:0 !important;padding:.5rem 0 !important;border-top:1px solid rgba(169,173,183,.10);}
-.model-panel-title + .model-row{border-top:0 !important;}
-.model-status-panel .model-dot{flex:0 0 .5rem !important;width:.5rem !important;height:.5rem !important;margin:0 .8rem 0 0 !important;
-    align-self:center !important;}
-.model-status-panel .model-name{flex:0 0 17.5rem !important;min-width:0 !important;max-width:17.5rem !important;white-space:normal !important;
-    font-size:.8rem !important;margin:0 !important;}
-.model-status-panel .model-share{flex:0 0 2.8rem !important;min-width:0 !important;text-align:right !important;font-size:.8rem !important;
-    margin:0 1rem 0 .4rem !important;}
-.model-status-panel .model-note{flex:1 1 0 !important;min-width:0 !important;font-size:.84rem !important;line-height:1.4 !important;}
-.model-panel-foot{font-size:.78rem !important;margin-top:.6rem !important;}
 
 /* Mood search: what it understood, as chips under the field, each with ×, plus Clear. */
 .st-key-mood_box{margin:0 0 .4rem !important;}
@@ -5538,16 +4040,11 @@ div.stButton>button:focus-visible,[data-testid="stPopover"] button:focus-visible
     .st-key-move_profile_link [data-testid="stPopover"] button,[class*="st-key-remove_selection_"] button{height:auto !important;min-height:0 !important;}
     .card-text .card-desc{min-height:0 !important;}
     .st-key-mood_box input{font-size:16px !important;}   /* 16px stops iPhone Safari from zooming into the field */
-    .model-status-panel .model-row{flex-wrap:wrap !important;}
-    .model-status-panel .model-name{flex:1 1 0 !important;max-width:none !important;}
-    .model-status-panel .model-share{margin-right:0 !important;}
-    .model-status-panel .model-note{flex:0 0 100% !important;padding-left:1.3rem !important;margin-top:.2rem !important;}
 }
 
-/* ---- Batch 10: Profile, library cards, streaming line ---- */
+/* Profile, library cards, streaming line ---- */
 /* Profile: one column, one rhythm. Sections share the same title, spacing, and left edge. */
 .pf{max-width:820px !important;}
-.pf-summary{font-family:var(--ui-font);color:var(--muted);font-size:.9rem;line-height:1.4;margin:.35rem 0 0;}
 .pf-section{margin:2rem 0 0;padding:1.6rem 0 0;border-top:1px solid var(--border);}
 .pf-title{font-family:"Space Grotesk",var(--ui-font);color:var(--ivory);font-size:1.15rem;font-weight:700;letter-spacing:-.015em;margin:0 0 .3rem;}
 .pf-sub{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;line-height:1.45;margin:0 0 1rem;}
@@ -5578,14 +4075,6 @@ div.stButton>button:focus-visible,[data-testid="stPopover"] button:focus-visible
 .pf-stats .insight-title{font-family:var(--ui-font);color:var(--ivory);font-size:.84rem;font-weight:650;margin:.3rem 0 .2rem;}
 .pf-stats .insight-label{font-size:.78rem !important;line-height:1.4 !important;}
 /* How it works: two by two, then the tested results. */
-.pf-how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.1rem 2rem;margin:.4rem 0 0;}
-.pf-how-title{font-family:var(--ui-font);color:var(--ivory);font-size:.92rem;font-weight:650;margin:0 0 .25rem;}
-.pf-how-copy{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.5;}
-.pf-proof-lead{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;margin:1.6rem 0 .6rem;}
-.pf .stat-row{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:1.5rem !important;margin:0 !important;}
-.pf .stat-num{font-variant-numeric:tabular-nums;}
-.pf .stat-label{font-size:.82rem !important;line-height:1.45 !important;}
-.pf .how-footnote{font-size:.78rem !important;margin:.7rem 0 0 !important;}
 
 /* Streaming line: wraps inside its card, each service stays whole, "+ N more" stays readable. */
 .card-text .watch-availability,.panel-lines .watch-availability{white-space:normal !important;overflow-wrap:break-word !important;
@@ -5607,19 +4096,17 @@ div.stButton>button:focus-visible,[data-testid="stPopover"] button:focus-visible
     .pf-taste .profile-block{flex-direction:column !important;gap:.35rem !important;}
     .pf-taste .profile-label{flex:none !important;line-height:1.3 !important;}
     .pf-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .pf-how,.pf .stat-row{grid-template-columns:1fr !important;}
     [class*="st-key-seenrow_"] div.stButton>button,[class*="st-key-seenrow_"] [data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}
 }
 .meta-part{white-space:nowrap;}
 
-
-/* ---- Batch 11: wabi-sabi palette, one thumbs control, centered labels ---- */
+/* wabi-sabi palette, one thumbs control, centered labels ---- */
 /* Palette, from traditional Japanese colors: sumi (ink), kinari (unbleached silk), nezumi (mouse grey),
    and one living accent, koke (moss), used only for things that are running right now. */
 :root{--koke:#8B7D3A;--koke-soft:rgba(139,125,58,.28);--kinari:#F3F0EA;}
 .pf-dot.on{background:var(--koke) !important;animation:pf-pulse-koke 2.2s ease-out infinite !important;box-shadow:0 0 0 0 rgba(139,125,58,.6);}
 @keyframes pf-pulse-koke{0%{box-shadow:0 0 0 0 rgba(139,125,58,.6);}70%{box-shadow:0 0 0 .5rem rgba(139,125,58,0);}100%{box-shadow:0 0 0 0 rgba(139,125,58,0);}}
-.model-dot.on,.model-status-dot{background:var(--koke) !important;box-shadow:0 0 6px rgba(139,125,58,.5) !important;}
+.model-dot.on{background:var(--koke) !important;box-shadow:0 0 6px rgba(139,125,58,.5) !important;}
 
 /* Every button label sits in the exact center. */
 div.stButton>button,[data-testid="stPopover"] button{display:flex !important;align-items:center !important;justify-content:center !important;text-align:center !important;}
@@ -5663,8 +4150,6 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 .pf-stats.pf-proof .insight-value{color:var(--kinari) !important;}
 
 /* Fit popup: what decided it (each model's share of this movie's score), then what each model saw. */
-.why-pop-sec{font-family:var(--ui-font);color:var(--muted2);font-size:.75rem;font-weight:700;letter-spacing:.08em;
-    text-transform:uppercase;margin:1rem 0 .5rem;}
 .mix{display:flex;flex-direction:column;gap:.55rem;}
 .mix-row{display:flex;align-items:center;gap:.8rem;}
 .mix-name{flex:0 0 11.5rem;min-width:0;font-family:var(--ui-font);color:var(--kinari);font-size:.86rem;font-weight:600;line-height:1.25;}
@@ -5686,9 +4171,6 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 .pf-readout .pf-dot{flex:0 0 .5rem;width:.5rem;height:.5rem;}
 .pf-readout-k{color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;font-size:.75rem;}
 .pf-readout-v{color:var(--kinari);font-variant-numeric:tabular-nums;}
-.pf-readout-t{color:var(--muted2);margin-left:auto;}
-@media (max-width: 640px){.pf-readout-t{margin-left:0;flex-basis:100%;padding-left:1.1rem;}}
-
 
 /* Fit popup, compact: each model's bar with what it saw right underneath. */
 .mix{gap:.35rem !important;margin-top:.9rem;}
@@ -5708,7 +4190,7 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 .mix{gap:.35rem !important;}
 @media (max-width: 640px){.mix-name{flex-basis:9rem !important;} .mix-name span{display:none !important;}}
 
-/* ---- Batch 11c ---- */
+/* ---- */
 /* Seen: remove sits in the action row as a fourth pill, so nothing floats over the poster or flashes on rerun. */
 [class*="st-key-seencard_"] [class*="st-key-unseen_"]{position:static !important;opacity:1 !important;width:100% !important;margin:0 !important;}
 [class*="st-key-unseen_"] button{width:100% !important;height:2.4rem !important;min-height:2.4rem !important;min-width:2.6rem !important;
@@ -5730,7 +4212,7 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 .mix-pct{font-family:var(--ui-font) !important;font-weight:600 !important;font-variant-numeric:tabular-nums !important;}
 .mix-detail{font-family:var(--ui-font) !important;}
 
-/* ---- Batch 20: search, shows popup, and the iPhone pass ---- */
+/* search, shows popup, and the iPhone pass ---- */
 /* Search: one full-width field, one-tap starting points under it. */
 .st-key-mood_box{max-width:760px;margin:.4rem 0 1rem !important;}
 .st-key-mood_suggest_row{margin:.55rem 0 0 !important;gap:.4rem !important;flex-wrap:wrap !important;}
@@ -5773,7 +4255,7 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 }
 .pf-empty{font-family:var(--ui-font);color:var(--muted2);font-size:.86rem;line-height:1.9rem;}
 
-/* ---- Batch 21: centered labels, a Seen row that fits its card ---- */
+/* centered labels, a Seen row that fits its card ---- */
 /* Popover buttons (fit pills, What's next): no dropdown chevron, label exactly centered. */
 [class*="st-key-showroom_controls_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
 [class*="st-key-seenrow_"] [data-testid="stPopover"] button [data-testid="stIconMaterial"],
@@ -5789,7 +4271,7 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 [class*="st-key-seenrow_"] [data-testid="stPopover"] button{padding:0 .5rem !important;min-width:0 !important;}
 [class*="st-key-seenrow_"] [data-testid="stPopover"] button p{font-size:.84rem !important;white-space:nowrap !important;}
 
-/* ---- Batch 21: Seen action row fits its card, centered labels, no chevrons ---- */
+/* Seen action row fits its card, centered labels, no chevrons ---- */
 [class*="st-key-seenrow_"] [data-testid="stHorizontalBlock"]{gap:.4rem !important;flex-wrap:nowrap !important;width:100% !important;margin:0 !important;}
 [class*="st-key-seenrow_"] [data-testid="column"],[class*="st-key-seenrow_"] [data-testid="stColumn"]{min-width:0 !important;}
 [class*="st-key-seenrow_"] div.stButton>button,[class*="st-key-seenrow_"] [data-testid="stPopover"] button{
@@ -5803,7 +4285,7 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 /* Every popover pill: label centered in the pill, nothing pushed aside by a hidden icon. */
 [data-testid="stPopover"] button > div,[data-testid="stPopover"] button [data-testid="stMarkdownContainer"]{width:100% !important;display:flex !important;justify-content:center !important;}
 
-/* ---- Batch 21 ---- */
+/* ---- */
 /* While a rerun is in flight, Streamlit keeps the previous run's elements on screen until it reaches them.
    A leftover copy of the tabs showed up as a second, greyed tab bar; hide any stale copy of the tabs. */
 [data-stale="true"]:has([data-testid="stTabs"]),[data-stale="true"] [data-testid="stTabs"]{display:none !important;}
@@ -5823,7 +4305,7 @@ div.stButton>button p{margin:0 !important;text-align:center !important;}
 [data-testid="stPopover"] > div > button [data-testid="stIconMaterial"]{display:none !important;}
 [data-testid="stPopover"] > div > button,[data-testid="stPopover"] > button{justify-content:center !important;}
 
-/* ---- Batch 24: buttons, services, Tonight's Show, Saved and Seen ---- */
+/* buttons, services, Tonight's Show, Saved and Seen ---- */
 /* Every button: one line, centered both ways, no clipped words. */
 div.stButton>button,[data-testid="stPopover"] button{padding-top:0 !important;padding-bottom:0 !important;}
 div.stButton>button p,[data-testid="stPopover"] button p{line-height:1.15 !important;white-space:nowrap !important;
@@ -5860,7 +4342,7 @@ div.stButton>button [data-testid="stMarkdownContainer"],[data-testid="stPopover"
 .tonight-meta .no-caps,.card-year .no-caps{text-transform:none !important;letter-spacing:0 !important;}
 .tonight-why{font-size:.86rem !important;line-height:1.45 !important;}
 
-/* ---- Batch 24: button text, library cards, Tonight's Show, services ---- */
+/* button text, library cards, Tonight's Show, services ---- */
 /* Every button label: one line box, no stray paragraph margin, so it sits in the optical center. */
 div.stButton>button,[data-testid="stPopover"] button{line-height:1 !important;}
 div.stButton>button p,[data-testid="stPopover"] button p,div.stButton>button [data-testid="stMarkdownContainer"] p{
@@ -5923,11 +4405,6 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
 
 /* Search result card: the movie your search names, in the same card language as Tonight's Show. */
 .st-key-search_card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02);padding:.9rem 1rem !important;margin:0 0 1.2rem !important;}
-.search-card-poster img{width:100%;max-width:6.5rem;aspect-ratio:2/3;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;}
-.search-card-kicker{font-family:var(--ui-font);color:var(--muted2);font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 .25rem;}
-.search-card-title{font-family:"Space Grotesk",var(--ui-font);color:var(--kinari);font-size:1.35rem;font-weight:700;letter-spacing:-.02em;margin:0 0 .3rem;}
-.search-card-meta{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.5;margin:0 0 .25rem;}
-.search-card-watch{margin:0 0 .6rem;}
 [class*="st-key-search_card_save"] button,[class*="st-key-search_card_seen"] button{height:2.4rem !important;min-height:2.4rem !important;border-radius:999px !important;}
 @media (max-width: 640px){
     .st-key-search_card [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:nowrap !important;gap:.8rem !important;}
@@ -5940,7 +4417,7 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
 .search-state{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;text-align:center;padding:.6rem 0;}
 .st-key-search_card{display:none !important;}
 
-/* ---- Batch 29: live search ---- */
+/* live search ---- */
 /* The search field is a small typing component; undo the rules that hide the invisible storage bridge. */
 .st-key-mood_box div[data-testid="stCustomComponentV1"],.st-key-mood_box div[data-testid="stCustomComponentV1"] iframe,
 .st-key-mood_box [class*="st-key-mood_live_"],.st-key-mood_box [class*="st-key-mood_live_"] iframe,
@@ -5964,7 +4441,7 @@ div[data-testid="stPopoverBody"] [data-testid="stPills"] button[aria-checked="tr
     [data-testid="stHorizontalBlock"]:has([class*="st-key-live_hit_"]) > div{flex:0 0 calc(50% - .25rem) !important;min-width:0 !important;}
 }
 
-/* ---- Batch 30 ---- */
+/* ---- */
 .st-key-refresh_showroom{display:none !important;}
 [data-testid="stElementContainer"]:has(.lib-cur),[data-testid="stElementContainer"]:has(.lib-mark),
 .element-container:has(.lib-cur),.element-container:has(.lib-mark){display:none !important;}

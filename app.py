@@ -7,6 +7,27 @@ from urllib.parse import quote_plus
 import json
 import re
 import streamlit as st
+from src.app_state import (  # session helpers, split out of app.py
+    restore_profile,
+    _compact_events,
+    queue_profile_save,
+    _too_soon,
+    _ver_mark,
+    _lib_mark,
+    _friendly_error,
+    _timing_on,
+    _format_seconds,
+    _remember_movie,
+    _drop_last_event,
+)
+from src.tested_settings import (  # tuned numbers from data/ test results
+    _tested_blend_weights,
+    _tested_knobs,
+    _tested_shelf,
+    _like_rerank_ships,
+    load_offline_results,
+    _similar_weights,
+)
 from src.recommender import (
     STARTER_MOVIES, GENRES, MORE_OF_OPTIONS, searchable_titles, get_movie,
     build_profile, score_movie, recommend, rank_movies, score_movie_components, CATALOG,
@@ -23,16 +44,6 @@ from src.scroll_keeper import scroll_keeper
 from src.cf_model import user_vector, cf_affinity, closest_liked, item_similarity, fan_percentile, preferred_title, interleave_eligible
 from src.interleave import team_draft, TARGET_DECIDED
 from src.recommender import _calibrated_match_percent
-
-def _timing_on():
-    """Set ICINEMA_TIMING = true in Streamlit secrets to log where time goes (Manage app → Logs)."""
-    import os
-    if os.environ.get("ICINEMA_TIMING"):
-        return True
-    try:
-        return bool(st.secrets.get("ICINEMA_TIMING", False))
-    except Exception:
-        return False
 
 
 def _log_time(label, start):
@@ -105,20 +116,6 @@ for k,v in defaults.items():
 
 PROFILE_STORAGE_KEY = "icinema_profile_v1"
 
-def _compact_events(events, keep_actions=1500, keep_impressions=300):
-    """What this browser keeps: every recent choice, the latest impressions, numbers rounded to 4 places.
-    Impressions are 16 per page view, so keeping all of them made every save slow to write."""
-    events = list(events or [])
-    imp_idx = [i for i, e in enumerate(events) if e.get("event") == "impression"][-keep_impressions:]
-    act_idx = [i for i, e in enumerate(events) if e.get("event") != "impression"][-keep_actions:]
-    out = []
-    for i in sorted(set(imp_idx) | set(act_idx)):
-        e = dict(events[i])
-        if isinstance(e.get("context"), dict):
-            e["context"] = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in e["context"].items()}
-        out.append({k: (round(v, 4) if isinstance(v, float) and k != "timestamp" else v) for k, v in e.items()})
-    return out
-
 
 def profile_snapshot():
     return {
@@ -155,45 +152,6 @@ def _snapshot_signature(snapshot):
     import hashlib
     return hashlib.md5(json.dumps(snapshot, sort_keys=True, default=str).encode()).hexdigest()
 
-
-def restore_profile(data):
-    if not isinstance(data, dict):
-        return False
-    try:
-        st.session_state.likes = set(data.get("likes") or [])
-        st.session_state.favorites = set(data.get("favorites") or [])
-        st.session_state.review_priority = int(data.get("review_priority", 50))
-        st.session_state.genres = list(data.get("genres") or [])
-        st.session_state.adventure = int(data.get("adventure", 50))
-        st.session_state.more_of = list(data.get("more_of") or [])
-        st.session_state.saved = set(data.get("saved") or [])
-        st.session_state.seen = set(data.get("seen") or [])
-        st.session_state.dismissed = set(data.get("dismissed") or [])
-        st.session_state.disliked = set(data.get("disliked") or [])
-        st.session_state.seen_from_saved = set(data.get("seen_from_saved") or [])
-        st.session_state.seen_rating = {str(k): int(v) for k, v in (data.get("seen_rating") or {}).items() if v in (1, -1)}
-        if data.get("anon_id"):
-            st.session_state.anon_id = str(data["anon_id"])
-        st.session_state.analytics_opt_out = bool(data.get("analytics_opt_out"))
-        st.session_state.prev_visit = data.get("last_visit")
-        st.session_state.prev_shown = list(data.get("last_shown") or [])
-        st.session_state.last_shown = list(data.get("last_shown") or [])
-        st.session_state.taste_reset_at = data.get("taste_reset_at")
-        st.session_state.selection_order = list(data.get("selection_order") or [])
-        st.session_state.imported_titles = set(data.get("imported_titles") or [])
-        st.session_state.imported_seen = set(data.get("imported_seen") or [])
-        st.session_state.imported_disliked = set(data.get("imported_disliked") or [])
-        st.session_state.external_movies = dict(data.get("external_movies") or {})
-        st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
-        st.session_state.streaming_services = list(data.get("streaming_services") or [])
-        st.session_state.mood_active = str(data.get("mood_active") or "")[:120]
-        st.session_state.pop("mood_input", None)
-        st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
-        if st.session_state.onboarding_complete:
-            st.session_state.screen = "showroom"
-        return True
-    except (TypeError, ValueError):
-        return False
 
 # Hydrate once per browser session before rendering the product. The component stores
 # only recommendation/profile state in this browser's localStorage.
@@ -278,19 +236,6 @@ def persist_from_fragment():
         persist_profile_if_needed()
 
 
-def queue_profile_save():
-    """Queue persistence without forcing an extra rerun.
-
-    Every Streamlit widget interaction already causes one normal app rerun.
-    Profile changes are written to localStorage during that same rerun, so we
-    never trigger a second rerun just to persist state. This keeps selections
-    visually stable and prevents the brief black/blank transition that can
-    happen when explicit reruns are stacked on top of widget reruns.
-    """
-    st.session_state._pending_profile_save = True
-    st.session_state._state_ver = int(st.session_state.get("_state_ver") or 0) + 1
-
-
 def _lib_bump():
     """A choice made on Saved or Seen (thumbs, Mark Seen, Remove): the Showroom re-ranks when you go back to it."""
     st.session_state._lib_ver = int(st.session_state.get("_lib_ver") or 0) + 1
@@ -301,20 +246,6 @@ def _saved_to_seen(title, movie):
     _lib_bump()
 
 
-def _lib_mark(showroom=False):
-    """Hidden marker for the library counter. The Showroom's copy says which library state it was ranked with."""
-    v = int(st.session_state.get("_lib_ver") or 0)
-    cls = 'lib-mark" data-tab="0' if showroom else "lib-cur"
-    st.markdown(f'<span class="{cls}" data-v="{v}"></span>', unsafe_allow_html=True)
-
-
-def _ver_mark(tab=None):
-    """Hidden marker of how current this part of the page is. Opening a tab refreshes it only if
-    something changed since it was drawn, so switching tabs is instant when nothing did."""
-    v = int(st.session_state.get("_state_ver") or 0)
-    cls = f'tv-mark" data-tab="{tab}' if tab is not None else "sv-cur"
-    st.markdown(f'<span class="{cls}" data-v="{v}"></span>', unsafe_allow_html=True)
-
 RECOGNIZABLE_SHELF_TITLES = [
     "Dune: Part Two", "Blade Runner 2049", "The Prestige", "Prisoners",
     "Nightcrawler", "The Truman Show", "The Grand Budapest Hotel",
@@ -323,20 +254,6 @@ RECOGNIZABLE_SHELF_TITLES = [
     "Past Lives", "The Holdovers", "The Wailing", "The Handmaiden",
     "Memories of Murder", "The Worst Person in the World",
 ]
-
-def _tested_shelf():
-    """Step 1 shelf picked by training/confirm_shelf_and_imports.py, or [] if that test didn't pass."""
-    try:
-        rows = json.loads((Path(__file__).resolve().parent / "data" / "shelf_titles.json").read_text())["titles"]
-    except Exception:
-        return []
-    out = []
-    for r in rows:
-        m = get_movie(r["title"])
-        out.append(dict(m) if m else {"title": r["title"], "year": int(r.get("year") or 0),
-                                      "tmdb_id": int(r.get("tmdb_id") or 0), "external": True,
-                                      "candidate_source": "shelf"})
-    return out
 
 
 def _current_hits(k, skip):
@@ -634,8 +551,6 @@ def set_adventure_level(value):
     queue_profile_save()
 
 
-
-
 _NON_TONE_TAGS = {g.casefold() for g in GENRES} | {
     "animation", "anime", "international", "critically acclaimed", "hidden gem", "hidden gems",
     "classic", "classics", "recent", "recent release", "recent releases", "documentary", "documentaries",
@@ -702,12 +617,6 @@ def visit_variety(title):
     import hashlib
     key = f"{st.session_state.get('showroom_session_id')}::{title}".encode()
     return int(hashlib.md5(key).hexdigest()[:8], 16) / 0xFFFFFFFF - 0.5
-
-
-
-
-
-
 
 
 def with_cf_reason(reasons, payload, limit=3):
@@ -792,20 +701,7 @@ def service_availability_utility(availability):
     return availability_utility(status)
 
 
-
-
-
 # Pill-sized forms of long reason labels; the full wording stays in the popover.
-
-
-
-
-
-
-
-
-
-
 
 
 def toggle_streaming_service(name):
@@ -826,14 +722,6 @@ def toggle_priority_choice(option):
     st.session_state.more_of = list(selected)
     queue_profile_save()
 
-def _remember_movie(movie):
-    if not movie or not isinstance(movie, dict):
-        return
-    title = movie.get("title")
-    if not title:
-        return
-    if movie.get("external") or not get_movie(title, {}):
-        st.session_state.external_movies[title] = dict(movie)
 
 def _current_recommendation_context(title):
     return dict((st.session_state.get("recommendation_context") or {}).get(title) or {})
@@ -871,8 +759,8 @@ def mark_movie_seen(title, movie=None):
     queue_profile_save()
 
 def remove_from_seen(title):
-    _lib_bump()
     """Undo an accidental Seen: drop it and its model signal; restore it to Saved if it came from there."""
+    _lib_bump()
     st.session_state.seen.discard(title)
     st.session_state.seen_rating = {k: v for k, v in (st.session_state.get("seen_rating") or {}).items() if k != title}
     from_saved = set(st.session_state.get("seen_from_saved") or set())
@@ -882,16 +770,6 @@ def remove_from_seen(title):
         st.session_state.saved.add(title)
     _drop_last_event(title, "seen")
     queue_profile_save()
-
-
-
-
-
-
-
-
-
-
 
 
 def resolve_history_movie(title):
@@ -1066,18 +944,6 @@ def rate_seen(title, value):
 from src.descriptions import card_description, expanded_card_description, quick_card_description, tonight_description  # card text rules (unit-tested)
 
 
-
-
-
-def _format_seconds(value):
-    if value is None:
-        return "Learning"
-    value=max(0,int(round(value)))
-    if value<60:
-        return f"{value}s"
-    return f"{value//60}m {value%60:02d}s"
-
-
 def cached_semantic_scores(movies, profile):
     """Content-model theme similarity, recomputed only when inputs change."""
     signals = tuple((s.get("title"), s.get("weight")) for s in (profile.get("semantic_signals") or []))
@@ -1147,43 +1013,11 @@ def training_scale():
     }
 
 
-def _tested_blend_weights():
-    """Blend weights picked on held-out MovieLens viewers (training/evaluate_blends.py)."""
-    try:
-        d = json.loads((Path(__file__).resolve().parent / "data" / "blend_results.json").read_text())
-        return float(d["content_blend"]["best_weight"]), float(d["whats_next"]["best_weight"])
-    except Exception:
-        return 0.65, 0.6
-
-
 # Content vs "viewers like you" in every row, and similarity vs personal match in What's next.
 CONTENT_WEIGHT, WHATS_NEXT_SIM = _tested_blend_weights()
 
 
-def _tested_knobs():
-    """Row mixes and the variety step from training/evaluate_knobs.py (data/knobs_results.json).
-    Until that test has run, the original settings stay."""
-    out = {"rows": {}, "variety": 0.74}
-    try:
-        d = json.loads((Path(__file__).resolve().parent / "data" / "knobs_results.json").read_text())
-        out["rows"] = {k: float(v["use"]) for k, v in (d.get("rows") or {}).items()}
-        out["variety"] = float((d.get("variety") or {}).get("use", 0.74))
-    except Exception:
-        pass
-    return out
-
-
 _KNOBS = _tested_knobs()
-
-
-@st.cache_data(show_spinner=False)
-def load_offline_results():
-    """MovieLens evaluation written by training/train_cf.py (data/cf_results.json)."""
-    try:
-        path = Path(__file__).resolve().parent / "data" / "cf_results.json"
-        return json.loads(path.read_text())
-    except Exception:
-        return None
 
 
 def render_cinema_profile(p, include_insights=False, show_heading=True, tab_heading=False):
@@ -1484,19 +1318,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     st.markdown(re.sub(r"\s*\n\s*", " ", _page), unsafe_allow_html=True)
 
 
-
 import functools as _functools
-
-
-def _friendly_error(exc):
-    """Log the real error for the server logs; show the viewer a calm message instead of a traceback."""
-    if type(exc).__name__ in {"RerunException", "StopException"}:
-        raise exc
-    import sys
-    import traceback
-    print("iCinema error:", "".join(traceback.format_exception(exc)), file=sys.stderr, flush=True)
-    st.markdown('<div class="friendly-error">This part didn’t load. Refresh the page to try again. '
-                'Your picks, saves, and settings are kept.</div>', unsafe_allow_html=True)
 
 
 def _with_app_rerun(fn):
@@ -2030,18 +1852,6 @@ def _clean_ranked(ranked, excluded):
     return out
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def _mood_text():
     """The mood search the viewer applied. It stays until they clear it, across pages and visits."""
     return " ".join(str(st.session_state.get("mood_active") or "").split())
@@ -2254,27 +2064,6 @@ def render_search_card():
                     st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, movie))
                 with b:
                     st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
-
-
-def _similar_weights():
-    """(content weight, popularity discount) for "like X", from the held-out test
-    (training/confirm_similar.py). If that test kept fans-only ordering, so does the app."""
-    try:
-        d = json.loads((Path(__file__).resolve().parent / "data" / "similar_confirm.json").read_text())
-        if not d.get("ship"):
-            return 0.0, 0.0
-        c = d.get("chosen") or {}
-        return float(c.get("content_weight", 0.5)), float(c.get("popularity_discount", 0.15))
-    except Exception:
-        return 0.5, 0.15          # until the test is run
-
-
-def _like_rerank_ships():
-    """True unless the held-out test (training/confirm_like.py -> data/like_confirm.json) rejected the re-rank."""
-    try:
-        return bool(json.loads((Path(__file__).resolve().parent / "data" / "like_confirm.json").read_text()).get("ship", True))
-    except Exception:
-        return True
 
 
 def _like_sims(source):
@@ -2538,18 +2327,6 @@ def dislike_movie(title, movie=None):
     st.session_state.disliked = disliked
     st.session_state.saved.discard(title)
     queue_profile_save()
-
-
-def _too_soon(slot_key, gap=0.4):
-    """A second tap on the same card within a moment is a double tap: ignore it so one tap = one action."""
-    import time as _t
-    now = _t.monotonic()
-    last = dict(st.session_state.get("_last_slot_tap") or {})
-    if now - last.get(slot_key, 0.0) < gap:
-        return True
-    last[slot_key] = now
-    st.session_state._last_slot_tap = last
-    return False
 
 
 def dislike_showroom_slot(row_name, slot_index):
@@ -2825,15 +2602,6 @@ def render_card_actions(row_name, row_index, slot_index):
         with b:
             st.button("Seen", key=f"seen_{row_name}_{slot_index}", use_container_width=True,
                       on_click=seen_showroom_slot, args=(row_name, slot_index))
-
-def _drop_last_event(title, event_type):
-    """Remove the most recent event of a type for a title (used by Undo)."""
-    events = list(st.session_state.get("analytics_events") or [])
-    for i in range(len(events) - 1, -1, -1):
-        if events[i].get("event") == event_type and events[i].get("title") == title:
-            del events[i]
-            break
-    st.session_state.analytics_events = events
 
 
 def undo_skip(title):
@@ -4037,7 +3805,6 @@ def _render_showroom(p):
                             '<div class="why-pop-line">It carries your likes, saves, and answers. No account, nothing personal. '
                             'Anyone with the link can load this profile.</div>', unsafe_allow_html=True)
                 st.code(f"https://{_host}/?p={_encode_profile_link(profile_snapshot())}", language=None)
-
 
 
     # tabs9: counts beside the fixed tab labels, found by tab id (labels never change, so
