@@ -141,3 +141,9 @@ def test_title_match_never_jumps_to_a_different_year():
         return
     i = _index({"title": "Oldboy", "year": 2003})
     assert i is None or movie_at(i)["year"] in (2002, 2003, 2004)
+
+
+def test_liked_next_blend_is_off_until_its_test_passes():
+    from src import seq_model
+    if not seq_model.available():
+        assert seq_model.blend_order(3, [5, 6, 7]) == [5, 6, 7]

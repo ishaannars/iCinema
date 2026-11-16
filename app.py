@@ -2077,9 +2077,8 @@ def _like_sims(source):
     from src.cf_model import neighbors as _nb, _index as _ix
     sims = {}
     if _ix(source) is not None:
-        # Fans' 100 closest movies, re-ranked: half how strongly the same fans loved both, half how alike the
-        # movies are (genres and fan tags), minus a light discount for the most popular titles. Fans alone
-        # drift to famous crowd-pleasers; tags alone drift to oddities; together they stay on target.
+        # Fans' 100 closest movies. A tag-based re-rank is applied only if training/confirm_like.py passed
+        # (it lost: fans alone ranked better), and "what fans liked next" only if build_sequential.py passed.
         import numpy as _np
         from src import content_model as _cm
         from src.cf_model import _load as _cfl
@@ -2102,7 +2101,11 @@ def _like_sims(source):
         else:
             score = fan_rank
         order = _np.argsort(-score)
-        sims = {int(near[k]): 0.5 + 0.5 * (1 - r / max(len(near), 1)) for r, k in enumerate(order)}
+        ranked_near = [int(near[k]) for k in order]
+        from src import seq_model as _seq
+        if _seq.available():
+            ranked_near = _seq.blend_order(i, ranked_near)
+        sims = {j: 0.5 + 0.5 * (1 - r / max(len(ranked_near), 1)) for r, j in enumerate(ranked_near)}
     else:
         from src.new_releases import nearest as _nr_near
         sims = dict(_nr_near(source, 100))

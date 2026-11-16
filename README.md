@@ -128,7 +128,9 @@ Every idea had to beat what was already shipping, on viewers the models never sa
 | Variety step that spreads out similar movies | Every setting cost 2.6 to 4.1 points of loved-in-top-10 (all significant) | Turned off; a live test can revisit it, since users often prefer variety |
 | Content model alone | NDCG@10 0.031, a third of fans alone | Used only inside the blend |
 
-**Testing many things at once.** With this many tests, one could pass by luck. `tools/multiple_testing.py` applies a Holm-Bonferroni correction across every stored result: 13 of the 14 wins that were significant on their own still are after the correction. The TV model alone (+0.001, p 0.64) was never significant, which is why shows use the tested fans-plus-popularity blend.
+**Testing many things at once.** With this many tests, one could pass by luck. `tools/multiple_testing.py` applies a Holm-Bonferroni correction across every stored result: 21 of 22 results (wins and the losses above) were significant on their own, and all 21 still are after the correction. The TV model alone (+0.001, p 0.64) was never significant, which is why shows use the tested fans-plus-popularity blend.
+
+**Order of likes.** A first-order Markov chain over each viewer's time-ordered likes, blended 80/20 with item-kNN, beat item-kNN from the 3 most recent likes (NDCG@10 0.127 vs 0.113, 95% CI +0.010 to +0.018; `training/benchmark_sequential.py`). "More like X" gets its own test before it can use it (`training/build_sequential.py`).
 
 ## Monitoring and rollback
 

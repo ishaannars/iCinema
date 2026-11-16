@@ -1,0 +1,26 @@
+{
+ "method": "    python training/build_sequential.py --data-dir ml-32m training/benchmark_sequential.py found that the order of likes predicts what people love next (NDCG@10 0.127 vs 0.113 for item-kNN from the 3 most recent likes, 95% CI +0.010 to +0.018). \"More like X\" starts from one movie, so it gets its own test before anything ships. Rules written before running, on the same 1-in-5 sample, time split and 3,000 + 3,000 viewers as confirm_like.py: source = each viewer's most recent like; the score is (1 - a) x fans' closeness + a x \"liked next\"; a is picked on validation viewers, then compared once on test viewers with fans alone (what ships today). Only if it wins with a 95% interval above zero is the model built on all of MovieLens 32M (each movie's 100 most likely next movies, same movie index as the app) into data/seq_chain.npz. A second test, same rules, checks the main ranking (Top Picks, Tonight's Show) against the shipped fan ranking from each viewer's 3 most recent likes. Writes data/seq_like_confirm.json and data/seq_main_confirm.json either way; the model is built if either test passes. ",
+ "validation_ndcg@10": {
+  "0.0": 0.0998,
+  "0.2": 0.1052,
+  "0.4": 0.1067,
+  "0.6": 0.1077,
+  "0.8": 0.1073,
+  "1.0": 0.1058
+ },
+ "weight": 0.6,
+ "test_ndcg@10": {
+  "fans_only": 0.0992,
+  "with_liked_next": 0.105
+ },
+ "hit@1": {
+  "fans_only": 0.121,
+  "with_liked_next": 0.1143
+ },
+ "diff": 0.0058,
+ "ci95": [
+  0.0026,
+  0.0088
+ ],
+ "ship": true
+}
