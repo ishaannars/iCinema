@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-**Always something great to watch.** Less scrolling, more watching. Nine models learn what you love and find your next movie or show, where to stream it, and how likely you are to love it, getting sharper every time you use it. No account needed.
+**Your next great watch, across every service.** Ten tested models turn three quick steps and tonight's mood into a ranked pick, where to stream it, and the odds you'll love it. First pick loved 48% more often than the most popular movie, on 3,000 movie fans the models never saw. No account needed.
 
 I built iCinema because I had this recurring problem of spending too much time deciding what to watch. Every model in it was tested on viewers it had never seen before it shipped, and the ones that didn't beat a simple baseline are reported below too.
 
@@ -130,7 +130,7 @@ Every idea had to beat what was already shipping, on viewers the models never sa
 
 **Testing many things at once.** With this many tests, one could pass by luck. `tools/multiple_testing.py` applies a Holm-Bonferroni correction across every stored result: 21 of 22 results (wins and the losses above) were significant on their own, and all 21 still are after the correction. The TV model alone (+0.001, p 0.64) was never significant, which is why shows use the tested fans-plus-popularity blend.
 
-**Order of likes.** A first-order Markov chain over each viewer's time-ordered likes, blended 80/20 with item-kNN, beat item-kNN from the 3 most recent likes (NDCG@10 0.127 vs 0.113, 95% CI +0.010 to +0.018; `training/benchmark_sequential.py`). "More like X" gets its own test before it can use it (`training/build_sequential.py`).
+**Order of likes (shipped).** A first-order Markov chain over each viewer's time-ordered likes ("what people like next") won both of its pre-registered tests on 3,000 held-out viewers. Main ranking from the 3 most recent likes, blended 80/20 with the shipped fan ranking: NDCG@10 0.127 vs 0.110 (95% CI +0.012 to +0.021), first pick loved 13.9% vs 12.7%. "More like X", blended 60/40 with fans: NDCG@10 0.105 vs 0.099 (CI +0.003 to +0.009). It is now the tenth model; `training/build_sequential.py` built it on all of MovieLens 32M.
 
 ## Monitoring and rollback
 

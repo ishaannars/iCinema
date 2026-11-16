@@ -147,3 +147,12 @@ def test_liked_next_blend_is_off_until_its_test_passes():
     from src import seq_model
     if not seq_model.available():
         assert seq_model.blend_order(3, [5, 6, 7]) == [5, 6, 7]
+
+
+def test_order_model_main_vector_is_a_percentile():
+    from src import seq_model
+    v = seq_model.main_vector([0, 1, 2])
+    if seq_model.main_available():
+        assert v is not None and 0 <= v.min() and v.max() <= 1
+    else:
+        assert v is None

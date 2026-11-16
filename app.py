@@ -1103,9 +1103,18 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                 (True, "  · Fans with less mainstream likes", "RP3beta", "", "A random-walk model that finds less obvious fan favorites."),
                 (True, "  · Fans with long histories", "EASE", "", "Learns from viewers who rated many movies, for detailed profiles.")]
                if _ltr_on else [])
+    from src import seq_model as _seqp
+    _order_row = []
+    if _seqp.main_available():
+        _ord = round(_fans * _seqp.main_weight())
+        _fans_left = _fans - _ord
+        first = (first[0], first[1], first[2], f"{_fans_left}%", first[4])
+        _order_row = [(True, "What you liked last", "Order model · Markov chain", f"{_ord}%",
+                       "What people like next after your three most recent picks; it beat the fan ranking on held-out viewers.")]
     items = [
         first,
         *_inside,
+        *_order_row,
         (True, "What each movie is like", "Content model · TF-IDF + SVD", f"{_cont}%",
          "Matches your answers to each movie’s genres and fan tags."),
         (learned.ready, "Your own choices", f"Personal model · {(learned.model_name if learned.ready else 'logistic regression').lower()}",
@@ -3208,6 +3217,22 @@ def _render_showroom(p):
         # Learned ranker (shipped only if it beat the fixed mix): one score from all six models.
         from src import ltr as _ltr
         ltr_aff=_ltr.viewer_scores(_signals) if _ltr.available() else None
+        # What you liked most recently, in order: the order model (tested on the main ranking) uses the
+        # last three to score what people like next. Step 1 picks come first, then saves by time.
+        from src import seq_model as _seqm
+        from src.cf_model import _index as _cfix
+        _recent=[]
+        if _seqm.main_available():
+            _ev=sorted((e for e in (st.session_state.get("analytics_events") or []) if e.get("event")=="save"),
+                       key=lambda e:float(e.get("timestamp") or 0))
+            _titles=list(st.session_state.get("selection_order") or [])+[e.get("title") for e in _ev]
+            for _t in _titles:
+                _m=get_movie(_t, st.session_state.external_movies)
+                _i=_cfix(_m) if _m else None
+                if _i is not None:
+                    _recent.append(_i)
+        _seq_vec=_seqm.main_vector(_recent) if _recent else None
+        _seq_w=_seqm.main_weight()
         cf_by_title={}
         personal_by_title={}
         cf_source_by_title={}
@@ -3328,6 +3353,10 @@ def _render_showroom(p):
                     cf_source_by_title[movie["title"]]="ranker" if _ci is not None else "fans"
                     if cf is None:
                         cf=_nr_affinity(movie,nr_view)
+                    if cf is not None and _seq_vec is not None:
+                        _si=_ci if _ci is not None else _cfix(movie)
+                        if _si is not None:
+                            cf=(1-_seq_w)*cf+_seq_w*float(_seq_vec[_si])   # tested blend: shipped ranking + liked-next
                         cf_source_by_title[movie["title"]]="new" if cf is not None else None
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
                     if cf is not None:
@@ -3831,8 +3860,8 @@ try:
 
     if screen=="welcome":
         logo()
-        st.markdown('<div class="hero-title">Always something great to watch.</div>',unsafe_allow_html=True)
-        st.markdown('<div class="hero-subtitle">Less scrolling, more watching. Nine models learn what you love and find your next movie or show, where to stream it, and how likely you are to love it, getting sharper every time you use it.</div>',unsafe_allow_html=True)
+        st.markdown('<div class="hero-title">Your next great watch, across every service.</div>',unsafe_allow_html=True)
+        st.markdown('<div class="hero-subtitle">Tell iCinema a few movies you love and what matters to you in three quick steps. Then search by mood, time, or a movie you just finished. Every pick is ranked for you across your services, with the odds you’ll love it.</div>',unsafe_allow_html=True)
         st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
         st.markdown('<div class="home-start-note">Like a few movies and answer a few quick questions.</div>', unsafe_allow_html=True)
 
@@ -3853,8 +3882,8 @@ try:
             st.markdown(
                 '<div class="home-proof">'
                 f'<div class="home-proof-num">+{int(_lift)}%</div>'
-                f'<div class="home-proof-text"><strong>More first picks you’ll love than going with what’s popular.</strong>'
-                + (f'<span>Tested on {_tested:,} movie fans iCinema had never seen.</span>' if isinstance(_tested, int) else '')
+                f'<div class="home-proof-text"><strong>More first picks you’ll love than going with the most popular movie.</strong>'
+                + (f'<span>Checked on {_tested:,} real movie fans: iCinema saw just 3 of their likes and guessed what they loved next.</span>' if isinstance(_tested, int) else '')
                 + '</div></div>', unsafe_allow_html=True)
 
     elif screen=="shelf":
