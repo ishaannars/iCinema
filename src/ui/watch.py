@@ -111,6 +111,9 @@ def watch_line_html(availability, title, services=None):
     total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
     extra = max(0, total - len(options))
     page = _safe_url(availability.get("url"))
+    # TMDB's watch page often lists nothing outside its own region; JustWatch's search always works.
+    from urllib.parse import quote_plus as _qp
+    page = f"https://www.justwatch.com/us/search?q={_qp(str(title))}" if title else page
     # "+ N more" opens the full where-to-watch page, so every option is one tap away.
     more = ("" if not extra else
             f' <a class="watch-link watch-more" href="{html.escape(page, quote=True)}" target="_blank" rel="noopener">+ {extra} more</a>'

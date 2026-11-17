@@ -55,3 +55,14 @@ def test_search_reads_a_whole_sentence():
     assert p["mood"] == "funny" and p["max"] == 120
     assert parse("movies like The Lord of the Rings that I haven't watched")["like"] == "The Lord of the Rings"
     assert parse("like Pride and Prejudice")["like"] == "Pride and Prejudice"
+
+
+def test_search_understands_what_to_avoid():
+    from src.ui.mood_time import chips
+    p = parse("a dark movie that is not too violent")
+    assert p["mood"] == "dark" and p["avoid"] == ["violent"]
+    p = parse("thriller like Se7en, no gore")
+    assert p["like"] == "Se7en" and p["avoid"] == ["gore"]
+    again = parse(dict(chips("funny, nothing scary"))["funny"])
+    assert again["avoid"] == ["scary"] and again["mood"] == ""
+    assert parse("not seen yet")["avoid"] == []

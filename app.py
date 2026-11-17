@@ -1242,7 +1242,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             proof_html = (
                 '<div class="pf-subtitle">Tested before launch</div>'
                 '<div class="pf-stats pf-proof">' + "".join(_stat(v, t, n) for v, t, n in cards_p) + '</div>'
-                f'<div class="pf-foot">{html.escape(significance_note)}</div>'
+                f'<div class="pf-pill-row"><span class="pf-pill">{html.escape(significance_note)}</span></div>'
             )
 
     live_html = ""
@@ -2554,6 +2554,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         pill_labels = dict(st.session_state.get("showroom_pill_labels") or {})
         row_taken = {label for key, label in pill_labels.items()
                      if key.startswith(f"{row_name}::") and key != slot_key and label}
+        _kind_tag = {"Critically Acclaimed": " · Critics’ pick", "Hidden Gems": " · Hidden gem",
+                     "Recent Releases for You": " · New release", "Something Different": " · Something new",
+                     "Classics for You": " · Classic", "International Films for You": " · International",
+                     "Documentaries for You": " · Documentary"}.get(row_name, "")
         pill_text, pill_label = match_pill(match, reasons, taken=row_taken, head=fit_head(payload, match),
                                            limit=19 if undo_title else None)
         pill_text = fit_head(payload, match)     # the why is shown in words under the title
@@ -2590,7 +2594,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                 _head = (f"#{_rank} of {_pool:,} movies scored for you" if isinstance(_rank, int) and isinstance(_pool, int)
                          else (f"Top {max(1, int(_tp))}% for you" if isinstance(_tp, (int, float)) else fit_head(payload, match)))
                 st.markdown(
-                    '<div class="why-pop-kicker">Why it’s here</div>'
+                    f'<div class="why-pop-kicker">Why it’s here{html.escape(_kind_tag)}</div>'
                     f'<div class="why-pop-head">{html.escape(_head)}</div>'
                     + (f'<div class="why-pop-odds">{html.escape(_odds)} if you watch it</div>' if _odds else "")
                     + (f'<div class="mix">{_mix_html}</div>' if _mix_html else "")
@@ -2631,7 +2635,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     _label = {"Critically Acclaimed": "Critics’ pick", "Hidden Gems": "Hidden gem", "Recent Releases for You": "New release",
               "Classics for You": "Classic", "International Films for You": "International",
               "Documentaries for You": "Documentary", "Something Different": "Something new"}.get(row_name, "")
-    meta = [str(x) for x in (_label if row_name != "Top Matches for You" else "", _year, genre_pair(movie),
+    meta = [str(x) for x in ("", _year, genre_pair(movie),
                                _fmt_rt(identity.get("runtime"))) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
@@ -2929,14 +2933,13 @@ def render_tonight_pick_fragment():
     _ver_mark()
 
 
-def _library_counts():
-    """Saved/Seen counts beside the fixed tab labels, refreshed inside each library fragment."""
+def _library_counts(which):
+    """The count beside one library tab, written by that tab's own fragment so neither can go stale over the other."""
+    n = len(st.session_state.saved) if which == "saved" else len(st.session_state.seen)
+    k = 1 if which == "saved" else 2
     st.markdown(
-        '<style>[data-testid="stTabs"] [role="tab"][id$="-tab-1"] p::after,'
-        '[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type(2) p::after{content:" (%d)" !important}'
-        '[data-testid="stTabs"] [role="tab"][id$="-tab-2"] p::after,'
-        '[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type(3) p::after{content:" (%d)" !important}</style>'
-        % (len(st.session_state.saved), len(st.session_state.seen)),
+        f'<style>[data-testid="stTabs"] [role="tab"][id$="-tab-{k}"] p::after,'
+        f'[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type({k + 1}) p::after{{content:" ({n})" !important}}</style>',
         unsafe_allow_html=True,
     )
 
@@ -2991,7 +2994,7 @@ def _saved_tab():
                     with saved_actions[1]:
                         st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
                                   on_click=remove_saved_movie, args=(m["title"],))
-    _library_counts()
+    _library_counts("saved")
 
 
 def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
@@ -3126,7 +3129,7 @@ def _seen_tab():
                     if pick:
                         with st.container(key=f"seennext_{i}"):
                             _whats_next_popover(i, m, pick, wn_payloads, wn_identity)
-    _library_counts()
+    _library_counts("seen")
 
 
 def render_showroom_fragment(p):
@@ -3766,6 +3769,7 @@ def _render_showroom(p):
         st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
         st.button("Refresh", key="refresh_showroom")   # hidden; clicked when you return here after rating on Saved/Seen
         _lib_mark(showroom=True)
+        _library_counts("saved"); _library_counts("seen")
         # The search sits inside the Showroom tab: it only changes Showroom rows, so Saved, Seen and
         # Profile stay clean. One keyed slot holds chips or suggestions, so the layout never shifts.
         from src.mood import available as _mood_ready
@@ -3860,8 +3864,7 @@ def _render_showroom(p):
         if _lately:
             _l = list(_lately)
             _lst = _l[0] if len(_l) == 1 else (" and ".join(_l) if len(_l) == 2 else ", ".join(_l[:-1]) + ", and " + _l[-1])
-            st.markdown(f'<div class="privacy-note">Lately you’ve been saving {html.escape(_lst)} movies.</div>',
-                        unsafe_allow_html=True)
+            pass   # the profile above already shows what you like; no extra sentence here
         # One row of three matching pills.
         edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
         with edit:
@@ -3876,8 +3879,6 @@ def _render_showroom(p):
         st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
                   key="_share_counts", on_change=_set_opt_out,
                   help="Counts like visits and saves, tied to a random ID. Never movie titles, names, emails, or location.")
-        st.markdown('<div class="privacy-note">Your profile stays in this browser. iCinema has no accounts '
-                    'and never sells your data.</div>', unsafe_allow_html=True)
         # A utility, not a profile action: a quiet link under the privacy line.
         with st.container(key="move_profile_link"):
             with st.popover("Move to Another Device"):

@@ -4498,7 +4498,7 @@ div[class*="st-key-priority_card_"]{margin-bottom:.5rem !important;}
     white-space:nowrap !important;overflow:visible !important;text-overflow:clip !important;}
 /* Cards: streaming stays on one line ("On your services: Netflix + 3 more"); the full list is one tap away. */
 [class*="st-key-showroom_swipe_"] .watch-availability,[class*="st-key-showroom_body_"] .watch-availability{
-    display:-webkit-box !important;-webkit-line-clamp:1 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;}
+    display:block !important;overflow:visible !important;-webkit-line-clamp:unset !important;}
 /* Tonight's Show: one compact card, the same height as the art. */
 .tonight-hook{display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;}
 .tonight-whys .tonight-why:nth-child(n+2){display:none !important;}
@@ -4564,3 +4564,21 @@ header[data-testid="stHeader"]{background:transparent !important;height:0 !impor
     [class*="st-key-step1_shelf"] [data-testid="stHorizontalBlock"] > div{flex:0 0 calc(50% - .3rem) !important;min-width:0 !important;width:auto !important;}
     [class*="st-key-step1_shelf"] img{width:100% !important;}
 }
+/* Skip uses the same small-caps type as the match pill beside it. */
+[class*="st-key-showroom_controls_"] [class*="st-key-skip_"] button p{font-family:var(--ui-font) !important;font-size:.72rem !important;
+    font-weight:700 !important;letter-spacing:.06em !important;text-transform:uppercase !important;color:var(--muted) !important;}
+/* "Why it's here" popup: compact on laptop and phone. */
+div[data-testid="stPopoverBody"]:has(.why-pop-kicker){max-width:26rem !important;padding:.8rem .95rem !important;}
+div[data-testid="stPopoverBody"] .why-pop-head{font-size:1.02rem !important;margin:0 0 .2rem !important;}
+div[data-testid="stPopoverBody"] .mix-row{margin:.35rem 0 .1rem !important;}
+div[data-testid="stPopoverBody"] .mix-detail,div[data-testid="stPopoverBody"] .why-pop-foot{font-size:.76rem !important;line-height:1.4 !important;}
+@media (max-width: 640px){div[data-testid="stPopoverBody"]:has(.why-pop-kicker){max-width:calc(100vw - 2rem) !important;}}
+/* Profile: the significance note as a quiet pill like the rest of the profile chips. */
+.pf-pill-row{margin:.6rem 0 0;}
+.pf-pill{display:inline-block;font-family:var(--ui-font);font-size:.8rem;color:var(--muted);border:1px solid rgba(169,173,183,.28);
+    border-radius:999px;padding:.3rem .75rem;}
+
+/* Profile utilities as pills, matching Edit My Answers and Reset Profile. */
+.st-key-move_profile_link [data-testid="stPopover"] button{height:2.4rem !important;min-height:2.4rem !important;padding:0 1.1rem !important;
+    border-radius:999px !important;border:1px solid rgba(169,173,183,.28) !important;background:transparent !important;text-decoration:none !important;}
+.st-key-move_profile_link [data-testid="stPopover"] button p{text-decoration:none !important;font-size:.86rem !important;font-weight:600 !important;color:var(--kinari) !important;}

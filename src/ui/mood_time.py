@@ -37,17 +37,21 @@ def _cut(q, m):
 _LIKE = re.compile(r"(?:\b(?:movies?|films?|shows?|something|anything)\s+)?\b(?:like|similar to)\s+(.+?)"
                    r"(?=\s*(?:,|;|\bthat\b|\bwhich\b|\bbut\b|\bi\s+have|\bi\s+haven|\bi've|\bnot\s+seen|\bnew\s+to\s+me|$))", re.I)
 # "I haven't seen yet", "that I haven't watched", "new to me": already true of every pick, so just understood.
+_AVOID = re.compile(r"\b(?:not\s+too|not\s+very|not|nothing(?:\s+too)?|no|without|less)\s+([a-z][a-z-]{2,})", re.I)
 _UNSEEN = re.compile(r"\b(?:that\s+|which\s+)?(?:i\s+(?:have\s+not|haven'?t|havent)\s+(?:seen|watched)(?:\s+(?:yet|before))?"
                      r"|not\s+(?:seen|watched)(?:\s+yet)?|new\s+to\s+me|unseen)\b", re.I)
 _CHAT = {"i", "want", "wanna", "id", "i'd", "show", "me", "give", "find", "looking", "something", "some", "watch",
-         "tonight", "please", "to", "kind", "of", "sort", "really", "just", "maybe"}
+         "tonight", "please", "to", "kind", "of", "sort", "really", "just", "maybe", "that", "is", "it", "which",
+         "but", "and", "isnt", "too", "very"}
 
 
 def parse(query):
     """-> {"mood": str, "max": minutes or None, "min": minutes or None, "episodes": max episode minutes or None, "label": str}"""
     q = " ".join(str(query or "").split())
-    out = {"max": None, "min": None, "episodes": None, "like": None}
+    out = {"max": None, "min": None, "episodes": None, "like": None, "avoid": []}
     q = _UNSEEN.sub(" ", q)
+    out["avoid"] = [w.lower() for w in _AVOID.findall(q) if w.lower() not in {"seen", "watched", "more", "longer"}][:3]
+    q = _AVOID.sub(" ", q)
     m = _LIKE.search(q)
     if m:
         out["like"] = m.group(1).strip(" ,.;\"“”'")[:80] or None
@@ -90,12 +94,13 @@ def parse(query):
         parts.append("short episodes")
     if out["like"]:
         parts.insert(0, f"like {out['like']}")
+    parts += [f"not {w}" for w in out["avoid"]]
     out["mood"] = mood
     out["label"] = " · ".join(parts)
     return out
 
 
-def compose(mood="", max_min=None, min_min=None, episodes=None, like=None):
+def compose(mood="", max_min=None, min_min=None, episodes=None, like=None, avoid=()):
     """Write a spec back as search text that parse() reads the same way ("like X" always goes last)."""
     bits = [mood] if mood else []
     if max_min:
@@ -104,6 +109,7 @@ def compose(mood="", max_min=None, min_min=None, episodes=None, like=None):
         bits.append(f"over {int(min_min)} min")
     if episodes:
         bits.append("short episodes")
+    bits += [f"not {w}" for w in (avoid or ())]
     if like:
         bits.append(f"like {like}")
     return ", ".join(bits)
@@ -112,18 +118,20 @@ def compose(mood="", max_min=None, min_min=None, episodes=None, like=None):
 def chips(query):
     """What the field understood, as removable chips: [(label, text without this chip), ...]."""
     s = parse(query)
-    m, mx, mn, ep, lk = s["mood"], s["max"], s["min"], s["episodes"], s["like"]
+    m, mx, mn, ep, lk, av = s["mood"], s["max"], s["min"], s["episodes"], s["like"], s["avoid"]
     out = []
     if lk:
-        out.append((f"Like {lk}", compose(m, mx, mn, ep, None)))
+        out.append((f"Like {lk}", compose(m, mx, mn, ep, None, av)))
     if m:
-        out.append((m, compose("", mx, mn, ep, lk)))
+        out.append((m, compose("", mx, mn, ep, lk, av)))
+    for w in av:
+        out.append((f"Not {w}", compose(m, mx, mn, ep, lk, [x for x in av if x != w])))
     if mx:
-        out.append((f"Under {fmt(mx)}", compose(m, None, mn, ep, lk)))
+        out.append((f"Under {fmt(mx)}", compose(m, None, mn, ep, lk, av)))
     if mn:
-        out.append((f"Over {fmt(mn)}", compose(m, mx, None, ep, lk)))
+        out.append((f"Over {fmt(mn)}", compose(m, mx, None, ep, lk, av)))
     if ep:
-        out.append(("Short episodes", compose(m, mx, mn, None, lk)))
+        out.append(("Short episodes", compose(m, mx, mn, None, lk, av)))
     return out
 
 
