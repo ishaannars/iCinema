@@ -5017,3 +5017,84 @@ div[data-testid="stPopoverBody"]:has(.st-key-svc_grid){max-width:25rem !importan
 .ready-model-name{font-family:var(--ui-font);font-size:.86rem;font-weight:700;color:var(--kinari);white-space:nowrap;}
 .ready-model-job{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);margin:0 !important;}
 @media (max-width:640px){.ready-model{grid-template-columns:.5rem minmax(0,1fr);}.ready-model-job{grid-column:2;}}
+
+/* Step 2 of 2: the "show me more" cards sit as the fourth question, with the same rhythm as the others. */
+.step2-question-next{margin-top:1.6rem !important;}
+.st-key-step3_grid{margin:.35rem 0 1.4rem !important;}
+.st-key-nav_row_taste{max-width:54rem !important;margin-top:.4rem !important;}
+
+/* ==== Batch 60: calm onboarding and ready page ==== */
+/* Step 2: one readable column, every question the same shape and the same gap. */
+body:has(.q-block) .block-container{max-width:58rem !important;}
+.step2-header{margin:0 0 1.6rem !important;}
+.step2-title{font-size:2rem !important;margin:0 0 .35rem !important;}
+.step2-subtitle{font-size:.95rem !important;color:var(--muted) !important;}
+.q-block{margin:1.9rem 0 .7rem;}
+.q-title{font-family:var(--ui-font);font-size:1.15rem;font-weight:720;letter-spacing:-.015em;color:var(--ivory);line-height:1.25;}
+.q-help{font-family:var(--ui-font);font-size:.84rem;color:var(--muted);margin-top:.25rem;}
+.q-ends{display:flex;justify-content:space-between;font-family:var(--ui-font);font-size:.78rem;font-weight:600;color:var(--muted2);margin-top:.45rem;}
+/* Segmented control: one track, five equal segments, the chosen one filled ivory. */
+.st-key-review_scale,.st-key-adventure_scale{background:rgba(255,255,255,.035) !important;border:1px solid var(--border) !important;
+    border-radius:999px !important;padding:.22rem !important;}
+.st-key-review_scale [data-testid="stHorizontalBlock"],.st-key-adventure_scale [data-testid="stHorizontalBlock"]{gap:.15rem !important;flex-wrap:nowrap !important;}
+.st-key-review_scale button,.st-key-adventure_scale button{height:2.35rem !important;min-height:2.35rem !important;border:0 !important;
+    border-radius:999px !important;background:transparent !important;box-shadow:none !important;padding:0 .4rem !important;}
+.st-key-review_scale button p,.st-key-adventure_scale button p{font-size:.8rem !important;font-weight:600 !important;color:var(--muted) !important;white-space:nowrap !important;}
+.st-key-review_scale button:hover p,.st-key-adventure_scale button:hover p{color:var(--kinari) !important;}
+.st-key-review_scale button[kind="primary"],.st-key-adventure_scale button[kind="primary"]{background:var(--kinari) !important;}
+.st-key-review_scale button[kind="primary"] p,.st-key-adventure_scale button[kind="primary"] p{color:#111315 !important;}
+/* Genres: chips that size to their words and wrap. */
+.st-key-genre_chips{flex-wrap:wrap !important;gap:.45rem !important;}
+.st-key-genre_chips > div{flex:0 0 auto !important;width:auto !important;}
+.st-key-genre_chips div.stButton,.st-key-genre_chips div.stButton > button{width:auto !important;}
+.st-key-genre_chips button{height:2.25rem !important;min-height:2.25rem !important;max-width:none !important;aspect-ratio:auto !important;
+    border-radius:999px !important;padding:0 1rem !important;margin:0 !important;}
+.st-key-genre_chips button p{font-size:.84rem !important;font-weight:600 !important;white-space:nowrap !important;}
+.st-key-genre_chips button[kind="primary"]{background:var(--kinari) !important;border-color:var(--kinari) !important;}
+.st-key-genre_chips button[kind="primary"] p{color:#111315 !important;}
+/* Show me more: compact cards; the ring belongs to the card itself, top-right, never over the text. */
+.st-key-step3_grid{max-width:none !important;margin:0 0 1.8rem !important;}
+[class*="st-key-pcard_"]{min-height:4.4rem !important;padding:.85rem 3rem .85rem 1.05rem !important;border-radius:14px !important;}
+.pcard-title{font-size:.95rem !important;}
+.pcard-desc{font-size:.8rem !important;margin-top:.18rem !important;}
+.pcard-check{display:none !important;}
+[class*="st-key-pcard_"]::after{content:"";position:absolute;top:50%;right:1rem;transform:translateY(-50%);width:1.2rem;height:1.2rem;
+    border-radius:50%;border:1.5px solid rgba(169,173,183,.45);box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    font-size:.68rem;font-weight:800;line-height:1;color:var(--sumi);z-index:1;}
+[class*="st-key-pcard_on_"]::after{content:"\2713";background:var(--koke);border-color:var(--koke);}
+.st-key-nav_row_taste{max-width:none !important;margin-top:0 !important;}
+@media (max-width:640px){
+    .st-key-review_scale,.st-key-adventure_scale{border-radius:16px !important;}
+    .st-key-review_scale [data-testid="stHorizontalBlock"],.st-key-adventure_scale [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;}
+    .st-key-review_scale [data-testid="stColumn"],.st-key-adventure_scale [data-testid="stColumn"]{flex:1 1 30% !important;min-width:0 !important;}
+    .st-key-review_scale button,.st-key-adventure_scale button{height:44px !important;min-height:44px !important;}
+    .st-key-genre_chips button{height:44px !important;min-height:44px !important;}
+}
+
+/* Ready page: three cards sized to their content, top-aligned, nothing pinned to the bottom. */
+.ready-grid{grid-template-columns:minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr) !important;align-items:start !important;max-width:62rem !important;}
+.ready-card{padding:1.1rem 1.2rem 1.15rem !important;}
+.ready-spec{margin-top:.2rem !important;}
+.ready-spec-row{padding:.5rem 0 !important;}
+.ready-spec-row span:first-child{white-space:nowrap;}
+.ready-chips{margin:0 0 .8rem !important;}
+.ready-posters{margin:0 0 .7rem !important;}
+.ready-card .ready-value{font-size:.92rem !important;font-weight:650 !important;color:var(--kinari) !important;}
+/* Models: name, then its five-word job right under it, so nothing collides at any width. */
+.ready-models{gap:.7rem !important;}
+.ready-model{display:grid !important;grid-template-columns:.5rem minmax(0,1fr) !important;column-gap:.65rem !important;row-gap:.1rem !important;align-items:center !important;}
+.ready-model .pf-dot{grid-row:1;align-self:center !important;}
+.ready-model-name{grid-column:2;white-space:normal !important;line-height:1.25 !important;}
+.ready-model-job{grid-column:2;font-size:.78rem !important;line-height:1.35 !important;}
+.ready-foot{margin-top:.7rem !important;}
+@media (max-width:900px){.ready-grid{grid-template-columns:1fr 1fr !important;}.ready-grid .ready-card:last-child{grid-column:1 / -1;}}
+@media (max-width:640px){.ready-grid{grid-template-columns:1fr !important;}}
+
+/* Step 1: search sits in one compact block; selections are small chips four across; Continue follows closely. */
+.search-shell{margin:1.6rem 0 .35rem !important;padding:0 !important;border:0 !important;background:transparent !important;}
+.search-shell-title{font-size:1.05rem !important;font-weight:700 !important;margin:0 0 .15rem !important;}
+.search-shell-copy{font-size:.84rem !important;margin:0 !important;}
+.selection-area-heading{margin:1.4rem 0 .5rem !important;}
+[class*="st-key-selection_card_"]{min-height:3.4rem !important;padding:.55rem .8rem !important;margin:0 0 .45rem !important;}
+[class*="st-key-selection_card_"] .selection-title{font-size:.86rem !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.st-key-nav_row_rate{margin-top:.6rem !important;}

@@ -80,7 +80,7 @@ def tested_block():
         ("Recency-weighted likes", "SVD with newer likes weighted more", f"{rec['hit@1']:.1%} vs {old['hit@1']:.1%}, no real gain", "❌ No"),
         ("Row goals (how much each row leans on its kind)", "Not testable offline", "They define what each row is for", "Design choice"),
         ("Personal Save/Skip model (22%)", "Needs real app users", "Live AUC shows in the Profile tab", "Design choice"),
-        ("Section order", "Not an accuracy question", "Your Step 3 picks decide which section comes after Top Matches", "Design choice"),
+        ("Section order", "Not an accuracy question", "Your “show me more” picks decide which section comes after Top Matches", "Design choice"),
         ("Hidden Gems", "Definition", "Under 4,000 TMDB votes, or outside the 20% most-loved MovieLens movies when votes are missing, plus a few hand-picked gems", "Design choice"),
         ("Card descriptions", "Rules checked by unit tests", "Each line is scored for being specific, standing on its own, and describing the story. No text is generated", "✅ Rule-based"),
     ]
@@ -247,7 +247,7 @@ def tested_block():
                      f"first {il['target_decided_visits']} decided visits, two-sided binomial test (rule in `src/interleave.py`)",
                      live_result_text(il), "Running" if il["status"] != "finished" else
                      ("❌ Routing turned off" if il.get("decision") == "turn routing off" else "✅ Routing stays")))
-    rows.append(("Fourth row follows Step 3", "Not an accuracy question", "Recent Releases, Classics, Documentaries, or International Films "
+    rows.append(("Fourth row follows your picks", "Not an accuracy question", "Recent Releases, Classics, Documentaries, or International Films "
                  "become the fourth row when picked. Each shows only its own kind", "Design choice"))
     lines = ["| Part | Test | Result | In the app |", "|---|---|---|---|"]
     lines += [f"| {a} | {b_} | {c} | {d} |" for a, b_, c, d in rows]

@@ -78,7 +78,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 
 ## Ethical considerations
 
-The model uses no demographic data and stores no personal data outside the viewer's browser. Recommendations can reinforce what a viewer already likes; the "Something Different" and "Hidden Gems" rows, the adventure setting, and MMR diversity reranking are there to counter that.
+The model uses no demographic data and stores no personal data outside the viewer's browser. Recommendations can reinforce what a viewer already likes; the "Something Different" and "Hidden Gems" rows, and the adventure setting are there to counter that. A variety re-rank (MMR) was tested and turned off because it cost accuracy.
 
 ## Citation
 

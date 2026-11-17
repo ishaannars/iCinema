@@ -56,6 +56,8 @@ _log_time("imports", _BOOT)
 st.set_page_config(page_title="iCinema", page_icon=str(Path(__file__).parent / "assets" / "favicon.png"), layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css
+from src.screens.home import render_home
+from src.screens.ready import render_ready_summary
 from src.love import love_line, love_chance, fit_floor, test_viewers as love_test_viewers
 from src.ui.cards import (  # card and popup text, unit-tested in tests/test_cards.py
     PILL_BUDGET,
@@ -1347,91 +1349,6 @@ def _with_app_rerun(fn):
     return inner
 
 
-def _plain_list(items, limit=3):
-    """“A, B and C”, or “A, B, C + 2 more” past the limit."""
-    items = [str(x) for x in items if x]
-    if len(items) > limit:
-        return ", ".join(items[:limit]) + f" + {len(items) - limit} more"
-    return items[0] if len(items) == 1 else (" and ".join([", ".join(items[:-1]), items[-1]]) if items else "")
-
-
-def _ready_models():
-    """The models that are actually running for this viewer right now: (name, technique, five-word job)."""
-    from src import cf_model as _cfm
-    from src import ltr as _ltr_mod
-    from src import seq_model as _seqm
-    from src.new_releases import available as _nr_on
-    from src.tv import available as _tv_on
-    sig = _cf_signals()
-    full_m, _ = _cfm._history_cut()
-    rk = _cfm._ranker_for(sig) if sig else None
-    fans_tech = ("EASE" if full_m is not None and rk is full_m else
-                 "RP3beta" if rk is not None and rk is _cfm._load_rank() and rk is not _cfm._load() else "item-kNN")
-    out = []
-    if _ltr_mod.available():
-        out.append(("Best-of-all ranker", "gradient boosting", "Weighs every model for you"))
-    out.append(("Fans like you", fans_tech, "People who loved your picks"))
-    if _seqm.main_available() and sig:
-        out.append(("What you liked last", "Markov chain", "What fans watched right after"))
-    out.append(("What each movie is like", "TF-IDF + SVD", "Matches genres and fan tags"))
-    if _nr_on():
-        out.append(("New releases", "ridge regression", "Places new films by filmmakers"))
-    if _tv_on():
-        out.append(("Shows", "item-kNN + popularity", "Shows loved by your fans"))
-    learned = learning_model_for(st.session_state.get("analytics_events") or [])
-    if getattr(learned, "ready", False):
-        out.append(("Your own choices", str(learned.model_name).lower(), "Learns from your saves, skips"))
-    return out
-
-
-def render_ready_summary():
-    """The page between Step 3 and the Showroom: what iCinema starts from, in three cards.
-    Starting from: your movies as posters. Leaning toward: all your genres and your answers as a short spec.
-    How picks are made: only the models running for you now. The in-depth version stays in the Profile tab."""
-    ss = st.session_state
-    liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
-    # Starting from: up to four posters of the movies you picked, then the count.
-    movies = [m for m in (get_movie(t, ss.external_movies) for t in liked[:4]) if m]
-    need = tuple((m["title"], int(m.get("year") or 0)) for m in movies if not m.get("poster_url"))
-    posters = get_poster_batch(need) if need else {}
-    imgs = [u for u in (m.get("poster_url") or posters.get(m["title"]) for m in movies) if str(u or "").startswith("https://")]
-    stack = "".join(f'<img src="{html.escape(u, quote=True)}" alt="">' for u in imgs)
-    n = len(liked)
-    count_note = f"{n} movie{'s' if n != 1 else ''} you like"
-    # Leaning toward: every genre you chose, as chips in the order you picked them; then your answers as a spec.
-    genres = list(ss.get("genres") or [])
-    genre_html = "".join(f'<span class="ready-chip">{html.escape(g)}</span>' for g in genres) \
-        or '<span class="ready-chip muted">Every genre</span>'
-    rp, adv = int(ss.get("review_priority") or 50), int(ss.get("adventure") or 50)
-    reviews = ("Critics first" if rp < 24 else "Leans on critics" if rp < 41 else "Critics and fun, equally" if rp <= 59
-               else "Leans on easy watching" if rp <= 76 else "Easy watching first")
-    discovery = ("Very familiar" if adv < 24 else "Mostly familiar" if adv < 41 else "Balanced" if adv <= 59
-                 else "More discovery" if adv <= 76 else "Very different")
-    more = list(ss.get("more_of") or [])
-    spec = [("Reviews", reviews), ("Discovery", discovery), ("More of", _plain_list(more, 3) or "Nothing extra")]
-    spec_html = "".join(f'<div class="ready-spec-row"><span>{html.escape(k)}</span><span>{html.escape(v)}</span></div>' for k, v in spec)
-    # How picks are made: only the models running now, each with its technique and a five-word job.
-    models = _ready_models()
-    models_html = "".join(
-        f'<div class="ready-model" title="{html.escape(tech)}"><span class="pf-dot on"></span>'
-        f'<span class="ready-model-name">{html.escape(nm)}</span>'
-        f'<span class="ready-model-job">{html.escape(job)}</span></div>' for nm, tech, job in models)
-    st.markdown(
-        '<div class="page-top-heading">Your Showroom is ready</div>'
-        '<div class="page-top-subtitle">Here’s what iCinema will start from. You can change any answer later in Profile.</div>'
-        '<div class="ready-grid">'
-        '<div class="ready-card"><div class="ready-kicker">Starting from</div>'
-        + (f'<div class="ready-posters">{stack}</div>' if stack else "")
-        + f'<div class="ready-value">{html.escape(count_note)}</div></div>'
-        '<div class="ready-card"><div class="ready-kicker">Leaning toward</div>'
-        f'<div class="ready-chips">{genre_html}</div>'
-        f'<div class="ready-spec">{spec_html}</div></div>'
-        f'<div class="ready-card"><div class="ready-kicker">{len(models)} models picking for you</div>'
-        f'<div class="ready-models">{models_html}</div>'
-        '</div>'
-        '</div>', unsafe_allow_html=True)
-
-
 @st.fragment
 @_with_app_rerun
 def render_live_profile():
@@ -1451,7 +1368,7 @@ def render_live_profile():
 def render_shelf_fragment():
     logo()
     st.markdown(
-        '<div class="page-top-heading">Step 1 of 3 — Rate the Shelf</div>'
+        '<div class="page-top-heading">Step 1 of 2 — Rate the Shelf</div>'
         '<div class="page-top-subtitle">Choose a few titles you already like. Skip any you don’t know, or search for one you enjoy.</div>',
         unsafe_allow_html=True,
     )
@@ -1647,7 +1564,7 @@ def render_shelf_fragment():
             )
 
             # Keep the familiar compact chip layout while making every item removable.
-            selection_cols = st.columns(min(4, len(chosen_titles)), gap="small")
+            selection_cols = st.columns(4, gap="small")
             for idx, title in enumerate(chosen_titles):
                 state = "Favorite" if title in st.session_state.favorites else "Liked"
                 with selection_cols[idx % len(selection_cols)]:
@@ -1679,130 +1596,77 @@ def render_shelf_fragment():
 @st.fragment
 @_with_app_rerun
 def render_taste_fragment():
+    """Step 2 of 2: four short questions on one calm page, each the same shape: a question, one quiet
+    helper line, then its control. The two scales are segmented controls (one track, one selected
+    segment, like iOS); genres are chips that wrap; "show me more" is a two-column card grid."""
     logo()
-    st.markdown(
-        '<div class="step2-header">'
-        '<div class="step2-title">Step 2 of 3 — Tailor Your Preferences</div>'
-        '<div class="step2-subtitle">Choose what matters most when you pick something to watch.</div>'
-        '</div>'
-        '<div class="step2-question">Which matters more?</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="step2-header"><div class="step2-title">Step 2 of 2 — Tailor Your Showroom</div>'
+                '<div class="step2-subtitle">Four quick answers. You can change any of them later in Profile.</div></div>',
+                unsafe_allow_html=True)
 
-    review_scale_map = [15, 32, 50, 68, 85]
-    review_idx = min(range(5), key=lambda i: abs(review_scale_map[i] - st.session_state.review_priority))
+    def _question(title, left=None, right=None, helper=None):
+        ends = (f'<div class="q-ends"><span>{html.escape(left)}</span><span>{html.escape(right)}</span></div>'
+                if left and right else "")
+        st.markdown(f'<div class="q-block"><div class="q-title">{html.escape(title)}</div>'
+                    + (f'<div class="q-help">{html.escape(helper)}</div>' if helper else "") + ends + '</div>',
+                    unsafe_allow_html=True)
 
-    review_label = [
-        "Leaning strongly toward reviews",
-        "Leaning toward reviews",
-        "Balanced",
-        "Leaning toward entertainment",
-        "Leaning strongly toward entertainment",
-    ][review_idx]
+    def _segmented(key, labels, values, current, on_click):
+        idx = min(range(len(values)), key=lambda i: abs(values[i] - current))
+        with st.container(key=key):
+            cols = st.columns(len(values), gap="small")
+            for i, value in enumerate(values):
+                with cols[i]:
+                    st.button(labels[i], key=f"{key}_{i}", type="primary" if i == idx else "secondary",
+                              use_container_width=True, on_click=on_click, args=(value,))
 
-    st.markdown(
-        '<div class="pref-scale-wrap">'
-        '<div class="pref-scale-ends"><span>Great reviews</span><span>Easy to enjoy</span></div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    scale = [15, 32, 50, 68, 85]
+    _question("Which matters more?", "Great reviews", "Easy to enjoy")
+    _segmented("review_scale", ["Reviews first", "Lean reviews", "Balanced", "Lean enjoyment", "Enjoyment first"],
+               scale, st.session_state.review_priority, set_review_priority)
 
-    review_button_labels = ["Reviews first", "Lean reviews", "Balanced", "Lean enjoyment", "Enjoyment first"]
-    st.markdown('<div class="pref-scale-clicks">', unsafe_allow_html=True)
-    review_cols = st.columns(5, gap="small")
-    for i, value in enumerate(review_scale_map):
-        with review_cols[i]:
-            st.button(
-                review_button_labels[i],
-                key=f"review_scale_{i}",
-                type="primary" if i == review_idx else "secondary",
-                use_container_width=True,
-                on_click=set_review_priority,
-                args=(value,),
-            )
-    st.markdown('</div>', unsafe_allow_html=True)
+    _question("What do you like to watch?", helper="Choose up to five.")
+    selected = set(st.session_state.genres)
+    try:
+        chips = st.container(key="genre_chips", horizontal=True, gap="small")
+    except TypeError:
+        chips = st.container(key="genre_chips")
+    with chips:
+        for i, genre in enumerate(GENRES):
+            st.button(genre, key=f"genre_{i}", type="primary" if genre in selected else "secondary",
+                      on_click=toggle_genre_choice, args=(genre,))
 
-    st.markdown('<div class="step2-question step2-question-next">What do you like to watch?</div>', unsafe_allow_html=True)
-    st.markdown('<div class="genre-helper">Select up to five genres.</div>', unsafe_allow_html=True)
-    selected=set(st.session_state.genres)
-    genre_cols=st.columns(7, gap="small")
-    for i,genre in enumerate(GENRES):
-        with genre_cols[i%7]:
-            active=genre in selected
-            st.button(
-                genre,
-                key=f"genre_{i}",
-                type="primary" if active else "secondary",
-                use_container_width=True,
-                on_click=toggle_genre_choice,
-                args=(genre,),
-            )
+    _question("How open are you to something different?", "Close to what I like", "Something different")
+    _segmented("adventure_scale", ["Very familiar", "Mostly familiar", "Balanced", "More discovery", "Very different"],
+               scale, st.session_state.adventure, set_adventure_level)
 
-    st.markdown('<div class="step2-question step2-question-next">How open are you to something different?</div>', unsafe_allow_html=True)
+    _question("What should iCinema show you more of?", helper="Choose any. Your top pick gets its own row.")
+    _render_more_choices()
 
-    adventure_scale_map = [15, 32, 50, 68, 85]
-    adventure_idx = min(range(5), key=lambda i: abs(adventure_scale_map[i] - st.session_state.adventure))
-
-    adventure_label = [
-        "Stay very close to what I like",
-        "Stay mostly familiar",
-        "Balanced",
-        "Explore a little more",
-        "Show me something different",
-    ][adventure_idx]
-
-    st.markdown(
-        '<div class="pref-scale-wrap">'
-        '<div class="pref-scale-ends"><span>Stay close to what I like</span><span>Show me something different</span></div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    adventure_button_labels = ["Very familiar", "Mostly familiar", "Balanced", "More discovery", "Very different"]
-    st.markdown('<div class="pref-scale-clicks">', unsafe_allow_html=True)
-    adventure_cols = st.columns(5, gap="small")
-    for i, value in enumerate(adventure_scale_map):
-        with adventure_cols[i]:
-            st.button(
-                adventure_button_labels[i],
-                key=f"adventure_scale_{i}",
-                type="primary" if i == adventure_idx else "secondary",
-                use_container_width=True,
-                on_click=set_adventure_level,
-                args=(value,),
-            )
     with st.container(key="nav_row_taste"):
-        back, cont, _ = st.columns([1, 1.25, 5], gap="small")
+        back, cont, _ = st.columns([1, 2.2, 4], gap="small")
         with back:
             st.button("← Back", key="back_taste", use_container_width=True, on_click=go_from_fragment, args=("shelf",))
         with cont:
-            st.button("Continue →", type="primary", key="continue_taste", use_container_width=True, on_click=go_from_fragment, args=("more",))
-
-
+            st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True,
+                      on_click=go_from_fragment, args=("profile",))
     persist_from_fragment()
 
-@st.fragment
-@_with_app_rerun
-def render_more_fragment():
-    logo()
-    st.markdown(
-        '<div class="page-top-heading">Step 3 of 3 — Shape Your Showroom</div>'
-        '<div class="page-top-subtitle step3-subtitle">What should iCinema lean toward? Choose any you’d like to see more often.</div>',
-        unsafe_allow_html=True,
-    )
 
-    descriptions = {
-        "Hidden Gems": "Less-known titles that still fit what you like",
-        "Critically Acclaimed": "Rotten Tomatoes 75%+ and IMDb 7.5+",
-        "Recent Releases": "Newer films and recent additions",
-        "International Films": "Stories and filmmakers from around the world",
-        "Classics": "Established favorites across earlier eras",
-        "Documentaries": "Nonfiction stories matched to your interests",
-    }
+_MORE_DESCRIPTIONS = {
+    "Hidden Gems": "Less-known titles that still fit what you like",
+    "Critically Acclaimed": "Rotten Tomatoes 75%+ and IMDb 7.5+",
+    "Recent Releases": "Newer films and recent additions",
+    "International Films": "Stories and filmmakers from around the world",
+    "Classics": "Established favorites across earlier eras",
+    "Documentaries": "Nonfiction stories matched to your interests",
+}
 
+
+def _render_more_choices():
+    """The six "show me more of" cards (formerly Step 3). Each card is drawn in HTML, so the title and line
+    always start at the same left edge, with an invisible button over the whole card as the tap target."""
     selected = set(st.session_state.more_of)
-    # Each choice is a card drawn in HTML (so the title and line always start at the same left edge),
-    # with an invisible button over the whole card as the tap target.
     with st.container(key="step3_grid"):
         left, right = st.columns(2, gap="small")
         for i, option in enumerate(MORE_OF_OPTIONS):
@@ -1810,24 +1674,10 @@ def render_more_fragment():
                 active = option in selected
                 with st.container(key=f"pcard_{'on_' if active else ''}{i}"):
                     st.markdown(f'<div class="pcard-title">{html.escape(option)}</div>'
-                                f'<div class="pcard-desc">{html.escape(descriptions[option])}</div>'
-                                f'<span class="pcard-check" aria-hidden="true"></span>', unsafe_allow_html=True)
+                                f'<div class="pcard-desc">{html.escape(_MORE_DESCRIPTIONS[option])}</div>', unsafe_allow_html=True)
                     st.button(option, key=f"priority_card_{'active_' if active else ''}{i}", use_container_width=True,
                               type="secondary", help=("Remove " if active else "Add ") + option,
                               on_click=toggle_priority_choice, args=(option,))
-
-    st.session_state.more_of = list(selected)
-
-    with st.container(key="nav_row_more"):
-        back, cont, _ = st.columns([1, 2.2, 4], gap="small")
-        with back:
-            st.button("← Back", key="back_more", use_container_width=True, on_click=go_from_fragment, args=("taste",))
-        with cont:
-            st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True, on_click=go_from_fragment, args=("profile",))
-
-    # Step 3 selections are queued in session state and persisted on the page-level
-    # transition to Profile. Avoid rendering the localStorage bridge inside this
-    # fragment, which could briefly surface as a dark strip after a card click.
 
 
 # The fourth Showroom row follows your Step 3 picks that have no row of their own;
@@ -4366,51 +4216,7 @@ screen=st.session_state.screen
 try:
 
     if screen=="welcome":
-        logo()
-        # One screen, three beats: the problem (a sourced number), the promise, the proof (tested numbers).
-        st.markdown('<div class="hero-kicker">Viewers spend 10.5 minutes per session deciding what to watch · Nielsen, 2023</div>'
-                    '<div class="hero-title">Less scrolling.<br>More movies you love.</div>'
-                    '<div class="hero-subtitle">Tell iCinema a few movies you like. It picks the one you’re most likely to love tonight, '
-                    'on the services you already pay for, and gets sharper with every save and skip.</div>', unsafe_allow_html=True)
-        st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
-
-        # Proof, read from the results files so it always matches the README.
-        _off = load_offline_results() or {}
-        _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
-        _tested = _off.get("held_out_users")
-        _cfh = ((_off.get("three_likes") or {}).get("cf") or {}).get("hit@1")
-        _poph = ((_off.get("full") or {}).get("popularity") or {}).get("hit@1")
-        try:
-            _lv = json.loads((Path(__file__).parent / "data" / "love_chance.json").read_text())
-            _ece = float(_lv["test_ece"]) if _lv.get("ships") else None
-        except Exception:
-            _ece = None
-        _stats = []
-        if isinstance(_lift, (int, float)):
-            _stats.append((f"+{_lift:.0f}%", "more first picks you’d love", "than going with the most popular movie"))
-        if isinstance(_ece, float):
-            _stats.append((f"±{max(_ece * 100, 0.1):.1f} pts", "honest odds", "each “chance you’ll love it” vs what test viewers did"))
-        if isinstance(_tested, int):
-            _stats.append((f"{_tested:,}", "test viewers", "movie fans the models never saw, from 3 likes each"))
-        if _stats:
-            st.markdown('<div class="home-stats">' + "".join(
-                f'<div class="home-stat"><div class="home-stat-num">{html.escape(n)}</div>'
-                f'<div class="home-stat-k">{html.escape(k)}</div><div class="home-stat-v">{html.escape(v)}</div></div>'
-                for n, k, v in _stats) + '</div>', unsafe_allow_html=True)
-
-        # Show the product: what's big right now, the kind of movie iCinema finds for you.
-        _hits = _current_hits(6, set())
-        if len(_hits) >= 4:
-            st.markdown(
-                '<div class="home-strip">' + "".join(
-                    f'<img src="{html.escape(str(m["poster_url"]), quote=True)}" alt="{html.escape(str(m.get("title", "")))}">'
-                    for m in _hits if str(m.get("poster_url", "")).startswith("https://")) + '</div>',
-                unsafe_allow_html=True)
-        if isinstance(_cfh, (int, float)) and isinstance(_poph, (int, float)):
-            # The baseline as plain counts next to the relative number (Bodemer, Meder & Gigerenzer, 2014).
-            st.markdown(f'<div class="home-foot">In testing, its first pick was loved by {_cfh * 1000:.0f} in 1,000 viewers, '
-                        f'vs {_poph * 1000:.0f} in 1,000 for the most popular movie. Every number links to a test in the README.</div>',
-                        unsafe_allow_html=True)
+        render_home({"logo": logo, "go": go, "current_hits": _current_hits})
 
     elif screen=="shelf":
         render_shelf_fragment()
@@ -4418,16 +4224,16 @@ try:
     elif screen=="taste":
         render_taste_fragment()
 
-    elif screen=="more":
-        render_more_fragment()
+    elif screen=="more":        # Step 3 merged into Step 2; older saved sessions land on the merged page
+        render_taste_fragment()
 
     elif screen=="profile":
         logo()
-        render_ready_summary()
+        render_ready_summary({"signals": _cf_signals, "learning_model_for": learning_model_for})
         with st.container(key="nav_row_profile"):
             back, cont, _ = st.columns([1, 2, 4], gap="small")
             with back:
-                st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
+                st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("taste",))
             with cont:
                 st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
         st.markdown('<div class="ready-foot">Every model’s share of your score is in the Profile tab.</div>',

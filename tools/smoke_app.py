@@ -33,6 +33,13 @@ def main():
     at.session_state["likes"] = {"Spirited Away"}
     at.session_state["genres"] = ["Anime", "Action"]
     at.session_state["more_of"] = ["Hidden Gems"]
+    # Onboarding is two steps now: Step 2 holds the four questions, including "show me more of".
+    for scr in ("shelf", "taste", "more"):
+        at.session_state["screen"] = scr
+        at.run(); ok &= check(at, f"Onboarding ({scr})")
+    cards = [b for b in at.button if (b.key or "").startswith("priority_card_")]
+    if cards:
+        cards[0].click().run(); ok &= check(at, "Step 2: show me more card")
     at.session_state["screen"] = "profile"
     at.run(); ok &= check(at, "Profile (1 like)")
     at.session_state["screen"] = "showroom"

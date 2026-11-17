@@ -2,11 +2,19 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-**Your next great watch, across every service.** Ten tested models turn three quick steps and tonight's mood into a ranked pick, where to stream it, and the odds you'll love it. First pick loved 48% more often than the most popular movie, on 3,000 movie fans the models never saw. No account needed.
+**Your next great watch, across every service.** Ten tested models turn two quick steps and tonight's mood into a ranked pick, where to stream it, and the odds you'll love it. First pick loved 48% more often than the most popular movie, on 3,000 movie fans the models never saw. No account needed.
 
 I built iCinema because I had this recurring problem of spending too much time deciding what to watch. Every model in it was tested on viewers it had never seen before it shipped, and the ones that didn't beat a simple baseline are reported below too.
 
 **[Try iCinema →](https://icinema.streamlit.app/)**
+
+| At a glance | |
+|---|---|
+| Problem | Viewers spend about 10.5 minutes per session deciding what to watch (Nielsen, *State of Play*, 2023). |
+| What it does | Two quick steps, then one best pick tonight on your services, with a calibrated chance you'll love it. Search by mood, length, or a movie. |
+| Proof | First pick loved by 80 in 1,000 test viewers vs 54 in 1,000 for the most popular movie (+48%), on 3,000 MovieLens viewers it never saw. |
+| Models | Ten, each kept only if it beat a simpler baseline on held-out viewers. The losses are in [What I tried that lost](#what-i-tried-that-lost). |
+| Stack | Python · Streamlit · NumPy · SciPy · scikit-learn · MovieLens 32M · Amazon Reviews 2023 · Wikidata · TMDB (display only) |
 
 ## Results
 
@@ -27,7 +35,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 
 ## How it works
 
-`candidate retrieval → "viewers like you" score + content score → personalized ranking → diversity reranking → your feedback → personal model`
+`candidate retrieval → "viewers like you" score + content score → learned ranker → row rules and fit floor → your feedback → personal model`
 
 - **Viewers like you.** Trained on 15.8 million 4+ star ratings from 198,954 viewers across 14,407 movies. Item-kNN ranks movies for most viewers and finds movies similar to one you watched, for What's next and "Loved by fans of …". If your likes are less-loved movies, RP3beta ranks instead: a walk from your likes to the people who loved them and on to what else they loved, with popular movies discounted slightly. Skips and "Not for me" push movies down.
 - **Content.** Each movie's MovieLens genres and fan tags become a 64-number description (TF-IDF, then truncated SVD), the same recipe the offline tests used. TMDB is used only to show titles, posters, and where to watch.
@@ -43,7 +51,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 - **New releases.** MovieLens stops around 2023, so a second model places newer movies by open Wikidata facts (director, cast, studio, genre, country), learned from where known movies sit among their fans. It ships only if hidden movies land next to their real closest movies better than genres alone (`training/confirm_new_releases.py`).
 - **Mood search.** One box on the Showroom ("slow-burn, twist ending") re-orders Top Matches by a 50/50 mix of fit and match, using only the tags MovieLens fans wrote. It ships only if words from taggers the index never saw find the movie (`training/confirm_mood.py`).
 - **Asking about the right movies.** Which movies Step 1 shows decides how much a few Likes reveal. Research on new users found that balancing how well known a movie is with how much people disagree about it beats asking about the most popular ones. Popular movies still anchor the shelf, since most people have seen them and most viewers watch them, so only middle grounds can replace today's shelf: every other card is one of the most popular movies, alternating with a more revealing pick. A new shelf ships only if the first screen stays as easy to answer and mainstream viewers don't lose out (`training/confirm_shelf_and_imports.py`). For viewers with many likes, a separate test decides whether EASE, best from full histories in the benchmark, ranks their picks (`training/confirm_history_routing.py`).
-- **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness) and Step 3 (what to see more of) shape the content score and your Profile. Step 3 also picks which section comes after Top Matches.
+- **Every step counts.** Step 1 likes feed both scores. Step 2 (genres, reviews vs enjoyment, openness, and what to see more of) shapes the content score and your Profile. Your “show me more” picks also decide which section comes after Top Matches.
 - **Tonight's Show.** Your single best match on the services you pick, with one-tap links to watch.
 - Your feedback stays in your browser. There's no account and no central user database.
 
@@ -83,7 +91,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | Recency-weighted likes | SVD with newer likes weighted more | 4.6% vs 4.4%, no real gain | ❌ No |
 | Row goals (how much each row leans on its kind) | Not testable offline | They define what each row is for | Design choice |
 | Personal Save/Skip model (22%) | Needs real app users | Live AUC shows in the Profile tab | Design choice |
-| Section order | Not an accuracy question | Your Step 3 picks decide which section comes after Top Matches | Design choice |
+| Section order | Not an accuracy question | Your “show me more” picks decide which section comes after Top Matches | Design choice |
 | Hidden Gems | Definition | Under 4,000 TMDB votes, or outside the 20% most-loved MovieLens movies when votes are missing, plus a few hand-picked gems | Design choice |
 | Card descriptions | Rules checked by unit tests | Each line is scored for being specific, standing on its own, and describing the story. No text is generated | ✅ Rule-based |
 | Hidden Gems row | Within movies outside the 20% most-loved movies, vs the most popular of that kind (1,823 viewers) | Found a movie the viewer later loved in its top 10 11.0% of the time vs 4.1% (CI +0.054 to +0.085) | ✅ Supported |
@@ -103,7 +111,7 @@ I also tested my own product claims. "Gets better the more you use it" failed it
 | TV shows | Amazon Reviews 2023 fans; held-out people's loved movies alone must rank the shows they loved above the most popular shows (rule in `training/confirm_tv.py`) | NDCG@20 0.057 vs 0.056, 5,000 held-out people, 8,120 shows | ❌ Not shipped |
 | TV shows, second try | Fans like you blended with popularity (weight 0.2 picked on half of a fresh held-out group, judged on the other half; rule in `training/confirm_tv_blend.py`) | NDCG@20 0.072 vs 0.060 (95% CI +0.0084 to +0.0159) | ✅ Ships |
 | Routing, live | Team-draft interleaving in Top Matches for viewers with less mainstream likes, first 200 decided visits, two-sided binomial test (rule in `src/interleave.py`) | Running: 0 of 200 decided visits. No result is read before then | Running |
-| Fourth row follows Step 3 | Not an accuracy question | Recent Releases, Classics, Documentaries, or International Films become the fourth row when picked. Each shows only its own kind | Design choice |
+| Fourth row follows your picks | Not an accuracy question | Recent Releases, Classics, Documentaries, or International Films become the fourth row when picked. Each shows only its own kind | Design choice |
 
 MovieLens has no onboarding answers, so Step 2–3 answers were filled in from each viewer's own history. Content and personal match always keep at least 20%, so your answers always count. From the scripts in `training/`.
 <!-- TESTED:END -->

@@ -526,7 +526,7 @@ def recommendation_explanation(
     theme_detail = ", ".join(trait_overlap[:2]) if trait_overlap else "movies you liked or favorited"
 
     priority_overlap = [p for p in priorities if any(p.casefold() == t.casefold() for t in movie_tags)]
-    priority_detail = ", ".join(priority_overlap[:2]) if priority_overlap else "your Step 3 priorities"
+    priority_detail = ", ".join(priority_overlap[:2]) if priority_overlap else "your “show me more” picks"
 
     review_value = int(controls.get("review_priority", review_priority) or review_priority)
     adventure_value = int(controls.get("adventure", adventure) or adventure)

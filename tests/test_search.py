@@ -58,14 +58,23 @@ def test_love_chance_reads_the_rank_it_was_tested_on():
 
 
 def test_home_shows_the_baseline_next_to_the_lift():
-    src = (ROOT / "app.py").read_text()
+    src = (ROOT / "src" / "screens" / "home.py").read_text()
     assert "in 1,000 viewers" in src and "Nielsen, 2023" in src
 
 
 def test_ready_page_lists_only_running_models_with_five_word_jobs():
     import ast
-    src = (ROOT / "app.py").read_text()
+    src = (ROOT / "src" / "screens" / "ready.py").read_text()
     fn = next(n for n in ast.parse(src).body if isinstance(n, ast.FunctionDef) and n.name == "_ready_models")
     jobs = [c.elts[2].value for c in ast.walk(fn) if isinstance(c, ast.Tuple) and len(c.elts) == 3
             and isinstance(c.elts[2], ast.Constant) and isinstance(c.elts[2].value, str)]
     assert jobs and all(len(j.replace(",", "").split()) == 5 for j in jobs), jobs
+
+
+def test_screens_live_in_their_own_files():
+    """app.py routes; Home and the ready page are their own modules, importable on their own."""
+    import importlib
+    for name in ("src.screens.home", "src.screens.ready"):
+        assert (ROOT / (name.replace(".", "/") + ".py")).exists()
+    src = (ROOT / "app.py").read_text()
+    assert "from src.screens.home import render_home" in src and "from src.screens.ready import render_ready_summary" in src
