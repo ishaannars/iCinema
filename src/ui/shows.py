@@ -44,7 +44,7 @@ def _card(ctx, slot, entry):
     with st.container(key=f"showroom_controls_tv_{slot}"):
         pill, skip = st.columns([3.2, 1], gap="small")
         with pill:
-            with st.popover(f"Top {top}% for you", use_container_width=True):
+            with st.popover(f"Top {top}%", use_container_width=True):
                 # Same layout as the movie popup: each model's share of THIS show's score, then what it saw.
                 mix = []
                 if isinstance(fan_part, float) and isinstance(pop_part, float) and fan_part + pop_part > 0:
@@ -111,6 +111,7 @@ def render_shows(ctx, count):
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=6) as pool:
         list(pool.map(lambda e: tv.details(e[0]), picks[:12]))
+    _shown_box = st.container()
     with st.container(key="showroom_swipe_tv"):    # same grid as the movie rows on every screen size
         shown, i = 0, 0
         while shown < count and i < len(picks):
@@ -140,3 +141,8 @@ def render_shows(ctx, count):
                             break
                 if shown >= count:
                     break
+    if shown == 0:
+        # An empty row is confusing: say why, and how to get the usual shows back.
+        _what = (spec.get("label") or spec.get("mood") or "this search")
+        st.markdown(f'<div class="mood-hint">No shows match “{html.escape(str(_what)[:40])}” yet. '
+                    'Clear the search to see the shows picked for you.</div>', unsafe_allow_html=True)

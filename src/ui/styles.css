@@ -4655,3 +4655,35 @@ div[data-testid="stPopoverBody"] .why-pop-foot{margin:.2rem 0 .7rem !important;p
 [class*="st-key-dym_"]:not(.st-key-dym_row) button{height:2.1rem !important;min-height:2.1rem !important;border-radius:999px !important;padding:0 .85rem !important;
     background:transparent !important;border:1px solid rgba(169,173,183,.35) !important;}
 [class*="st-key-dym_"]:not(.st-key-dym_row) button p{font-size:.82rem !important;font-weight:600 !important;white-space:nowrap !important;}
+
+/* ---- Search row and results rhythm ---- */
+/* Clear all leads the row as a quiet text action; pills follow on one line. */
+.st-key-mood_suggest_row .st-key-mood_reset{order:-1;}
+.st-key-mood_suggest_row{flex-wrap:nowrap !important;overflow-x:auto !important;scrollbar-width:none;margin:.55rem 0 1.4rem !important;}
+.st-key-mood_suggest_row::-webkit-scrollbar{display:none;}
+.st-key-mood_suggest_row > div{flex:0 0 auto !important;width:auto !important;}
+/* Every pill on a card uses the same small caps: search result, movies, shows. */
+.search-fit-pill{font-family:var(--ui-font) !important;font-size:.72rem !important;font-weight:700 !important;letter-spacing:.06em !important;
+    text-transform:uppercase !important;color:var(--muted) !important;}
+[class*="st-key-tv_controls_"] [data-testid="stPopover"] button p,[class*="st-key-showroom_controls_tv"] [data-testid="stPopover"] button p{
+    font-family:var(--ui-font) !important;font-size:.72rem !important;font-weight:700 !important;letter-spacing:.06em !important;text-transform:uppercase !important;color:var(--muted) !important;}
+/* Room between the result card and Tonight's Show. */
+.st-key-movie_actions_search{margin-bottom:.2rem !important;}
+.st-key-search_more_like{margin:.5rem 0 1.6rem !important;}
+/* Cards in a row stay level: the year · genres · minutes line never wraps on wide screens. */
+@media (min-width: 901px){
+    [class*="st-key-showroom_swipe_"] .card-year,[class*="st-key-showroom_body_"] .card-year{white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;}
+}
+/* Top result pill: same small caps as the match pills. */
+.search-fit-pill{font-family:var(--ui-font) !important;font-size:.72rem !important;font-weight:700 !important;letter-spacing:.06em !important;
+    text-transform:uppercase !important;color:var(--muted) !important;}
+
+/* Descriptions show in full: no "…" cut that can't be opened. */
+.tonight-hook{display:block !important;-webkit-line-clamp:unset !important;overflow:visible !important;}
+[class*="st-key-showroom_swipe_"] .card-desc,[class*="st-key-showroom_body_"] .card-desc,.card-premise-text{
+    display:block !important;-webkit-line-clamp:unset !important;overflow:visible !important;max-height:none !important;}
+/* Top result: a compact header, so the result sits right under the search. */
+[class*="st-key-search_card"] h2,.search-result-head{font-size:1.25rem !important;margin:.4rem 0 .5rem !important;}
+.st-key-search_more_like{margin-top:.35rem !important;}
+.search-result-head-wrap .showroom-row-title{font-size:1.25rem !important;margin:0 0 .4rem !important;}
+.search-result-head-wrap{padding:0 0 .4rem !important;margin:.2rem 0 0 !important;}

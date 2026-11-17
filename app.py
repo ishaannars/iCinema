@@ -2070,16 +2070,22 @@ def render_search_card():
     fit = ""
     cf = cf_affinity(movie, user_vector(_cf_signals()))
     if isinstance(cf, float) and cf > 0.5:
-        fit = f"Top {max(1, round((1 - (cf - 0.5) * 2) * 100))}% for you"
+        fit = f"Top {max(1, round((1 - (cf - 0.5) * 2) * 100))}%"
     lookup = _mood_spec().get("lookup")
     note = ("The movie you searched for" if lookup else "The movie your search is built around")
-    st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">'
-                f'{"Top result" if lookup else "Based on"}</div><div class="row-model-note">{note}</div></div>',
+    st.markdown('<div class="showroom-row showroom-row-header search-result-head-wrap"><div class="showroom-row-title">'
+                f'{"Top result" if lookup else "Based on"}</div></div>',
                 unsafe_allow_html=True)
     cols = st.columns(4)
     with cols[0]:
+        _pay = (st.session_state.get("showroom_payloads") or {}).get(title)
+        _lvs = love_line(_pay.get("fit_top_pct")) if isinstance(_pay, dict) else ""
+        _lvsm = re.search(r"(\d+)%", _lvs or "")
+        if _lvsm:
+            fit = f"{_lvsm.group(1)}% match"
         if fit:
-            st.markdown(f'<div class="search-fit-pill">{html.escape(fit)}</div>', unsafe_allow_html=True)
+            _lvx = re.search(r"(\d+)%", love_line((_pay or {}).get("fit_top_pct")) or "") if _pay else None
+            st.markdown(f'<div class="search-fit-pill">{html.escape(f"{_lvx.group(1)}% match" if _lvx else fit)}</div>', unsafe_allow_html=True)
         art_html = movie_thumb(dict(movie, year=""), art, landscape=True, return_html=True)
         st.markdown(card_html("search-premise", art_html, ident.get("display_title") or title, movie, ident,
                               f'<div class="poster-caption-year card-year">{meta_html([x for x in meta if x])}</div>'
@@ -2139,8 +2145,8 @@ def _like_sims(source):
         order = _np.argsort(-score)
         ranked_near = [int(near[k]) for k in order]
         from src import seq_model as _seq
-        if _seq.available():
-            ranked_near = _seq.blend_order(i, ranked_near)
+        # A search for "like X" means similar to X, so it uses fans' closest movies to X alone.
+        # The order model ("what people watch next") stays in the main ranking, where it won its test.
         sims = {j: 0.5 + 0.5 * (1 - r / max(len(ranked_near), 1)) for r, j in enumerate(ranked_near)}
     else:
         from src.new_releases import nearest as _nr_near
@@ -2196,9 +2202,8 @@ def render_mood_chips():
     render_mood_suggestions()
 
 
-_MOOD_PRESETS = [("Feel-good", "feel-good"), ("Mind-bending", "mind-bending"), ("Funny", "funny"),
-                 ("Dark and tense", "dark tense"), ("Thought-provoking", "thought-provoking"),
-                 ("Under 2 hours", "under 2 hours"), ("Nothing too violent", "not violent"), ("Like your last save", None)]
+_MOOD_PRESETS = [("Feel-good", "feel-good"), ("Funny", "funny"), ("Mind-bending", "mind-bending"),
+                 ("Dark and tense", "dark tense"), ("Under 2 hours", "under 2 hours"), ("Nothing too violent", "not violent")]
 
 
 def _preset_active(text, spec):
@@ -2261,14 +2266,14 @@ def render_mood_suggestions():
     except TypeError:
         row = st.container(key="mood_suggest_row")
     with row:
+        if _mood_text():
+            st.button("Clear all", key="mood_reset", on_click=_set_mood_live, args=("",))
         for i, (label, rest) in enumerate(chips_now):
             st.button(f"{label}  ×", key=f"mood_chip_{i}", help=f"Remove {label}", on_click=_set_mood_live, args=(rest,))
         for i, (label, text) in enumerate(opts):
             on = _preset_active(text, spec)
             st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}",
                       help=f"Remove {label}" if on else f"Add {label}", on_click=_toggle_preset, args=(text,))
-        if _mood_text():
-            st.button("Clear all", key="mood_reset", on_click=_set_mood_live, args=("",))
     _spx = _mood_spec()
     mood = _spx["mood"]
     if mood and scores(mood) is None and not _spx.get("lookup"):
@@ -3534,8 +3539,12 @@ def _render_showroom(p):
             _n=len(top_all)
             _ms=[float(_mood[i]) if (i:=_cf_idx(m)) is not None else 0.0 for _,m in top_all]
             _pos=_mood[_mood>0]
-            _thr=float(_np.quantile(_pos,0.95)) if len(_pos) else 1.0
-            _hit=[j for j in range(_n) if _ms[j]>=_thr]          # movies fans really describe that way
+            _hit=[]
+            for _q in (0.95,0.9,0.8,0.7):                         # strictest bar that still gives a full row
+                _thr=float(_np.quantile(_pos,_q)) if len(_pos) else 1.0
+                _hit=[j for j in range(_n) if _ms[j]>=_thr]       # movies fans really describe that way
+                if len(_hit)>=4:
+                    break
             if len(_hit)>=4:
                 _mrank={j:r for r,j in enumerate(sorted(_hit,key=lambda j:-_ms[j]))}
                 _frank={j:r for r,j in enumerate(_hit)}
@@ -3550,12 +3559,13 @@ def _render_showroom(p):
             _sk=_src.get("title")
             top_all=[x for x in top_all if x[1].get("title")!=_sk]
             _scored=[(_like_score(x[1],_src),x) for x in top_all]
-            _close=[(v,x) for v,x in _scored if v>0.5 and float(x[0] or 0)>=45]   # close AND a real fit for you
+            _close=[(v,x) for v,x in _scored if v>0.5 and float(x[0] or 0)>=30]   # close, and not a poor fit for you
             if len(_close)>=4:
                 _scored=_close
             # 80% how close it is, 20% how well it fits you: the What's Next blend that beat every lower
             # similarity weight on held-out viewers, so tonight's search leads and your profile still counts.
-            top_all=[x for _,x in sorted(_scored,key=lambda t:-(WHATS_NEXT_SIM*t[0]+(1-WHATS_NEXT_SIM)*float(t[1][0] or 0)/100.0))]
+            # Closest to X first (similarity alone was the best weight on held-out viewers); your fit breaks ties.
+            top_all=[x for _,x in sorted(_scored,key=lambda t:(-round(t[0],3),-float(t[1][0] or 0)))]
             # Shorts (under 40 minutes) can sit close to a movie in fan data but aren't what "like X" means.
             _ids12=get_movie_identity_batch(tuple((m["title"],int(m.get("year") or 0),int(m.get("tmdb_id") or 0)) for _,m in top_all[:16]))
             top_all=[x for x in top_all[:16] if int((_ids12.get(x[1]["title"]) or {}).get("runtime") or 999)>=40]+top_all[16:]
@@ -3893,7 +3903,15 @@ def _render_showroom(p):
                     cells.append((r, idx, pools[r][depth]))
             depth += 1
         if cells:
-            _header("More to explore", "Critics’ picks, hidden gems, and something new, all chosen for you")
+            _sx = _mood_spec()
+            _bits = [f"“{_sx['mood'][:30]}”" if _sx.get("mood") else "",
+                     (f"like {_sx['like']}" if _sx.get("like") and not _sx.get("lookup") else ""),
+                     ("under 2 hours" if _sx.get("max") == 120 else (f"under {_sx['max']} min" if _sx.get("max") else "")),
+                     ("nothing " + ", ".join(_sx.get("avoid") or []) if _sx.get("avoid") else "")]
+            _bits = [b for b in _bits if b]
+            # Every row says when your search is shaping it.
+            _header("More to explore", ("Critics’ picks, hidden gems, and something new, matching " + " · ".join(_bits))
+                    if _bits else "Critics’ picks, hidden gems, and something new, all chosen for you")
             _draw_cards("explore", cells)
         _remember_shown(row_choices)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."
