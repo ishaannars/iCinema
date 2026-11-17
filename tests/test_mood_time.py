@@ -43,7 +43,7 @@ def test_search_understands_movies_like():
     p = parse("funny, under 2 hours, like The Office")
     assert p["like"] == "The Office" and p["mood"] == "funny" and p["max"] == 120
     labels = dict(chips("funny, like Inception"))
-    assert parse(labels["Like Inception"])["like"] is None and parse(labels["funny"])["like"] == "Inception"
+    assert parse(labels["More like Inception"])["like"] is None and parse(labels["funny"])["like"] == "Inception"
     assert parse("movies like Se7en")["like"] == "Se7en" and parse("movies like Se7en")["mood"] == ""
     assert parse("like")["mood"] == ""
 

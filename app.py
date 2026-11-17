@@ -2071,13 +2071,18 @@ def render_search_card():
         state = "Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen else ""
         with st.container(key="movie_actions_search"):
             if state:
-                st.markdown(f'<div class="search-state">In {state}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="search-state-pill"><span class="dot"></span>{state}</div>', unsafe_allow_html=True)
             else:
                 a, b = st.columns(2, gap="small")
                 with a:
                     st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, movie))
                 with b:
                     st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
+    if _mood_spec().get("lookup"):
+        with cols[1]:
+            st.markdown('<div class="search-next-copy">Want the whole Showroom to lean this way?</div>', unsafe_allow_html=True)
+            st.button(f"Show movies like {str(ident.get('display_title') or title)[:40]}", key="search_more_like",
+                      on_click=_set_mood_live, args=(f"like {title}",))
 
 
 def _like_sims(source):
@@ -2163,7 +2168,7 @@ def render_mood_chips():
     parts = chips(active)
     _sp = _mood_spec()
     if _sp.get("lookup") and _sp.get("like"):
-        parts = [(_sp["like"], "")]
+        parts = [(f"Movie: {_sp['like']}", "")]
     # Parts already shown as a selected starting point aren't repeated as chips.
     preset_words = {w for _, t in _MOOD_PRESETS if t and not t.startswith(("under", "like ")) for w in t.split()}
     mood_now = (_sp.get("mood") or "").split()
@@ -2234,10 +2239,12 @@ def render_mood_suggestions():
     opts = []
     for label, text in _MOOD_PRESETS:
         if text is None:
+            if spec.get("like") or spec.get("lookup"):
+                continue
             last = next((e.get("title") for e in reversed(st.session_state.get("analytics_events") or [])
                          if e.get("event") == "save" and e.get("title")), None)
             if last:
-                opts.append((f"Like {last[:28]}", f"like {last}"))
+                opts.append((f"More like {last[:24]}", f"like {last}"))
         elif text.startswith("under") or scores(text) is not None:
             opts.append((label, text))
     if not opts:
@@ -2291,7 +2298,7 @@ def render_search_box():
         live = None
         try:
             from st_keyup import st_keyup
-            live = st_keyup("Search by mood, time, or a movie", value=_mood_text(), debounce=300,
+            live = st_keyup("Search by mood, time, or a movie", value="", debounce=300,
                             key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
                             placeholder="Try “funny, under 2 hours” or “like Inception”", label_visibility="collapsed")
         except Exception:
@@ -2304,9 +2311,9 @@ def render_search_box():
             if live is not None and typed and typed != _mood_text():
                 _render_live_suggestions(typed)
             else:
-                render_mood_suggestions()
                 if _mood_text():
                     render_mood_chips()
+                render_mood_suggestions()
 
 
 def _render_live_suggestions(typed):
@@ -2431,8 +2438,9 @@ def save_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    if not _advance_showroom_slot(row_name, slot_index):
-        st.session_state._app_rerun = True
+    _advance_showroom_slot(row_name, slot_index)
+    _mark_showroom_fast()                 # reuse the ranking, but refresh Saved / Seen and their counts now
+    st.session_state._app_rerun = True
 
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -2446,8 +2454,9 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
-    if not _advance_showroom_slot(row_name, slot_index):
-        st.session_state._app_rerun = True
+    _advance_showroom_slot(row_name, slot_index)
+    _mark_showroom_fast()                 # reuse the ranking, but refresh Saved / Seen and their counts now
+    st.session_state._app_rerun = True
 
 def _showroom_cached_metadata(movie):
     """Use initial batch metadata; fetch only the replacement card on cache miss."""
@@ -3198,7 +3207,8 @@ def _render_showroom(p):
                     external_pool = []
             except Exception:
                 external_pool = []
-        candidate_pool = list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
+        candidate_pool = [m for m in list(CATALOG) + list(st.session_state.external_movies.values()) + external_pool
+                          if not str(m.get("title", "")).lower().startswith("untitled")]
         _mq = _mood_spec()["mood"]
         if _mq:
             from src.mood import top_rows as _mood_rows
@@ -3237,6 +3247,7 @@ def _render_showroom(p):
             None,
         )
         ranked = _clean_ranked(ranked, excluded)
+        ranked = [x for x in ranked if not str(x[1].get("title", "")).lower().startswith(("untitled", "tba ", "tbd "))]
         learning_result=learning_model_for(st.session_state.get("analytics_events", []))
         ranked_movies=[movie for _,movie in ranked]
         semantic_by_id=cached_semantic_scores(ranked_movies,p)

@@ -121,7 +121,7 @@ def chips(query):
     m, mx, mn, ep, lk, av = s["mood"], s["max"], s["min"], s["episodes"], s["like"], s["avoid"]
     out = []
     if lk:
-        out.append((f"Like {lk}", compose(m, mx, mn, ep, None, av)))
+        out.append((f"More like {lk}", compose(m, mx, mn, ep, None, av)))
     if m:
         out.append((m, compose("", mx, mn, ep, lk, av)))
     for w in av:

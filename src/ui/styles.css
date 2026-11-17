@@ -4582,3 +4582,42 @@ div[data-testid="stPopoverBody"] .mix-detail,div[data-testid="stPopoverBody"] .w
 .st-key-move_profile_link [data-testid="stPopover"] button{height:2.4rem !important;min-height:2.4rem !important;padding:0 1.1rem !important;
     border-radius:999px !important;border:1px solid rgba(169,173,183,.28) !important;background:transparent !important;text-decoration:none !important;}
 .st-key-move_profile_link [data-testid="stPopover"] button p{text-decoration:none !important;font-size:.86rem !important;font-weight:600 !important;color:var(--kinari) !important;}
+
+/* ---- Search, popup and spacing pass ---- */
+/* The search sits close under the tabs. */
+.showroom-tab-start{height:.6rem !important;}
+.st-key-mood_box{margin:.2rem 0 .9rem !important;}
+/* Saved / Seen status on the result card: a quiet pill where the buttons would be. */
+.search-state{text-align:left !important;padding:0 !important;margin:.2rem 0 0 !important;}
+.search-state span{display:inline-block;font-family:var(--ui-font);font-size:.78rem;font-weight:650;color:var(--muted);
+    border:1px solid rgba(169,173,183,.28);border-radius:999px;padding:.35rem .8rem;}
+/* "Why it's here": even rhythm. Kicker, headline, chance, then each model as label/bar/percent with its note under it. */
+div[data-testid="stPopoverBody"] .why-pop-kicker{margin:0 0 .35rem !important;}
+div[data-testid="stPopoverBody"] .why-pop-head{margin:0 0 .25rem !important;line-height:1.2 !important;}
+div[data-testid="stPopoverBody"] .why-pop-odds,div[data-testid="stPopoverBody"] .why-pop-sub{margin:0 0 .85rem !important;}
+div[data-testid="stPopoverBody"] .mix{display:flex !important;flex-direction:column !important;gap:.15rem !important;}
+div[data-testid="stPopoverBody"] .mix-row{display:grid !important;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 2.6rem !important;
+    align-items:center !important;column-gap:.75rem !important;margin:.55rem 0 .15rem !important;}
+div[data-testid="stPopoverBody"] .mix-pct{text-align:right !important;}
+div[data-testid="stPopoverBody"] .mix-detail{margin:0 0 .35rem !important;color:var(--muted) !important;}
+div[data-testid="stPopoverBody"] .mix-extra{margin-top:.5rem !important;}
+div[data-testid="stPopoverBody"] .why-pop-foot{margin:.8rem 0 .2rem !important;padding-top:.65rem !important;border-top:1px solid rgba(169,173,183,.14) !important;}
+
+/* ---- Search and popup spacing ---- */
+/* The search sits close under the tabs. */
+.st-key-mood_box{margin-top:-.6rem !important;}
+/* A searched movie that's already yours: a quiet pill, left-aligned like every action row. */
+.search-state-pill{display:inline-flex;align-items:center;gap:.45rem;margin:.35rem 0 0;padding:.4rem .85rem;border-radius:999px;
+    border:1px solid rgba(169,173,183,.28);font-family:var(--ui-font);font-size:.82rem;font-weight:650;color:var(--kinari);}
+.search-state-pill .dot{width:.45rem;height:.45rem;border-radius:50%;background:var(--koke);display:inline-block;}
+.search-next-copy{font-family:var(--ui-font);color:var(--muted);font-size:.86rem;line-height:1.4;margin:2.2rem 0 .6rem;}
+.st-key-search_more_like button{height:2.4rem !important;min-height:2.4rem !important;border-radius:999px !important;padding:0 1rem !important;}
+/* "Why it's here": an even rhythm. Kicker, heading, chance, then each model with its reason, then the note. */
+div[data-testid="stPopoverBody"] .why-pop-kicker{margin:0 0 .35rem !important;}
+div[data-testid="stPopoverBody"] .why-pop-head{margin:0 0 .25rem !important;line-height:1.25 !important;}
+div[data-testid="stPopoverBody"] .why-pop-odds,div[data-testid="stPopoverBody"] .why-pop-head + div{margin:0 0 .85rem !important;}
+div[data-testid="stPopoverBody"] .mix{display:flex;flex-direction:column;gap:.7rem;margin:.2rem 0 .8rem !important;}
+div[data-testid="stPopoverBody"] .mix-row{margin:0 !important;align-items:center !important;}
+div[data-testid="stPopoverBody"] .mix-detail{margin:.25rem 0 0 !important;}
+div[data-testid="stPopoverBody"] .mix-extra{margin-top:.1rem !important;}
+div[data-testid="stPopoverBody"] .why-pop-foot{margin:.2rem 0 .7rem !important;padding-top:.6rem !important;border-top:1px solid rgba(169,173,183,.14) !important;}
