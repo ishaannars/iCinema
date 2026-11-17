@@ -83,6 +83,30 @@
         if (b) b.click();
       }, 0);
     }, true);
+    // Enter in the search field = tap "Search": the live-typing field lives in its own frame and can't
+    // report Enter, so listen inside it and press the button once the suggestions have caught up.
+    function wireEnter() {
+      doc.querySelectorAll('.st-key-mood_box iframe').forEach(function (f) {
+        try {
+          var d = f.contentDocument;
+          var inp = d && d.querySelector("input");
+          if (!inp || inp.dataset.enterWired) return;
+          inp.dataset.enterWired = "1";
+          inp.addEventListener("keydown", function (ev) {
+            if (ev.key !== "Enter") return;
+            ev.preventDefault();
+            var tries = 0;
+            (function press() {
+              var b = doc.querySelector('[class*="st-key-live_search_go"] button');
+              if (b) { b.click(); return; }
+              if (++tries < 12) setTimeout(press, 120);       // wait for the typing pause to register
+            })();
+          });
+        } catch (e) { /* a frame from another origin: skip */ }
+      });
+    }
+    wireEnter();
+    setInterval(wireEnter, 1000);
   } catch (err) { /* keeper is optional; the app works without it */ }
 })();
 </script>

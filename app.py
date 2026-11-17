@@ -2012,8 +2012,26 @@ def _strong_title(q):
     turns into a random title."""
     import difflib
     q = " ".join(str(q).split())
-    if not q or len(q) > 60:
+    if not q or len(q) > 70:
         return None
+    picked = (st.session_state.get("_exact_pick") or {}).get(q.casefold())
+    if picked:
+        return picked
+    ym = re.match(r"^(.*?)\s*\((\d{4})\)$", q)
+    if ym:
+        t, y = ym.group(1).strip(), int(ym.group(2))
+        pool = list(CATALOG) + list(st.session_state.external_movies.values())
+        hit = [x for x in pool if str(x.get("title", "")).casefold() == t.casefold() and int(x.get("year") or 0) == y]
+        if hit:
+            return hit[0]
+        if tmdb_catalog_configured():
+            try:
+                hit = [r for r in (search_movies(t, 8) or []) if int(r.get("year") or 0) == y]
+            except Exception:
+                hit = []
+            if hit:
+                return hit[0]
+        q = t
     m = get_movie(q, st.session_state.external_movies)
     if m:
         return m
@@ -2079,9 +2097,8 @@ def render_search_card():
                 with b:
                     st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
     if _mood_spec().get("lookup"):
-        with cols[1]:
-            st.markdown('<div class="search-next-copy">Want the whole Showroom to lean this way?</div>', unsafe_allow_html=True)
-            st.button(f"Show movies like {str(ident.get('display_title') or title)[:40]}", key="search_more_like",
+        with cols[0]:
+            st.button("More like this", key="search_more_like", use_container_width=True,
                       on_click=_set_mood_live, args=(f"like {title}",))
 
 
@@ -2160,48 +2177,34 @@ def _mood_line():
     return f"{head} · {t}" if head and t else head
 
 
-def render_mood_chips():
-    """What the search understood, as chips with ×. Each chip removes one part; Clear removes all."""
+def _active_chips():
+    """The parts of the search that aren't a starting point, as (label, search without this part)."""
     from src.ui.mood_time import chips
-    from src.mood import scores
-    active = _mood_text()
-    parts = chips(active)
     _sp = _mood_spec()
+    parts = chips(_mood_text())
     if _sp.get("lookup") and _sp.get("like"):
         parts = [(f"Movie: {_sp['like']}", "")]
-    # Parts already shown as a selected starting point aren't repeated as chips.
     preset_words = {w for _, t in _MOOD_PRESETS if t and not t.startswith(("under", "like ")) for w in t.split()}
     mood_now = (_sp.get("mood") or "").split()
-    parts = [(lab, rest) for lab, rest in parts
-             if not (mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words)
-             and not (lab.startswith("Under ") and _sp.get("max") == 120)]
-    if not parts and not _mood_text():
-        return
-    try:
-        row = st.container(key="mood_chip_row", horizontal=True, gap="small")
-    except TypeError:          # older Streamlit: chips stack instead of sitting in one line
-        row = st.container(key="mood_chip_row")
-    with row:
-        for i, (label, rest) in enumerate(parts):
-            st.button(f"{label}  ×", key=f"mood_chip_{i}", help=f"Remove {label}",
-                      on_click=_set_mood_live, args=(rest,))
-        st.button("Clear", key="mood_reset", on_click=_set_mood_live, args=("",))
-    mood = _mood_spec()["mood"]
-    if mood and scores(mood) is None:
-        st.markdown(
-            f'<div class="mood-hint">No movies are described as “{html.escape(mood[:40])}” yet. '
-            'Try words like feel-good, mind-bending, or slow burn.</div>',
-            unsafe_allow_html=True,
-        )
+    return [(lab, rest) for lab, rest in parts
+            if not (mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words)
+            and not (lab.startswith("Under ") and _sp.get("max") == 120)]
+
+
+def render_mood_chips():
+    """Kept for callers elsewhere: the single control row now shows chips, toggles and Clear together."""
+    render_mood_suggestions()
 
 
 _MOOD_PRESETS = [("Feel-good", "feel-good"), ("Mind-bending", "mind-bending"), ("Funny", "funny"),
                  ("Dark and tense", "dark tense"), ("Thought-provoking", "thought-provoking"),
-                 ("Under 2 hours", "under 2 hours"), ("Like your last save", None)]
+                 ("Under 2 hours", "under 2 hours"), ("Nothing too violent", "not violent"), ("Like your last save", None)]
 
 
 def _preset_active(text, spec):
     """Is this starting point already part of the search?"""
+    if text.startswith("not "):
+        return text[4:] in (spec.get("avoid") or [])
     if text.startswith("under"):
         return spec.get("max") == 120
     if text.startswith("like "):
@@ -2215,8 +2218,12 @@ def _toggle_preset(text):
     from src.ui.mood_time import parse, compose
     spec = parse(_mood_text())
     mood, mx, mn, ep, lk = spec["mood"], spec["max"], spec["min"], spec["episodes"], spec.get("like")
+    av = list(spec.get("avoid") or [])
     on = _preset_active(text, spec)
-    if text.startswith("under"):
+    if text.startswith("not "):
+        w = text[4:]
+        av = [x for x in av if x != w] if on else av + [w]
+    elif text.startswith("under"):
         mx = None if on else 120
     elif text.startswith("like "):
         lk = None if on else text[5:]
@@ -2227,15 +2234,16 @@ def _toggle_preset(text):
         else:
             words += [w for w in text.split() if w not in words]
         mood = " ".join(words)
-    _set_mood_live(compose(mood, mx, mn, ep, lk))
+    _set_mood_live(compose(mood, mx, mn, ep, lk, av))
 
 
 def render_mood_suggestions():
-    """Starting points under the search field, always visible as toggles: tap to add, tap again to remove.
-    A mood shows only if fans actually use those words; "Like ..." follows the movie you saved last."""
+    """One row under the search field: what's on (tap × to remove), then starting points (tap to add,
+    tap again to remove; filled when on), then Clear when anything is on. Nothing moves around."""
     from src.mood import scores
     from src.ui.mood_time import parse
     spec = parse(_mood_text())
+    spec["lookup"] = _mood_spec().get("lookup")
     opts = []
     for label, text in _MOOD_PRESETS:
         if text is None:
@@ -2244,20 +2252,46 @@ def render_mood_suggestions():
             last = next((e.get("title") for e in reversed(st.session_state.get("analytics_events") or [])
                          if e.get("event") == "save" and e.get("title")), None)
             if last:
-                opts.append((f"More like {last[:24]}", f"like {last}"))
-        elif text.startswith("under") or scores(text) is not None:
+                opts.append((f"More like {last[:28]}", f"like {last}"))
+        elif text.startswith(("under", "not ")) or scores(text) is not None:
             opts.append((label, text))
-    if not opts:
-        return
+    chips_now = _active_chips() if _mood_text() else []
     try:
         row = st.container(key="mood_suggest_row", horizontal=True, gap="small")
     except TypeError:
         row = st.container(key="mood_suggest_row")
     with row:
+        for i, (label, rest) in enumerate(chips_now):
+            st.button(f"{label}  ×", key=f"mood_chip_{i}", help=f"Remove {label}", on_click=_set_mood_live, args=(rest,))
         for i, (label, text) in enumerate(opts):
             on = _preset_active(text, spec)
-            st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}", type="primary" if on else "secondary",
+            st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}",
                       help=f"Remove {label}" if on else f"Add {label}", on_click=_toggle_preset, args=(text,))
+        if _mood_text():
+            st.button("Clear all", key="mood_reset", on_click=_set_mood_live, args=("",))
+    _spx = _mood_spec()
+    mood = _spx["mood"]
+    if mood and scores(mood) is None and not _spx.get("lookup"):
+        # A likely typo of a title: offer "Did you mean …?" with the exact movie, one tap away.
+        _dym = []
+        try:
+            from src.cf_model import fuzzy_titles
+            _dym = [m for m in (fuzzy_titles(mood, n=3, cutoff=0.7) or []) if m.get("title")][:2]
+        except Exception:
+            _dym = []
+        if _dym:
+            st.markdown('<div class="mood-hint">Did you mean</div>', unsafe_allow_html=True)
+            try:
+                _drow = st.container(key="dym_row", horizontal=True, gap="small")
+            except TypeError:
+                _drow = st.container(key="dym_row")
+            with _drow:
+                for k, m in enumerate(_dym):
+                    exact = f'{m["title"]} ({m["year"]})' if m.get("year") else m["title"]
+                    st.button(exact[:48], key=f"dym_{k}", on_click=_commit_exact, args=(exact, m))
+        else:
+            st.markdown(f'<div class="mood-hint">No movie or mood matches “{html.escape(mood[:40])}”. '
+                        'Try a movie title, or words like feel-good, mind-bending, or slow burn.</div>', unsafe_allow_html=True)
 
 
 _BUILD_KEYS = ("showroom_slots", "showroom_payloads", "showroom_row_queues", "recommendation_context",
@@ -2281,6 +2315,16 @@ def _commit_search(text):
     st.session_state._app_rerun = True
 
 
+def _commit_exact(text, movie=None):
+    """A tapped poster: search for exactly that film (title and year), with no typo correction."""
+    if movie and movie.get("title"):
+        st.session_state.external_movies.setdefault(movie["title"], dict(movie))
+        memo = dict(st.session_state.get("_exact_pick") or {})
+        memo[text.replace("like ", "", 1).casefold()] = dict(movie)
+        st.session_state._exact_pick = memo
+    _set_mood_live(text)
+
+
 def _set_mood_live(text):
     """A chip, Clear, or a starting point tapped inside the search box: change the search, rebuild the Showroom."""
     _set_mood(text)
@@ -2300,25 +2344,23 @@ def render_search_box():
             from st_keyup import st_keyup
             live = st_keyup("Search by mood, time, or a movie", value="", debounce=300,
                             key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
-                            placeholder="Try “funny, under 2 hours” or “like Inception”", label_visibility="collapsed")
+                            placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or “like Inception”"), label_visibility="collapsed")
         except Exception:
             if "mood_input" not in st.session_state:
                 st.session_state.mood_input = _mood_text()
             st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
-                          placeholder="Try “funny, under 2 hours” or “like Inception”", on_change=_apply_mood)
+                          placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or “like Inception”"), on_change=_apply_mood)
         typed = " ".join(str(live or "").split())
         with st.container(key="mood_under"):
             if live is not None and typed and typed != _mood_text():
                 _render_live_suggestions(typed)
             else:
-                if _mood_text():
-                    render_mood_chips()
                 render_mood_suggestions()
 
 
 def _render_live_suggestions(typed):
     """Under the field while typing: "Search for …" first, then up to four movies with posters."""
-    st.button(f"Search for “{typed[:60]}”", key="live_search_go", on_click=_commit_search, args=(typed,))
+    st.button(f"Search “{typed[:60]}”", key="live_search_go", type="primary", on_click=_commit_search, args=(typed,))
     from src.ui.mood_time import parse
     spec = parse(typed)
     q = spec.get("like") or spec.get("mood") or ""
@@ -2330,15 +2372,16 @@ def _render_live_suggestions(typed):
             hits = []
     if not hits:
         return
-    st.markdown('<div class="live-hits-label">Movies</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="live-hits-label">Movies titled “{html.escape(q[:40])}”</div>', unsafe_allow_html=True)
     cols = st.columns(4, gap="small")
     for k, m in enumerate(hits):
         with cols[k]:
             st.markdown(f'<div class="live-hit"><img src="{html.escape(str(m["poster_url"]), quote=True)}" alt=""></div>',
                         unsafe_allow_html=True)
             label = f'{m["title"]}' + (f' ({m["year"]})' if m.get("year") else "")
-            st.button(label[:42], key=f"live_hit_{k}", use_container_width=True, on_click=_commit_search,
-                      args=(("like " + m["title"]) if spec.get("like") else m["title"],))
+            exact = f'{m["title"]} ({m["year"]})' if m.get("year") else m["title"]
+            st.button(label[:42], key=f"live_hit_{k}", use_container_width=True, on_click=_commit_exact,
+                      args=(("like " + exact) if spec.get("like") else exact, m))
 
 
 def _showroom_slot_key(row_name, slot_index):

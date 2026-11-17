@@ -4621,3 +4621,37 @@ div[data-testid="stPopoverBody"] .mix-row{margin:0 !important;align-items:center
 div[data-testid="stPopoverBody"] .mix-detail{margin:.25rem 0 0 !important;}
 div[data-testid="stPopoverBody"] .mix-extra{margin-top:.1rem !important;}
 div[data-testid="stPopoverBody"] .why-pop-foot{margin:.2rem 0 .7rem !important;padding-top:.6rem !important;border-top:1px solid rgba(169,173,183,.14) !important;}
+
+/* ---- One search row: active chips, then starting points, then Clear all ---- */
+.st-key-mood_suggest_row{align-items:center !important;margin:.6rem 0 .2rem !important;}
+/* Selected starting points: filled ivory with dark text (beats the outline rule above). */
+.st-key-mood_suggest_row [class*="st-key-mood_suggest_on_"]:not(.st-key-mood_suggest_row) button{background:var(--kinari) !important;border-color:var(--kinari) !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_suggest_on_"]:not(.st-key-mood_suggest_row) button p{color:#111315 !important;}
+/* Active chips (a movie, "like X", typed words): same shape as the starting points, filled, with ×. */
+.st-key-mood_suggest_row [class*="st-key-mood_chip_"] button{height:2.1rem !important;min-height:2.1rem !important;padding:0 .85rem !important;
+    border-radius:999px !important;background:var(--kinari) !important;border:1px solid var(--kinari) !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_chip_"] button p{color:#111315 !important;font-size:.82rem !important;font-weight:650 !important;white-space:nowrap !important;}
+/* Clear all: a quiet text action at the end of the same row. */
+.st-key-mood_suggest_row .st-key-mood_reset button{height:2.1rem !important;min-height:2.1rem !important;border:0 !important;background:transparent !important;padding:0 .4rem !important;}
+.st-key-mood_suggest_row .st-key-mood_reset button p{font-size:.82rem !important;color:var(--muted) !important;text-decoration:none !important;font-weight:600 !important;}
+.st-key-mood_suggest_row .st-key-mood_reset button:hover p{color:var(--kinari) !important;}
+/* "More like this" under the result card: same pill as Save and Seen. */
+.st-key-search_more_like{margin-top:.45rem !important;}
+.st-key-search_more_like button{height:2.4rem !important;min-height:2.4rem !important;border-radius:999px !important;}
+/* Narrow windows and phones: the row scrolls sideways on one line instead of stacking. */
+@media (max-width: 900px){
+    .st-key-mood_suggest_row{flex-wrap:nowrap !important;overflow-x:auto !important;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:.2rem !important;}
+    .st-key-mood_suggest_row::-webkit-scrollbar{display:none;}
+    .st-key-mood_suggest_row > div{flex:0 0 auto !important;width:auto !important;}
+}
+@media (max-width: 640px){
+    .st-key-mood_suggest_row [class*="st-key-mood_"] button{height:2.3rem !important;min-height:2.3rem !important;}
+    .st-key-mood_box{margin-top:-.3rem !important;}
+}
+.st-key-live_search_go button{background:var(--kinari) !important;border-color:var(--kinari) !important;}
+.st-key-live_search_go button p{color:#111315 !important;}
+.mood-hint{font-family:var(--ui-font);color:var(--muted);font-size:.84rem;margin:.5rem 0 0;}
+.st-key-dym_row{gap:.4rem !important;margin:.3rem 0 0 !important;}
+[class*="st-key-dym_"]:not(.st-key-dym_row) button{height:2.1rem !important;min-height:2.1rem !important;border-radius:999px !important;padding:0 .85rem !important;
+    background:transparent !important;border:1px solid rgba(169,173,183,.35) !important;}
+[class*="st-key-dym_"]:not(.st-key-dym_row) button p{font-size:.82rem !important;font-weight:600 !important;white-space:nowrap !important;}
