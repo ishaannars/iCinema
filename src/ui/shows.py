@@ -34,6 +34,7 @@ def _card(ctx, slot, entry):
         return False
     title = show["title"]
     top = max(1, -(-100 * rank // max(total, 1)))
+    pct = max(1, min(99, int(round(float(score) * 100))))
     # Real IMDb and RT scores (OMDb, via the show's IMDb id); TMDB's score only if IMDb has none.
     from src.live_ratings import get_live_ratings_batch
     from src.ui.cards import card_ratings, ratings_text
@@ -44,7 +45,9 @@ def _card(ctx, slot, entry):
     with st.container(key=f"showroom_controls_tv_{slot}"):
         pill, skip = st.columns([3.2, 1], gap="small")
         with pill:
-            with st.popover(f"Top {top}%", use_container_width=True):
+            # Same "% match" pill as movies. For shows it's the tested blend score itself (fans like you
+            # 80%, popularity 20%), not a love chance: the show model has no calibration table yet.
+            with st.popover(f"{pct}% match", use_container_width=True):
                 # Same layout as the movie popup: each model's share of THIS show's score, then what it saw.
                 mix = []
                 if isinstance(fan_part, float) and isinstance(pop_part, float) and fan_part + pop_part > 0:
@@ -62,10 +65,11 @@ def _card(ctx, slot, entry):
                     mix_html += f'<div class="mix-detail mix-extra">Ratings: {html.escape(ratings)}</div>'
                 st.markdown(
                     '<div class="why-pop-kicker">Why it’s here</div>'
-                    f'<div class="why-pop-head">Top {top}% for you · #{rank:,} of {total:,}</div>'
+                    f'<div class="why-pop-head">#{rank:,} of {total:,} shows scored for you</div>'
+                    f'<div class="why-pop-odds">{pct}% match: fans like you count 80%, popularity 20%</div>'
                     f'<div class="mix">{mix_html}</div>'
                     '<div class="why-pop-foot">Every number is from this show’s own scores. The show model was tested on '
-                    'viewers it never saw (Amazon Reviews 2023).</div>',
+                    'viewers it never saw (Amazon Reviews 2023). Unlike movies, it isn’t a love chance yet.</div>',
                     unsafe_allow_html=True)
         with skip:
             st.button("Skip", key=f"skip_tv_{slot}_{title}", use_container_width=True,
@@ -89,60 +93,66 @@ def _card(ctx, slot, entry):
     return True
 
 
+def _picks_for(ctx, acted):
+    """The ranked shows this search calls for (SEARCH_RULE): fans of the searched movie in the movie
+    states, otherwise fans of every movie you love. Same tested model either way."""
+    src = ctx.get("like_source")
+    if src:
+        return tv.viewer_shows([(src, "favorite")], exclude=acted), src.get("title")
+    return tv.viewer_shows(ctx["signals"](), exclude=acted), None
+
+
 @st.fragment
 def render_shows(ctx, count):
-    """`count` cards (4 per line) of the viewer's best shows. A tap here reruns only this row."""
+    """`count` cards (4 per line) of the viewer's best shows. A tap here reruns only this row.
+    The row, heading included, appears only when at least one show fits: never an empty row."""
     ss = st.session_state
     acted = set(ss.saved) | set(ss.seen) | set(ss.dismissed) | set(ss.get("disliked") or ())
-    picks = tv.viewer_shows(ctx["signals"](), exclude=acted)
+    picks, anchor = _picks_for(ctx, acted)
     spec = ctx.get("spec") or {}
-    spec = ctx.get("spec") or {}
-    note = "Shows loved by fans of the movies you love"
-    _lab = " · ".join(x for x in (spec.get("label") or "").split(" · ") if x and not x.startswith("like "))
-    if spec.get("mood") or _lab:
-        note = "Matching " + " · ".join(x for x in (f"“{spec['mood']}”" if spec.get("mood") else "", _lab) if x)
-    st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">Shows for You</div>'
-                f'<div class="row-model-note">{html.escape(note)}</div></div>', unsafe_allow_html=True)
     if not picks:
-        st.caption("Like or save a few movies and your shows appear here.")
         return
     # Fetch the first dozen shows' details at once instead of one by one, so the row fills fast
     # and a slow TMDB answer for one show can't leave the row with a single card.
     from concurrent.futures import ThreadPoolExecutor
+    from src.ui.mood_time import fits
     with ThreadPoolExecutor(max_workers=6) as pool:
         list(pool.map(lambda e: tv.details(e[0]), picks[:12]))
-    _shown_box = st.container()
+    # Decide what fits before drawing anything, so a search with no matching shows hides the whole row.
+    chosen = []
+    for entry in picks:
+        if len(chosen) >= count:
+            break
+        info = tv.details(entry[0])
+        if not info or not tv.matches_mood(info, spec.get("mood", "")):
+            continue
+        if not fits(info.get("episode_runtime"), spec, show=True):
+            continue
+        chosen.append(entry)
+    if not chosen:
+        return
+    words = ctx.get("search_words") or ""
+    if anchor:
+        note = f"Shows loved by fans of {anchor}" + (f" · {words}" if words else "")
+    elif words:
+        note = "Matching " + words
+    else:
+        note = "Shows loved by fans of the movies you love"
+    st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">Shows for You</div>'
+                f'<div class="row-model-note">{html.escape(note)}</div></div>', unsafe_allow_html=True)
     with st.container(key="showroom_swipe_tv"):    # same grid as the movie rows on every screen size
-        shown, i = 0, 0
-        while shown < count and i < len(picks):
-            cols = st.columns(4)
-            for c in range(4):
-                while shown < count and i < len(picks):
-                    entry = picks[i]
-                    i += 1
-                    info = tv.details(entry[0])
-                    if not info or not tv.matches_mood(info, spec.get("mood", "")):
-                        continue
-                    from src.ui.mood_time import fits
-                    if not fits(info.get("episode_runtime"), spec, show=True):
-                        continue
-                    with cols[c]:
-                        slot = st.empty()
-                        try:
-                            with slot.container():
-                                ok = _card(ctx, shown, entry)
-                        except Exception as exc:          # one bad show is skipped, never the whole row
-                            if type(exc).__name__ in {"RerunException", "StopException"}:
-                                raise
-                            slot.empty()
-                            ok = False
-                        if ok:
-                            shown += 1
-                            break
-                if shown >= count:
-                    break
-    if shown == 0:
-        # An empty row is confusing: say why, and how to get the usual shows back.
-        _what = (spec.get("label") or spec.get("mood") or "this search")
-        st.markdown(f'<div class="mood-hint">No shows match “{html.escape(str(_what)[:40])}” yet. '
-                    'Clear the search to see the shows picked for you.</div>', unsafe_allow_html=True)
+        cols = st.columns(4)
+        shown = 0
+        for entry in chosen:
+            with cols[shown]:
+                slot = st.empty()
+                try:
+                    with slot.container():
+                        ok = _card(ctx, shown, entry)
+                except Exception as exc:          # one bad show is skipped, never the whole row
+                    if type(exc).__name__ in {"RerunException", "StopException"}:
+                        raise
+                    slot.empty()
+                    ok = False
+            if ok:
+                shown += 1

@@ -87,6 +87,7 @@ F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History a
 ## Changes after launch (all decided by held-out tests)
 
 - "More like X" ranks by fans alone. A re-rank with genres, fan tags and a popularity discount lost (NDCG@10 0.085 vs 0.099) in every popularity band.
+- The order model won a "More like X" test (NDCG@10 0.105 vs 0.099) but isn't used for it: the test scored what viewers liked next, and "more like X" means similar to X. It ranks Top Picks and Tonight's Show only.
 - Critically Acclaimed and Hidden Gems order their qualifying movies by your fit alone (Hidden Gems: 12.5% vs 1.1% loved in the top 10).
 - The variety step is off: every setting cost 2.6 to 4.1 points of loved-in-top-10.
 - The learned ranker runs from exported decision-tree arrays (`data/ltr_trees.npz`), identical to the scikit-learn model to 1e-16, so library updates cannot switch it off.

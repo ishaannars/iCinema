@@ -56,7 +56,7 @@ _log_time("imports", _BOOT)
 st.set_page_config(page_title="iCinema", page_icon=str(Path(__file__).parent / "assets" / "favicon.png"), layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css
-from src.love import love_line, fit_floor, test_viewers as love_test_viewers
+from src.love import love_line, love_chance, fit_floor, test_viewers as love_test_viewers
 from src.ui.cards import (  # card and popup text, unit-tested in tests/test_cards.py
     PILL_BUDGET,
     _PILL_SHORT,
@@ -2051,10 +2051,11 @@ def _strong_title(q):
     return None
 
 
-def render_search_card():
-    """The movie your search names, drawn exactly like a Top Picks card (art, fit, year · genres ·
-    minutes, ratings, where to stream, tap the art for the story, Save / Seen), under a row title:
-    "Top result" for a title search, "Based on" for "like X"."""
+def render_top_result(row_name, row_index, beside):
+    """Movie state only (SEARCH_RULE): one line with the movie you searched for first, drawn like every
+    card (match pill, art, year · genres · minutes, ratings, where to stream, tap the art for the story,
+    Save / Seen), then the three movies its fans love most beside it, so the line is never half empty.
+    `beside` are Top Picks slots; Top Picks itself continues after them."""
     src = _like_source()
     if not src:
         return
@@ -2067,45 +2068,47 @@ def render_search_card():
     movie = dict(src, overview=src.get("overview") or ident.get("overview"), tagline=ident.get("tagline"))
     meta = [str(ident.get("year") or year or ""), genre_pair(movie) or movie.get("genre") or "", f"{runtime} min" if runtime else ""]
     ratings = " · ".join(ratings_text(card_ratings(movie, live))) or "Ratings unavailable"
-    fit = ""
-    cf = cf_affinity(movie, user_vector(_cf_signals()))
-    if isinstance(cf, float) and cf > 0.5:
-        fit = f"Top {max(1, round((1 - (cf - 0.5) * 2) * 100))}%"
-    lookup = _mood_spec().get("lookup")
-    note = ("The movie you searched for" if lookup else "The movie your search is built around")
-    st.markdown('<div class="showroom-row showroom-row-header search-result-head-wrap"><div class="showroom-row-title">'
-                f'{"Top result" if lookup else "Based on"}</div></div>',
+    pay = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    chance = love_chance(pay.get("fit_top_pct")) if pay else None
+    state = ("Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen
+             else "Liked" if title in st.session_state.likes else "")
+    st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">Top result</div>'
+                f'<div class="row-model-note">{html.escape(title)}, then the movies its fans love most</div></div>',
                 unsafe_allow_html=True)
-    cols = st.columns(4)
-    with cols[0]:
-        _pay = (st.session_state.get("showroom_payloads") or {}).get(title)
-        _lvs = love_line(_pay.get("fit_top_pct")) if isinstance(_pay, dict) else ""
-        _lvsm = re.search(r"(\d+)%", _lvs or "")
-        if _lvsm:
-            fit = f"{_lvsm.group(1)}% match"
-        if fit:
-            _lvx = re.search(r"(\d+)%", love_line((_pay or {}).get("fit_top_pct")) or "") if _pay else None
-            st.markdown(f'<div class="search-fit-pill">{html.escape(f"{_lvx.group(1)}% match" if _lvx else fit)}</div>', unsafe_allow_html=True)
-        art_html = movie_thumb(dict(movie, year=""), art, landscape=True, return_html=True)
-        st.markdown(card_html("search-premise", art_html, ident.get("display_title") or title, movie, ident,
-                              f'<div class="poster-caption-year card-year">{meta_html([x for x in meta if x])}</div>'
-                              f'<div class="ratings">{html.escape(ratings)}</div>'
-                              f'<div class="watch-availability">{watch_line_html(watch, title, st.session_state.get("streaming_services"))}</div>'),
-                    unsafe_allow_html=True)
-        state = "Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen else ""
-        with st.container(key="movie_actions_search"):
-            if state:
-                st.markdown(f'<div class="search-state-pill"><span class="dot"></span>{state}</div>', unsafe_allow_html=True)
-            else:
-                a, b = st.columns(2, gap="small")
-                with a:
-                    st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, movie))
-                with b:
-                    st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
-    if _mood_spec().get("lookup"):
+    with st.container(key="showroom_swipe_result"):
+        cols = st.columns(4)
         with cols[0]:
-            st.button("More like this", key="search_more_like", use_container_width=True,
-                      on_click=_set_mood_live, args=(f"like {title}",))
+            with st.container(key="showroom_controls_result"):
+                # Same pill as every card: the calibrated chance you'd love it, tap for where it ranked.
+                with st.popover(f"{chance}% match" if chance is not None else (state or "Your search"),
+                                use_container_width=True):
+                    rank, pool = pay.get("fit_rank"), pay.get("fit_pool")
+                    head = (f"#{rank:,} of {pool:,} movies scored for you" if isinstance(rank, int) and isinstance(pool, int)
+                            else "You searched for this movie")
+                    st.markdown('<div class="why-pop-kicker">Your search</div>'
+                                f'<div class="why-pop-head">{html.escape(head)}</div>'
+                                + (f'<div class="why-pop-odds">About {chance}% chance you’ll love it if you watch it</div>'
+                                   if chance is not None else "")
+                                + '<div class="why-pop-foot">The movies beside it and in Top Picks are the ones its fans '
+                                  'love most, closest first.</div>', unsafe_allow_html=True)
+            art_html = movie_thumb(dict(movie, year=""), art, landscape=True, return_html=True)
+            st.markdown(card_html("search-premise", art_html, ident.get("display_title") or title, movie, ident,
+                                  f'<div class="poster-caption-year card-year">{meta_html([x for x in meta if x])}</div>'
+                                  f'<div class="ratings">{html.escape(ratings)}</div>'
+                                  f'<div class="watch-availability">{watch_line_html(watch, title, st.session_state.get("streaming_services"))}</div>'),
+                        unsafe_allow_html=True)
+            with st.container(key="movie_actions_search"):
+                if state:
+                    st.markdown(f'<div class="search-state-pill"><span class="dot"></span>{state}</div>', unsafe_allow_html=True)
+                else:
+                    a, b = st.columns(2, gap="small")
+                    with a:
+                        st.button("Save", key="search_card_save", use_container_width=True, on_click=save_movie, args=(title, movie))
+                    with b:
+                        st.button("Seen", key="search_card_seen", use_container_width=True, on_click=mark_movie_seen, args=(title, movie))
+        for c, slot in enumerate(beside[:3], start=1):
+            with cols[c]:
+                render_showroom_card_fragment(row_name, row_index, slot)
 
 
 def _like_sims(source):
@@ -2120,7 +2123,8 @@ def _like_sims(source):
     sims = {}
     if _ix(source) is not None:
         # Fans' 100 closest movies. A tag-based re-rank is applied only if training/confirm_like.py passed
-        # (it lost: fans alone ranked better), and "what fans liked next" only if build_sequential.py passed.
+        # (it lost: fans alone ranked better). The order model won a "like X" test too, but it measured
+        # what fans liked next, not similarity, so it isn't used here (README, "A test it won that didn't ship").
         import numpy as _np
         from src import content_model as _cm
         from src.cf_model import _load as _cfl
@@ -2184,17 +2188,29 @@ def _mood_line():
 
 
 def _active_chips():
-    """The parts of the search that aren't a starting point, as (label, search without this part)."""
-    from src.ui.mood_time import chips
+    """The parts of the search shown as tokens: (label, search without this part, text to edit).
+    Tap a token's words to edit them in the field; tap × to remove that part. Moods that are just the
+    tapped presets show as filled presets instead, so nothing appears twice."""
+    from src.ui.mood_time import chips, parse
     _sp = _mood_spec()
-    parts = chips(_mood_text())
-    if _sp.get("lookup") and _sp.get("like"):
-        parts = [(f"Movie: {_sp['like']}", "")]
+    raw_mood = parse(_mood_text())["mood"]
     preset_words = {w for _, t in _MOOD_PRESETS if t and not t.startswith(("under", "like ")) for w in t.split()}
     mood_now = (_sp.get("mood") or "").split()
-    return [(lab, rest) for lab, rest in parts
-            if not (mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words)
-            and not (lab.startswith("Under ") and _sp.get("max") == 120)]
+    out = []
+    for lab, rest in chips(_mood_text()):
+        if _sp.get("lookup") and _sp.get("like") and raw_mood and lab.casefold() == raw_mood.casefold():
+            out.append((f"Movie: {_sp['like']}", rest, _sp["like"]))
+        elif lab.startswith("More like "):
+            out.append((f"Like: {lab[len('More like '):]}", rest, f"like {lab[len('More like '):]}"))
+        elif mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words:
+            continue
+        elif lab.startswith("Under ") and _sp.get("max") == 120:
+            continue
+        elif lab.startswith("Not ") and lab[4:] in {t[4:] for _, t in _MOOD_PRESETS if t.startswith("not ")}:
+            continue
+        else:
+            out.append((lab, rest, lab if lab == lab.lower() else lab[0].lower() + lab[1:]))
+    return out
 
 
 def render_mood_chips():
@@ -2204,6 +2220,65 @@ def render_mood_chips():
 
 _MOOD_PRESETS = [("Feel-good", "feel-good"), ("Funny", "funny"), ("Mind-bending", "mind-bending"),
                  ("Dark and tense", "dark tense"), ("Under 2 hours", "under 2 hours"), ("Nothing too violent", "not violent")]
+
+
+# The search is one designed system. Four states, and one written rule for what every part of the
+# Showroom shows in each. The page reads this table instead of deciding part by part.
+#   none:  nothing typed or tapped.
+#   mood:  a mood, a length, or something to avoid ("mind-bending", "under 2 hours", "not violent").
+#   movie: a movie typed on its own ("Inception"): the movie first, then the closest matches.
+#   like:  "like Inception" (or a movie plus a mood): the closest matches, without the movie itself.
+# A mood or length added to a movie filters inside that movie's matches; it never changes the state.
+SEARCH_RULE = {
+    "none":  {"tokens": "presets", "tonight": "Your single best match right now", "top_result": False,
+              "top_picks": "personal ranking", "shows": "personal", "explore": True},
+    "mood":  {"tokens": "editable, filled presets", "tonight": "Your best match for {search}", "top_result": False,
+              "top_picks": "personal ranking, filtered and led by the mood", "shows": "personal, filtered", "explore": True},
+    "movie": {"tokens": "Movie: X, editable", "tonight": "Your best match like {movie}", "top_result": True,
+              "top_picks": "fans' closest to X, after the three beside it", "shows": "fans of X", "explore": False},
+    "like":  {"tokens": "Like: X, editable", "tonight": "Your best match like {movie}", "top_result": False,
+              "top_picks": "fans' closest to X", "shows": "fans of X", "explore": False},
+}
+
+
+def _search_state():
+    """Which of the four search states is on (see SEARCH_RULE)."""
+    spec = _mood_spec()
+    if spec.get("lookup") and spec.get("like"):
+        return "movie"
+    if spec.get("like"):
+        return "like"
+    if spec.get("mood") or spec.get("max") or spec.get("min") or spec.get("episodes") or spec.get("avoid"):
+        return "mood"
+    return "none"
+
+
+def _search_words():
+    """The search in a few readable words for row notes: “mind-bending” · under 2 hours · nothing violent."""
+    sx = _mood_spec()
+    bits = [f"“{sx['mood'][:30]}”" if sx.get("mood") else "",
+            ("under 2 hours" if sx.get("max") == 120 else (f"under {sx['max']} min" if sx.get("max") else "")),
+            (f"over {sx['min']} min" if sx.get("min") else ""),
+            ("short episodes" if sx.get("episodes") else ""),
+            ("nothing " + ", ".join(sx.get("avoid") or []) if sx.get("avoid") else "")]
+    return " · ".join(b for b in bits if b)
+
+
+def _fans_reason(movie=None):
+    """The search's lead reason in the movie states: “Loved by fans of Inception”, with where this movie
+    sits among the fans' 100 closest. None outside the movie states."""
+    src = _like_source() if _search_state() in ("movie", "like") else None
+    if not src:
+        return None
+    rank = None
+    if movie is not None:
+        from src.cf_model import _index as _ix
+        sims = _like_sims(src)
+        i = _ix(movie)
+        if sims and i is not None and i in sims:
+            rank = sorted(sims, key=lambda j: -sims[j]).index(i) + 1
+    text = f"#{rank} of the 100 movies they love most alongside it" if rank else ""
+    return {"label": f"Loved by fans of “{src['title']}”", "text": text, "rank": rank}
 
 
 def _preset_active(text, spec):
@@ -2268,8 +2343,15 @@ def render_mood_suggestions():
     with row:
         if _mood_text():
             st.button("Clear all", key="mood_reset", on_click=_set_mood_live, args=("",))
-        for i, (label, rest) in enumerate(chips_now):
-            st.button(f"{label}  ×", key=f"mood_chip_{i}", help=f"Remove {label}", on_click=_set_mood_live, args=(rest,))
+        for i, (label, rest, edit) in enumerate(chips_now):
+            # One capsule, two taps: the words open the token in the field to edit; × removes it.
+            try:
+                tok = st.container(key=f"mood_tok_{i}", horizontal=True, gap="small")
+            except TypeError:
+                tok = st.container(key=f"mood_tok_{i}")
+            with tok:
+                st.button(label, key=f"mood_edit_{i}", help=f"Edit {label}", on_click=_edit_token, args=(rest, edit))
+                st.button("×", key=f"mood_chip_{i}", help=f"Remove {label}", on_click=_set_mood_live, args=(rest,))
         for i, (label, text) in enumerate(opts):
             on = _preset_active(text, spec)
             st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}",
@@ -2312,9 +2394,38 @@ def _build_key():
             len([e for e in (ss.get("analytics_events") or []) if e.get("event") != "impression"]))
 
 
+def _merged_search(typed, exact_title=None):
+    """What's typed, added to the search already on (or to the rest of a token being edited):
+    moods and avoids add up, a new length or movie replaces the old one (src/ui/mood_time.merge)."""
+    from src.ui.mood_time import merge, parse
+    base = st.session_state.pop("_edit_rest", None)
+    if base is None:
+        base = _mood_text()
+    typed = " ".join(str(typed or "").split())[:120]
+    if not base:
+        return typed
+    bp, tp = parse(base), parse(typed)
+    cur_title = None
+    if bp["mood"] and not bp["like"]:
+        cur_title = (_lookup_title(bp["mood"]) or {}).get("title")
+    typed_title = exact_title
+    if typed_title is None and tp["mood"] and not tp["like"]:
+        typed_title = (_lookup_title(tp["mood"]) or {}).get("title")
+    return merge(base, typed, current_title=cur_title, typed_title=typed_title)[:120]
+
+
+def _edit_token(rest, text):
+    """Tap a token's words: they open in the field to edit, and Search puts the edit back in place of it.
+    Only the search box reruns; the Showroom stays as it is until Search."""
+    ver = int(st.session_state.get("_mood_ver") or 0) + 1
+    st.session_state._mood_ver = ver
+    st.session_state._edit_rest = rest
+    st.session_state._mood_prefill = (ver, " ".join(str(text or "").split())[:120])
+
+
 def _commit_search(text):
     """Run a search from the live field or a suggestion, then rebuild the Showroom around it."""
-    st.session_state.mood_input = " ".join(str(text or "").split())[:120]
+    st.session_state.mood_input = _merged_search(text)
     _apply_mood()
     st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1   # the field shows the tidy text
     st.session_state._app_rerun = True
@@ -2327,11 +2438,13 @@ def _commit_exact(text, movie=None):
         memo = dict(st.session_state.get("_exact_pick") or {})
         memo[text.replace("like ", "", 1).casefold()] = dict(movie)
         st.session_state._exact_pick = memo
-    _set_mood_live(text)
+    exact = None if text.startswith("like ") else text
+    _set_mood_live(_merged_search(text, exact_title=exact))
 
 
 def _set_mood_live(text):
     """A chip, Clear, or a starting point tapped inside the search box: change the search, rebuild the Showroom."""
+    st.session_state.pop("_edit_rest", None)      # any token edit in progress is replaced by this change
     _set_mood(text)
     st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1
     st.session_state._app_rerun = True
@@ -2347,7 +2460,9 @@ def render_search_box():
         live = None
         try:
             from st_keyup import st_keyup
-            live = st_keyup("Search by mood, time, or a movie", value="", debounce=300,
+            _pre = st.session_state.get("_mood_prefill") or (None, "")
+            _ver = int(st.session_state.get("_mood_ver") or 0)
+            live = st_keyup("Search by mood, time, or a movie", value=(_pre[1] if _pre[0] == _ver else ""), debounce=300,
                             key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
                             placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or “like Inception”"), label_visibility="collapsed")
         except Exception:
@@ -2356,6 +2471,8 @@ def render_search_box():
             st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
                           placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or “like Inception”"), on_change=_apply_mood)
         typed = " ".join(str(live or "").split())
+        if live is not None and not typed:
+            st.session_state.pop("_edit_rest", None)   # the field was cleared: no token edit is pending
         with st.container(key="mood_under"):
             if live is not None and typed and typed != _mood_text():
                 _render_live_suggestions(typed)
@@ -2577,7 +2694,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         ]},
         "cf_affinity":round(float(payload.get("cf") if payload.get("cf") is not None else 0.5),6),
         "candidate_source":movie.get("candidate_source"),
-        "model_version":"v5.191",
+        "model_version":"v5.192",
         **_interleave_fields(row_name, title),
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
@@ -2585,21 +2702,14 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     st.session_state.recommendation_context = recommendation_context
     record_impressions(st.session_state, {title: context})
 
+    undo_title = (st.session_state.get("showroom_undo") or {}).get(slot_key)
+    if undo_title:
+        # Undo sits on the art's corner, not in the pill row, so the pill row is always match + Skip
+        # and nothing in the row moves when it appears.
+        st.button("Undo skip", key=f"card_undo_{row_index}_{slot_index}_{title}",
+                  help=f"Bring back {undo_title}", on_click=undo_showroom_slot, args=(row_name, slot_index))
     with st.container(key=f"showroom_controls_{row_index}_{slot_index}_{title}"):
-        undo_title = (st.session_state.get("showroom_undo") or {}).get(slot_key)
-        if undo_title:
-            match_col, undo_col, skip_col = st.columns([2.75,0.62,0.90], gap="small")
-            with undo_col:
-                st.button(
-                    ":material/undo:",
-                    key=f"undo_{row_name}_{slot_index}_{title}",
-                    help=f"Undo skip · bring back {undo_title}",
-                    use_container_width=True,
-                    on_click=undo_showroom_slot,
-                    args=(row_name, slot_index),
-                )
-        else:
-            match_col, skip_col = st.columns([3.35,0.90], gap="small")
+        match_col, skip_col = st.columns([3.35,0.90], gap="small")
         reasons = with_cf_reason(recommendation_explanation(
             with_live_ratings(movie, live_rating),p,st.session_state.adventure,st.session_state.review_priority,
             semantic_similarity=context.get("semantic_similarity"),
@@ -2608,6 +2718,9 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         ), payload)
         if (_mr := mood_reason(movie)):
             reasons = [_mr] + reasons
+        _fr = _fans_reason(movie)
+        if _fr:
+            reasons = [_fr] + [r for r in reasons if not str(r.get("label", "")).startswith("Loved by fans")]
         pill_labels = dict(st.session_state.get("showroom_pill_labels") or {})
         row_taken = {label for key, label in pill_labels.items()
                      if key.startswith(f"{row_name}::") and key != slot_key and label}
@@ -2615,8 +2728,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                      "Recent Releases for You": " · New release", "Something Different": " · Something new",
                      "Classics for You": " · Classic", "International Films for You": " · International",
                      "Documentaries for You": " · Documentary"}.get(row_name, "")
-        pill_text, pill_label = match_pill(match, reasons, taken=row_taken, head=fit_head(payload, match),
-                                           limit=19 if undo_title else None)
+        pill_text, pill_label = match_pill(match, reasons, taken=row_taken, head=fit_head(payload, match))
         pill_text = fit_head(payload, match)     # the why is shown in words under the title
         _lv = love_line(payload.get("fit_top_pct"))
         _lvm = re.search(r"(\d+)%", _lv or "")
@@ -2641,6 +2753,10 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
                     f'<div class="mix-pct">{round(sh * 100)}%</div></div>'
                     + (f'<div class="mix-detail">{html.escape(_detail[n])}</div>' if _detail.get(n) else "")
                     for n, t, sh in _mix)
+                if _fr:
+                    # The search leads the popup: where this movie sits among the searched movie's fans' picks.
+                    _mix_html = (f'<div class="mix-detail mix-lead">{html.escape(_fr["label"])}'
+                                 + (f' · {html.escape(_fr["text"])}' if _fr.get("text") else "") + '</div>') + _mix_html
                 if _rows.get("Mood"):
                     _mix_html += f'<div class="mix-detail mix-extra">Mood: {html.escape(_rows["Mood"])}</div>'
                 if (_rr := ratings_reason(_rows.get("Ratings"), st.session_state.get("review_priority"))):
@@ -2857,14 +2973,23 @@ def render_tonight_pick_fragment():
         fits = [t for t in on_services if t not in in_rows] + [t for t in on_services if t in in_rows]
     ordered = fits + [t for t in pool if t not in fits]
 
+    # The note follows SEARCH_RULE: what the search is, then where it streams.
+    _state = _search_state()
+    _src = _like_source() if _state in ("movie", "like") else None
+    _words = _search_words()
+    if _src:
+        base = f"Your best match like {_src['title']}"
+    elif _state == "mood" and _words:
+        base = f"Your best match for {_words}"
+    else:
+        base = SEARCH_RULE["none"]["tonight"]
     if services:
         shown = ", ".join(services[:2]) + (f" +{len(services) - 2}" if len(services) > 2 else "")
-        note = (f"Your single best match right now on {shown}" if fits else
-                f"None of your top matches stream on {shown} right now, so here’s your best overall match")
+        note = (f"{base} on {shown}" if fits else
+                f"Nothing {'like ' + _src['title'] if _src else 'in your top matches'} streams on {shown} right now, "
+                "so here’s the best overall")
     else:
-        note = "Your single best match right now"
-    if _mood_line() and not _mood_spec().get("lookup"):
-        note = _mood_line().replace("Your best fits for", "Your best match for")
+        note = base
     head, picker = st.columns([3.4, 1.1], gap="medium", vertical_alignment="bottom")
     with head:
         st.markdown(
@@ -2903,7 +3028,7 @@ def render_tonight_pick_fragment():
         ]},
         "cf_affinity": round(float(payload.get("cf") if payload.get("cf") is not None else 0.5), 6),
         "candidate_source": movie.get("candidate_source"),
-        "model_version":"v5.191",
+        "model_version":"v5.192",
     }
     recommendation_context = dict(st.session_state.get("recommendation_context") or {})
     recommendation_context[title] = context
@@ -2936,6 +3061,10 @@ def render_tonight_pick_fragment():
         availability_score=context.get("availability_alignment", 0.5),
         components=context,
     ), payload, limit=2)
+    # In a search, the lead reason names it: "Loved by fans of “Inception”", or the mood you typed.
+    _lead = _fans_reason(movie) or mood_reason(movie)
+    if _lead:
+        reasons = [_lead] + [r for r in reasons if not str(r.get("label", "")).startswith("Loved by fans")]
     def _why_text(r):
         # "Loved by fans of X" already says it; skip the sentence that repeats it.
         t = str(r.get("text") or "")
@@ -3279,7 +3408,11 @@ def _render_showroom(p):
         _extra_idx = _cf_top(user_vector(_cf_signals()), 150)
         _src0 = _like_source()
         if _src0:
-            _extra_idx = list(_like_sims(_src0).keys())[:60] + _extra_idx   # the 60 closest are plenty for 4 picks
+            _extra_idx = list(_like_sims(_src0).keys())[:60] + _extra_idx   # the 60 closest are plenty for 7 picks
+            if _search_state() == "movie" and str(_src0.get("title", "")).casefold() not in _have2:
+                # The searched movie is scored like any other, so its pill is a real calibrated chance.
+                candidate_pool.append(dict(_src0, candidate_source="search"))
+                _have2.add(str(_src0.get("title", "")).casefold())
         for _r in _extra_idx:
             _m = _movie_at2(_r)
             if _m and _m["title"] and _m["title"].casefold() not in _have2:
@@ -3552,11 +3685,14 @@ def _render_showroom(p):
                 _hs=set(_hit)
                 top_all=[top_all[j] for j in _first]   # only movies that fit the mood, even after many Skips
         _src=_like_source()
+        _src_item=None
         _lookup=_mood_spec().get("lookup")
+        _state=_search_state()
         _personal_top=list(top_all)          # a title lookup leaves Tonight's Show as your personal best
         if _src and top_all:
             # "like X": Top Picks re-ranks by the What's next blend (fans who loved X, plus your own match).
             _sk=_src.get("title")
+            _src_item=next((x for x in top_all if x[1].get("title")==_sk),None)   # kept for the Top result pill
             top_all=[x for x in top_all if x[1].get("title")!=_sk]
             _scored=[(_like_score(x[1],_src),x) for x in top_all]
             _close=[(v,x) for v,x in _scored if v>0.5 and float(x[0] or 0)>=30]   # close, and not a poor fit for you
@@ -3579,6 +3715,8 @@ def _render_showroom(p):
         fit_titles={m["title"] for _,m in fits}
         tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
         reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
+        if _src:
+            reserved.add(_src.get("title"))      # the searched movie never repeats in a row below it
         reserved_series={_franchise(t) for t in reserved}
 
         # Team-draft interleave routed vs item-kNN-only for Top Matches (rule in src/interleave.py).
@@ -3649,8 +3787,10 @@ def _render_showroom(p):
                         ordered=[ordered[k] for k in sorted(_close)]+[it for k,it in enumerate(ordered) if k not in _close and it[1].get("title")!=_src.get("title")]
             # One movie per series across the Showroom, so rows don't fill up with sequels.
             picks=[]
+            # Movie state: Top Picks also fills the three places beside the Top result (SEARCH_RULE).
+            _want=7 if (row_name=="Top Matches for You" and _state=="movie") else 4
             for item in ordered:
-                if len(picks)>=4:
+                if len(picks)>=_want:
                     break
                 if item[1]["title"] in reserved or _franchise(item[1]["title"]) in reserved_series:
                     continue
@@ -3690,6 +3830,8 @@ def _render_showroom(p):
         for row_name in row_order:
             if il_teams and row_name=="Top Matches for You":
                 continue   # interleaved order is shown as drafted, so neither ranker gets the top spots
+            if row_name=="Top Matches for You" and _state!="none":
+                continue   # a search sets this row's order (closest to X first, or mood-led); re-sorting by fit undid it
             row_choices[row_name].sort(key=lambda item:0.91*(item[0]/100.0)+0.09*service_availability_utility(watch_by_title.get(item[1]["title"])),reverse=True)
 
         recommendation_context={}
@@ -3708,7 +3850,7 @@ def _render_showroom(p):
                     **{k:round(float(comps.get(k,.5)),6) for k in ["genre_affinity","trait_affinity","semantic_similarity","quality_alignment","discovery_alignment","priority_alignment","availability_alignment","vote_confidence","profile_confidence"]},
                     "cf_affinity":round(float(cf_by_title.get(movie["title"],0.5)),6),
                     "candidate_source":movie.get("candidate_source"),
-                    "model_version":"v5.191",
+                    "model_version":"v5.192",
                     **_interleave_fields(row_name,movie["title"]),
                 }
         st.session_state.recommendation_context=recommendation_context
@@ -3762,6 +3904,14 @@ def _render_showroom(p):
             })
         st.session_state.showroom_undo={}
         st.session_state.showroom_pill_labels={}
+        if _src_item is not None:
+            payloads.setdefault(_src_item[1]["title"],{
+                "match":_src_item[0],
+                "movie":_src_item[1],
+                "semantic_similarity":semantic_by_id.get(id(_src_item[1]),.5),
+                "cf":cf_by_title.get(_src_item[1]["title"]),
+                "model_match":model_match_by_title.get(_src_item[1]["title"],_src_item[0]),
+            })
         if tonight_queue:
             for match,movie in tonight_queue:
                 payloads.setdefault(movie["title"],{
@@ -3839,13 +3989,9 @@ def _render_showroom(p):
         from src.mood import available as _mood_ready
         if _mood_ready():
             render_search_box()
-            if _mood_text():
-                render_search_card()
-        # One unified guide, like the Apple TV app's Home: no toggles. Tonight's Show, Top Picks,
-        # Shows for You, and More to explore (critics' picks, hidden gems and your fourth row mixed in
-        # one row, each card labeled), so there are never more than three rows under the hero.
-        from src import tv as _tv
-        render_tonight_pick_fragment()
+        _state = _search_state()
+        _rule = SEARCH_RULE[_state]
+        _src_now = _like_source() if _state in ("movie", "like") else None
         row_notes={
             "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
             "Critically Acclaimed":"Highly rated movies that still fit what you like",
@@ -3881,37 +4027,49 @@ def _render_showroom(p):
                         render_showroom_card_fragment(rname, rindex, slot)
 
         top_name = row_specs[0]
-        _header("Top Picks for You", _mood_line() or row_notes[top_name])
         top_slots = _strong_slots(top_name, len(row_choices.get(top_name, [])))
-        if top_slots:
-            _draw_cards(0, [(top_name, 0, i) for i in top_slots])
+        if _rule["top_result"] and _src_now:
+            # Movie state: the movie, then the three closest beside it; Top Picks continues after them.
+            render_top_result(top_name, 0, top_slots[:3])
+            top_slots = top_slots[3:]
+        # One unified guide, like the Apple TV app's Home: no toggles. Tonight's Show, Top Picks,
+        # Shows for You, and More to explore (critics' picks, hidden gems and your fourth row mixed in
+        # one row, each card labeled), so there are never more than three rows under the hero.
+        from src import tv as _tv
+        render_tonight_pick_fragment()
+
+        _words = _search_words()
+        if _src_now:
+            _top_note = f"More like {_src_now['title']}" + (f" · {_words}" if _words else "")
         else:
+            _top_note = _mood_line() or row_notes[top_name]
+        if top_slots:
+            _header("Top Picks for You", _top_note)
+            _draw_cards(0, [(top_name, 0, i) for i in top_slots])
+        elif _state == "none":
+            _header("Top Picks for You", _top_note)
             st.caption("Refreshing personalized matches…")
 
         if _tv.available():
             from src.ui.shows import render_shows
             render_shows({"movie_thumb": movie_thumb, "card_html": card_html, "watch_line_html": watch_line_html,
                           "record_event": record_event, "queue_profile_save": queue_profile_save, "signals": _cf_signals,
-                          "spec": _mood_spec()}, 4)
+                          "spec": _mood_spec(), "like_source": _src_now, "search_words": _words}, 4)
 
-        explore = [(r, row_specs.index(r)) for r in row_specs[1:]]
-        pools = {r: _strong_slots(r, len(row_choices.get(r, []))) for r, _ in explore}
-        cells, depth = [], 0
-        while len(cells) < 4 and any(len(v) > depth for v in pools.values()):
-            for r, idx in explore:
-                if len(pools[r]) > depth and len(cells) < 4:
-                    cells.append((r, idx, pools[r][depth]))
-            depth += 1
+        cells = []
+        if _rule["explore"]:
+            explore = [(r, row_specs.index(r)) for r in row_specs[1:]]
+            pools = {r: _strong_slots(r, len(row_choices.get(r, []))) for r, _ in explore}
+            depth = 0
+            while len(cells) < 4 and any(len(v) > depth for v in pools.values()):
+                for r, idx in explore:
+                    if len(pools[r]) > depth and len(cells) < 4:
+                        cells.append((r, idx, pools[r][depth]))
+                depth += 1
         if cells:
-            _sx = _mood_spec()
-            _bits = [f"“{_sx['mood'][:30]}”" if _sx.get("mood") else "",
-                     (f"like {_sx['like']}" if _sx.get("like") and not _sx.get("lookup") else ""),
-                     ("under 2 hours" if _sx.get("max") == 120 else (f"under {_sx['max']} min" if _sx.get("max") else "")),
-                     ("nothing " + ", ".join(_sx.get("avoid") or []) if _sx.get("avoid") else "")]
-            _bits = [b for b in _bits if b]
             # Every row says when your search is shaping it.
-            _header("More to explore", ("Critics’ picks, hidden gems, and something new, matching " + " · ".join(_bits))
-                    if _bits else "Critics’ picks, hidden gems, and something new, all chosen for you")
+            _header("More to explore", ("Critics’ picks, hidden gems, and something new, matching " + _words)
+                    if _words else "Critics’ picks, hidden gems, and something new, all chosen for you")
             _draw_cards("explore", cells)
         _remember_shown(row_choices)
         rating_note = "" if omdb_configured() else " IMDb and Rotten Tomatoes ratings require OMDB_API_KEY in Streamlit Secrets."

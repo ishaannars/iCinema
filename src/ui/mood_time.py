@@ -151,3 +151,24 @@ def fits(runtime, spec, show=False):
     if not runtime:
         return False
     return (not lim_max or runtime <= lim_max) and (not lim_min or runtime >= lim_min)
+
+
+def merge(current, typed, current_title=None, typed_title=None):
+    """Add what was typed to the search already on, the way the placeholder promises ("Add a mood, a
+    length, or a movie"). Moods and things to avoid add up; a new length or movie replaces the old one.
+
+    current_title / typed_title: the movie a side names on its own ("Inception"), already looked up by
+    the app. A searched movie plus a mood becomes "mood, like Movie", so both parts keep working.
+    """
+    cur, new = parse(current), parse(typed)
+    mx, mn, ep = new["max"] or cur["max"], new["min"] or cur["min"], new["episodes"] or cur["episodes"]
+    avoid = list(cur["avoid"]) + [w for w in new["avoid"] if w not in cur["avoid"]]
+    if typed_title:
+        # A movie typed on its own: it becomes the search's movie; lengths and avoids stay.
+        if not cur["mood"] or current_title:
+            return compose(typed_title, mx, mn, ep, None, avoid)
+        return compose(cur["mood"], mx, mn, ep, typed_title, avoid)
+    like = new["like"] or cur["like"] or current_title
+    mood_words = [] if current_title else cur["mood"].split()
+    mood_words += [w for w in new["mood"].split() if w not in mood_words]
+    return compose(" ".join(mood_words), mx, mn, ep, like, avoid)

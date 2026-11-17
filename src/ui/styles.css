@@ -4687,3 +4687,43 @@ div[data-testid="stPopoverBody"] .why-pop-foot{margin:.2rem 0 .7rem !important;p
 .st-key-search_more_like{margin-top:.35rem !important;}
 .search-result-head-wrap .showroom-row-title{font-size:1.25rem !important;margin:0 0 .4rem !important;}
 .search-result-head-wrap{padding:0 0 .4rem !important;margin:.2rem 0 0 !important;}
+
+/* ---- Search as one system ---- */
+/* Tokens: one filled capsule, two taps. The words open the token in the field to edit; × removes it. */
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"]{flex:0 0 auto !important;width:auto !important;flex-wrap:nowrap !important;
+    gap:0 !important;align-items:center !important;height:2.1rem !important;border-radius:999px !important;
+    background:var(--kinari) !important;border:1px solid var(--kinari) !important;padding:0 !important;overflow:hidden !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] > div{flex:0 0 auto !important;width:auto !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] div.stButton{width:auto !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button{height:2.1rem !important;min-height:2.1rem !important;
+    background:transparent !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_edit_"] button{padding:0 .25rem 0 .85rem !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] [class*="st-key-mood_chip_"] button{padding:0 .75rem 0 .35rem !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button p{color:#111315 !important;font-size:.82rem !important;
+    font-weight:650 !important;white-space:nowrap !important;line-height:1 !important;margin:0 !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_edit_"] button:hover p{text-decoration:underline !important;text-underline-offset:.18em;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] [class*="st-key-mood_chip_"] button p{font-size:.95rem !important;font-weight:500 !important;}
+@media (max-width: 640px){
+    .st-key-mood_suggest_row [class*="st-key-mood_tok_"],.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button{
+        height:2.3rem !important;min-height:2.3rem !important;}
+    .st-key-mood_suggest_row [class*="st-key-mood_tok_"] [class*="st-key-mood_chip_"] button{min-width:2.3rem !important;}
+}
+
+/* Undo skip: a small capsule on the art's top-left corner. Out of the pill row, and nothing moves. */
+[data-testid="stColumn"]:has([class*="st-key-card_undo_"]),[data-testid="column"]:has([class*="st-key-card_undo_"]){position:relative !important;}
+[class*="st-key-card_undo_"]{position:absolute !important;top:2.65rem !important;left:.5rem !important;z-index:6 !important;
+    width:auto !important;margin:0 !important;}
+[class*="st-key-card_undo_"] button{height:2rem !important;min-height:2rem !important;padding:0 .8rem !important;border-radius:999px !important;
+    background:rgba(17,19,21,.82) !important;border:1px solid rgba(243,240,234,.28) !important;backdrop-filter:blur(8px);
+    display:flex !important;align-items:center !important;justify-content:center !important;}
+[class*="st-key-card_undo_"] button p{font-family:var(--ui-font) !important;font-size:.72rem !important;font-weight:700 !important;
+    letter-spacing:.06em !important;text-transform:uppercase !important;color:var(--kinari) !important;margin:0 !important;line-height:1 !important;}
+[class*="st-key-card_undo_"] button:hover{border-color:rgba(243,240,234,.55) !important;}
+@media (max-width: 640px){
+    [class*="st-key-card_undo_"] button{height:44px !important;min-height:44px !important;padding:0 1rem !important;}
+}
+
+/* Top result: the searched movie's pill is the same full-width pill as its neighbours, so the line stays level. */
+.st-key-showroom_controls_result [data-testid="stPopover"]{width:100% !important;}
+/* The search's lead line in a card popup reads first and slightly brighter. */
+div[data-testid="stPopoverBody"] .mix-lead{color:var(--kinari) !important;font-weight:650 !important;margin:0 0 .2rem !important;}

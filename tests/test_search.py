@@ -1,0 +1,50 @@
+"""The search is one system: what's typed adds to what's on, and the parts read back the same way."""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from src.ui.mood_time import merge, parse  # noqa: E402
+
+
+def test_typing_adds_to_the_search():
+    assert parse(merge("funny", "under 2 hours")) == parse("funny, under 2 hours")
+    assert parse(merge("dark, not violent", "slow-burn"))["avoid"] == ["violent"]
+    assert parse(merge("dark", "slow-burn"))["mood"] == "dark slow-burn"
+
+
+def test_a_new_length_or_movie_replaces_the_old_one():
+    assert parse(merge("funny, under 90 min", "under 2 hours"))["max"] == 120
+    assert parse(merge("funny, like Inception", "like Heat"))["like"] == "Heat"
+
+
+def test_a_searched_movie_plus_a_mood_becomes_like_the_movie():
+    p = parse(merge("inception", "funny", current_title="Inception"))
+    assert p["like"] == "Inception" and p["mood"] == "funny"
+    p = parse(merge("mind-bending", "Inception", typed_title="Inception"))
+    assert p["like"] == "Inception" and p["mood"] == "mind-bending"
+
+
+def test_a_movie_typed_alone_keeps_the_filters():
+    p = parse(merge("under 90 min, not violent", "Inception", typed_title="Inception"))
+    assert p["mood"] == "inception" and p["max"] == 90 and p["avoid"] == ["violent"] and p["like"] is None
+
+
+def test_every_part_of_the_search_has_one_rule():
+    """The written rule in app.py names every part for every state, so nothing is decided ad hoc."""
+    src = (ROOT / "app.py").read_text()
+    for part in ("tokens", "tonight", "top_result", "top_picks", "shows", "explore"):
+        assert f'"{part}"' in src
+    for state in ("none", "mood", "movie", "like"):
+        assert f'"{state}"' in src
+
+
+def test_undo_is_not_in_the_pill_row():
+    src = (ROOT / "app.py").read_text()
+    assert ":material/undo:" not in src
+    assert "card_undo_" in src
+
+
+def test_a_movie_typed_with_a_length_keeps_both():
+    p = parse(merge("funny", "Inception under 2 hours", typed_title="Inception"))
+    assert p["like"] == "Inception" and p["mood"] == "funny" and p["max"] == 120

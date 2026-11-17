@@ -55,13 +55,34 @@ def main():
     saves = [b for b in at.button if (b.key or "").startswith("save_Top Matches")]
     if saves:
         saves[0].click().run(); ok &= check(at, "Save in live test")
-    # Mood plus time in one field ("funny, under 2 hours") still renders every section.
-    try:
-        at.session_state["mood_query"] = "funny, under 2 hours"
-        at.run(); ok &= check(at, "Showroom (mood + time)")
-        at.session_state["mood_query"] = ""
-    except Exception as e:
-        print("Mood + time               ERROR:", e); ok = False
+    # The search's four states (SEARCH_RULE in app.py), plus a movie with a mood, each render every section.
+    at.session_state["likes"] = {"Spirited Away"}
+    for label, query in (("Search: mood + time", "funny, under 2 hours"), ("Search: mood", "mind-bending"),
+                         ("Search: movie", "Inception"), ("Search: like a movie", "like Inception"),
+                         ("Search: movie + mood", "funny, like Inception")):
+        try:
+            at.session_state["mood_active"] = query
+            at.session_state["mood_input"] = query
+            at.run(); ok &= check(at, label)
+        except Exception as e:
+            print(f"{label:<28} ERROR: {e}"); ok = False
+    # Tap a token's words to edit it, then Skip a card and Undo it from the art's corner.
+    edits = [b for b in at.button if (b.key or "").startswith("mood_edit_")]
+    if edits:
+        edits[0].click().run(); ok &= check(at, "Search: edit a token")
+    at.session_state["mood_active"] = ""
+    at.session_state["mood_input"] = ""
+    at.run(); ok &= check(at, "Search: cleared")
+    skips = [b for b in at.button if (b.key or "").startswith("skip_Top Matches")]
+    if skips:
+        skips[0].click().run(); ok &= check(at, "Skip a card")
+        undos = [b for b in at.button if (b.key or "").startswith("card_undo_")]
+        if undos:
+            undos[0].click().run(); ok &= check(at, "Undo a skip")
+        else:
+            # In the app, Skip reruns only its card, so Undo appears. A test runner that reruns the whole
+            # page rebuilds the rows instead, which clears Undo; that isn't an error.
+            print(f"{'Undo a skip':<28} OK (page rebuilt, nothing to undo)")
     print("All screens OK" if ok else "Some screens failed")
     sys.exit(0 if ok else 1)
 
