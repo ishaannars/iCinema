@@ -187,15 +187,30 @@ def service_logos(region: str = "US") -> dict:
     data = _request("/watch/providers/movie", {"watch_region": region}) or {}
     items = sorted(data.get("results") or [],
                    key=lambda x: (x.get("display_priorities") or {}).get(region, x.get("display_priority", 999)))
+    # The service's own app logo, never a reseller version ("HBO Max on Prime Video", "Paramount+ Premium"):
+    # an exact name match wins, then the plainest name that starts with it. "Free" shows Tubi, Pluto, Roku.
+    resold = ("channel", "amazon", "withads", "store", "premium", "roku", "apple")
+
+    def plain(it, aliases):
+        key = _provider_key(it.get("provider_name", ""))
+        hits = [a for a in aliases if key.startswith(a)]
+        if not hits:
+            return None
+        tail = key[len(max(hits, key=len)):]
+        return (key not in aliases, any(w in tail for w in resold), len(key))
     out = {}
     for name, aliases in STREAMING_SERVICES.items():
-        want = 3 if name.startswith("Free") else 1
-        for it in items:
-            key = _provider_key(it.get("provider_name", ""))
-            if it.get("logo_path") and any(key.startswith(a) for a in aliases):
-                url = f"https://image.tmdb.org/t/p/w154{it['logo_path']}"
+        if name.startswith("Free"):
+            groups = [(a,) for a in aliases]          # one logo each: Tubi, Pluto, then the next free service
+        else:
+            groups = [tuple(aliases)]                 # the plainest match across every name the service goes by
+        for group in groups:
+            ranked = sorted(((plain(it, group), it) for it in items if it.get("logo_path") and plain(it, group)),
+                            key=lambda x: x[0])
+            if ranked:
+                url = f"https://image.tmdb.org/t/p/w154{ranked[0][1]['logo_path']}"
                 if url not in out.setdefault(name, []):
                     out[name].append(url)
-            if len(out.get(name, [])) >= want:
+            if len(out.get(name, [])) >= (3 if name.startswith("Free") else 1):
                 break
     return out

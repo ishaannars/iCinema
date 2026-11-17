@@ -68,26 +68,45 @@ def provider_watch_url(provider, title, availability=None):
     return fallback or f"https://www.justwatch.com/us/search?q={quote_plus(str(title))}"
 
 
-def watch_options(availability, title, services=None, limit=2):
-    """[(label, provider, url)] for the best ways to watch, the viewer's services first."""
+_CHANNEL = re.compile(r"\s+(?:basic\s+|standard\s+)?with\s+ads$|\s+(?:amazon|roku\s+premium|apple\s+tv)\s+channel$|\s+premium$",
+                      re.IGNORECASE)
+
+
+def clean_provider(name):
+    """One name per service: "AMC+ Roku Premium Channel" and "Netflix Standard with Ads" read "AMC+" and "Netflix"."""
+    return _CHANNEL.sub("", str(name or "")).strip()
+
+
+def unique_providers(names):
+    """Cleaned provider names, duplicates dropped, order kept."""
+    seen, out = set(), []
+    for n in names or []:
+        c = clean_provider(n)
+        if c and c.casefold() not in seen:
+            seen.add(c.casefold())
+            out.append((c, n))
+    return out
+
+
+def _major(name):
+    return any(_on_service(name, sv) for sv in STREAMING_SERVICES)
+
+
+def watch_options(availability, title, services=None, limit=1):
+    """[(label, provider, url)] for the best ways to watch: your services first, then the big services
+    people recognise, then the rest. One name by default, so the line never wraps."""
     availability = availability or {}
     services = list(services or [])
-    streaming = list(availability.get("providers") or [])
-    renting = list(availability.get("rent_providers") or [])
-    if services:
-        mine = [p for p in streaming if any(_on_service(p, sv) for sv in services)]
-        streaming = mine + [p for p in streaming if p not in mine]
-    chosen = [("Watch on", p) for p in streaming[:limit]]
+    streaming = unique_providers(availability.get("providers"))
+    renting = unique_providers(availability.get("rent_providers"))
+    def order(items):
+        mine = [x for x in items if services and any(_on_service(x[1], sv) for sv in services)]
+        big = [x for x in items if x not in mine and _major(x[1])]
+        return mine + big + [x for x in items if x not in mine and x not in big]
+    chosen = [("Watch on", x) for x in order(streaming)[:limit]]
     if not chosen:
-        chosen = [("Rent on", p) for p in renting[:limit]]
-    seen, out = set(), []
-    for verb, provider in chosen:
-        name = re.sub(r"\s+(basic\s+)?with\s+ads$|\s+amazon\s+channel$|\s+standard\s+with\s+ads$", "", provider, flags=re.IGNORECASE).strip()
-        if name.casefold() in seen:
-            continue
-        seen.add(name.casefold())
-        out.append((f"{verb} {name}", name, provider_watch_url(provider, title, availability)))
-    return out
+        chosen = [("Rent on", x) for x in renting[:limit]]
+    return [(f"{verb} {name}", name, provider_watch_url(raw, title, availability)) for verb, (name, raw) in chosen]
 
 
 def watch_line_html(availability, title, services=None):
@@ -109,7 +128,7 @@ def watch_line_html(availability, title, services=None):
              if _safe_url(url) else html.escape(_label(name)))
             for _, name, url in opts
         )
-    total = len(availability.get("providers") or []) if verb == "Streaming" else len(availability.get("rent_providers") or [])
+    total = len(unique_providers(availability.get("providers") if verb == "Streaming" else availability.get("rent_providers")))
     extra = max(0, total - len(options))
     page = _safe_url(availability.get("url"))
     # TMDB's watch page often lists nothing outside its own region; JustWatch's search always works.

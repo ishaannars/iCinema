@@ -41,7 +41,7 @@ def test_every_part_of_the_search_has_one_rule():
 
 def test_undo_is_not_in_the_pill_row():
     src = (ROOT / "app.py").read_text()
-    assert ":material/undo:" not in src
+    assert "st.columns([2.75,0.62,0.90]" not in src      # the old three-column pill row with Undo inside it
     assert "card_undo_" in src
 
 
@@ -60,3 +60,12 @@ def test_love_chance_reads_the_rank_it_was_tested_on():
 def test_home_shows_the_baseline_next_to_the_lift():
     src = (ROOT / "app.py").read_text()
     assert "in 1,000 viewers" in src and "Nielsen, 2023" in src
+
+
+def test_ready_page_lists_only_running_models_with_five_word_jobs():
+    import ast
+    src = (ROOT / "app.py").read_text()
+    fn = next(n for n in ast.parse(src).body if isinstance(n, ast.FunctionDef) and n.name == "_ready_models")
+    jobs = [c.elts[2].value for c in ast.walk(fn) if isinstance(c, ast.Tuple) and len(c.elts) == 3
+            and isinstance(c.elts[2], ast.Constant) and isinstance(c.elts[2].value, str)]
+    assert jobs and all(len(j.replace(",", "").split()) == 5 for j in jobs), jobs

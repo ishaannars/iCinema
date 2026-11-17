@@ -1355,31 +1355,81 @@ def _plain_list(items, limit=3):
     return items[0] if len(items) == 1 else (" and ".join([", ".join(items[:-1]), items[-1]]) if items else "")
 
 
+def _ready_models():
+    """The models that are actually running for this viewer right now: (name, technique, five-word job)."""
+    from src import cf_model as _cfm
+    from src import ltr as _ltr_mod
+    from src import seq_model as _seqm
+    from src.new_releases import available as _nr_on
+    from src.tv import available as _tv_on
+    sig = _cf_signals()
+    full_m, _ = _cfm._history_cut()
+    rk = _cfm._ranker_for(sig) if sig else None
+    fans_tech = ("EASE" if full_m is not None and rk is full_m else
+                 "RP3beta" if rk is not None and rk is _cfm._load_rank() and rk is not _cfm._load() else "item-kNN")
+    out = []
+    if _ltr_mod.available():
+        out.append(("Best-of-all ranker", "gradient boosting", "Weighs every model for you"))
+    out.append(("Fans like you", fans_tech, "People who loved your picks"))
+    if _seqm.main_available() and sig:
+        out.append(("What you liked last", "Markov chain", "What fans watched right after"))
+    out.append(("What each movie is like", "TF-IDF + SVD", "Matches genres and fan tags"))
+    if _nr_on():
+        out.append(("New releases", "ridge regression", "Places new films by filmmakers"))
+    if _tv_on():
+        out.append(("Shows", "item-kNN + popularity", "Shows loved by your fans"))
+    learned = learning_model_for(st.session_state.get("analytics_events") or [])
+    if getattr(learned, "ready", False):
+        out.append(("Your own choices", str(learned.model_name).lower(), "Learns from your saves, skips"))
+    return out
+
+
 def render_ready_summary():
-    """The page between Step 3 and the Showroom: three short cards that say what iCinema took from the
-    answers, in the viewer's own words. The in-depth version stays in the Profile tab."""
+    """The page between Step 3 and the Showroom: what iCinema starts from, in three cards.
+    Starting from: your movies as posters. Leaning toward: all your genres and your answers as a short spec.
+    How picks are made: only the models running for you now. The in-depth version stays in the Profile tab."""
     ss = st.session_state
     liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
-    favs = len(ss.favorites)
+    # Starting from: up to four posters of the movies you picked, then the count.
+    movies = [m for m in (get_movie(t, ss.external_movies) for t in liked[:4]) if m]
+    need = tuple((m["title"], int(m.get("year") or 0)) for m in movies if not m.get("poster_url"))
+    posters = get_poster_batch(need) if need else {}
+    imgs = [u for u in (m.get("poster_url") or posters.get(m["title"]) for m in movies) if str(u or "").startswith("https://")]
+    stack = "".join(f'<img src="{html.escape(u, quote=True)}" alt="">' for u in imgs)
+    n = len(liked)
+    count_note = f"{n} movie{'s' if n != 1 else ''} you like"
+    # Leaning toward: every genre you chose, as chips in the order you picked them; then your answers as a spec.
+    genres = list(ss.get("genres") or [])
+    genre_html = "".join(f'<span class="ready-chip">{html.escape(g)}</span>' for g in genres) \
+        or '<span class="ready-chip muted">Every genre</span>'
     rp, adv = int(ss.get("review_priority") or 50), int(ss.get("adventure") or 50)
-    weigh = "Great reviews count more" if rp < 41 else "Easy to enjoy counts more" if rp > 59 else "Reviews and fun count equally"
-    mix = "Mostly familiar picks" if adv < 41 else "More discovery" if adv > 59 else "Familiar and new, balanced"
+    reviews = ("Critics first" if rp < 24 else "Leans on critics" if rp < 41 else "Critics and fun, equally" if rp <= 59
+               else "Leans on easy watching" if rp <= 76 else "Easy watching first")
+    discovery = ("Very familiar" if adv < 24 else "Mostly familiar" if adv < 41 else "Balanced" if adv <= 59
+                 else "More discovery" if adv <= 76 else "Very different")
     more = list(ss.get("more_of") or [])
-    cards = [
-        ("Starting from", _plain_list(liked) or "Popular picks",
-         f"{len(liked)} movie{'s' if len(liked) != 1 else ''} you like" + (f" · {favs} favorite{'s' if favs != 1 else ''}" if favs else "")),
-        ("Leaning toward", _plain_list(ss.get("genres") or [], 3) or "Every genre",
-         " · ".join([weigh, mix] + ([f"More {_plain_list(more, 2)}"] if more else []))),
-        ("How picks are made", "Ten tested models",
-         "Fans who loved your movies, what each movie is like, and soon your own saves and skips."),
-    ]
+    spec = [("Reviews", reviews), ("Discovery", discovery), ("More of", _plain_list(more, 3) or "Nothing extra")]
+    spec_html = "".join(f'<div class="ready-spec-row"><span>{html.escape(k)}</span><span>{html.escape(v)}</span></div>' for k, v in spec)
+    # How picks are made: only the models running now, each with its technique and a five-word job.
+    models = _ready_models()
+    models_html = "".join(
+        f'<div class="ready-model" title="{html.escape(tech)}"><span class="pf-dot on"></span>'
+        f'<span class="ready-model-name">{html.escape(nm)}</span>'
+        f'<span class="ready-model-job">{html.escape(job)}</span></div>' for nm, tech, job in models)
     st.markdown(
         '<div class="page-top-heading">Your Showroom is ready</div>'
         '<div class="page-top-subtitle">Here’s what iCinema will start from. You can change any answer later in Profile.</div>'
-        '<div class="ready-grid">' + "".join(
-            f'<div class="ready-card"><div class="ready-kicker">{html.escape(k)}</div>'
-            f'<div class="ready-value">{html.escape(v)}</div><div class="ready-note">{html.escape(n)}</div></div>'
-            for k, v, n in cards) + '</div>', unsafe_allow_html=True)
+        '<div class="ready-grid">'
+        '<div class="ready-card"><div class="ready-kicker">Starting from</div>'
+        + (f'<div class="ready-posters">{stack}</div>' if stack else "")
+        + f'<div class="ready-value">{html.escape(count_note)}</div></div>'
+        '<div class="ready-card"><div class="ready-kicker">Leaning toward</div>'
+        f'<div class="ready-chips">{genre_html}</div>'
+        f'<div class="ready-spec">{spec_html}</div></div>'
+        f'<div class="ready-card"><div class="ready-kicker">{len(models)} models picking for you</div>'
+        f'<div class="ready-models">{models_html}</div>'
+        '</div>'
+        '</div>', unsafe_allow_html=True)
 
 
 @st.fragment
@@ -1751,19 +1801,20 @@ def render_more_fragment():
     }
 
     selected = set(st.session_state.more_of)
-    left, right = st.columns(2, gap="large")
-
-    for i, option in enumerate(MORE_OF_OPTIONS):
-        with (left if i % 2 == 0 else right):
-            active = option in selected
-            st.button(
-                f"**{option}**  \n{descriptions[option]}",
-                key=f"priority_card_{'active_' if active else ''}{i}",
-                use_container_width=True,
-                type="secondary",
-                on_click=toggle_priority_choice,
-                args=(option,),
-            )
+    # Each choice is a card drawn in HTML (so the title and line always start at the same left edge),
+    # with an invisible button over the whole card as the tap target.
+    with st.container(key="step3_grid"):
+        left, right = st.columns(2, gap="small")
+        for i, option in enumerate(MORE_OF_OPTIONS):
+            with (left if i % 2 == 0 else right):
+                active = option in selected
+                with st.container(key=f"pcard_{'on_' if active else ''}{i}"):
+                    st.markdown(f'<div class="pcard-title">{html.escape(option)}</div>'
+                                f'<div class="pcard-desc">{html.escape(descriptions[option])}</div>'
+                                f'<span class="pcard-check" aria-hidden="true"></span>', unsafe_allow_html=True)
+                    st.button(option, key=f"priority_card_{'active_' if active else ''}{i}", use_container_width=True,
+                              type="secondary", help=("Remove " if active else "Add ") + option,
+                              on_click=toggle_priority_choice, args=(option,))
 
     st.session_state.more_of = list(selected)
 
@@ -2007,7 +2058,7 @@ def mood_reason(movie):
     import numpy as np
     if i is None or sc[i] <= 0 or sc[i] < float(np.quantile(sc[sc > 0], 0.9)):
         return None
-    return {"label": "Fits your mood", "text": f"Fans describe it the way you did: “{q[:40]}”."}
+    return {"label": "Fits your mood", "text": f"Among the 10% of movies fans tag closest to “{q[:30]}”."}
 
 
 def _like_source():
@@ -2252,7 +2303,7 @@ def _active_chips():
         elif lab.startswith("Not ") and lab[4:] in {t[4:] for _, t in _MOOD_PRESETS if t.startswith("not ")}:
             continue
         else:
-            out.append((lab, rest, lab if lab == lab.lower() else lab[0].lower() + lab[1:]))
+            out.append((lab[:1].upper() + lab[1:], rest, lab if lab == lab.lower() else lab[0].lower() + lab[1:]))
     return out
 
 
@@ -2282,6 +2333,34 @@ SEARCH_RULE = {
     "like":  {"tokens": "Like: X, editable", "tonight": "Your best match like {movie}", "top_result": False,
               "top_picks": "fans' closest to X", "shows": "fans of X", "explore": False},
 }
+
+
+def _quality_strict():
+    """The higher quality bar applies when you chose strong reviews in Step 2 or Critically Acclaimed in Step 3."""
+    ss = st.session_state
+    return int(ss.get("review_priority") or 50) < 41 or "Critically Acclaimed" in (ss.get("more_of") or [])
+
+
+def _quality_ok(movie, strict=False):
+    """A rule, not a model: is this movie good enough to lead a mood search? Uses every score known for it
+    (IMDb, Rotten Tomatoes, TMDB with enough votes, then how many MovieLens fans loved it)."""
+    live = (st.session_state.get("showroom_rating_cache") or {}).get(movie.get("title")) or {}
+    def num(*vals):
+        for v in vals:
+            try:
+                if v is not None and float(v) >= 0:
+                    return float(v)
+            except (TypeError, ValueError):
+                pass
+        return None
+    imdb, rt = num(live.get("imdb"), movie.get("imdb")), num(live.get("rt"), movie.get("rt"))
+    tv = num(movie.get("tmdb_vote")) if (num(movie.get("tmdb_vote_count")) or 0) >= 200 else None
+    bars = {"imdb": 7.0 if strict else 6.3, "rt": 75 if strict else 55, "tv": 7.0 if strict else 6.3}
+    known = [(v, bars[k]) for k, v in (("imdb", imdb), ("rt", rt), ("tv", tv)) if v is not None]
+    if known:
+        return all(v >= bar for v, bar in known)
+    fans = fan_percentile(movie)
+    return fans is None or fans >= (0.7 if strict else 0.55)
 
 
 def _search_state():
@@ -2434,6 +2513,7 @@ def _build_key():
     return (_mood_text(), tuple(sorted(ss.likes)), tuple(sorted(ss.favorites)), tuple(ss.genres),
             ss.review_priority, ss.adventure, tuple(ss.more_of), len(ss.saved), len(ss.seen), len(ss.dismissed),
             len(ss.get("disliked") or ()), tuple(sorted(ss.get("streaming_services") or ())),
+            tuple(sorted((ss.get("seen_rating") or {}).items())),      # a thumbs on Seen re-ranks the Showroom
             len([e for e in (ss.get("analytics_events") or []) if e.get("event") != "impression"]))
 
 
@@ -2565,6 +2645,7 @@ def _advance_showroom_slot(row_name, slot_index):
         | set(st.session_state.dismissed)
         | set(st.session_state.get("disliked") or set())
         | set(st.session_state.likes) | set(st.session_state.favorites)  # tabs9
+        | {st.session_state.get("tonight_current")}
     )
 
     replacement = None
@@ -2700,6 +2781,49 @@ def _showroom_cached_metadata(movie):
 
     return identity or {}, availability or {}, live_rating or {}
 
+def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):
+    """The three most important reasons this one movie is here, each with its own number, strongest first.
+
+    Order follows what moved its score most: the search, then the model with the biggest share of this
+    movie's score (fans, the new-release model, or your own saves), then mood, tone, reviews you asked for,
+    and whether it's on your services. Nothing generic: every line names this movie's own evidence."""
+    out = []
+    def add(k, v):
+        if v and k not in {x[0] for x in out}:
+            out.append((k, v[:1].upper() + v[1:]))
+    if fans_reason:
+        add(fans_reason["label"], fans_reason.get("text") or "")
+    anchor = next((r["label"] for r in reasons or [] if str(r.get("label", "")).startswith("Loved by fans of")), None)
+    mix = {n: sh for n, _t, sh in score_mix(payload, CONTENT_WEIGHT)}
+    model_lines = []
+    fans_text = rows.get("Fans like you") or rows.get("All models")
+    if fans_text:
+        model_lines.append((mix.get("Fans like you", 0), anchor or "Fans like you",
+                            re.sub(r" · fans of .+ love it$", "", fans_text)))
+    if rows.get("New release"):
+        model_lines.append((mix.get("New releases", 0), "New, from filmmakers near your likes", rows["New release"]))
+    if rows.get("Your choices"):
+        model_lines.append((mix.get("Your choices", 0), "Your saves and skips", rows["Your choices"]))
+    for _sh, k, v in sorted(model_lines, key=lambda x: -x[0]):
+        add(k, v)
+    mood = next((r for r in reasons or [] if r.get("label") == "Fits your mood"), None)
+    if mood:
+        add("Fits your mood", mood.get("text", ""))
+    tone = next((r for r in reasons or [] if str(r.get("label", "")).startswith("Feels like")), None)
+    if tone and rows.get("Tone"):
+        add(tone["label"], rows["Tone"])
+    rr = ratings_reason(rows.get("Ratings"), st.session_state.get("review_priority"))
+    if rr:
+        add("Reviews", rr)
+    services = list(st.session_state.get("streaming_services") or [])
+    if services and movie_on_services(availability, services):
+        opt = watch_options(availability, movie.get("title", ""), services)
+        add("On your services", opt[0][1] if opt else "")
+    if rows.get("This row"):
+        add("This row", rows["This row"])
+    return out[:limit]
+
+
 @st.fragment
 @_with_app_rerun
 def render_showroom_card_fragment(row_name, row_index, slot_index):
@@ -2749,7 +2873,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     if undo_title:
         # Undo sits on the art's corner, not in the pill row, so the pill row is always match + Skip
         # and nothing in the row moves when it appears.
-        st.button("Undo skip", key=f"card_undo_{row_index}_{slot_index}_{title}",
+        st.button(":material/undo:", key=f"card_undo_{row_index}_{slot_index}_{title}",
                   help=f"Bring back {undo_title}", on_click=undo_showroom_slot, args=(row_name, slot_index))
     with st.container(key=f"showroom_controls_{row_index}_{slot_index}_{title}"):
         match_col, skip_col = st.columns([3.35,0.90], gap="small")
@@ -2783,39 +2907,23 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
             with st.popover(pill_text, use_container_width=True):
                 _love = love_line(_love_pct(payload))
                 _odds = _love.replace("If you watch it: about ", "About ").replace(" chance you'll love it", " chance you’ll love it") if _love else ""
-                # One compact block: each model's share of this movie's score, with what it saw right under it.
                 _rows = dict(why_rows(reasons, movie, live_rating, payload, row_name))
-                _detail = {"Fans like you": _rows.get("Fans like you") or _rows.get("All models"),
-                           "New releases": _rows.get("New release"),
-                           "What it’s like": _rows.get("Tone"),
-                           "Your choices": _rows.get("Your choices")}
-                _mix = score_mix(payload, CONTENT_WEIGHT)
-                _mix_html = "".join(
-                    f'<div class="mix-row"><div class="mix-name">{html.escape(n)}<span>{html.escape(t)}</span></div>'
-                    f'<div class="mix-track"><div class="mix-fill" style="width:{max(3, round(sh * 100))}%"></div></div>'
-                    f'<div class="mix-pct">{round(sh * 100)}%</div></div>'
-                    + (f'<div class="mix-detail">{html.escape(_detail[n])}</div>' if _detail.get(n) else "")
-                    for n, t, sh in _mix)
-                if _fr:
-                    # The search leads the popup: where this movie sits among the searched movie's fans' picks.
-                    _mix_html = (f'<div class="mix-detail mix-lead">{html.escape(_fr["label"])}'
-                                 + (f' · {html.escape(_fr["text"])}' if _fr.get("text") else "") + '</div>') + _mix_html
-                if _rows.get("Mood"):
-                    _mix_html += f'<div class="mix-detail mix-extra">Mood: {html.escape(_rows["Mood"])}</div>'
-                if (_rr := ratings_reason(_rows.get("Ratings"), st.session_state.get("review_priority"))):
-                    _mix_html += f'<div class="mix-detail mix-extra">Ratings: {html.escape(_rr)}</div>'
+                _lines = why_this_movie(reasons, _rows, payload, movie, availability, _fr)
                 _rank, _pool = payload.get("fit_rank"), payload.get("fit_pool")
-                _tp = (payload or {}).get("fit_top_pct")
-                # Plain words: where it ranked among the movies scored for you; the chance is the line below.
-                _head = (f"#{_rank} of {_pool:,} movies scored for you" if isinstance(_rank, int) and isinstance(_pool, int)
-                         else (f"Top {max(1, int(_tp))}% for you" if isinstance(_tp, (int, float)) else fit_head(payload, match)))
+                _mix = score_mix(payload, CONTENT_WEIGHT)
+                _foot = []
+                if isinstance(_rank, int) and isinstance(_pool, int):
+                    _foot.append(f"#{_rank} of {_pool:,} movies scored for you")
+                if _mix:
+                    _foot.append("score: " + ", ".join(f"{n.lower()} {round(sh * 100)}%" for n, _t, sh in _mix))
                 st.markdown(
                     f'<div class="why-pop-kicker">Why it’s here{html.escape(_kind_tag)}</div>'
-                    f'<div class="why-pop-head">{html.escape(_head)}</div>'
-                    + (f'<div class="why-pop-odds">{html.escape(_odds)} if you watch it</div>' if _odds else "")
-                    + (f'<div class="mix">{_mix_html}</div>' if _mix_html else "")
-                    + '<div class="why-pop-foot">Every number is from this movie’s own scores. The models and the chance '
-                    'were tested on movie fans they never saw.</div>',
+                    + (f'<div class="why-pop-head">{html.escape(_odds)} if you watch it</div>' if _odds
+                       else f'<div class="why-pop-head">{html.escape(fit_head(payload, match))}</div>')
+                    + '<div class="why-list">' + "".join(
+                        f'<div class="why-item"><div class="why-item-k">{html.escape(k)}</div>'
+                        f'<div class="why-item-v">{html.escape(v)}</div></div>' for k, v in _lines) + '</div>'
+                    + (f'<div class="why-pop-foot">{html.escape(" · ".join(_foot))}</div>' if _foot else ""),
                     unsafe_allow_html=True,
                 )
                 st.button(
@@ -2985,7 +3093,7 @@ def _render_services_picker(services):
     except Exception:
         logos = {}
     with st.container(key="services_picker"), st.popover(label, use_container_width=True):
-        st.markdown('<div class="services-help">Pick what you subscribe to. Tonight’s Show re-picks as you tap.</div>',
+        st.markdown('<div class="services-help">Tap the services you pay for.</div>',
                     unsafe_allow_html=True)
         try:
             grid = st.container(key="svc_grid", horizontal=True, gap="small")
@@ -3004,8 +3112,7 @@ def _render_services_picker(services):
                     st.button(short, key=f"svc_btn_{i}", help=("Turn off " if on else "Turn on ") + short,
                               on_click=toggle_streaming_service, args=(name,))
         st.button("Done", key="svc_done", type="primary", on_click=_services_done)
-        st.markdown('<div class="services-credit">Logos and availability: JustWatch, via TMDB. Done puts your services '
-                    'first on every card and in each row’s order.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="services-credit">Availability and logos by JustWatch, via TMDB.</div>', unsafe_allow_html=True)
 
 
 @st.fragment
@@ -3076,6 +3183,7 @@ def render_tonight_pick_fragment():
         return
 
     title = ordered[0]
+    st.session_state.tonight_current = title     # a row card that moves on never lands on tonight's pick
     payload = payloads.get(title) or {}
     movie = payload.get("movie") or {}
     match = int(payload.get("match") or 0)
@@ -3250,6 +3358,7 @@ def _saved_tab():
                         st.button("Remove", key=f"unsave_{m['title']}", use_container_width=True,
                                   on_click=remove_saved_movie, args=(m["title"],))
     _library_counts("saved")
+    persist_from_fragment()
 
 
 def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
@@ -3385,6 +3494,9 @@ def _seen_tab():
                         with st.container(key=f"seennext_{i}"):
                             _whats_next_popover(i, m, pick, wn_payloads, wn_identity)
     _library_counts("seen")
+    # Thumbs, Remove and What's next run only this tab, so the change is written to this browser here;
+    # before, it waited for a full page run and a reload in between lost it.
+    persist_from_fragment()
 
 
 def render_showroom_fragment(p):
@@ -3746,6 +3858,13 @@ def _render_showroom(p):
                 _thr=float(_np.quantile(_pos,_q)) if len(_pos) else 1.0
                 _hit=[j for j in range(_n) if _ms[j]>=_thr]       # movies fans really describe that way
                 if len(_hit)>=4:
+                    break
+            # A mood narrows what kind of movie; it never lowers the bar on how good. Weak movies leave first,
+            # by your Step 2/3 answers (strong reviews or Critically Acclaimed = the higher bar).
+            for _strict in ((True, False) if _quality_strict() else (False,)):
+                _good=[j for j in _hit if _quality_ok(top_all[j][1],_strict)]
+                if len(_good)>=4:
+                    _hit=_good
                     break
             if len(_hit)>=4:
                 _mrank={j:r for r,j in enumerate(sorted(_hit,key=lambda j:-_ms[j]))}
@@ -4204,7 +4323,7 @@ def _render_showroom(p):
                         '<div class="data-card-copy">Everything stays in this browser. No account, nothing personal.</div>',
                         unsafe_allow_html=True)
             with st.container(key="data_row_share"):
-                txt, ctl = st.columns([5, 1], vertical_alignment="center")
+                txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
                 with txt:
                     st.markdown('<div class="data-row-label">Share anonymous usage counts</div>'
                                 '<div class="data-row-note">Visits and saves with a random ID. Never titles, names, email, or location.</div>',
@@ -4248,11 +4367,36 @@ try:
 
     if screen=="welcome":
         logo()
-        st.markdown('<div class="hero-kicker">The average viewer spends 10.5 minutes deciding what to watch (Nielsen, 2023)</div>'
-                    '<div class="hero-title">Less scrolling.<br>More movies you love.</div>',unsafe_allow_html=True)
-        st.markdown('<div class="hero-subtitle">Tell iCinema a few movies you like. It picks the one you’re most likely to love tonight, '
-                    'on the services you already pay for, and gets sharper with every save and skip.</div>',unsafe_allow_html=True)
+        # One screen, three beats: the problem (a sourced number), the promise, the proof (tested numbers).
+        st.markdown('<div class="hero-kicker">Viewers spend 10.5 minutes per session deciding what to watch · Nielsen, 2023</div>'
+                    '<div class="hero-title">Less scrolling.<br>More movies you love.</div>'
+                    '<div class="hero-subtitle">Tell iCinema a few movies you like. It picks the one you’re most likely to love tonight, '
+                    'on the services you already pay for, and gets sharper with every save and skip.</div>', unsafe_allow_html=True)
         st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=go, args=("shelf",))
+
+        # Proof, read from the results files so it always matches the README.
+        _off = load_offline_results() or {}
+        _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
+        _tested = _off.get("held_out_users")
+        _cfh = ((_off.get("three_likes") or {}).get("cf") or {}).get("hit@1")
+        _poph = ((_off.get("full") or {}).get("popularity") or {}).get("hit@1")
+        try:
+            _lv = json.loads((Path(__file__).parent / "data" / "love_chance.json").read_text())
+            _ece = float(_lv["test_ece"]) if _lv.get("ships") else None
+        except Exception:
+            _ece = None
+        _stats = []
+        if isinstance(_lift, (int, float)):
+            _stats.append((f"+{_lift:.0f}%", "more first picks you’d love", "than going with the most popular movie"))
+        if isinstance(_ece, float):
+            _stats.append((f"±{max(_ece * 100, 0.1):.1f} pts", "honest odds", "each “chance you’ll love it” vs what test viewers did"))
+        if isinstance(_tested, int):
+            _stats.append((f"{_tested:,}", "test viewers", "movie fans the models never saw, from 3 likes each"))
+        if _stats:
+            st.markdown('<div class="home-stats">' + "".join(
+                f'<div class="home-stat"><div class="home-stat-num">{html.escape(n)}</div>'
+                f'<div class="home-stat-k">{html.escape(k)}</div><div class="home-stat-v">{html.escape(v)}</div></div>'
+                for n, k, v in _stats) + '</div>', unsafe_allow_html=True)
 
         # Show the product: what's big right now, the kind of movie iCinema finds for you.
         _hits = _current_hits(6, set())
@@ -4262,24 +4406,11 @@ try:
                     f'<img src="{html.escape(str(m["poster_url"]), quote=True)}" alt="{html.escape(str(m.get("title", "")))}">'
                     for m in _hits if str(m.get("poster_url", "")).startswith("https://")) + '</div>',
                 unsafe_allow_html=True)
-
-        # Proof, read from the results file so it always matches the README.
-        _off = load_offline_results() or {}
-        _lift = (_off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
-        _tested = _off.get("held_out_users")
-        # The baseline in plain counts, next to the relative lift: people read "48% more" correctly only
-        # when they also see what it's 48% more than (Bodemer, Meder & Gigerenzer, 2014).
-        _cfh = ((_off.get("three_likes") or {}).get("cf") or {}).get("hit@1")
-        _poph = ((_off.get("full") or {}).get("popularity") or {}).get("hit@1")
-        _base = (f"Its first pick was loved by {_cfh * 1000:.0f} in 1,000 viewers, vs {_poph * 1000:.0f} in 1,000 for the most popular movie. "
-                 if isinstance(_cfh, (int, float)) and isinstance(_poph, (int, float)) else "")
-        if isinstance(_lift, (int, float)):
-            st.markdown(
-                '<div class="home-proof">'
-                f'<div class="home-proof-num">+{_lift:.0f}%</div>'
-                f'<div class="home-proof-text"><strong>more likely to pick a movie you’ll love than going with the most popular one.</strong>'
-                + (f'<span>{_base}Tested on {_tested:,} movie fans the models never saw, from 3 likes each.</span>' if isinstance(_tested, int) else '')
-                + '</div></div>', unsafe_allow_html=True)
+        if isinstance(_cfh, (int, float)) and isinstance(_poph, (int, float)):
+            # The baseline as plain counts next to the relative number (Bodemer, Meder & Gigerenzer, 2014).
+            st.markdown(f'<div class="home-foot">In testing, its first pick was loved by {_cfh * 1000:.0f} in 1,000 viewers, '
+                        f'vs {_poph * 1000:.0f} in 1,000 for the most popular movie. Every number links to a test in the README.</div>',
+                        unsafe_allow_html=True)
 
     elif screen=="shelf":
         render_shelf_fragment()
@@ -4299,7 +4430,7 @@ try:
                 st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("more",))
             with cont:
                 st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
-        st.markdown('<div class="ready-foot">The full breakdown, with every model’s share, lives in the Profile tab.</div>',
+        st.markdown('<div class="ready-foot">Every model’s share of your score is in the Profile tab.</div>',
                     unsafe_allow_html=True)
 
     elif screen=="showroom":

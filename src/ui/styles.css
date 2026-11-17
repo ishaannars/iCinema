@@ -4839,3 +4839,181 @@ div[data-testid="stPopoverBody"]:has(.st-key-svc_grid){max-width:36rem !importan
 /* Card title logos never overflow the art. */
 .poster .art-logo{max-height:42% !important;}
 .services-credit{font-family:var(--ui-font);font-size:.7rem;color:var(--muted2);line-height:1.4;margin:.6rem 0 .1rem;}
+
+/* ---- Batch 56 ---- */
+/* Undo: the same round arrow icon as before, sitting inside the art's top-left corner (not on its edge). */
+[class*="st-key-card_undo_"]{top:3.85rem !important;left:.55rem !important;}
+[class*="st-key-card_undo_"] button{width:2.1rem !important;min-width:2.1rem !important;height:2.1rem !important;min-height:2.1rem !important;
+    padding:0 !important;border-radius:50% !important;}
+[class*="st-key-card_undo_"] button [data-testid="stIconMaterial"]{font-size:1.1rem !important;color:var(--kinari) !important;}
+@media (max-width:640px){[class*="st-key-card_undo_"] button{width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;}}
+
+/* Why it's here: the chance, then up to three reasons that belong to this movie only, then one quiet line. */
+div[data-testid="stPopoverBody"] .why-list{display:flex;flex-direction:column;gap:.7rem;margin:.75rem 0 .2rem;}
+div[data-testid="stPopoverBody"] .why-item-k{font-family:var(--ui-font);font-size:.86rem;font-weight:700;color:var(--kinari);line-height:1.3;}
+div[data-testid="stPopoverBody"] .why-item-v{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);line-height:1.45;margin-top:.12rem;}
+div[data-testid="stPopoverBody"] .why-pop-head{font-size:1.02rem !important;line-height:1.3 !important;}
+
+/* Your picks on Seen: the chosen thumb is filled moss, so the choice shows at a glance and after a reload. */
+[class*="st-key-seenrow_"] button[kind="primary"]{background:var(--koke) !important;border-color:var(--koke) !important;}
+[class*="st-key-seenrow_"] button[kind="primary"] [data-testid="stIconMaterial"]{color:var(--sumi) !important;}
+
+/* Search tokens: words and × centered on one line inside the capsule. */
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button,
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button > div,
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button [data-testid="stMarkdownContainer"]{
+    display:flex !important;align-items:center !important;justify-content:center !important;line-height:1 !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] button p{line-height:1 !important;padding:0 !important;transform:none !important;}
+.st-key-mood_suggest_row [class*="st-key-mood_tok_"] [class*="st-key-mood_chip_"] button p{font-size:.9rem !important;margin-top:-.08rem !important;}
+
+/* Cards: the streaming line is one line, so every card's Save / Seen sit level across a row. */
+[class*="st-key-showroom_swipe_"] .watch-availability{white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;max-height:1.5rem !important;}
+
+/* Title logos laid over art keep their own shape: no fixed width, so nothing is ever cropped. */
+.poster.has-image.landscape img.art-logo,div.poster img.art-logo{width:auto !important;height:auto !important;max-width:48% !important;max-height:38% !important;
+    left:5.5% !important;bottom:9% !important;object-fit:contain !important;border-radius:0 !important;}
+
+/* Your services, minimal: logos only in an even grid. Off = dimmed; on = full color, moss ring, small check.
+   The name sits under each logo in small type; the whole tile is the tap target. */
+div[data-testid="stPopoverBody"]:has(.st-key-svc_grid){max-width:25rem !important;padding:1rem 1.1rem .9rem !important;}
+.st-key-svc_grid{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:.9rem .5rem !important;margin:.6rem 0 .9rem !important;}
+.st-key-svc_grid > div{width:auto !important;min-width:0 !important;}
+[class*="st-key-svc_tile_"]{width:auto !important;flex:none !important;border:0 !important;background:transparent !important;padding:0 !important;gap:.35rem !important;}
+[class*="st-key-svc_tile_"]:hover{border:0 !important;background:transparent !important;}
+[class*="st-key-svc_tile_on_"]{border:0 !important;background:transparent !important;}
+.svc-art{width:3.1rem;height:3.1rem;position:relative;border-radius:13px;transition:opacity .15s ease,filter .15s ease,box-shadow .15s ease;
+    opacity:.42;filter:grayscale(.35);}
+.svc-art img{width:3.1rem;height:3.1rem;border-radius:13px;}
+[class*="st-key-svc_tile_"]:hover .svc-art{opacity:.75;}
+[class*="st-key-svc_tile_on_"] .svc-art{opacity:1;filter:none;box-shadow:0 0 0 2px var(--sumi),0 0 0 3.5px var(--koke);}
+[class*="st-key-svc_tile_on_"]::after{top:-.25rem !important;right:calc(50% - 1.95rem) !important;width:1.1rem !important;height:1.1rem !important;
+    box-shadow:0 0 0 2px var(--surface);}
+.svc-art.multi{width:3.1rem;}
+.svc-art.multi img{width:1.55rem;height:1.55rem;border-radius:7px;}
+.svc-name{font-size:.7rem !important;color:var(--muted2) !important;}
+[class*="st-key-svc_tile_on_"] .svc-name{color:var(--kinari) !important;}
+.services-help{font-family:var(--ui-font);font-size:.82rem;color:var(--muted);margin:0;}
+.st-key-svc_done{margin:0 !important;}
+.st-key-svc_done button{width:100% !important;}
+@media (max-width:640px){[class*="st-key-svc_tile_"]{width:auto !important;flex:none !important;}}
+
+/* Your data: even padding all round, one hairline above each row (never through the text), controls on one right edge. */
+.st-key-data_card{padding:1.15rem 1.25rem 1.1rem !important;gap:0 !important;}
+.st-key-data_card > div{margin:0 !important;}
+.data-card-copy{margin:.2rem 0 0 !important;}
+.st-key-data_row_share,.st-key-data_row_move{border-top:1px solid rgba(169,173,183,.14) !important;margin-top:.95rem !important;padding:.95rem 0 0 !important;}
+.st-key-data_row_share [data-testid="stHorizontalBlock"],.st-key-data_row_move [data-testid="stHorizontalBlock"]{align-items:center !important;gap:1rem !important;}
+.st-key-data_row_share [data-testid="stColumn"]:last-child,.st-key-data_row_move [data-testid="stColumn"]:last-child{
+    display:flex !important;flex-direction:row !important;justify-content:flex-end !important;align-items:center !important;}
+.st-key-data_row_share [data-testid="stColumn"]:last-child > div,.st-key-data_row_move [data-testid="stColumn"]:last-child > div{width:auto !important;margin-left:auto !important;}
+.st-key-data_row_share [data-testid="stCheckbox"],.st-key-data_row_share [data-testid="stToggle"],.st-key-data_row_share label{margin:0 !important;width:auto !important;justify-content:flex-end !important;}
+.data-row-note{margin-top:.2rem !important;}
+.st-key-move_profile_link{width:auto !important;}
+.st-key-move_profile_link button{height:2.3rem !important;min-height:2.3rem !important;padding:0 1.05rem !important;border:1px solid rgba(169,173,183,.35) !important;
+    border-radius:999px !important;background:transparent !important;width:auto !important;white-space:nowrap !important;}
+.st-key-move_profile_link button p{font-size:.82rem !important;font-weight:650 !important;color:var(--kinari) !important;text-decoration:none !important;margin:0 !important;}
+.st-key-move_profile_link button [data-testid="stIconMaterial"]{display:none !important;}
+@media (max-width:640px){.st-key-move_profile_link button{height:44px !important;min-height:44px !important;}
+    .st-key-data_row_share [data-testid="stHorizontalBlock"],.st-key-data_row_move [data-testid="stHorizontalBlock"]{flex-direction:row !important;flex-wrap:nowrap !important;}}
+
+/* Step 3: one even grid of equal cards, capped to a readable width. Title and line share one left edge,
+   the ring sits level with the title, picked cards are moss (and stay moss on focus), equal gaps everywhere. */
+.st-key-step3_grid{max-width:54rem !important;margin:0 0 1.5rem !important;}
+.st-key-step3_grid [data-testid="stHorizontalBlock"]{gap:.85rem !important;}
+.st-key-step3_grid [data-testid="stColumn"] > div{gap:.85rem !important;}
+[class*="st-key-pcard_"]{position:relative !important;min-height:5.1rem !important;padding:1rem 3.1rem 1rem 1.15rem !important;gap:.3rem !important;
+    border:1px solid var(--border) !important;border-radius:16px !important;background:rgba(255,255,255,.02) !important;
+    transition:border-color .15s ease,background .15s ease;box-sizing:border-box !important;justify-content:center !important;}
+[class*="st-key-pcard_"]:hover{border-color:rgba(169,173,183,.5) !important;background:rgba(255,255,255,.035) !important;}
+[class*="st-key-pcard_on_"],[class*="st-key-pcard_on_"]:hover{border-color:var(--koke) !important;background:rgba(139,125,58,.09) !important;}
+.pcard-title{font-family:var(--ui-font);font-size:1rem;font-weight:700;letter-spacing:-.012em;color:var(--kinari);line-height:1.25;margin:0;text-align:left;}
+.pcard-desc{font-family:var(--ui-font);font-size:.86rem;font-weight:500;color:var(--muted);line-height:1.4;margin:.28rem 0 0;text-align:left;}
+.pcard-check{position:absolute;top:1rem;right:1rem;width:1.25rem;height:1.25rem;border-radius:50%;border:1.5px solid rgba(169,173,183,.45);
+    box-sizing:border-box;display:flex;align-items:center;justify-content:center;}
+[class*="st-key-pcard_on_"] .pcard-check{background:var(--koke);border-color:var(--koke);}
+[class*="st-key-pcard_on_"] .pcard-check::after{content:"\2713";color:var(--sumi);font-size:.7rem;font-weight:800;line-height:1;}
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"]{position:absolute !important;inset:0 !important;margin:0 !important;z-index:3 !important;}
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] div.stButton,[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button{
+    width:100% !important;height:100% !important;min-height:0 !important;max-height:none !important;}
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button,
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button:hover,
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button:focus,
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button:active{background:transparent !important;border:0 !important;box-shadow:none !important;}
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button::after{display:none !important;content:none !important;}
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] button p{opacity:0 !important;}
+[class*="st-key-pcard_"]:has(button:focus-visible){outline:2px solid var(--kinari);outline-offset:2px;}
+.st-key-nav_row_more{max-width:54rem !important;}
+@media (max-width:640px){
+    .st-key-step3_grid [data-testid="stHorizontalBlock"]{flex-direction:column !important;}
+    [class*="st-key-pcard_"]{min-height:4.6rem !important;padding:.85rem 2.8rem .85rem 1rem !important;}
+}
+[class*="st-key-pcard_"] [class*="st-key-priority_card_"] div.stButton > button{height:100% !important;min-height:0 !important;max-height:none !important;
+    padding:0 !important;border:0 !important;background:transparent !important;}
+@media (max-width:640px){.st-key-step3_grid [data-testid="stHorizontalBlock"] > div{width:100% !important;flex:1 1 auto !important;min-width:0 !important;}
+    [class*="st-key-pcard_"] [class*="st-key-priority_card_"] div.stButton > button{height:100% !important;min-height:0 !important;}}
+
+/* Home, minimal and data-led: kicker, headline, one sentence, the button, three tested numbers, the art, one footnote. */
+.hero-kicker{text-transform:none !important;letter-spacing:0 !important;font-size:.86rem !important;font-weight:600 !important;color:var(--muted) !important;
+    margin:0 0 .9rem !important;display:inline-flex;align-items:center;gap:.5rem;}
+.hero-kicker::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--koke);display:inline-block;}
+.hero-title{font-size:clamp(2.3rem,4vw,3.6rem) !important;margin:0 0 .8rem !important;}
+.hero-subtitle{max-width:38rem !important;margin:0 0 1.3rem !important;}
+.st-key-start_personalizing{margin:0 0 1.6rem !important;}
+.home-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:46rem;margin:0 0 1.5rem;border-top:1px solid var(--border);}
+.home-stat{padding:.95rem 1.2rem 0 0;}
+.home-stat + .home-stat{padding-left:1.2rem;border-left:1px solid var(--border);}
+.home-stat-num{font-family:var(--ui-font);font-size:1.9rem;font-weight:760;letter-spacing:-.03em;color:var(--ivory);line-height:1;}
+.home-stat-k{font-family:var(--ui-font);font-size:.86rem;font-weight:700;color:var(--kinari);margin:.45rem 0 .15rem;}
+.home-stat-v{font-family:var(--ui-font);font-size:.78rem;color:var(--muted);line-height:1.4;}
+.home-strip{max-width:46rem !important;gap:.55rem !important;margin:0 0 .9rem !important;}
+.home-strip img{border-radius:10px !important;}
+.home-foot{font-family:var(--ui-font);font-size:.76rem;color:var(--muted2);max-width:46rem;line-height:1.45;margin:0 0 1rem;}
+.home-proof{display:none !important;}
+@media (max-height:860px) and (min-width:801px){.home-strip{max-width:38rem !important;}}
+@media (max-width:640px){
+    .home-stats{grid-template-columns:1fr;border-top:0;}
+    .home-stat,.home-stat + .home-stat{padding:.8rem 0;border-left:0;border-top:1px solid var(--border);}
+    .home-stat-num{font-size:1.6rem;}
+}
+
+/* ---- Ready page: three purposeful cards ---- */
+.ready-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.35fr) !important;max-width:64rem !important;gap:.85rem !important;align-items:stretch;}
+.ready-card{padding:1.05rem 1.15rem 1.1rem !important;display:flex;flex-direction:column;}
+.ready-kicker{margin:0 0 .8rem !important;}
+/* Starting from: a small fan of your posters, then one line with the count. */
+.ready-posters{display:flex;align-items:flex-end;margin:0 0 .85rem;}
+.ready-posters img{width:3.3rem;aspect-ratio:2/3;object-fit:cover;border-radius:8px;border:2px solid var(--surface);
+    box-shadow:0 6px 16px rgba(0,0,0,.35);margin-left:-1.1rem;}
+.ready-posters img:first-child{margin-left:0;}
+.ready-posters img:nth-child(2){transform:translateY(-.2rem);}
+.ready-card .ready-value{font-size:.98rem !important;margin:0 !important;}
+/* Leaning toward: one genre, large; then your answers as a quiet spec sheet. */
+.ready-card .ready-genre{font-size:1.45rem !important;letter-spacing:-.025em !important;margin:0 0 .75rem !important;}
+.ready-spec{display:flex;flex-direction:column;margin-top:auto;}
+.ready-spec-row{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.48rem 0;border-top:1px solid rgba(169,173,183,.14);
+    font-family:var(--ui-font);font-size:.82rem;}
+.ready-spec-row span:first-child{color:var(--muted2);font-weight:600;}
+.ready-spec-row span:last-child{color:var(--kinari);font-weight:650;text-align:right;}
+/* How picks are made: only the models running now, a live moss dot each, name + technique, then a five-word job. */
+.ready-models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem 1rem;}
+.ready-model{display:flex;gap:.55rem;align-items:flex-start;}
+.ready-model .pf-dot{margin-top:.32rem;flex:0 0 .5rem;width:.5rem;height:.5rem;}
+.ready-model-name{font-family:var(--ui-font);font-size:.86rem;font-weight:700;color:var(--kinari);line-height:1.25;}
+.ready-model-name span{display:block;font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted2);margin-top:.12rem;}
+.ready-model-job{font-family:var(--ui-font);font-size:.78rem;color:var(--muted);line-height:1.35;margin-top:.2rem;}
+.ready-models-foot{margin-top:auto !important;padding-top:.8rem;border-top:1px solid rgba(169,173,183,.14);font-size:.76rem !important;color:var(--muted2) !important;}
+.ready-models + .ready-models-foot{margin-top:.9rem !important;}
+@media (max-width:900px){.ready-grid{grid-template-columns:1fr 1fr !important;}.ready-grid .ready-card:last-child{grid-column:1 / -1;}}
+@media (max-width:640px){.ready-grid{grid-template-columns:1fr !important;}.ready-models{grid-template-columns:1fr;}}
+/* Leaning toward: every genre you chose, as chips. */
+.ready-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 .9rem;}
+.ready-chip{font-family:var(--ui-font);font-size:.82rem;font-weight:650;color:var(--kinari);padding:.32rem .7rem;border-radius:999px;
+    border:1px solid rgba(169,173,183,.3);background:rgba(243,240,234,.04);line-height:1.1;}
+.ready-chip.muted{color:var(--muted);}
+/* How picks are made, brief: one line per running model. Dot, name, five-word job. Technique on hover. */
+.ready-models{display:flex !important;flex-direction:column !important;gap:.55rem !important;}
+.ready-model{display:grid !important;grid-template-columns:.5rem minmax(0,9.5rem) minmax(0,1fr);gap:.6rem;align-items:baseline !important;}
+.ready-model .pf-dot{margin:0 !important;align-self:center;}
+.ready-model-name{font-family:var(--ui-font);font-size:.86rem;font-weight:700;color:var(--kinari);white-space:nowrap;}
+.ready-model-job{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);margin:0 !important;}
+@media (max-width:640px){.ready-model{grid-template-columns:.5rem minmax(0,1fr);}.ready-model-job{grid-column:2;}}
