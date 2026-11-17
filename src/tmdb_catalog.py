@@ -611,7 +611,10 @@ def _best_landscape(images):
         return None
 
     def rank(img):
-        return (float(img.get("vote_average") or 0), int(img.get("vote_count") or 0))
+        # True 16:9 first: the card frame is 16:9, so other shapes would be cropped at the top or bottom,
+        # which is where a painted-in title usually sits.
+        ar = float(img.get("aspect_ratio") or 0)
+        return (abs(ar - 16 / 9) < 0.02, float(img.get("vote_average") or 0), int(img.get("vote_count") or 0))
 
     titled = [b for b in backdrops if b.get("iso_639_1") == "en"]
     textless = [b for b in backdrops if not b.get("iso_639_1")]

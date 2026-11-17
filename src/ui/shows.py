@@ -121,7 +121,7 @@ def render_shows(ctx, count):
     # Decide what fits before drawing anything, so a search with no matching shows hides the whole row.
     chosen = []
     for entry in picks:
-        if len(chosen) >= count:
+        if len(chosen) >= count * 2:     # a few spares, so your services can lead without emptying the row
             break
         info = tv.details(entry[0])
         if not info or not tv.matches_mood(info, spec.get("mood", "")):
@@ -131,6 +131,19 @@ def render_shows(ctx, count):
         chosen.append(entry)
     if not chosen:
         return
+    services = list(ss.get("streaming_services") or [])
+    if services and len(chosen) > 1:
+        # Same gentle preference as the movie rows: among the shows that fit, ones on your services go first;
+        # the model's order holds within each group.
+        from src.ui.watch import movie_on_services
+        def _on(entry):
+            info = tv.details(entry[0]) or {}
+            try:
+                return movie_on_services(tv.show_watch(info["tmdb_id"]), services) if info.get("tmdb_id") else False
+            except Exception:
+                return False
+        chosen = sorted(chosen, key=lambda e: not _on(e))
+    chosen = chosen[:count]
     words = ctx.get("search_words") or ""
     if anchor:
         note = f"Shows loved by fans of {anchor}" + (f" · {words}" if words else "")

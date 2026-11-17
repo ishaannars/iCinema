@@ -172,3 +172,30 @@ def get_watch_availability_batch(movies: Tuple[Tuple[str, int], ...], region: st
             except Exception:
                 results[title] = {"status": "unknown", "text": "Where to watch: availability unavailable", "url": None}
     return results
+
+
+@st.cache_data(ttl=7 * 24 * 60 * 60, show_spinner=False)
+def service_logos(region: str = "US") -> dict:
+    """{service: [logo URLs]} for the services picker, from TMDB's provider list (JustWatch data).
+
+    The most prominent matching provider supplies each logo; "Free" shows up to three. Empty if TMDB
+    isn't configured, so the picker falls back to names.
+    """
+    from src.ui.watch import STREAMING_SERVICES, _provider_key
+    if not tmdb_configured():
+        return {}
+    data = _request("/watch/providers/movie", {"watch_region": region}) or {}
+    items = sorted(data.get("results") or [],
+                   key=lambda x: (x.get("display_priorities") or {}).get(region, x.get("display_priority", 999)))
+    out = {}
+    for name, aliases in STREAMING_SERVICES.items():
+        want = 3 if name.startswith("Free") else 1
+        for it in items:
+            key = _provider_key(it.get("provider_name", ""))
+            if it.get("logo_path") and any(key.startswith(a) for a in aliases):
+                url = f"https://image.tmdb.org/t/p/w154{it['logo_path']}"
+                if url not in out.setdefault(name, []):
+                    out[name].append(url)
+            if len(out.get(name, [])) >= want:
+                break
+    return out

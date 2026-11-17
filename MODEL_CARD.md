@@ -91,5 +91,6 @@ F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History a
 - Critically Acclaimed and Hidden Gems order their qualifying movies by your fit alone (Hidden Gems: 12.5% vs 1.1% loved in the top 10).
 - The variety step is off: every setting cost 2.6 to 4.1 points of loved-in-top-10.
 - The learned ranker runs from exported decision-tree arrays (`data/ltr_trees.npz`), identical to the scikit-learn model to 1e-16, so library updates cannot switch it off.
+- The love chance on cards now reads each movie's rank among the 600 most-loved movies you haven't marked, by the fans-like-you score: the exact footing its calibration test used. It used to read the rank among the app's own candidate pool, which isn't what the table was fit on.
 - Holm-Bonferroni correction across all stored tests: 13 of 14 significant results survive (`tools/multiple_testing.py`).
 - A weekly canary (`tools/canary.py`) fails if any shipped model's top 10 for fixed viewers changes by more than 3 titles.

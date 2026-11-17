@@ -23,10 +23,11 @@ STREAMING_SERVICES = {
     "Hulu": ("hulu",),
     "Prime Video": ("amazonprime", "primevideo"),
     "Disney+": ("disney",),
-    "Apple TV+": ("appletvplus",),
+    "Apple TV+": ("appletvplus", "appletv"),      # Apple renamed it "Apple TV" in 2025; streaming lists only
     "Peacock": ("peacock",),
     "Paramount+": ("paramount",),
-    "Free (Tubi, Pluto & more)": ("tubi", "pluto", "roku", "plex", "freevee", "kanopy", "hoopla"),
+    "Free (Tubi, Pluto & more)": ("tubi", "pluto", "roku", "therokuchannel", "plex", "freevee",
+                                  "amazonfreevee", "crackle", "kanopy", "hoopla"),
 }
 
 

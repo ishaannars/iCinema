@@ -73,6 +73,11 @@ def main():
     at.session_state["mood_active"] = ""
     at.session_state["mood_input"] = ""
     at.run(); ok &= check(at, "Search: cleared")
+    # Services: tap a logo tile, then Done redraws the Showroom with your services first.
+    for key in ("svc_btn_0", "svc_done"):
+        found = [b for b in at.button if b.key == key]
+        if found:
+            found[0].click().run(); ok &= check(at, f"Services ({key})")
     skips = [b for b in at.button if (b.key or "").startswith("skip_Top Matches")]
     if skips:
         skips[0].click().run(); ok &= check(at, "Skip a card")

@@ -86,7 +86,9 @@ def fit_head(payload, match):
     Accurate by construction (it is a rank, not a probability), and it spreads out
     even when the raw scores of top picks sit close together.
     """
-    top = (payload or {}).get("fit_top_pct")
+    top = (payload or {}).get("love_top_pct")
+    if not isinstance(top, (int, float)):
+        top = (payload or {}).get("fit_top_pct")
     if isinstance(top, (int, float)):
         from src.love import love_chance
         c = love_chance(top)

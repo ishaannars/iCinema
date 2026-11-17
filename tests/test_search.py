@@ -48,3 +48,15 @@ def test_undo_is_not_in_the_pill_row():
 def test_a_movie_typed_with_a_length_keeps_both():
     p = parse(merge("funny", "Inception under 2 hours", typed_title="Inception"))
     assert p["like"] == "Inception" and p["mood"] == "funny" and p["max"] == 120
+
+
+def test_love_chance_reads_the_rank_it_was_tested_on():
+    """The calibration table was fit on rank among the 600 most-loved unseen movies, so the pill reads that rank."""
+    from src.ui.cards import fit_head
+    assert fit_head({"love_top_pct": 2, "fit_top_pct": 40}, 0) == fit_head({"fit_top_pct": 2}, 0)
+    assert fit_head({"fit_top_pct": 40}, 0) == fit_head({"love_top_pct": 40}, 0)
+
+
+def test_home_shows_the_baseline_next_to_the_lift():
+    src = (ROOT / "app.py").read_text()
+    assert "in 1,000 viewers" in src and "Nielsen, 2023" in src
