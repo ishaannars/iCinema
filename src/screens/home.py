@@ -35,11 +35,13 @@ def render_home(ctx):
         ece = None
     stats = []
     if isinstance(lift, (int, float)):
-        base = (f"{cfh * 1000:.0f} vs {poph * 1000:.0f} in 1,000 viewers"
+        base = (f"{cfh * 1000:.0f} vs {poph * 1000:.0f} in 1,000 test viewers"
                 if isinstance(cfh, (int, float)) and isinstance(poph, (int, float)) else "vs the most popular movie")
-        stats.append((f"+{lift:.0f}%", "first picks loved", f"vs the most popular movie · {base}"))
+        stats.append((f"+{lift:.0f}%", "more first picks loved", f"{base}, vs the most popular movie"))
     if isinstance(ece, float):
-        stats.append((f"±{max(ece * 100, 0.1):.1f} pts", "calibrated odds", "“chance you’ll love it” vs what happened"))
+        # Expected calibration error is an average gap, not a ± range, so it's stated as one.
+        stats.append((f"{max(ece * 100, 0.1):.1f} pts", "average error in our odds",
+                      "each “chance you’ll love it” vs what test viewers did"))
     if isinstance(tested, int):
         stats.append(("10 models", "each beat a baseline", f"on {tested:,} viewers they never saw"))
     if stats:

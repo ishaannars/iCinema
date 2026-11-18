@@ -1105,9 +1105,9 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _mq = _mood_spec()["mood"] if _mood_on else ""
     # The ranker's three fan models, shown on their own lines so every model doing work is visible.
     _fans_n = f"{scale['users']:,}" if isinstance(scale.get("users"), int) else (scale.get("users") or "MovieLens")
-    _inside = ([(True, "  · Fans like you", "item-kNN", "", f"Movies the same {_fans_n} fans loved together."),
-                (True, "  · Fans with less mainstream likes", "RP3beta", "", "A random-walk model that finds less obvious fan favorites."),
-                (True, "  · Fans with long histories", "EASE", "", "Learns from viewers who rated many movies, for detailed profiles.")]
+    _inside = ([(True, "Fans like you", "Inside the ranker · item-kNN", "", f"Movies the same {_fans_n} fans loved together."),
+                (True, "Fans with less mainstream likes", "Inside the ranker · RP3beta", "", "A random-walk model that finds less obvious fan favorites."),
+                (True, "Fans with long histories", "Inside the ranker · EASE", "", "Learns from viewers who rated many movies, for detailed profiles.")]
                if _ltr_on else [])
     from src import seq_model as _seqp
     _order_row = []
@@ -1317,7 +1317,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _sv, _sn = len(_ss.get("saved") or ()), len(_ss.get("seen") or ())
     _sk = len(set(_ss.get("dismissed") or ()) - set(_ss.get("disliked") or ()))
     _lk = len(set(_ss.get("likes") or ()) | set(_ss.get("favorites") or ()))
-    _inputs = [(_lk, "movie liked", "movies liked"), (_g, "genre", "genres"), (2, "slider", "sliders"),
+    _inputs = [(_lk, "movie liked", "movies liked"), (_g, "genre", "genres"), (2, "preference", "preferences"),
                (_r, "row pick", "row picks"), (_sv, "saved", "saved"), (_sn, "seen", "seen"),
                (_sk, "skipped", "skipped"), (_dl, "not for me", "not for me")]
     _parts = [f"{n} {one if n == 1 else many}" for n, one, many in _inputs if n]
@@ -1605,7 +1605,7 @@ def render_taste_fragment():
     segment, like iOS); genres are chips that wrap; "show me more" is a two-column card grid."""
     logo()
     st.markdown('<div class="step2-header"><div class="step2-title">Step 2 of 2 — Tailor Your Showroom</div>'
-                '<div class="step2-subtitle">Four quick answers. Change them anytime in Profile.</div></div>',
+                '<div class="step2-subtitle">Five quick answers. Change them anytime in Profile.</div></div>',
                 unsafe_allow_html=True)
 
     def _question(title, left=None, right=None, helper=None):
@@ -1646,6 +1646,11 @@ def render_taste_fragment():
 
     _question("Show me more of", helper="Optional. Your first pick gets its own row.")
     _render_more_choices()
+
+    # The promise is "tonight, on the services you pay for", so onboarding asks for them (optional).
+    _question("Your streaming services", helper="Optional. Tonight's pick comes from these first.")
+    with st.container(key="onb_services"):
+        _render_services_grid(list(st.session_state.get("streaming_services") or []))
 
     with st.container(key="nav_row_taste"):
         back, cont, _ = st.columns([1, 2.2, 4], gap="small")
@@ -2014,14 +2019,14 @@ def render_top_result(row_name, row_index, beside):
     watch = (get_watch_availability_batch(((title, int(ident.get("year") or year)),), "US") or {}).get(title)
     runtime = int(ident.get("runtime") or src.get("runtime") or 0)
     movie = dict(src, overview=src.get("overview") or ident.get("overview"), tagline=ident.get("tagline"))
-    meta = [str(ident.get("year") or year or ""), genre_pair(movie) or movie.get("genre") or "", f"{runtime} min" if runtime else ""]
+    meta = [str(ident.get("year") or year or ""), genre_pair(movie) or movie.get("genre") or ", ".join(ident.get("genres") or []), f"{runtime} min" if runtime else ""]
     ratings = " · ".join(ratings_text(card_ratings(movie, live))) or "Ratings unavailable"
     pay = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
     chance = love_chance(_love_pct(pay)) if pay else None
     state = ("Saved" if title in st.session_state.saved else "Seen" if title in st.session_state.seen
              else "Liked" if title in st.session_state.likes else "")
     st.markdown('<div class="showroom-row showroom-row-header"><div class="showroom-row-title">Top result</div>'
-                f'<div class="row-model-note">{html.escape(title)}, then the movies its fans love most</div></div>',
+                '<div class="row-model-note">Your search, then its three closest matches</div></div>',
                 unsafe_allow_html=True)
     with st.container(key="showroom_swipe_result"):
         cols = st.columns(4)
@@ -2457,6 +2462,9 @@ def render_search_box():
                 _render_live_suggestions(typed)
             else:
                 render_mood_suggestions()
+                if st.session_state.get("_search_status") and _mood_text():
+                    st.markdown(f'<div class="search-status">{html.escape(st.session_state._search_status)}</div>',
+                                unsafe_allow_html=True)
 
 
 def _render_live_suggestions(typed):
@@ -2813,7 +2821,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     _label = {"Critically Acclaimed": "Critics’ pick", "Hidden Gems": "Hidden gem", "Recent Releases for You": "New release",
               "Classics for You": "Classic", "International Films for You": "International",
               "Documentaries for You": "Documentary", "Something Different": "Something new"}.get(row_name, "")
-    meta = [str(x) for x in ("", _year, genre_pair(movie),
+    meta = [str(x) for x in ("", _year, genre_pair(movie) or ", ".join(identity.get("genres") or []),
                                _fmt_rt(identity.get("runtime"))) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
@@ -2935,6 +2943,32 @@ def _services_done():
     """Done: the whole Showroom redraws once, so every card's streaming line puts your services first.
     Tapping tiles reruns only Tonight's Show, which re-picks instantly; the rows reuse the current build."""
     st.session_state._app_rerun = True
+
+
+def _render_services_grid(services):
+    """The services as their real logos (TMDB, JustWatch data); tap to turn one on or off.
+    Used in Step 2 and inside Tonight's Show's "Your Services" popover."""
+    from src.watch_providers import service_logos
+    try:
+        logos = service_logos() or {}
+    except Exception:
+        logos = {}
+    try:
+        grid = st.container(key="svc_grid", horizontal=True, gap="small")
+    except TypeError:
+        grid = st.container(key="svc_grid")
+    with grid:
+        for i, name in enumerate(STREAMING_SERVICES):
+            on = name in services
+            short = _SERVICE_SHORT.get(name, name)
+            imgs = [u for u in (logos.get(name) or []) if str(u).startswith("https://")][:3]
+            art = ("".join(f'<img src="{html.escape(u, quote=True)}" alt="">' for u in imgs) if imgs
+                   else f'<span class="svc-word">{html.escape(short)}</span>')
+            with st.container(key=f"svc_tile_{'on_' if on else ''}{i}"):
+                st.markdown(f'<div class="svc-art{" multi" if len(imgs) > 1 else ""}">{art}</div>'
+                            f'<div class="svc-name">{html.escape(short)}</div>', unsafe_allow_html=True)
+                st.button(short, key=f"svc_btn_{i}", help=("Turn off " if on else "Turn on ") + short,
+                          on_click=toggle_streaming_service, args=(name,))
 
 
 def _render_services_picker(services):
@@ -4050,8 +4084,6 @@ def _render_showroom(p):
         # The search sits inside the Showroom tab: it only changes Showroom rows, so Saved, Seen and
         # Profile stay clean. One keyed slot holds chips or suggestions, so the layout never shifts.
         from src.mood import available as _mood_ready
-        if _mood_ready():
-            render_search_box()
         _state = _search_state()
         _rule = SEARCH_RULE[_state]
         _src_now = _like_source() if _state in ("movie", "like") else None
@@ -4064,7 +4096,9 @@ def _render_showroom(p):
                         + (f", narrowed to {_w}" if _w else "") + ". Clear the search to get your usual picks back.")
             else:
                 _say = f"Your picks, narrowed to {_w}. Clear the search to get your usual picks back."
-            st.markdown(f'<div class="search-status">{html.escape(_say)}</div>', unsafe_allow_html=True)
+            st.session_state._search_status = _say
+        else:
+            st.session_state._search_status = None
         row_notes={
             "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
             "Critically Acclaimed":"Highly rated movies that still fit what you like",
@@ -4101,6 +4135,9 @@ def _render_showroom(p):
 
         top_name = row_specs[0]
         top_slots = _strong_slots(top_name, len(row_choices.get(top_name, [])))
+        from src.mood import available as _mood_ready2
+        if _mood_ready2():
+            render_search_box()     # first on the page; the status line set above is drawn inside it, under the tokens
         if _rule["top_result"] and _src_now:
             # Movie state: the movie, then the three closest beside it; Top Picks continues after them.
             render_top_result(top_name, 0, top_slots[:3])
@@ -4120,10 +4157,12 @@ def _render_showroom(p):
         else:
             _top_note = _mood_line() or row_notes[top_name]
         if top_slots:
-            _header("Top Picks for You", _top_note)
+            _header(f"More like {_src_now['title']}" if _src_now else "Top Picks for You",
+                    ("Closest first" + (f" · {_words}" if _words else "")) if _src_now else _top_note)
             _draw_cards(0, [(top_name, 0, i) for i in top_slots])
         elif _state == "none":
-            _header("Top Picks for You", _top_note)
+            _header(f"More like {_src_now['title']}" if _src_now else "Top Picks for You",
+                    ("Closest first, kept to what fits you" + (f" · {_words}" if _words else "")) if _src_now else _top_note)
             st.caption("Refreshing personalized matches…")
 
         if _tv.available() and _rule["shows"]:

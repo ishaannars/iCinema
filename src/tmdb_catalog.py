@@ -563,6 +563,8 @@ def get_movie_identity(title: str, year: int = 0, tmdb_id: int = 0):
         "release_date": release or None,
         "runtime": int(payload.get("runtime") or 0) or None,
         "studios": [c.get("name") for c in (payload.get("production_companies") or []) if c.get("name")][:3],
+        # iCinema's own genre names, so cards from the fans' list (which carry no genres) still show them.
+        "genres": [GENRE_MAP[g["id"]] for g in (payload.get("genres") or []) if g.get("id") in GENRE_MAP][:2],
     }
 
 

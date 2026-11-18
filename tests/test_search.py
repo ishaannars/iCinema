@@ -59,7 +59,7 @@ def test_love_chance_reads_the_rank_it_was_tested_on():
 
 def test_home_shows_the_baseline_next_to_the_lift():
     src = (ROOT / "src" / "screens" / "home.py").read_text()
-    assert "in 1,000 viewers" in src and "current_hits" in src      # tested numbers, then what's trending
+    assert "in 1,000 test viewers" in src and "current_hits" in src      # tested numbers, then what is trending
 
 
 def test_ready_page_lists_only_running_models_with_five_word_jobs():

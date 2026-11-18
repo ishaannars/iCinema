@@ -5184,3 +5184,24 @@ body:has(.q-block) .block-container{max-width:58rem !important;}
 @media (max-height:820px){.home-strip img{max-height:10rem;}}
 @media (max-width:640px){.home-strip img:nth-child(n+4){display:none;}}
 .st-key-step1_hits [class*="st-key-search_result_"] button{justify-content:center !important;text-align:center !important;}
+
+/* ==== Batch 65 ==== */
+/* Step 2 services: one row of logos, the same dim-off / moss-on treatment as the popover. */
+.st-key-onb_services .st-key-svc_grid{display:grid !important;grid-template-columns:repeat(9,minmax(0,1fr)) !important;gap:.6rem !important;margin:.35rem 0 1.4rem !important;}
+.st-key-onb_services [class*="st-key-svc_tile_"]{width:auto !important;flex:none !important;align-items:center !important;}
+.st-key-onb_services .svc-art,.st-key-onb_services .svc-art img{width:2.8rem !important;height:2.8rem !important;border-radius:12px !important;}
+.st-key-onb_services .svc-art.multi img{width:1.4rem !important;height:1.4rem !important;border-radius:6px !important;}
+.st-key-onb_services .svc-name{font-size:.68rem !important;text-align:center !important;white-space:nowrap !important;}
+@media (max-width:900px){.st-key-onb_services .st-key-svc_grid{grid-template-columns:repeat(5,minmax(0,1fr)) !important;}}
+/* Your data: controls on one right edge; the gap above each hairline actually applies. */
+.st-key-data_card .st-key-data_row_share,.st-key-data_card .st-key-data_row_move{margin-top:.9rem !important;padding-top:.9rem !important;}
+.st-key-data_card .st-key-data_row_share [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"],
+.st-key-data_card .st-key-data_row_move [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"]{align-items:flex-end !important;}
+.st-key-data_card .st-key-data_row_share [data-testid="stColumn"]:last-child [data-testid="stElementContainer"],
+.st-key-data_card .st-key-data_row_move [data-testid="stColumn"]:last-child [data-testid="stElementContainer"]{width:auto !important;margin-left:auto !important;}
+.st-key-data_card .st-key-move_profile_link div[data-testid="stPopover"] button{height:2.2rem !important;min-height:2.2rem !important;padding:0 1rem !important;
+    border:1px solid rgba(169,173,183,.35) !important;border-radius:999px !important;background:transparent !important;width:auto !important;}
+.st-key-data_card .st-key-move_profile_link div[data-testid="stPopover"] button p{font-size:.8rem !important;font-weight:650 !important;margin:0 !important;}
+.st-key-data_card .st-key-move_profile_link{width:auto !important;}
+/* Showroom search: the status line sits close to the tokens and close to the first row. */
+.search-status{margin:.15rem 0 .9rem !important;}

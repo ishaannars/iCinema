@@ -37,6 +37,11 @@ def main():
     for scr in ("shelf", "taste", "more"):
         at.session_state["screen"] = scr
         at.run(); ok &= check(at, f"Onboarding ({scr})")
+    at.session_state["screen"] = "taste"
+    at.run()
+    svc = [b for b in at.button if (b.key or "") == "svc_btn_0"]
+    if svc:
+        svc[0].click().run(); ok &= check(at, "Step 2: a service tile")
     cards = [b for b in at.button if (b.key or "").startswith("priority_card_")]
     if cards:
         cards[0].click().run(); ok &= check(at, "Step 2: show me more card")
