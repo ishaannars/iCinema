@@ -49,7 +49,7 @@ def _ready_models(ctx):
 
 def render_ready_summary(ctx):
     """The page between onboarding and the Showroom: what iCinema starts from, in three cards.
-    Starting from: your movies as posters. Leaning toward: all your genres and your answers as a short spec.
+    Starting from: your movies as posters. Your answers: genres, reviews, discovery and more-of, as one short spec.
     How picks are made: only the models running for you now. The in-depth version stays in the Profile tab."""
     ss = st.session_state
     liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
@@ -61,17 +61,17 @@ def render_ready_summary(ctx):
     stack = "".join(f'<img src="{html.escape(u, quote=True)}" alt="">' for u in imgs)
     n = len(liked)
     count_note = f"{n} movie{'s' if n != 1 else ''} you like"
-    # Leaning toward: every genre you chose, as chips in the order you picked them; then your answers as a spec.
+    # Your answers: every genre you chose (in the order picked), then the other three answers.
     genres = list(ss.get("genres") or [])
-    genre_html = "".join(f'<span class="ready-chip">{html.escape(g)}</span>' for g in genres) \
-        or '<span class="ready-chip muted">Every genre</span>'
+    genre_text = _plain_list(genres, 5) or "Every genre"
     rp, adv = int(ss.get("review_priority") or 50), int(ss.get("adventure") or 50)
-    reviews = ("Critics first" if rp < 24 else "Leans on critics" if rp < 41 else "Critics and fun, equally" if rp <= 59
-               else "Leans on easy watching" if rp <= 76 else "Easy watching first")
-    discovery = ("Very familiar" if adv < 24 else "Mostly familiar" if adv < 41 else "Balanced" if adv <= 59
-                 else "More discovery" if adv <= 76 else "Very different")
+    # Same words as the Step 2 buttons, so the answer reads back exactly as it was given.
+    reviews = ("Reviews" if rp < 24 else "Lean reviews" if rp < 41 else "Balanced" if rp <= 59
+               else "Lean easy" if rp <= 76 else "Easy to enjoy")
+    discovery = ("Familiar" if adv < 24 else "Mostly familiar" if adv < 41 else "Balanced" if adv <= 59
+                 else "More new" if adv <= 76 else "Surprise me")
     more = list(ss.get("more_of") or [])
-    spec = [("Reviews", reviews), ("Discovery", discovery), ("More of", _plain_list(more, 3) or "Nothing extra")]
+    spec = [("Genres", genre_text), ("Reviews", reviews), ("Discovery", discovery), ("More of", _plain_list(more, 3) or "Nothing extra")]
     spec_html = "".join(f'<div class="ready-spec-row"><span>{html.escape(k)}</span><span>{html.escape(v)}</span></div>' for k, v in spec)
     # How picks are made: only the models running now, each with its technique and a five-word job.
     models = _ready_models(ctx)
@@ -81,15 +81,14 @@ def render_ready_summary(ctx):
         f'<span class="ready-model-job">{html.escape(job)}</span></div>' for nm, tech, job in models)
     st.markdown(
         '<div class="page-top-heading">Your Showroom is ready</div>'
-        '<div class="page-top-subtitle">Here’s what iCinema will start from. You can change any answer later in Profile.</div>'
+        '<div class="page-top-subtitle">What iCinema starts from. Change anything later in Profile.</div>'
         '<div class="ready-grid">'
         '<div class="ready-card"><div class="ready-kicker">Starting from</div>'
         + (f'<div class="ready-posters">{stack}</div>' if stack else "")
         + f'<div class="ready-value">{html.escape(count_note)}</div></div>'
-        '<div class="ready-card"><div class="ready-kicker">Leaning toward</div>'
-        f'<div class="ready-chips">{genre_html}</div>'
+        '<div class="ready-card"><div class="ready-kicker">Your answers</div>'
         f'<div class="ready-spec">{spec_html}</div></div>'
-        f'<div class="ready-card"><div class="ready-kicker">{len(models)} models picking for you</div>'
+        f'<div class="ready-card"><div class="ready-kicker">{len(models)} models picking</div>'
         f'<div class="ready-models">{models_html}</div>'
         '</div>'
         '</div>', unsafe_allow_html=True)

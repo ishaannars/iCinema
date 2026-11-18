@@ -5098,3 +5098,89 @@ body:has(.q-block) .block-container{max-width:58rem !important;}
 [class*="st-key-selection_card_"]{min-height:3.4rem !important;padding:.55rem .8rem !important;margin:0 0 .45rem !important;}
 [class*="st-key-selection_card_"] .selection-title{font-size:.86rem !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .st-key-nav_row_rate{margin-top:.6rem !important;}
+
+/* ==== Batch 61 ==== */
+/* Home: one screen. */
+.hero-subtitle{max-width:34rem !important;}
+.home-stats{max-width:48rem !important;margin:.2rem 0 0 !important;}
+.home-stat-v{max-width:15rem;}
+
+/* Step 1: Like / Favorite stay readable at any width: side by side when there's room, stacked when there isn't. */
+@media (max-width:1180px){
+    [class*="st-key-shelf_actions_"] [data-testid="stHorizontalBlock"]{flex-direction:column !important;gap:.35rem !important;}
+    [class*="st-key-shelf_actions_"] [data-testid="stHorizontalBlock"] > div{width:100% !important;flex:1 1 auto !important;min-width:0 !important;}
+}
+[class*="st-key-like_"] button p,[class*="st-key-fav_"] button p{white-space:nowrap !important;overflow:hidden !important;text-overflow:clip !important;}
+/* Step 1 search results: posters with their title under them, the same look as the Showroom search. */
+.st-key-step1_hits [data-testid="stHorizontalBlock"]{gap:.6rem !important;}
+.st-key-step1_hits [data-testid="stColumn"] > div{gap:.35rem !important;}
+.live-hit.on img{outline:2px solid var(--koke);outline-offset:2px;}
+.live-hit-blank{aspect-ratio:2/3;border-radius:10px;border:1px solid var(--border);background:#0F1114;display:flex;align-items:center;
+    justify-content:center;padding:.4rem;text-align:center;font-family:var(--ui-font);font-size:.7rem;font-weight:700;color:var(--muted2);}
+.st-key-step1_hits button{min-height:2.1rem !important;height:auto !important;padding:.3rem .45rem !important;border-radius:10px !important;}
+.st-key-step1_hits button p{font-size:.72rem !important;line-height:1.25 !important;white-space:normal !important;text-align:center !important;}
+/* Import: one quiet line in the same type as the rest, a hairline card when open. */
+.st-key-step1_letterboxd [data-testid="stExpander"] details{border:1px solid var(--border) !important;border-radius:14px !important;background:rgba(255,255,255,.02) !important;}
+.st-key-step1_letterboxd [data-testid="stExpander"] summary{padding:.7rem .95rem !important;}
+.st-key-step1_letterboxd [data-testid="stExpander"] summary p{font-family:var(--ui-font) !important;font-size:.86rem !important;font-weight:650 !important;
+    color:var(--kinari) !important;text-decoration:none !important;}
+.st-key-step1_letterboxd [data-testid="stExpander"] summary svg{color:var(--muted2) !important;}
+/* Your selections: small posters, × in the corner, title and Liked / Favorite under each. */
+[class*="st-key-selection_card_"]{position:relative !important;min-height:0 !important;padding:0 !important;border:0 !important;background:transparent !important;gap:.3rem !important;}
+[class*="st-key-selection_card_"]:hover{border:0 !important;background:transparent !important;}
+.sel-poster img,.sel-poster .live-hit-blank{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:flex;}
+.sel-cap{display:flex;flex-direction:column;gap:.1rem;margin-top:.35rem;}
+.sel-title{font-family:var(--ui-font);font-size:.74rem;font-weight:700;color:var(--kinari);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sel-state{font-family:var(--ui-font);font-size:.62rem;font-weight:740;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);}
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"]{top:.3rem !important;right:.3rem !important;opacity:1 !important;}
+[class*="st-key-selection_card_"] [class*="st-key-remove_selection_"] button{background:rgba(17,19,21,.82) !important;color:var(--kinari) !important;
+    width:1.6rem !important;min-width:1.6rem !important;height:1.6rem !important;min-height:1.6rem !important;}
+@media (max-width:640px){
+    .st-key-step1_hits [data-testid="stHorizontalBlock"],.st-key-step1_selections [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;}
+    .st-key-step1_hits [data-testid="stColumn"]{flex:0 0 calc(33.33% - .4rem) !important;min-width:0 !important;}
+    .st-key-step1_selections [data-testid="stColumn"]{flex:0 0 calc(25% - .4rem) !important;min-width:0 !important;}
+    [class*="st-key-selection_card_"] [class*="st-key-remove_selection_"] button{width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;}
+}
+
+/* Step 2: the "show me more" cards three across, so the page fits one screen. */
+.st-key-step3_grid [data-testid="stHorizontalBlock"]{gap:.6rem !important;}
+.st-key-step3_grid [data-testid="stColumn"] > div{gap:.6rem !important;}
+[class*="st-key-pcard_"]{min-height:3.9rem !important;padding:.7rem 2.6rem .7rem .95rem !important;}
+.q-block{margin:1.45rem 0 .6rem !important;}
+@media (max-width:900px){.st-key-step3_grid [data-testid="stHorizontalBlock"]{flex-wrap:wrap !important;}
+    .st-key-step3_grid [data-testid="stColumn"]{flex:1 1 45% !important;min-width:0 !important;}}
+
+/* Ready page: one type scale. Labels muted, values ivory, the same row style for every answer. */
+.ready-spec-row{display:flex !important;justify-content:space-between !important;gap:1rem !important;border-top:1px solid rgba(169,173,183,.14);}
+.ready-spec-row:first-child{border-top:0;padding-top:0 !important;}
+.ready-spec-row span:first-child{font-family:var(--ui-font);font-size:.84rem;color:var(--muted);}
+.ready-spec-row span:last-child{font-family:var(--ui-font);font-size:.86rem;font-weight:650;color:var(--kinari);text-align:right;}
+.ready-kicker{margin-bottom:.8rem !important;}
+.ready-model-name{font-size:.86rem !important;font-weight:700 !important;}
+
+/* Showroom: one line says what the search changed; nothing else sits between the tokens and the first row. */
+.search-status{font-family:var(--ui-font);font-size:.84rem;color:var(--muted);margin:.5rem 0 1.4rem;display:flex;align-items:center;gap:.5rem;}
+.search-status::before{content:"";width:.42rem;height:.42rem;border-radius:50%;background:var(--koke);flex:none;}
+.st-key-mood_box{margin-bottom:0 !important;}
+.st-key-mood_under{margin-bottom:0 !important;}
+
+/* Your data: the label column and the control column line up on every row. */
+.st-key-data_row_share [data-testid="stColumn"]:first-child,.st-key-data_row_move [data-testid="stColumn"]:first-child{min-width:0 !important;}
+.data-row-title{font-family:var(--ui-font);font-size:.95rem;font-weight:700;color:var(--kinari);margin:0;}
+.data-row-note{font-family:var(--ui-font);font-size:.82rem;color:var(--muted);line-height:1.4;}
+
+/* ==== Batch 62: one control height on Step 2, one type scale on the ready page ==== */
+.st-key-review_scale button,.st-key-adventure_scale button,.st-key-genre_chips button{height:2.3rem !important;min-height:2.3rem !important;}
+.st-key-nav_row_taste button,.st-key-nav_row_rate button,.st-key-nav_row_profile button{height:2.9rem !important;min-height:2.9rem !important;}
+.st-key-nav_row_taste{margin-top:.2rem !important;}
+.ready-card .ready-value{font-size:.92rem !important;font-weight:650 !important;color:var(--kinari) !important;}
+.ready-kicker{font-size:.7rem !important;letter-spacing:.1em !important;color:var(--muted2) !important;}
+.ready-posters img{width:3.2rem !important;height:auto !important;aspect-ratio:2/3;border-radius:8px !important;}
+
+/* ==== Batch 63: Home fits one screen with the trending strip back ==== */
+.home-stats{margin:.4rem 0 1.4rem !important;}
+.home-strip{display:flex !important;gap:.6rem !important;max-width:48rem !important;margin:0 !important;}
+.home-strip img{flex:1 1 0;min-width:0;width:auto !important;aspect-ratio:2/3;object-fit:cover;border-radius:10px !important;max-height:13rem;}
+@media (max-height:820px){.home-strip img{max-height:10rem;}}
+@media (max-width:640px){.home-strip img:nth-child(n+4){display:none;}}
+.st-key-step1_hits [class*="st-key-search_result_"] button{justify-content:center !important;text-align:center !important;}

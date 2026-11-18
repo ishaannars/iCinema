@@ -59,7 +59,7 @@ def test_love_chance_reads_the_rank_it_was_tested_on():
 
 def test_home_shows_the_baseline_next_to_the_lift():
     src = (ROOT / "src" / "screens" / "home.py").read_text()
-    assert "in 1,000 viewers" in src and "Nielsen, 2023" in src
+    assert "in 1,000 viewers" in src and "current_hits" in src      # tested numbers, then what's trending
 
 
 def test_ready_page_lists_only_running_models_with_five_word_jobs():
@@ -78,3 +78,41 @@ def test_screens_live_in_their_own_files():
         assert (ROOT / (name.replace(".", "/") + ".py")).exists()
     src = (ROOT / "app.py").read_text()
     assert "from src.screens.home import render_home" in src and "from src.screens.ready import render_ready_summary" in src
+
+
+def test_stylesheet_ships_in_whole_rules_under_the_size_limit():
+    """One ~200k-character <style> block was cut off in the browser; it now ships in balanced pieces."""
+    from src.ui import app_css, css_chunks
+    css = app_css()
+    parts = css_chunks(css)
+    assert "".join(parts) == css and all(len(p) <= 60000 for p in parts)
+    assert all(p.count("{") == p.count("}") for p in parts)
+
+
+def test_a_movie_search_is_one_focused_answer():
+    src = (ROOT / "app.py").read_text()
+    assert '"movie": {"tokens": "Movie: X, editable", "tonight": None' in src
+    assert "like Inception”\"" not in src
+
+
+def test_only_new_releases_are_credited_to_the_new_release_model():
+    """The order-model blend used to label every blended movie "new", so a 2014 film said "New, from filmmakers…"."""
+    src = (ROOT / "app.py").read_text()
+    i = src.index("cf=_nr_affinity(movie,nr_view)")
+    block = src[i:i + 300]
+    assert 'cf_source_by_title[movie["title"]]="new"' in block.split("if cf is not None and _seq_vec")[0]
+
+
+def test_new_styles_only_touch_what_they_name():
+    """Every rule from Batch 60 on is scoped to a keyed box or one of iCinema's own classes, so a fix on
+    one screen can't reach into another. (A broad rule in Batch 62 stacked the whole Step 1 shelf.)"""
+    import re
+    css = (ROOT / "src" / "ui" / "styles.css").read_text()
+    block = re.sub(r"/\*.*?\*/", "", css[css.index("/* ==== Batch 60"):], flags=re.S)
+    own = (r'\.st-key-|\[class\*="st-key-|\.(q-|step2|ready|search-|selection|sel-|pcard|genre|hero|home|live-hit|'
+           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings)')
+    allowed = {"body:has(.q-block) .block-container"}
+    for group in re.findall(r"([^{}]+)\{", block):
+        for sel in (x.strip() for x in group.split(",")):
+            if sel and not sel.startswith("@") and sel not in allowed:
+                assert re.search(own, sel), f"unscoped CSS selector: {sel}"
