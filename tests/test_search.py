@@ -78,3 +78,18 @@ def test_screens_live_in_their_own_files():
         assert (ROOT / (name.replace(".", "/") + ".py")).exists()
     src = (ROOT / "app.py").read_text()
     assert "from src.screens.home import render_home" in src and "from src.screens.ready import render_ready_summary" in src
+
+
+def test_stylesheet_ships_in_whole_rules_under_the_size_limit():
+    """One ~200k-character <style> block was cut off in the browser; it now ships in balanced pieces."""
+    from src.ui import app_css, css_chunks
+    css = app_css()
+    parts = css_chunks(css)
+    assert "".join(parts) == css and all(len(p) <= 60000 for p in parts)
+    assert all(p.count("{") == p.count("}") for p in parts)
+
+
+def test_a_movie_search_is_one_focused_answer():
+    src = (ROOT / "app.py").read_text()
+    assert '"movie": {"tokens": "Movie: X, editable", "tonight": None' in src
+    assert "like Inception”\"" not in src

@@ -55,7 +55,7 @@ def _log_time(label, start):
 _log_time("imports", _BOOT)
 st.set_page_config(page_title="iCinema", page_icon=str(Path(__file__).parent / "assets" / "favicon.png"), layout="wide", initial_sidebar_state="collapsed")
 
-from src.ui import app_css
+from src.ui import app_css, css_chunks
 from src.screens.home import render_home
 from src.screens.ready import render_ready_summary
 from src.love import love_line, love_chance, fit_floor, test_viewers as love_test_viewers
@@ -93,7 +93,10 @@ from src.ui.cards import (  # card and popup text, unit-tested in tests/test_car
 from src.ui.watch import (STREAMING_SERVICES, PROVIDER_LINKS, _provider_key, _on_service, provider_watch_url,
                           watch_options, watch_line_html, concise_availability_text, movie_on_services)
 
-st.markdown("<style>" + app_css() + "</style>", unsafe_allow_html=True)
+# The stylesheet goes out in a few <style> blocks under 60k characters each: one ~200k block was being cut
+# off in the browser, silently dropping every rule past that point (Batches 56-60's newest rules).
+for _css_part in css_chunks(app_css()):
+    st.markdown("<style>" + _css_part + "</style>", unsafe_allow_html=True)
 
 defaults={
     "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
@@ -1464,21 +1467,22 @@ def render_shelf_fragment():
         if search_query.strip():
             if matches:
                 st.markdown(f'<div class="search-results-label">{"Did you mean" if did_you_mean else "Matching titles"}</div>', unsafe_allow_html=True)
-                result_cols = st.columns(2)
-                for j, movie in enumerate(matches):
-                    title = movie["title"]
-                    year_label = f" ({movie['year']})" if movie.get("year") else ""
-                    selected_movie = st.session_state.search_selected_movie
-                    selected = bool(selected_movie and selected_movie.get("tmdb_id") == movie.get("tmdb_id") and movie.get("tmdb_id") is not None)
-                    with result_cols[j % 2]:
-                        st.button(
-                            f"{title}{year_label}",
-                            key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
-                            type="primary" if selected else "secondary",
-                            use_container_width=True,
-                            on_click=select_search_result,
-                            args=(movie,),
-                        )
+                # Same look as the Showroom search: a poster, then its title as the tap target.
+                with st.container(key="step1_hits"):
+                    result_cols = st.columns(6, gap="small")
+                    for j, movie in enumerate(matches[:12]):
+                        title = movie["title"]
+                        year_label = f" ({movie['year']})" if movie.get("year") else ""
+                        selected_movie = st.session_state.search_selected_movie
+                        selected = bool(selected_movie and selected_movie.get("tmdb_id") == movie.get("tmdb_id") and movie.get("tmdb_id") is not None)
+                        with result_cols[j % 6]:
+                            _p = str(movie.get("poster_url") or "")
+                            st.markdown(f'<div class="live-hit{" on" if selected else ""}">'
+                                        + (f'<img src="{html.escape(_p, quote=True)}" alt="">' if _p.startswith("https://")
+                                           else '<div class="live-hit-blank">iCinema</div>') + '</div>', unsafe_allow_html=True)
+                            st.button(f"{title}{year_label}"[:42], key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
+                                      type="primary" if selected else "secondary", use_container_width=True,
+                                      on_click=select_search_result, args=(movie,))
 
             if already_selected_matches:
                 selected_name = already_selected_matches[0]["title"]
@@ -1530,7 +1534,7 @@ def render_shelf_fragment():
 
     with st.container(key="step1_letterboxd"):
         # Optional, so it stays one quiet line under search (progressive disclosure): no new box or button.
-        with st.expander("Or import your ratings from Letterboxd or IMDb"):
+        with st.expander("Import your ratings from Letterboxd or IMDb"):
             st.caption("Upload the ZIP from Letterboxd or the ratings file from IMDb. Your file stays in this browser.")
             st.file_uploader("Letterboxd export (ZIP or ratings.csv) or IMDb ratings.csv", type=["zip", "csv"], key="lb_upload",
                              label_visibility="collapsed", on_change=import_letterboxd)
@@ -1563,26 +1567,24 @@ def render_shelf_fragment():
                 unsafe_allow_html=True,
             )
 
-            # Keep the familiar compact chip layout while making every item removable.
-            selection_cols = st.columns(4, gap="small")
+            # Your picks as small posters, like everywhere else movies appear; × on each removes it.
+            _ms = [get_movie(t, st.session_state.external_movies) or {"title": t} for t in chosen_titles]
+            _need = tuple((m["title"], int(m.get("year") or 0)) for m in _ms if not m.get("poster_url"))
+            _pm = get_poster_batch(_need) if _need else {}
+            selection_cols = st.columns(8, gap="small")
             for idx, title in enumerate(chosen_titles):
                 state = "Favorite" if title in st.session_state.favorites else "Liked"
-                with selection_cols[idx % len(selection_cols)]:
+                _u = str(_ms[idx].get("poster_url") or _pm.get(title) or "")
+                with selection_cols[idx % 8]:
                     with st.container(key=f"selection_card_{idx}"):
                         st.markdown(
-                            f'<div class="selection-card-copy">'
-                            f'<div class="selection-title">{html.escape(title)}</div>'
-                            f'<div class="selection-state">{html.escape(state)}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-                        st.button(
-                            "×",
-                            key=f"remove_selection_{idx}",
-                            help=f"Remove {title}",
-                            on_click=remove_step1_selection,
-                            args=(title,),
-                        )
+                            '<div class="sel-poster">'
+                            + (f'<img src="{html.escape(_u, quote=True)}" alt="">' if _u.startswith("https://")
+                               else f'<div class="live-hit-blank">{html.escape(title[:24])}</div>')
+                            + f'</div><div class="sel-cap"><span class="sel-title">{html.escape(title)}</span>'
+                            f'<span class="sel-state">{html.escape(state)}</span></div>', unsafe_allow_html=True)
+                        st.button("×", key=f"remove_selection_{idx}", help=f"Remove {title}",
+                                  on_click=remove_step1_selection, args=(title,))
 
         st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
     with st.container(key="nav_row_rate"):
@@ -1601,7 +1603,7 @@ def render_taste_fragment():
     segment, like iOS); genres are chips that wrap; "show me more" is a two-column card grid."""
     logo()
     st.markdown('<div class="step2-header"><div class="step2-title">Step 2 of 2 — Tailor Your Showroom</div>'
-                '<div class="step2-subtitle">Four quick answers. You can change any of them later in Profile.</div></div>',
+                '<div class="step2-subtitle">Four quick answers. Change them anytime in Profile.</div></div>',
                 unsafe_allow_html=True)
 
     def _question(title, left=None, right=None, helper=None):
@@ -1621,11 +1623,11 @@ def render_taste_fragment():
                               use_container_width=True, on_click=on_click, args=(value,))
 
     scale = [15, 32, 50, 68, 85]
-    _question("Which matters more?", "Great reviews", "Easy to enjoy")
-    _segmented("review_scale", ["Reviews first", "Lean reviews", "Balanced", "Lean enjoyment", "Enjoyment first"],
+    _question("Great reviews or easy to enjoy?")
+    _segmented("review_scale", ["Reviews", "Lean reviews", "Balanced", "Lean easy", "Easy to enjoy"],
                scale, st.session_state.review_priority, set_review_priority)
 
-    _question("What do you like to watch?", helper="Choose up to five.")
+    _question("Your genres", helper="Up to five.")
     selected = set(st.session_state.genres)
     try:
         chips = st.container(key="genre_chips", horizontal=True, gap="small")
@@ -1636,11 +1638,11 @@ def render_taste_fragment():
             st.button(genre, key=f"genre_{i}", type="primary" if genre in selected else "secondary",
                       on_click=toggle_genre_choice, args=(genre,))
 
-    _question("How open are you to something different?", "Close to what I like", "Something different")
-    _segmented("adventure_scale", ["Very familiar", "Mostly familiar", "Balanced", "More discovery", "Very different"],
+    _question("How adventurous?")
+    _segmented("adventure_scale", ["Familiar", "Mostly familiar", "Balanced", "More new", "Surprise me"],
                scale, st.session_state.adventure, set_adventure_level)
 
-    _question("What should iCinema show you more of?", helper="Choose any. Your top pick gets its own row.")
+    _question("Show me more of", helper="Optional. Your first pick gets its own row.")
     _render_more_choices()
 
     with st.container(key="nav_row_taste"):
@@ -1654,12 +1656,12 @@ def render_taste_fragment():
 
 
 _MORE_DESCRIPTIONS = {
-    "Hidden Gems": "Less-known titles that still fit what you like",
-    "Critically Acclaimed": "Rotten Tomatoes 75%+ and IMDb 7.5+",
-    "Recent Releases": "Newer films and recent additions",
-    "International Films": "Stories and filmmakers from around the world",
-    "Classics": "Established favorites across earlier eras",
-    "Documentaries": "Nonfiction stories matched to your interests",
+    "Hidden Gems": "Less known, still your taste",
+    "Critically Acclaimed": "RT 75%+ and IMDb 7.5+",
+    "Recent Releases": "Released 2023 or later",
+    "International Films": "From around the world",
+    "Classics": "Favorites from earlier eras",
+    "Documentaries": "True stories, your interests",
 }
 
 
@@ -1668,9 +1670,9 @@ def _render_more_choices():
     always start at the same left edge, with an invisible button over the whole card as the tap target."""
     selected = set(st.session_state.more_of)
     with st.container(key="step3_grid"):
-        left, right = st.columns(2, gap="small")
+        cols = st.columns(3, gap="small")
         for i, option in enumerate(MORE_OF_OPTIONS):
-            with (left if i % 2 == 0 else right):
+            with cols[i % 3]:
                 active = option in selected
                 with st.container(key=f"pcard_{'on_' if active else ''}{i}"):
                     st.markdown(f'<div class="pcard-title">{html.escape(option)}</div>'
@@ -2173,15 +2175,17 @@ _MOOD_PRESETS = [("Feel-good", "feel-good"), ("Funny", "funny"), ("Mind-bending"
 #   movie: a movie typed on its own ("Inception"): the movie first, then the closest matches.
 #   like:  "like Inception" (or a movie plus a mood): the closest matches, without the movie itself.
 # A mood or length added to a movie filters inside that movie's matches; it never changes the state.
+# A movie search is one focused answer: the movie and its closest matches. Tonight's Show and Shows step aside
+# (None below) because four rows all about the same movie repeated each other.
 SEARCH_RULE = {
     "none":  {"tokens": "presets", "tonight": "Your single best match right now", "top_result": False,
               "top_picks": "personal ranking", "shows": "personal", "explore": True},
     "mood":  {"tokens": "editable, filled presets", "tonight": "Your best match for {search}", "top_result": False,
               "top_picks": "personal ranking, filtered and led by the mood", "shows": "personal, filtered", "explore": True},
-    "movie": {"tokens": "Movie: X, editable", "tonight": "Your best match like {movie}", "top_result": True,
-              "top_picks": "fans' closest to X, after the three beside it", "shows": "fans of X", "explore": False},
-    "like":  {"tokens": "Like: X, editable", "tonight": "Your best match like {movie}", "top_result": False,
-              "top_picks": "fans' closest to X", "shows": "fans of X", "explore": False},
+    "movie": {"tokens": "Movie: X, editable", "tonight": None, "top_result": True,
+              "top_picks": "fans' closest to X, after the three beside it", "shows": None, "explore": False},
+    "like":  {"tokens": "Like: X, editable", "tonight": None, "top_result": False,
+              "top_picks": "fans' closest to X", "shows": None, "explore": False},
 }
 
 
@@ -2216,10 +2220,10 @@ def _quality_ok(movie, strict=False):
 def _search_state():
     """Which of the four search states is on (see SEARCH_RULE)."""
     spec = _mood_spec()
-    if spec.get("lookup") and spec.get("like"):
-        return "movie"
+    if spec.get("like") and (spec.get("lookup") or not spec.get("mood")):
+        return "movie"            # "Inception" and "like Inception" are one search: the movie, then its closest matches
     if spec.get("like"):
-        return "like"
+        return "like"             # a movie plus a mood: closest matches to the movie that fit the mood
     if spec.get("mood") or spec.get("max") or spec.get("min") or spec.get("episodes") or spec.get("avoid"):
         return "mood"
     return "none"
@@ -2437,12 +2441,12 @@ def render_search_box():
             _ver = int(st.session_state.get("_mood_ver") or 0)
             live = st_keyup("Search by mood, time, or a movie", value=(_pre[1] if _pre[0] == _ver else ""), debounce=300,
                             key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
-                            placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or “like Inception”"), label_visibility="collapsed")
+                            placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or a movie you loved"), label_visibility="collapsed")
         except Exception:
             if "mood_input" not in st.session_state:
                 st.session_state.mood_input = _mood_text()
             st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
-                          placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or “like Inception”"), on_change=_apply_mood)
+                          placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or a movie you loved"), on_change=_apply_mood)
         typed = " ".join(str(live or "").split())
         if live is not None and not typed:
             st.session_state.pop("_edit_rest", None)   # the field was cleared: no token edit is pending
@@ -3752,7 +3756,8 @@ def _render_showroom(p):
         fits=[item for item in tonight_pool if movie_on_services(tonight_watch.get(item[1]["title"]),my_services)]
         fit_titles={m["title"] for _,m in fits}
         tonight_queue=fits+[item for item in tonight_pool if item[1]["title"] not in fit_titles]
-        reserved={tonight_queue[0][1]["title"]} if tonight_queue else set()
+        # Tonight's Show keeps its pick out of the rows, except in a movie search, where Tonight's Show is hidden.
+        reserved={tonight_queue[0][1]["title"]} if (tonight_queue and _state not in ("movie","like")) else set()
         if _src:
             reserved.add(_src.get("title"))      # the searched movie never repeats in a row below it
         reserved_series={_franchise(t) for t in reserved}
@@ -4049,6 +4054,16 @@ def _render_showroom(p):
         _state = _search_state()
         _rule = SEARCH_RULE[_state]
         _src_now = _like_source() if _state in ("movie", "like") else None
+        # One line says what the search changed, so nobody wonders why the rows moved.
+        if _state != "none":
+            _w = _search_words()
+            _n_found = len(row_choices.get("Top Matches for You", []))
+            if _src_now:
+                _say = (f"Showing {_src_now['title']} and the {_n_found} movies its fans love most alongside it"
+                        + (f", narrowed to {_w}" if _w else "") + ". Clear the search to get your usual picks back.")
+            else:
+                _say = f"Your picks, narrowed to {_w}: {_n_found} top matches. Clear the search to get your usual picks back."
+            st.markdown(f'<div class="search-status">{html.escape(_say)}</div>', unsafe_allow_html=True)
         row_notes={
             "Top Matches for You":_new_picks_note(row_choices.get("Top Matches for You", [])),
             "Critically Acclaimed":"Highly rated movies that still fit what you like",
@@ -4093,7 +4108,10 @@ def _render_showroom(p):
         # Shows for You, and More to explore (critics' picks, hidden gems and your fourth row mixed in
         # one row, each card labeled), so there are never more than three rows under the hero.
         from src import tv as _tv
-        render_tonight_pick_fragment()
+        if _rule["tonight"]:
+            render_tonight_pick_fragment()
+        else:
+            st.session_state.tonight_current = None
 
         _words = _search_words()
         if _src_now:
@@ -4107,7 +4125,7 @@ def _render_showroom(p):
             _header("Top Picks for You", _top_note)
             st.caption("Refreshing personalized matches…")
 
-        if _tv.available():
+        if _tv.available() and _rule["shows"]:
             from src.ui.shows import render_shows
             render_shows({"movie_thumb": movie_thumb, "card_html": card_html, "watch_line_html": watch_line_html,
                           "record_event": record_event, "queue_profile_save": queue_profile_save, "signals": _cf_signals,
@@ -4236,8 +4254,6 @@ try:
                 st.button("← Back", key="back_profile", use_container_width=True, on_click=go, args=("taste",))
             with cont:
                 st.button("Enter My Showroom →", type="primary", key="enter_showroom", use_container_width=True, on_click=go, args=("showroom",))
-        st.markdown('<div class="ready-foot">Every model’s share of your score is in the Profile tab.</div>',
-                    unsafe_allow_html=True)
 
     elif screen=="showroom":
         logo()
