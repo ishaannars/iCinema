@@ -5205,3 +5205,47 @@ body:has(.q-block) .block-container{max-width:58rem !important;}
 .st-key-data_card .st-key-move_profile_link{width:auto !important;}
 /* Showroom search: the status line sits close to the tokens and close to the first row. */
 .search-status{margin:.15rem 0 .9rem !important;}
+
+/* ==== Batch 66 ==== */
+/* Ready page answers: a two-column list, labels and values both left-aligned, one size, one weight. */
+.ready-spec-row{display:grid !important;grid-template-columns:5.6rem minmax(0,1fr) !important;align-items:baseline !important;gap:.9rem !important;padding:.55rem 0 !important;}
+.ready-spec-row span:first-child{font-size:.8rem !important;color:var(--muted2) !important;white-space:nowrap;}
+.ready-spec-row span:last-child{text-align:left !important;font-size:.86rem !important;font-weight:600 !important;line-height:1.4 !important;color:var(--kinari) !important;}
+/* Step 1 selections: small posters. */
+[class*="st-key-selection_card_"]{max-width:5.6rem !important;}
+.sel-title{font-size:.7rem !important;}
+/* Showroom live search: posters at card size, never full width. */
+.st-key-mood_under .live-hit img{max-height:12rem !important;width:auto !important;max-width:100% !important;margin:0 auto .4rem !important;}
+.st-key-mood_under .live-hit{display:flex;justify-content:center;}
+.st-key-step1_hits .live-hit img{max-height:11rem !important;width:auto !important;max-width:100% !important;margin:0 auto .4rem !important;}
+.st-key-step1_hits .live-hit{display:flex;justify-content:center;}
+
+/* ==== Batch 67 ==== */
+/* Ready page: cards end on one line, the count reads like the other values, the poster stack shows each poster. */
+.ready-grid{align-items:stretch !important;}
+.ready-grid .ready-card .ready-value{font-size:.9rem !important;font-weight:650 !important;}
+.ready-kicker{font-weight:700 !important;letter-spacing:.08em !important;}
+.ready-posters img + img{margin-left:-.9rem !important;}
+/* Showroom search: the status line sits right under the tokens. */
+.st-key-mood_suggest_row{margin-bottom:0 !important;}
+.st-key-mood_box .search-status{margin:.35rem 0 .2rem !important;}
+/* Profile: your likes as small posters, the same treatment as Step 1. */
+.profile-likes-head{font-family:var(--ui-font);font-size:1.1rem;font-weight:720;color:var(--ivory);margin:1.6rem 0 .2rem;}
+.profile-likes-copy{font-family:var(--ui-font);font-size:.84rem;color:var(--muted);margin:0 0 .7rem;}
+.st-key-profile_add_likes button{height:2.3rem !important;min-height:2.3rem !important;padding:0 1rem !important;border-radius:999px !important;margin:.4rem 0 1rem !important;}
+/* Step 2: "Skip, use my likes" is a quiet text link beside the main button. */
+.st-key-skip_taste button{background:transparent !important;border:0 !important;box-shadow:none !important;height:2.9rem !important;}
+.st-key-skip_taste button p{font-size:.84rem !important;font-weight:600 !important;color:var(--muted) !important;text-decoration:underline;text-underline-offset:.2em;}
+.st-key-skip_taste button:hover p{color:var(--kinari) !important;}
+/* "Liked it?" after Seen: a small capsule inside the new card's art corner, like Undo. */
+[data-testid="stColumn"]:has([class*="st-key-card_rate_"]){position:relative !important;}
+[class*="st-key-card_rate_"]{position:absolute !important;top:3.85rem !important;left:.55rem !important;z-index:6 !important;width:auto !important;
+    flex-wrap:nowrap !important;align-items:center !important;gap:.15rem !important;padding:.2rem .3rem .2rem .7rem !important;border-radius:999px !important;
+    background:rgba(17,19,21,.88) !important;border:1px solid rgba(243,240,234,.25) !important;backdrop-filter:blur(8px);}
+[class*="st-key-card_rate_"] > div{width:auto !important;flex:none !important;}
+[class*="st-key-card_rate_"] .rate-ask{font-family:var(--ui-font);font-size:.72rem;font-weight:650;color:var(--kinari);white-space:nowrap;margin-right:.2rem;}
+[class*="st-key-card_rate_"] button{width:1.9rem !important;min-width:1.9rem !important;height:1.9rem !important;min-height:1.9rem !important;padding:0 !important;
+    border:0 !important;border-radius:50% !important;background:transparent !important;}
+[class*="st-key-card_rate_"] button:hover{background:rgba(255,255,255,.08) !important;}
+[class*="st-key-card_rate_"] [data-testid="stIconMaterial"]{font-size:1rem !important;color:var(--kinari) !important;}
+@media (max-width:640px){[class*="st-key-card_rate_"] button{width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;}}

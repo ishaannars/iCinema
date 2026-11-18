@@ -66,12 +66,12 @@ def render_ready_summary(ctx):
     genre_text = _plain_list(genres, 5) or "Every genre"
     rp, adv = int(ss.get("review_priority") or 50), int(ss.get("adventure") or 50)
     # Same words as the Step 2 buttons, so the answer reads back exactly as it was given.
-    reviews = ("Reviews" if rp < 24 else "Lean reviews" if rp < 41 else "Balanced" if rp <= 59
-               else "Lean easy" if rp <= 76 else "Easy to enjoy")
+    reviews = ("Great reviews" if rp < 24 else "Lean great reviews" if rp < 41 else "Balanced" if rp <= 59
+               else "Lean easy to enjoy" if rp <= 76 else "Easy to enjoy")
     discovery = ("Familiar" if adv < 24 else "Mostly familiar" if adv < 41 else "Balanced" if adv <= 59
                  else "More new" if adv <= 76 else "Surprise me")
     more = list(ss.get("more_of") or [])
-    spec = [("Genres", genre_text), ("Reviews", reviews), ("Discovery", discovery), ("More of", _plain_list(more, 3) or "Nothing extra")]
+    spec = [("Genres", genre_text), ("Priority", reviews), ("Adventure", discovery), ("More of", _plain_list(more, 3) or "Nothing extra")]
     spec_html = "".join(f'<div class="ready-spec-row"><span>{html.escape(k)}</span><span>{html.escape(v)}</span></div>' for k, v in spec)
     # How picks are made: only the models running now, each with its technique and a five-word job.
     models = _ready_models(ctx)

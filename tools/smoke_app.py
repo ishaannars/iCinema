@@ -90,6 +90,14 @@ def main():
         found = [b for b in at.button if b.key == key]
         if found:
             found[0].click().run(); ok &= check(at, f"Services ({key})")
+    seens = [b for b in at.button if (b.key or "").startswith("seen_Top Matches")]
+    if seens:
+        seens[0].click().run(); ok &= check(at, "Seen a card")
+        ups = [b for b in at.button if (b.key or "").startswith("rate_up_")]
+        if ups:
+            ups[0].click().run(); ok &= check(at, "Liked it? (thumbs up)")
+        else:
+            print(f"{'Liked it? prompt':<28} OK (page rebuilt, no prompt to answer)")
     skips = [b for b in at.button if (b.key or "").startswith("skip_Top Matches")]
     if skips:
         skips[0].click().run(); ok &= check(at, "Skip a card")

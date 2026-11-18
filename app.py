@@ -1352,6 +1352,40 @@ def _with_app_rerun(fn):
     return inner
 
 
+def _remove_like_from_profile(title):
+    """× on a like in Profile: remove it and rebuild the whole Showroom so every row stops using it."""
+    remove_step1_selection(title)
+    st.session_state._app_rerun = True
+
+
+def _render_profile_likes():
+    """Your likes, editable from the Showroom: small posters with ×, and a way to add more."""
+    ss = st.session_state
+    liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
+    st.markdown('<div class="profile-likes-head">Your likes</div>'
+                '<div class="profile-likes-copy">Every pick starts from these. Remove one, or add more.</div>',
+                unsafe_allow_html=True)
+    if liked:
+        ms = [get_movie(t, ss.external_movies) or {"title": t} for t in liked]
+        need = tuple((m["title"], int(m.get("year") or 0)) for m in ms if not m.get("poster_url"))
+        pm = get_poster_batch(need) if need else {}
+        with st.container(key="profile_likes"):
+            cols = st.columns(10, gap="small")
+            for i, t in enumerate(liked):
+                u = str(ms[i].get("poster_url") or pm.get(t) or "")
+                with cols[i % 10]:
+                    with st.container(key=f"selection_card_p{i}"):
+                        st.markdown('<div class="sel-poster">'
+                                    + (f'<img src="{html.escape(u, quote=True)}" alt="">' if u.startswith("https://")
+                                       else f'<div class="live-hit-blank">{html.escape(t[:24])}</div>')
+                                    + f'</div><div class="sel-cap"><span class="sel-title">{html.escape(t)}</span>'
+                                    f'<span class="sel-state">{"Favorite" if t in ss.favorites else "Liked"}</span></div>',
+                                    unsafe_allow_html=True)
+                        st.button("×", key=f"remove_selection_p{i}", help=("Keep at least one like" if len(liked) == 1 else f"Remove {t}"),
+                                  disabled=len(liked) == 1, on_click=_remove_like_from_profile, args=(t,))
+    st.button("Add likes", key="profile_add_likes", on_click=go, args=("shelf",), help="Pick more movies you like.")
+
+
 @st.fragment
 @_with_app_rerun
 def render_live_profile():
@@ -1405,7 +1439,7 @@ def render_shelf_fragment():
                 )
                 movie_thumb(movie, shelf_landscape_map.get(title) or movie.get("poster_url") or shelf_poster_map.get(title))
                 # Own keyed box, so "stack Like over Favorite when the card is narrow" touches only these two.
-                with st.container(key=f"shelf_actions_{i}"):
+                with st.container(key=f"shelf_actions_{i}_{movie.get('tmdb_id') or title}"):
                     b1,b2=st.columns(2, gap="small")
                     with b1:
                         st.button(
@@ -1659,6 +1693,9 @@ def render_taste_fragment():
         with cont:
             st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True,
                       on_click=go_from_fragment, args=("profile",))
+        with _:
+            st.button("Skip, use my likes", key="skip_taste", on_click=go_from_fragment, args=("showroom",),
+                      help="Go straight to your Showroom. You can answer these later in Profile.")
     persist_from_fragment()
 
 
@@ -2152,9 +2189,9 @@ def _active_chips():
     out = []
     for lab, rest in chips(_mood_text()):
         if _sp.get("lookup") and _sp.get("like") and raw_mood and lab.casefold() == raw_mood.casefold():
-            out.append((f"Movie: {_sp['like']}", rest, _sp["like"]))
+            out.append((f"Like {_sp['like']}", rest, _sp["like"]))
         elif lab.startswith("More like "):
-            out.append((f"Like: {lab[len('More like '):]}", rest, f"like {lab[len('More like '):]}"))
+            out.append((f"Like {lab[len('More like '):]}", rest, f"like {lab[len('More like '):]}"))
         elif mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words:
             continue
         elif lab.startswith("Under ") and _sp.get("max") == 120:
@@ -2189,9 +2226,9 @@ SEARCH_RULE = {
               "top_picks": "personal ranking", "shows": "personal", "explore": True},
     "mood":  {"tokens": "editable, filled presets", "tonight": "Your best match for {search}", "top_result": False,
               "top_picks": "personal ranking, filtered and led by the mood", "shows": "personal, filtered", "explore": True},
-    "movie": {"tokens": "Movie: X, editable", "tonight": None, "top_result": True,
+    "movie": {"tokens": "Like X, editable", "tonight": None, "top_result": True,
               "top_picks": "fans' closest to X, after the three beside it", "shows": None, "explore": False},
-    "like":  {"tokens": "Like: X, editable", "tonight": None, "top_result": False,
+    "like":  {"tokens": "Like X + mood, editable", "tonight": None, "top_result": False,
               "top_picks": "fans' closest to X", "shows": None, "explore": False},
 }
 
@@ -2448,12 +2485,12 @@ def render_search_box():
             _ver = int(st.session_state.get("_mood_ver") or 0)
             live = st_keyup("Search by mood, time, or a movie", value=(_pre[1] if _pre[0] == _ver else ""), debounce=300,
                             key=f"mood_live_{int(st.session_state.get('_mood_ver') or 0)}",
-                            placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or a movie you loved"), label_visibility="collapsed")
+                            placeholder=("Add a Mood, Length, or Movie" if _mood_text() else "Movies, Moods, Lengths, and More"), label_visibility="collapsed")
         except Exception:
             if "mood_input" not in st.session_state:
                 st.session_state.mood_input = _mood_text()
             st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
-                          placeholder=("Add a mood, a length, or a movie" if _mood_text() else "Try “funny, under 2 hours” or a movie you loved"), on_change=_apply_mood)
+                          placeholder=("Add a Mood, Length, or Movie" if _mood_text() else "Movies, Moods, Lengths, and More"), on_change=_apply_mood)
         typed = " ".join(str(live or "").split())
         if live is not None and not typed:
             st.session_state.pop("_edit_rest", None)   # the field was cleared: no token edit is pending
@@ -2476,13 +2513,13 @@ def _render_live_suggestions(typed):
     hits = []
     if len(q) >= 2 and tmdb_catalog_configured():
         try:
-            hits = [m for m in (search_movies(q, 6) or []) if m.get("poster_url")][:4]
+            hits = [m for m in (search_movies(q, 8) or []) if m.get("poster_url")][:6]
         except Exception:
             hits = []
     if not hits:
         return
     st.markdown(f'<div class="live-hits-label">Movies titled “{html.escape(q[:40])}”</div>', unsafe_allow_html=True)
-    cols = st.columns(4, gap="small")
+    cols = st.columns(6, gap="small")
     for k, m in enumerate(hits):
         with cols[k]:
             st.markdown(f'<div class="live-hit"><img src="{html.escape(str(m["poster_url"]), quote=True)}" alt=""></div>',
@@ -2595,6 +2632,15 @@ def save_showroom_slot(row_name, slot_index):
     _mark_showroom_fast()                 # reuse the ranking, but refresh Saved / Seen and their counts now
     st.session_state._app_rerun = True
 
+def _answer_seen(slot_key, title, value):
+    """Thumbs on the "liked it?" prompt after Seen: same effect as the thumbs on the Seen tab."""
+    ask = dict(st.session_state.get("showroom_rate_ask") or {})
+    ask.pop(slot_key, None)
+    st.session_state.showroom_rate_ask = ask
+    if value:
+        rate_seen(title, value)
+
+
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
     if _too_soon(slot_key):
@@ -2607,6 +2653,11 @@ def seen_showroom_slot(row_name, slot_index):
         undo = dict(st.session_state.get("showroom_undo") or {})
         undo.pop(slot_key, None)
         st.session_state.showroom_undo = undo
+        # Ask "liked it?" on the card that replaces it: a Seen with a thumbs teaches the fans model more
+        # (+1.0 or -0.8) than a plain Seen (+0.5), which counts a movie you disliked as half a like.
+        ask = dict(st.session_state.get("showroom_rate_ask") or {})
+        ask[slot_key] = title
+        st.session_state.showroom_rate_ask = ask
     _advance_showroom_slot(row_name, slot_index)
     _mark_showroom_fast()                 # reuse the ranking, but refresh Saved / Seen and their counts now
     st.session_state._app_rerun = True
@@ -2734,6 +2785,20 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     record_impressions(st.session_state, {title: context})
 
     undo_title = (st.session_state.get("showroom_undo") or {}).get(slot_key)
+    ask_title = (st.session_state.get("showroom_rate_ask") or {}).get(slot_key)
+    if ask_title and not undo_title:
+        try:
+            _ask_box = st.container(key=f"card_rate_{row_index}_{slot_index}", horizontal=True, gap="small")
+        except TypeError:
+            _ask_box = st.container(key=f"card_rate_{row_index}_{slot_index}")
+        with _ask_box:
+            st.markdown(f'<div class="rate-ask">Liked {html.escape(ask_title[:22])}?</div>', unsafe_allow_html=True)
+            st.button(":material/thumb_up:", key=f"rate_up_{row_index}_{slot_index}", help="Liked it",
+                      on_click=_answer_seen, args=(slot_key, ask_title, 1))
+            st.button(":material/thumb_down:", key=f"rate_down_{row_index}_{slot_index}", help="Didn't like it",
+                      on_click=_answer_seen, args=(slot_key, ask_title, -1))
+            st.button(":material/close:", key=f"rate_x_{row_index}_{slot_index}", help="Not now",
+                      on_click=_answer_seen, args=(slot_key, ask_title, 0))
     if undo_title:
         # Undo sits on the art's corner, not in the pill row, so the pill row is always match + Skip
         # and nothing in the row moves when it appears.
@@ -3981,6 +4046,7 @@ def _render_showroom(p):
                 "model_match":model_match_by_title.get(movie["title"],match),
             })
         st.session_state.showroom_undo={}
+        st.session_state.showroom_rate_ask={}
         st.session_state.showroom_pill_labels={}
         if _src_item is not None:
             payloads.setdefault(_src_item[1]["title"],{
@@ -4210,6 +4276,7 @@ def _render_showroom(p):
             _l = list(_lately)
             _lst = _l[0] if len(_l) == 1 else (" and ".join(_l) if len(_l) == 2 else ", ".join(_l[:-1]) + ", and " + _l[-1])
             pass   # the profile above already shows what you like; no extra sentence here
+        _render_profile_likes()
         # One row of three matching pills.
         edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
         with edit:

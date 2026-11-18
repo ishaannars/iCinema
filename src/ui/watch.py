@@ -73,8 +73,9 @@ _CHANNEL = re.compile(r"\s+(?:basic\s+|standard\s+)?with\s+ads$|\s+(?:amazon|rok
 
 
 def clean_provider(name):
-    """One name per service: "AMC+ Roku Premium Channel" and "Netflix Standard with Ads" read "AMC+" and "Netflix"."""
-    return _CHANNEL.sub("", str(name or "")).strip()
+    """One name per service: "AMC+ Roku Premium Channel", "Netflix Standard with Ads" and "Kanopy (free with a
+    library card)" read "AMC+", "Netflix" and "Kanopy"."""
+    return _CHANNEL.sub("", re.sub(r"\s*\([^)]*\)", "", str(name or ""))).strip()
 
 
 def unique_providers(names):

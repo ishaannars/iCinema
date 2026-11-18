@@ -49,3 +49,8 @@ def test_one_clean_name_per_service_and_big_services_first():
     assert out.startswith("Streaming:") and "Hulu" in out and "Fandor" not in out and "+ 2 more" in out
     out = watch_line_html({"providers": ["Netflix", "Netflix basic with Ads"]}, "Film")
     assert "more" not in out
+
+
+def test_provider_names_drop_parentheticals():
+    from src.ui.watch import clean_provider
+    assert clean_provider("Kanopy (free with a library card)") == "Kanopy"

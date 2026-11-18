@@ -22,7 +22,7 @@ I built iCinema because I had this recurring problem of spending too much time d
 - That beat the old model by **+83%** on the first pick, and it found a loved movie **13 recommendations sooner** than popularity (median 19 vs 32).
 - For viewers with **less mainstream likes**, ranking quality rose **8%** and nobody else got worse. This held on 39,805 brand-new viewers from a separate slice of MovieLens.
 - **It gets better the more you use it.** Picks from 50 choices beat picks from 3 (NDCG@10 +0.016, interval +0.014 to +0.018) on viewers no earlier test touched. The first version of this test failed, so the claim waited for a fresh one.
-- **Its love chance is honest.** When it says about 75%, viewers who watched those movies loved them about 75% of the time (calibration error under 1 point).
+- **The models’ odds hold up.** When they say about 75%, viewers who watched those movies loved them about 75% of the time (calibration error under 1 point).
 - **Hidden Gems has real evidence.** Ranking less-known movies with the shipped model put a movie the viewer later loved in the top 10 **2.7 times as often** as the most popular less-known movies (11.0% vs 4.1%).
 
 ## What I learned
