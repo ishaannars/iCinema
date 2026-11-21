@@ -236,6 +236,10 @@ python -m pytest -q
 
 To rebuild every model and number with one command, download MovieLens 32M into `ml-32m/` and run `python reproduce.py --data-dir ml-32m`. It runs each script in `training/` in order (the list is at the top of `reproduce.py`), then `tools/refresh_results.py`. The live test is scored with `python tools/interleave_report.py --api`.
 
+## Waiting on a test
+
+- **"More Like X," tuned to your taste.** `training/confirm_like_blend.py` checks whether ordering by closeness *and* your fit beats closeness alone on 3,000 held-out viewers (2% bar, 95% interval above zero, and the top 10 must keep 90% of the closeness). The app reads its result; until it ships, the shelf stays closest first.
+
 ## Coming next
 
 - A For Critics tab, an "Only my services" mode, and adding likes from the Showroom anytime.

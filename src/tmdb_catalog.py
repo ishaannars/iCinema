@@ -213,14 +213,23 @@ def search_movies(query: str, limit: int = 8):
     if not payload:
         return []
 
-    results = []
-    for item in payload.get("results", []):
-        if not item.get("title"):
-            continue
-        results.append(_to_icinema_movie(item, "search"))
-        if len(results) >= limit:
-            break
-    return results
+    items = rank_search_results([i for i in payload.get("results", []) if i.get("title")], query)
+    return [_to_icinema_movie(item, "search") for item in items[:limit]]
+
+
+def rank_search_results(items, query):
+    """Order TMDB title matches the way people expect: an exact title first, then the movies most people
+    have rated. When several well-known matches exist, near-unknown ones (under 20 votes) drop out, so
+    "inception" shows Inception before "Bikini Inception"."""
+    q = " ".join(str(query or "").split()).casefold()
+    def votes(i):
+        try:
+            return int(i.get("vote_count") or 0)
+        except (TypeError, ValueError):
+            return 0
+    if sum(1 for i in items if votes(i) >= 100) >= 3:
+        items = [i for i in items if votes(i) >= 20]
+    return sorted(items, key=lambda i: (str(i.get("title", "")).casefold() != q, -votes(i)))
 
 
 @st.cache_data(ttl=CACHE_SECONDS, show_spinner=False)

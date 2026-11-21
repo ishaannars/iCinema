@@ -5249,3 +5249,110 @@ body:has(.q-block) .block-container{max-width:58rem !important;}
 [class*="st-key-card_rate_"] button:hover{background:rgba(255,255,255,.08) !important;}
 [class*="st-key-card_rate_"] [data-testid="stIconMaterial"]{font-size:1rem !important;color:var(--kinari) !important;}
 @media (max-width:640px){[class*="st-key-card_rate_"] button{width:44px !important;min-width:44px !important;height:44px !important;min-height:44px !important;}}
+
+/* ==== Batch 68 ==== */
+/* Titles under search posters: up to two full lines, centered, never cut mid-word with a fade. */
+[class*="st-key-live_hit_"] button,.st-key-step1_hits [class*="st-key-search_result_"] button{height:auto !important;min-height:2.6rem !important;
+    padding:.35rem .5rem !important;border-radius:10px !important;justify-content:center !important;}
+[class*="st-key-live_hit_"] button p,.st-key-step1_hits [class*="st-key-search_result_"] button p{white-space:normal !important;overflow:hidden !important;
+    text-overflow:clip !important;display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;
+    font-size:.74rem !important;line-height:1.25 !important;text-align:center !important;}
+/* Your data: room between each line of text and the hairline under it. */
+.st-key-data_card .data-card-copy,.st-key-data_card .data-row-note{margin-bottom:.85rem !important;}
+.st-key-data_row_move .data-row-note{margin-bottom:0 !important;}
+/* Profile: "Add likes" matches Edit My Answers and Reset Profile. */
+.st-key-profile_add_likes button{height:2.9rem !important;min-height:2.9rem !important;padding:0 1.6rem !important;border-radius:999px !important;}
+.st-key-profile_add_likes button p{font-size:.95rem !important;font-weight:650 !important;}
+
+/* ==== Batch 69 ==== */
+/* Why it's here: the odds, then each model behind this pick with its share and this movie's own evidence. */
+div[data-testid="stPopoverBody"] .why-models-label{font-family:var(--ui-font);font-size:.66rem;font-weight:740;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted2);margin:.85rem 0 .45rem;}
+div[data-testid="stPopoverBody"] .why-models{display:flex;flex-direction:column;gap:.7rem;}
+div[data-testid="stPopoverBody"] .why-model-top{display:flex;align-items:baseline;gap:.45rem;}
+div[data-testid="stPopoverBody"] .why-model-name{font-family:var(--ui-font);font-size:.86rem;font-weight:700;color:var(--kinari);}
+div[data-testid="stPopoverBody"] .why-model-tech{font-family:var(--ui-font);font-size:.7rem;color:var(--muted2);}
+div[data-testid="stPopoverBody"] .why-model-pct{margin-left:auto;font-family:var(--ui-font);font-size:.8rem;font-weight:700;color:var(--kinari);}
+div[data-testid="stPopoverBody"] .why-model-bar{height:3px;border-radius:2px;background:rgba(169,173,183,.16);margin:.3rem 0 .3rem;overflow:hidden;}
+div[data-testid="stPopoverBody"] .why-model-bar span{display:block;height:100%;background:var(--koke);border-radius:2px;}
+div[data-testid="stPopoverBody"] .why-model-why{font-family:var(--ui-font);font-size:.76rem;color:var(--muted);line-height:1.4;}
+div[data-testid="stPopoverBody"] .why-note{font-family:var(--ui-font);font-size:.74rem;color:var(--muted2);line-height:1.4;}
+div[data-testid="stPopoverBody"] .why-extra{font-family:var(--ui-font);font-size:.78rem;color:var(--muted);line-height:1.4;margin-top:.8rem;padding-top:.7rem;
+    border-top:1px solid rgba(169,173,183,.14);}
+div[data-testid="stPopoverBody"] .why-extra strong{color:var(--kinari);font-weight:700;}
+/* Tonight's Show: the odds line is a quiet pill that opens the same popup. */
+.st-key-tonight_why{margin:.2rem 0 .35rem !important;width:auto !important;}
+.st-key-tonight_why div[data-testid="stPopover"] button{width:auto !important;height:2rem !important;min-height:2rem !important;padding:0 .85rem !important;
+    border-radius:999px !important;border:1px solid rgba(139,125,58,.55) !important;background:rgba(139,125,58,.1) !important;}
+.st-key-tonight_why div[data-testid="stPopover"] button p{font-size:.84rem !important;font-weight:700 !important;color:var(--kinari) !important;white-space:nowrap !important;}
+/* Your data: one bordered card, hairlines as their own spacers, controls on one right edge. */
+.st-key-privacy_card{border:1px solid var(--border) !important;border-radius:16px !important;background:rgba(255,255,255,.02) !important;
+    padding:1.1rem 1.25rem !important;gap:0 !important;max-width:46rem !important;margin-top:1.2rem !important;}
+.st-key-privacy_card .pc-title{font-family:var(--ui-font);font-size:1rem;font-weight:720;color:var(--kinari);margin:0 0 .2rem;}
+.st-key-privacy_card .pc-label{font-family:var(--ui-font);font-size:.9rem;font-weight:700;color:var(--kinari);margin:0 0 .15rem;}
+.st-key-privacy_card .pc-note{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);line-height:1.4;margin:0;}
+.st-key-privacy_card .pc-hr{height:1px;background:rgba(169,173,183,.14);margin:.9rem 0;}
+.st-key-privacy_row_share [data-testid="stHorizontalBlock"],.st-key-privacy_row_move [data-testid="stHorizontalBlock"]{align-items:center !important;gap:1rem !important;}
+.st-key-privacy_row_share [data-testid="stColumn"]:last-child,.st-key-privacy_row_move [data-testid="stColumn"]:last-child{
+    display:flex !important;justify-content:flex-end !important;align-items:center !important;}
+.st-key-privacy_row_share [data-testid="stColumn"]:last-child > div,.st-key-privacy_row_move [data-testid="stColumn"]:last-child > div{width:auto !important;margin-left:auto !important;}
+.st-key-privacy_link{width:auto !important;}
+.st-key-privacy_link div[data-testid="stPopover"] button{height:2.2rem !important;min-height:2.2rem !important;padding:0 1rem !important;border-radius:999px !important;
+    border:1px solid rgba(169,173,183,.35) !important;background:transparent !important;width:auto !important;}
+.st-key-privacy_link div[data-testid="stPopover"] button p{font-size:.82rem !important;font-weight:650 !important;color:var(--kinari) !important;white-space:nowrap !important;}
+.st-key-privacy_link div[data-testid="stPopover"] button [data-testid="stIconMaterial"]{display:none !important;}
+@media (max-width:640px){.st-key-privacy_link div[data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}}
+/* Profile: your likes as compact posters with Liked / Favorite under each; even spacing around the section. */
+.st-key-profile_likes [class*="st-key-selection_card_p"]{max-width:4.4rem !important;}
+.st-key-profile_likes [data-testid="stHorizontalBlock"]{gap:.5rem !important;}
+.st-key-profile_likes .sel-cap{margin-top:.25rem !important;}
+.profile-likes-head{margin:1.8rem 0 .15rem !important;}
+.profile-likes-copy{margin:0 0 .8rem !important;}
+.st-key-profile_add_likes{margin:.6rem 0 1.4rem !important;}
+/* Top result: Save · Seen · Like fit on one line. */
+.st-key-movie_actions_search button p{font-size:.8rem !important;white-space:nowrap !important;}
+
+/* ==== Batch 70 ==== */
+/* Movie search: the searched movie, large, like Tonight's Show. */
+.st-key-search_hero{border:1px solid var(--border) !important;border-radius:18px !important;background:rgba(255,255,255,.02) !important;
+    padding:1.1rem 1.2rem !important;margin:.4rem 0 1.4rem !important;}
+.st-key-search_hero .shero-poster img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:12px;border:1px solid var(--border);display:block;}
+.st-key-search_hero .shero-title{font-family:var(--ui-font);font-size:1.55rem;font-weight:760;letter-spacing:-.025em;color:var(--ivory);line-height:1.15;margin:0 0 .3rem;}
+.st-key-search_hero .shero-meta{font-family:var(--ui-font);font-size:.76rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 .45rem;}
+.st-key-search_hero .shero-line{font-family:var(--ui-font);font-size:.84rem;color:var(--muted);margin:0 0 .25rem;}
+.st-key-search_hero .shero-story{font-family:var(--ui-font);font-size:.88rem;color:var(--muted);line-height:1.45;margin:.45rem 0 .7rem;max-width:40rem;}
+.st-key-search_hero_why{width:auto !important;margin:0 0 .7rem !important;}
+.st-key-search_hero_why div[data-testid="stPopover"] button{width:auto !important;height:2rem !important;min-height:2rem !important;padding:0 .85rem !important;
+    border-radius:999px !important;border:1px solid rgba(139,125,58,.55) !important;background:rgba(139,125,58,.1) !important;}
+.st-key-search_hero_why div[data-testid="stPopover"] button p{font-size:.84rem !important;font-weight:700 !important;color:var(--kinari) !important;white-space:nowrap !important;}
+.st-key-search_hero_actions{max-width:40rem !important;}
+.st-key-search_hero_actions button{height:2.6rem !important;min-height:2.6rem !important;border-radius:999px !important;}
+.st-key-search_hero_actions button p{font-size:.86rem !important;font-weight:650 !important;white-space:nowrap !important;}
+.st-key-search_hero_actions .shero-ask{font-family:var(--ui-font);font-size:.92rem;font-weight:700;color:var(--kinari);line-height:2.6rem;}
+.shero-done{display:flex;align-items:center;gap:.7rem;padding:.55rem .8rem;margin:.4rem 0 1.1rem;border:1px solid var(--border);border-radius:14px;
+    background:rgba(255,255,255,.02);max-width:30rem;}
+.shero-done img{width:2rem;aspect-ratio:2/3;object-fit:cover;border-radius:5px;}
+.shero-done-title{font-family:var(--ui-font);font-size:.92rem;font-weight:700;color:var(--kinari);}
+.shero-done-state{margin-left:auto;font-family:var(--ui-font);font-size:.8rem;font-weight:650;color:var(--koke);}
+@media (max-width:640px){.st-key-search_hero_actions button{height:44px !important;min-height:44px !important;}
+    .st-key-search_hero .shero-title{font-size:1.25rem;}}
+/* Profile likes: Edit / Done at the right, × only while editing, a "+" tile to add. */
+.st-key-plike_head [data-testid="stColumn"]:last-child{display:flex !important;justify-content:flex-end !important;}
+.st-key-plike_head button{background:transparent !important;border:0 !important;box-shadow:none !important;height:2rem !important;min-height:2rem !important;}
+.st-key-plike_head button p{font-size:.88rem !important;font-weight:650 !important;color:var(--koke) !important;}
+.st-key-plike_add{position:relative !important;max-width:4.4rem !important;gap:.25rem !important;}
+.st-key-plike_add .plike-plus{aspect-ratio:2/3;border:1px dashed rgba(169,173,183,.4);border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--ui-font);font-size:1.4rem;color:var(--muted);}
+.st-key-plike_add:hover .plike-plus{border-color:var(--kinari);color:var(--kinari);}
+.st-key-plike_add .st-key-profile_add_likes{position:absolute !important;inset:0 !important;margin:0 !important;z-index:3 !important;}
+.st-key-plike_add .st-key-profile_add_likes button{width:100% !important;height:100% !important;min-height:0 !important;opacity:0 !important;padding:0 !important;}
+/* Privacy: an Apple Settings-style group, section label above, explanations in small text below. */
+.pc-section{font-family:var(--ui-font);font-size:.7rem;font-weight:740;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);margin:1.6rem 0 .4rem .2rem;}
+.st-key-privacy_card{padding:.2rem 1.1rem !important;margin-top:0 !important;}
+.st-key-privacy_card [class*="st-key-privacy_row_"]{min-height:3rem !important;justify-content:center !important;}
+.st-key-privacy_card .pc-hr{margin:0 !important;}
+.pc-footer{font-family:var(--ui-font);font-size:.76rem;color:var(--muted2);line-height:1.45;max-width:46rem;margin:.5rem .2rem 1.6rem;}
+/* Why it's here, trimmed: odds, one evidence sentence, share bars, one extra line, a pointer to Profile. */
+div[data-testid="stPopoverBody"] .why-lead{font-family:var(--ui-font);font-size:.82rem;color:var(--muted);line-height:1.45;margin:.35rem 0 0;}
+div[data-testid="stPopoverBody"] .why-models{gap:.5rem !important;}
+div[data-testid="stPopoverBody"] .why-more{font-family:var(--ui-font);font-size:.7rem;color:var(--muted2);margin-top:.7rem;}

@@ -33,7 +33,8 @@ def restore_profile(data):
         st.session_state.external_movies = dict(data.get("external_movies") or {})
         st.session_state.analytics_events = list(data.get("analytics_events") or [])[-2000:]
         st.session_state.streaming_services = list(data.get("streaming_services") or [])
-        st.session_state.mood_active = str(data.get("mood_active") or "")[:120]
+        # A reload opens your normal Showroom: a search is for this visit only, never restored.
+        st.session_state.mood_active = ""
         st.session_state.pop("mood_input", None)
         st.session_state.onboarding_complete = bool(data.get("onboarding_complete", False))
         if st.session_state.onboarding_complete:

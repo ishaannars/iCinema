@@ -78,6 +78,19 @@ def main():
             at.run(); ok &= check(at, label)
         except Exception as e:
             print(f"{label:<28} ERROR: {e}"); ok = False
+    # Movie search fork: I've Seen It -> How was it? -> Loved it.
+    try:
+        at.session_state["mood_active"] = "Inception"
+        at.session_state["mood_input"] = "Inception"
+        at.run(); ok &= check(at, "Search: movie hero")
+        fs = [b for b in at.button if (b.key or "") == "fork_seen"]
+        if fs:
+            fs[0].click().run(); ok &= check(at, "Search: I've Seen It")
+            fl = [b for b in at.button if (b.key or "") == "fork_loved"]
+            if fl:
+                fl[0].click().run(); ok &= check(at, "Search: Loved it")
+    except Exception as e:
+        print(f"{'Search fork':<28} ERROR: {e}"); ok = False
     # Tap a token's words to edit it, then Skip a card and Undo it from the art's corner.
     edits = [b for b in at.button if (b.key or "").startswith("mood_edit_")]
     if edits:

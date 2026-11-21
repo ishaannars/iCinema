@@ -91,7 +91,7 @@ def test_stylesheet_ships_in_whole_rules_under_the_size_limit():
 
 def test_a_movie_search_is_one_focused_answer():
     src = (ROOT / "app.py").read_text()
-    assert '"movie": {"tokens": "Like X, editable", "tonight": None' in src
+    assert '"movie": {"tokens": "X, editable", "tonight": None' in src
     assert "like Inception”\"" not in src
 
 
@@ -110,9 +110,56 @@ def test_new_styles_only_touch_what_they_name():
     css = (ROOT / "src" / "ui" / "styles.css").read_text()
     block = re.sub(r"/\*.*?\*/", "", css[css.index("/* ==== Batch 60"):], flags=re.S)
     own = (r'\.st-key-|\[class\*="st-key-|\.(q-|step2|ready|search-|selection|sel-|pcard|genre|hero|home|live-hit|'
-           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-)')
+           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-)')
     allowed = {"body:has(.q-block) .block-container"}
     for group in re.findall(r"([^{}]+)\{", block):
         for sel in (x.strip() for x in group.split(",")):
             if sel and not sel.startswith("@") and sel not in allowed:
                 assert re.search(own, sel), f"unscoped CSS selector: {sel}"
+
+
+def test_title_search_puts_the_known_movie_first():
+    from src.tmdb_catalog import rank_search_results
+    items = [{"title": "Bikini Inception", "vote_count": 12}, {"title": "Inception: The Cobol Job", "vote_count": 140},
+             {"title": "Inception", "vote_count": 38000}, {"title": "The Crack: Inception", "vote_count": 300},
+             {"title": "Inception of Seeing", "vote_count": 150}]
+    out = [i["title"] for i in rank_search_results(items, "inception")]
+    assert out[0] == "Inception" and "Bikini Inception" not in out
+    assert out[1] == "The Crack: Inception"
+
+
+def test_a_reload_opens_the_normal_showroom():
+    """A search is for this visit only: it isn't saved, and a restored profile starts with no search."""
+    app = (ROOT / "app.py").read_text()
+    snap = app[app.index("def profile_snapshot"):app.index("def _snapshot_signature")]
+    assert "mood_active" not in snap
+    assert 'st.session_state.mood_active = ""' in (ROOT / "src" / "app_state.py").read_text()
+
+
+def test_one_why_popup_for_cards_and_tonight():
+    src = (ROOT / "app.py").read_text()
+    assert src.count("why_popup_html(") >= 3          # the definition, every card, and Tonight's Show
+    assert "Models behind this pick" in src
+
+
+def test_movie_search_asks_the_one_question_that_tells_two_people_apart():
+    src = (ROOT / "app.py").read_text()
+    assert "Save to Watch" in src and "I’ve Seen It" in src and "How was it?" in src
+    assert "def _fork_answer(title, movie, value):" in src
+
+
+def test_like_blend_test_orders_by_both_ranks():
+    """The blend in training/confirm_like_blend.py: w=0 keeps closest first, w=1 is pure fit."""
+    import ast
+    import numpy as np
+    src = (ROOT / "training" / "confirm_like_blend.py").read_text()
+    ns = {"np": np}
+    for node in ast.parse(src).body:
+        if isinstance(node, ast.FunctionDef) and node.name in ("ranks01", "blend_order"):
+            exec(compile(ast.Module([node], []), "blend", "exec"), ns)
+    near = np.array([10, 11, 12])
+    close, fit = np.array([0.9, 0.5, 0.1]), np.array([0.1, 0.2, 0.9])
+    assert list(ns["blend_order"](near, close, fit, 0.0)) == [10, 11, 12]
+    assert list(ns["blend_order"](near, close, fit, 1.0)) == [12, 11, 10]
+    src_app = (ROOT / "app.py").read_text()
+    assert "_like_blend_weight()" in src_app and "like_blend_confirm.json" in src_app
