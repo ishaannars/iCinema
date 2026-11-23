@@ -114,7 +114,11 @@ def seen_thumbs_ship():
     import json
     from pathlib import Path
     try:
-        return bool(json.loads((Path(__file__).resolve().parent.parent / "data" / "seen_thumbs_confirm.json").read_text()).get("ship"))
+        r = json.loads((Path(__file__).resolve().parent.parent / "data" / "seen_thumbs_confirm.json").read_text())
+        # Version 1's simulated models scored at chance (AUC ~0.5), so its "pass" had no power to detect harm.
+        # Only a result whose baseline actually works (AUC >= 0.55) counts.
+        auc_a = float(((r.get("auc") or {}).get("saves_and_skips")) or 0)
+        return bool(r.get("ship")) and auc_a >= 0.55
     except Exception:
         return False
 

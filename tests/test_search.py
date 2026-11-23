@@ -175,7 +175,9 @@ def test_seen_thumbs_train_the_personal_model_only_after_their_test():
         if existed:
             path.unlink()
         assert ml.seen_thumbs_ship() is False                       # no result yet: thumbs don't train it
-        path.write_text(json.dumps({"ship": True}))
+        path.write_text(json.dumps({"ship": True, "auc": {"saves_and_skips": 0.49}}))
+        assert ml.seen_thumbs_ship() is False                       # a chance-level baseline can't count
+        path.write_text(json.dumps({"ship": True, "auc": {"saves_and_skips": 0.68}}))
         assert ml.seen_thumbs_ship() is True
     finally:
         if existed:
@@ -190,3 +192,11 @@ def test_movie_plus_mood_stays_inside_the_movie_matches():
     assert "if _mood is not None and top_all and not _like_source():" in src
     assert "Movie + mood (\"Inception\" + \"Funny\")" in src
     assert '"like":  {"tokens": "X + mood, editable", "tonight": None, "top_result": True' in src
+
+
+def test_meaning_search_only_runs_after_its_test():
+    import src.mood as mood
+    mood._embed.cache_clear()
+    if not (ROOT / "data" / "mood_embed_confirm.json").exists():
+        assert mood._embed() is None
+    assert "def _meaning(query):" in (ROOT / "src" / "mood.py").read_text()

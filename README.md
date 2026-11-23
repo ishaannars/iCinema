@@ -10,7 +10,7 @@ I built iCinema because I had this recurring problem of spending too much time d
 
 | At a glance | |
 |---|---|
-| Problem | Viewers spend about 10.5 minutes per session deciding what to watch (Nielsen, *State of Play*, 2023). |
+| Problem | US viewers spend about 12 minutes per session deciding what to watch, up from 10.5 in 2023 (Gracenote, a Nielsen company, *State of Play* 2025). |
 | What it does | Two quick steps, then one best pick tonight on your services, with a calibrated chance you'll love it. Search by mood, length, or a movie. |
 | Proof | First pick loved by 80 in 1,000 test viewers vs 54 in 1,000 for the most popular movie (+48%), on 3,000 MovieLens viewers it never saw. |
 | Models | Ten, each kept only if it beat a simpler baseline on held-out viewers. The losses are in [What I tried that lost](#what-i-tried-that-lost). |
@@ -237,11 +237,25 @@ python -m pytest -q
 
 To rebuild every model and number with one command, download MovieLens 32M into `ml-32m/` and run `python reproduce.py --data-dir ml-32m`. It runs each script in `training/` in order (the list is at the top of `reproduce.py`), then `tools/refresh_results.py`. The live test is scored with `python tools/interleave_report.py --api`.
 
+## Why this problem
+
+Three questions every project has to pass before it's built: is the problem painful, does it recur, and do many people share it?
+
+| Question | Evidence |
+|---|---|
+| **Painful?** | 46% of streaming viewers say the number of services makes it harder to find something to watch, and 49% say they'd cancel a service if they can't (Gracenote 2025, 3,000 viewers in six countries). |
+| **Recurring?** | It happens every session: about 12 minutes of browsing each time in the US, 16 minutes for 18–34s (Gracenote 2025). |
+| **Shared?** | US streamers pay for about 4 services on average (Deloitte 2025), and 66% want one guide that tells them where something is, whatever service it's on (Gracenote 2025). |
+
+## Recent test results
+
+- **"More Like X," tuned to your taste: shipped.** On 3,000 held-out viewers, ordering by closeness (80%) plus your fit (20%) beat closeness alone: NDCG@10 0.1019 vs 0.0992 (+2.75%, 95% interval +0.0002 to +0.0053), keeping 98.8% of the closeness. Reported because it matters: the first pick was loved slightly less often (11.1% vs 12.1%); the gain is across the top 10, not the first slot. Weight chosen on separate validation viewers (0.2 vs 0.4 and 0.6).
+- **Seen thumbs teaching the personal model: inconclusive, being rerun.** Version 1 of the simulation "passed" its no-worse rule (+0.017 AUC, interval +0.012 to +0.023), but both arms scored about 0.5 AUC, which is chance, so it couldn't have detected harm. I don't count it. Version 2 (`training/confirm_seen_thumbs.py`) gives the simulated model real signals and adds a validity rule set before running: the saves-and-skips model must reach 0.55 AUC, or nothing ships. Until then, thumbs teach the fans model only.
+
 ## Waiting on a test
 
-- **Seen thumbs teaching the personal model.** `training/confirm_seen_thumbs.py` simulates it on held-out MovieLens viewers (there are no real users yet): thumbs join only if the personal model's held-out AUC stays within one point (lower end of the 95% interval above -0.01). Until then, thumbs teach the fans model only.
-
-- **"More Like X," tuned to your taste.** `training/confirm_like_blend.py` checks whether ordering by closeness *and* your fit beats closeness alone on 3,000 held-out viewers (2% bar, 95% interval above zero, and the top 10 must keep 90% of the closeness). The app reads its result; until it ships, the shelf stays closest first.
+- **Mood search with meaning.** `training/confirm_mood_embed.py` adds a small word-embedding model (model2vec) to fan-tag search, so "cozy" can find "heartwarming." It ships only if it's no worse overall (within 2 points of recall@50) **and** better on rare words, both at 97.5% intervals.
+- **SASRec (sequence model) as a ranker input.** After launch.
 
 ## Coming next
 

@@ -43,9 +43,48 @@ def _scores(query):
     return np.asarray(M @ (q / np.linalg.norm(q))).ravel()
 
 
+EMBED = PATH.parent / "mood_embed.npz"
+EMBED_RESULT = PATH.parent / "mood_embed_confirm.json"
+
+
+@lru_cache(maxsize=1)
+def _embed():
+    """Movie and word vectors from training/confirm_mood_embed.py, only if its held-out test passed."""
+    import json
+    try:
+        if not json.loads(EMBED_RESULT.read_text()).get("ship") or not EMBED.exists():
+            return None
+        d = np.load(EMBED)
+        words_ = [str(w) for w in d["words"]]
+        return d["movies"].astype(np.float32), {w: i for i, w in enumerate(words_)}, d["word_vecs"].astype(np.float32)
+    except Exception:
+        return None
+
+
+@lru_cache(maxsize=64)
+def _meaning(query):
+    e = _embed()
+    if e is None:
+        return None
+    movies, index, vecs = e
+    hits = [vecs[index[w]] for w in words(query) if w in index]
+    if not hits:
+        return None
+    q = np.mean(hits, axis=0)
+    norm = float(np.linalg.norm(q))
+    return movies @ (q / norm) if norm else None
+
+
 def scores(query):
-    """Match of every movie (rows of data/cf_knn.npz) to the words, or None if no word is known."""
-    return _scores(" ".join(words(query)))
+    """Match of every movie (rows of data/cf_knn.npz) to the words, or None if no word is known.
+    Fan-tag TF-IDF; if the meaning test passed, half TF-IDF and half word-meaning, exactly as tested."""
+    q = " ".join(words(query))
+    s, m = _scores(q), _meaning(q)
+    if m is None:
+        return s
+    if s is None:
+        return np.clip(m, 0, None)
+    return 0.5 * s + 0.5 * np.clip(m, 0, None)
 
 
 def top_rows(query, k=150):
