@@ -43,7 +43,7 @@ def render_home(ctx):
         stats.append((f"{max(ece * 100, 0.1):.1f} pts", "average error in our odds",
                       "each “chance you’ll love it” vs what test viewers did"))
     if isinstance(tested, int):
-        stats.append(("10 models", "each beat a baseline", f"on {tested:,} viewers they never saw"))
+        stats.append(("10 + 1 models", "10 pick, 1 sets the odds", f"each beat a baseline on {tested:,} viewers they never saw"))
     if stats:
         st.markdown('<div class="home-stats">' + "".join(
             f'<div class="home-stat"><div class="home-stat-num">{html.escape(n)}</div>'

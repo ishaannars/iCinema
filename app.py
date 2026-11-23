@@ -1506,25 +1506,11 @@ def render_shelf_fragment():
         if search_query.strip():
             if matches:
                 st.markdown(f'<div class="search-results-label">{"Did you mean" if did_you_mean else "Matching titles"}</div>', unsafe_allow_html=True)
-                # Same look as the Showroom search: a poster, then its title as the tap target.
+                # Same tiles as the Showroom search and cards: wide key art with the title in it; tap to pick.
                 with st.container(key="step1_hits"):
-                    result_cols = st.columns(6, gap="small")
-                    for j, movie in enumerate(matches[:12]):
-                        title = movie["title"]
-                        year_label = f" ({movie['year']})" if movie.get("year") else ""
-                        selected_movie = st.session_state.search_selected_movie
-                        selected = bool(selected_movie and selected_movie.get("tmdb_id") == movie.get("tmdb_id") and movie.get("tmdb_id") is not None)
-                        with result_cols[j % 6]:
-                            _p = str(movie.get("poster_url") or "")
-                            st.markdown(f'<div class="live-hit{" on" if selected else ""}">'
-                                        + (f'<img src="{html.escape(_p, quote=True)}" alt="">' if _p.startswith("https://")
-                                           else '<div class="live-hit-blank">iCinema</div>') + '</div>'
-                                        + f'<div class="hit-cap">{html.escape(title)}'
-                                        + (f'<span>{html.escape(str(movie["year"]))}</span>' if movie.get("year") else "") + '</div>',
-                                        unsafe_allow_html=True)
-                            st.button(f"{title}{year_label}"[:42], key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
-                                      type="primary" if selected else "secondary", use_container_width=True,
-                                      on_click=select_search_result, args=(movie,))
+                    _sel = st.session_state.search_selected_movie
+                    _render_search_tiles(matches[:8], "search_result", lambda m: (m,), select_search_result,
+                                         selected_id=(_sel or {}).get("tmdb_id"))
 
             if already_selected_matches:
                 selected_name = already_selected_matches[0]["title"]
@@ -2084,6 +2070,8 @@ def _fork_answer(title, movie, value):
         record_event(st.session_state, "seen_loved" if value == 1 else "seen_disliked", title,
                      _current_recommendation_context(title))
     st.session_state.seen_rating = rated
+    if value != 1:
+        st.session_state.likes.discard(title)             # changed from "Loved it": it stops counting as a like
     if value == 1:
         if movie and (movie.get("external") or movie.get("tmdb_id")) and not get_movie(title, {}):
             st.session_state.external_movies[title] = dict(movie)
@@ -2128,8 +2116,11 @@ def render_top_result(row_name=None, row_index=None, beside=None):
         # Already answered: one quiet line, so the matches below are the focus.
         state = ("Loved it" if (liked or rating == 1) else "Not for me" if rating == -1 else "Seen")
         thumb = f'<img src="{html.escape(poster, quote=True)}" alt="">' if poster.startswith("https://") else ""
-        st.markdown(f'<div class="shero-done">{thumb}<span class="shero-done-title">{name}</span>'
-                    f'<span class="shero-done-state">{html.escape(state)}</span></div>', unsafe_allow_html=True)
+        with st.container(key="shero_done_row"):
+            st.markdown(f'<div class="shero-done">{thumb}<span class="shero-done-title">{name}</span>'
+                        f'<span class="shero-done-state">{html.escape(state)}</span></div>', unsafe_allow_html=True)
+            # Change your answer: the "How was it?" question comes back in place.
+            st.button("Change", key="fork_change", help="Change your answer", on_click=_fork_seen, args=(title,))
         return
 
     with st.container(key="search_hero"):
@@ -2605,17 +2596,26 @@ def _render_live_suggestions(typed):
     if not hits:
         return
     st.markdown(f'<div class="live-hits-label">Movies titled “{html.escape(q[:40])}”</div>', unsafe_allow_html=True)
-    cols = st.columns(6, gap="small")
-    for k, m in enumerate(hits):
-        with cols[k]:
-            st.markdown(f'<div class="live-hit"><img src="{html.escape(str(m["poster_url"]), quote=True)}" alt=""></div>'
-                        f'<div class="hit-cap">{html.escape(str(m["title"]))}'
-                        + (f'<span>{html.escape(str(m["year"]))}</span>' if m.get("year") else "") + '</div>',
-                        unsafe_allow_html=True)
-            label = f'{m["title"]}' + (f' ({m["year"]})' if m.get("year") else "")
-            exact = f'{m["title"]} ({m["year"]})' if m.get("year") else m["title"]
-            st.button(label[:60], key=f"live_hit_{k}", use_container_width=True, help=label, on_click=_commit_exact,
-                      args=(("like " + exact) if spec.get("like") else exact, m))
+    _render_search_tiles(hits[:4], "live_hit", lambda m: (("like " if spec.get("like") else "")
+                         + (f'{m["title"]} ({m["year"]})' if m.get("year") else m["title"]), m), _commit_exact)
+
+
+def _render_search_tiles(movies, key, args_for, on_click, selected_id=None):
+    """Search results drawn exactly like Showroom cards: the same wide key art with the title in it,
+    four across. The whole tile is the button (each tile is its own keyed box, so the tap area is exact)."""
+    keys = tuple((m["title"], int(m.get("year") or 0), int(m.get("tmdb_id") or 0)) for m in movies)
+    art = get_landscape_batch(keys) if keys else {}
+    cols = st.columns(4, gap="small")
+    for k, m in enumerate(movies):
+        with cols[k % 4]:
+            with st.container(key=f"hit_tile_{key}_{k}"):
+                on = selected_id is not None and m.get("tmdb_id") == selected_id
+                st.markdown(f'<div class="hit-art{" on" if on else ""}">'
+                            + movie_thumb(dict(m, year=""), art.get(m["title"]) or m.get("poster_url"), landscape=True, return_html=True)
+                            + '</div>', unsafe_allow_html=True)
+                label = m["title"] + (f' ({m["year"]})' if m.get("year") else "")
+                st.button(label[:60], key=f"{key}_{k}_{m.get('tmdb_id') or m['title']}", help=label,
+                          on_click=on_click, args=args_for(m))
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -2824,6 +2824,15 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
         for n, t, sh in mix[:3])
     if len(mix) == 1 and mix[0][0] == "What it’s like":
         lead_line = "Too new or too rare for fan data yet, so it’s matched on genres and fan tags."
+    # Which of the 11 models touched this pick: the bars, the models inside the ranker, and the odds model.
+    _ids = {"calibration"}
+    for n, _t, _sh in mix:
+        _ids |= {"Fans like you": ({"ranker", "item-kNN", "RP3beta", "EASE"} if payload.get("cf_source") == "ranker" else {"item-kNN"}),
+                 "What you liked last": {"markov"}, "What it’s like": {"content"}, "Your choices": {"personal"},
+                 "New releases": {"ridge"}, "Mood search": {"mood"}}.get(n, set())
+    used_line = (f"{len(_ids)} of 11 models shaped this pick"
+                 + (" (the fan ranker blends item-kNN, RP3beta and EASE)" if payload.get("cf_source") == "ranker" else "")
+                 + ", and a calibration model turns the score into your odds.")
     extra = None
     if fans_reason:
         extra = (fans_reason["label"], fans_reason.get("text") or "")
@@ -2844,7 +2853,7 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
             + (f'<div class="why-models-label">What decided this pick</div><div class="why-models">{models}</div>' if models else "")
             + (f'<div class="why-extra"><strong>{html.escape(extra[0])}</strong>'
                + (f' · {html.escape(extra[1])}' if extra[1] else "") + '</div>' if extra else "")
-            + '<div class="why-more">Each bar is that model’s share of this pick. Point at one for the method; Profile explains them all.</div>')
+            + f'<div class="why-more">{html.escape(used_line)} Each bar is that model’s share; point at one for its method.</div>')
 
 
 def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):

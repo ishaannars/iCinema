@@ -92,5 +92,7 @@ F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History a
 - The variety step is off: every setting cost 2.6 to 4.1 points of loved-in-top-10.
 - The learned ranker runs from exported decision-tree arrays (`data/ltr_trees.npz`), identical to the scikit-learn model to 1e-16, so library updates cannot switch it off.
 - The love chance on cards now reads each movie's rank among the 600 most-loved movies you haven't marked, by the fans-like-you score: the exact footing its calibration test used. It used to read the rank among the app's own candidate pool, which isn't what the table was fit on.
+- Seen thumbs now also train the personal model (simulation on held-out viewers: AUC 0.657 to 0.668; version 1 of that test was at chance and wasn't counted).
+- Word-embedding meaning in mood search was tested and lost (recall@50 63.8% to 59.8%); mood search stays on fan tags.
 - Holm-Bonferroni correction across all stored tests: 13 of 14 significant results survive (`tools/multiple_testing.py`).
 - A weekly canary (`tools/canary.py`) fails if any shipped model's top 10 for fixed viewers changes by more than 3 titles.

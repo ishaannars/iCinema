@@ -5408,3 +5408,41 @@ div[data-testid="stPopoverBody"] .why-more{font-family:var(--ui-font);font-size:
 /* The answered search movie: "Loved it" as a moss pill. */
 .shero-done-state{padding:.3rem .8rem;border-radius:999px;border:1px solid rgba(139,125,58,.6);background:rgba(139,125,58,.14);
     color:var(--kinari) !important;font-size:.78rem !important;font-weight:700 !important;white-space:nowrap;}
+
+/* ==== Batch 77 ==== */
+/* Search results: Showroom-style wide art, the whole tile is the button (its own keyed box). */
+[class*="st-key-hit_tile_"]{position:relative !important;gap:0 !important;cursor:pointer;}
+[class*="st-key-hit_tile_"] .hit-art .poster{margin:0 !important;}
+[class*="st-key-hit_tile_"] [class*="st-key-live_hit_"],[class*="st-key-hit_tile_"] [class*="st-key-search_result_"]{
+    position:absolute !important;inset:0 !important;z-index:4 !important;margin:0 !important;}
+[class*="st-key-hit_tile_"] div.stButton,[class*="st-key-hit_tile_"] div.stButton > button{width:100% !important;height:100% !important;
+    min-height:0 !important;max-height:none !important;}
+[class*="st-key-hit_tile_"] div.stButton > button{opacity:0 !important;border:0 !important;padding:0 !important;}
+[class*="st-key-hit_tile_"]:hover .hit-art .poster{outline:2px solid var(--kinari);outline-offset:2px;border-radius:12px;}
+.hit-art.on .poster{outline:2px solid var(--koke);outline-offset:2px;border-radius:12px;}
+/* The answered search movie: one row, "Change" as a quiet text button on the right. */
+.st-key-shero_done_row{position:relative !important;max-width:34rem !important;gap:0 !important;}
+.st-key-shero_done_row .shero-done{max-width:none;padding-right:6.2rem;}
+.st-key-shero_done_row .st-key-fork_change{position:absolute !important;right:6.6rem !important;top:50% !important;transform:translateY(-50%);
+    width:auto !important;margin:0 !important;z-index:3;}
+.st-key-shero_done_row .st-key-fork_change button{background:transparent !important;border:0 !important;box-shadow:none !important;
+    height:2rem !important;min-height:2rem !important;padding:0 .4rem !important;}
+.st-key-shero_done_row .st-key-fork_change button p{font-size:.8rem !important;font-weight:650 !important;color:var(--muted) !important;}
+.st-key-shero_done_row .st-key-fork_change button:hover p{color:var(--kinari) !important;}
+/* Why it's here: every piece of text in its own soft bubble, centered and evenly spaced. */
+div[data-testid="stPopoverBody"] .why-pop-head{display:inline-flex;align-items:center;justify-content:center;padding:.45rem .9rem;border-radius:999px;
+    border:1px solid rgba(139,125,58,.55);background:rgba(139,125,58,.12);font-size:.95rem !important;margin:.35rem 0 .2rem;}
+div[data-testid="stPopoverBody"] .why-lead{padding:.6rem .8rem;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--border);
+    margin:.55rem 0 0 !important;text-align:left;}
+div[data-testid="stPopoverBody"] .why-model{padding:.5rem .75rem .55rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);}
+div[data-testid="stPopoverBody"] .why-model-top{align-items:center !important;}
+div[data-testid="stPopoverBody"] .why-model-pct{display:inline-flex;align-items:center;justify-content:center;min-width:2.9rem;padding:.15rem .5rem;
+    border-radius:999px;background:rgba(139,125,58,.16);font-size:.76rem !important;}
+div[data-testid="stPopoverBody"] .why-model-bar{margin:.4rem 0 0 !important;}
+div[data-testid="stPopoverBody"] .why-extra{padding:.55rem .8rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border) !important;
+    margin-top:.7rem !important;}
+div[data-testid="stPopoverBody"] .why-more{text-align:center;margin-top:.75rem !important;line-height:1.45;}
+/* Profile: the heading sits clear of the tabs, and the gap to the first section matches the rest of the page. */
+.profile-wrap.pf{padding-top:.6rem !important;}
+.profile-wrap.pf .pf-readout{margin-top:.7rem !important;}
+.profile-wrap.pf .pf-readout + .pf-section,.profile-wrap.pf .pf-section:first-of-type{margin-top:1.4rem !important;padding-top:1.2rem !important;}

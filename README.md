@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-**Your next great watch, across every service.** Ten tested models turn two quick steps and tonight's mood into a ranked pick, where to stream it, and the odds you'll love it. First pick loved 48% more often than the most popular movie, on 3,000 movie fans the models never saw. No account needed.
+**Your next great watch, across every service.** Ten tested recommendation models, plus a calibrated model for the odds, turn two quick steps and tonight's mood into a ranked pick, where to stream it, and the odds you'll love it. First pick loved 48% more often than the most popular movie, on 3,000 movie fans the models never saw. No account needed.
 
 I built iCinema because I had this recurring problem of spending too much time deciding what to watch. Every model in it was tested on viewers it had never seen before it shipped, and the ones that didn't beat a simple baseline are reported below too.
 
@@ -13,7 +13,7 @@ I built iCinema because I had this recurring problem of spending too much time d
 | Problem | US viewers spend about 12 minutes per session deciding what to watch, up from 10.5 in 2023 (Gracenote, a Nielsen company, *State of Play* 2025). |
 | What it does | Two quick steps, then one best pick tonight on your services, with a calibrated chance you'll love it. Search by mood, length, or a movie. |
 | Proof | First pick loved by 80 in 1,000 test viewers vs 54 in 1,000 for the most popular movie (+48%), on 3,000 MovieLens viewers it never saw. |
-| Models | Ten, each kept only if it beat a simpler baseline on held-out viewers. The losses are in [What I tried that lost](#what-i-tried-that-lost). |
+| Models | Ten recommendation models plus a calibrated model for the odds, each kept only if it beat a simpler baseline on held-out viewers. The losses are in [What I tried that lost](#what-i-tried-that-lost). |
 | Stack | Python · Streamlit · NumPy · SciPy · scikit-learn · MovieLens 32M · Amazon Reviews 2023 · Wikidata · TMDB (display only) |
 
 ## Results
@@ -250,11 +250,11 @@ Three questions every project has to pass before it's built: is the problem pain
 ## Recent test results
 
 - **"More Like X," tuned to your taste: shipped.** On 3,000 held-out viewers, ordering by closeness (80%) plus your fit (20%) beat closeness alone: NDCG@10 0.1019 vs 0.0992 (+2.75%, 95% interval +0.0002 to +0.0053), keeping 98.8% of the closeness. Reported because it matters: the first pick was loved slightly less often (11.1% vs 12.1%); the gain is across the top 10, not the first slot. Weight chosen on separate validation viewers (0.2 vs 0.4 and 0.6).
-- **Seen thumbs teaching the personal model: inconclusive, being rerun.** Version 1 of the simulation "passed" its no-worse rule (+0.017 AUC, interval +0.012 to +0.023), but both arms scored about 0.5 AUC, which is chance, so it couldn't have detected harm. I don't count it. Version 2 (`training/confirm_seen_thumbs.py`) gives the simulated model real signals and adds a validity rule set before running: the saves-and-skips model must reach 0.55 AUC, or nothing ships. Until then, thumbs teach the fans model only.
+- **Seen thumbs teaching the personal model: shipped (simulation).** Version 1 "passed" but both arms scored about 0.5 AUC (chance), so it couldn't have detected harm, and I didn't count it. Version 2 gave the simulated personal model real signals and a validity rule set before running (the saves-and-skips model must reach 0.55 AUC). It did: 0.657. Adding Seen thumbs raised AUC to 0.668 (+0.011, 95% interval +0.007 to +0.016) on 2,026 held-out MovieLens viewers, clearing the no-worse rule and landing above zero. It's a simulation until real users exist; thumbs now also teach the personal model.
+- **Mood search with meaning: didn't ship.** Adding a word-embedding model (model2vec potion-base-8M) to fan-tag search lowered recall@50 from 63.8% to 59.8% (−3.95 points, 97.5% interval −5.5 to −2.4) and didn't help rare words (53.1% vs 52.5%, interval −3.9 to +2.8). Fans' own tag words beat general word meaning for finding movies, so mood search stays on fan tags.
 
 ## Waiting on a test
 
-- **Mood search with meaning.** `training/confirm_mood_embed.py` adds a small word-embedding model (model2vec) to fan-tag search, so "cozy" can find "heartwarming." It ships only if it's no worse overall (within 2 points of recall@50) **and** better on rare words, both at 97.5% intervals.
 - **SASRec (sequence model) as a ranker input.** After launch.
 
 ## Coming next
