@@ -109,6 +109,16 @@ def _features_from_context(ctx):
     ]
 
 
+def seen_thumbs_ship():
+    """Seen thumbs train the personal model only if their held-out test passed (data/seen_thumbs_confirm.json)."""
+    import json
+    from pathlib import Path
+    try:
+        return bool(json.loads((Path(__file__).resolve().parent.parent / "data" / "seen_thumbs_confirm.json").read_text()).get("ship"))
+    except Exception:
+        return False
+
+
 def _joined_examples(events):
     """Return explicit preference labels joined to their first session impression.
 
@@ -131,15 +141,16 @@ def _joined_examples(events):
             continue
         impressions.setdefault(key, e)
 
+    labeled = {"save", "skip", "dislike"} | ({"seen_loved", "seen_disliked"} if seen_thumbs_ship() else set())
     for e in events:
         typ = str(e.get("event") or "").lower()
-        if typ not in {"save", "skip", "dislike"}:
+        if typ not in labeled:
             continue
         key = (e.get("session_id"), e.get("title"))
         if not all(key):
             continue
         labels[key] = {
-            "label": 1 if typ == "save" else 0,
+            "label": 1 if typ in {"save", "seen_loved"} else 0,
             # An explicit "Not for me" is a more certain negative than a Skip.
             "weight": 2.0 if typ == "dislike" else 1.0,
             "timestamp": _safe_float(e.get("timestamp"), 0.0),

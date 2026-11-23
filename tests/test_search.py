@@ -110,7 +110,7 @@ def test_new_styles_only_touch_what_they_name():
     css = (ROOT / "src" / "ui" / "styles.css").read_text()
     block = re.sub(r"/\*.*?\*/", "", css[css.index("/* ==== Batch 60"):], flags=re.S)
     own = (r'\.st-key-|\[class\*="st-key-|\.(q-|step2|ready|search-|selection|sel-|pcard|genre|hero|home|live-hit|'
-           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-|showroom-)')
+           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-|showroom-|hit-)')
     allowed = {"body:has(.q-block) .block-container"}
     for group in re.findall(r"([^{}]+)\{", block):
         for sel in (x.strip() for x in group.split(",")):
@@ -139,7 +139,7 @@ def test_a_reload_opens_the_normal_showroom():
 def test_one_why_popup_for_cards_and_tonight():
     src = (ROOT / "app.py").read_text()
     assert src.count("why_popup_html(") >= 3          # the definition, every card, and Tonight's Show
-    assert "Models behind this pick" in src
+    assert "What decided this pick" in src
 
 
 def test_movie_search_asks_the_one_question_that_tells_two_people_apart():
@@ -163,3 +163,30 @@ def test_like_blend_test_orders_by_both_ranks():
     assert list(ns["blend_order"](near, close, fit, 1.0)) == [12, 11, 10]
     src_app = (ROOT / "app.py").read_text()
     assert "_like_blend_weight()" in src_app and "like_blend_confirm.json" in src_app
+
+
+def test_seen_thumbs_train_the_personal_model_only_after_their_test():
+    import json
+    import src.ml_engine as ml
+    path = ROOT / "data" / "seen_thumbs_confirm.json"
+    existed = path.exists()
+    old = path.read_text() if existed else None
+    try:
+        if existed:
+            path.unlink()
+        assert ml.seen_thumbs_ship() is False                       # no result yet: thumbs don't train it
+        path.write_text(json.dumps({"ship": True}))
+        assert ml.seen_thumbs_ship() is True
+    finally:
+        if existed:
+            path.write_text(old)
+        elif path.exists():
+            path.unlink()
+
+
+def test_movie_plus_mood_stays_inside_the_movie_matches():
+    """'Inception' + 'Funny' must order Inception's closest matches by mood, never pull in unrelated funny films."""
+    src = (ROOT / "app.py").read_text()
+    assert "if _mood is not None and top_all and not _like_source():" in src
+    assert "Movie + mood (\"Inception\" + \"Funny\")" in src
+    assert '"like":  {"tokens": "X + mood, editable", "tonight": None, "top_result": True' in src

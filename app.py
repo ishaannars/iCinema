@@ -942,6 +942,11 @@ def rate_seen(title, value):
     rated[title] = 0 if rated.get(title) == value else value
     rated = {k: v for k, v in rated.items() if v}
     st.session_state.seen_rating = rated
+    if rated.get(title) in (1, -1):
+        # Logged like a Save or Skip, so the personal model can learn from it if its test passed
+        # (training/confirm_seen_thumbs.py); otherwise the event is kept but not used for training.
+        record_event(st.session_state, "seen_loved" if rated[title] == 1 else "seen_disliked", title,
+                     _current_recommendation_context(title))
     _lib_bump()
     queue_profile_save()
 
@@ -1513,7 +1518,10 @@ def render_shelf_fragment():
                             _p = str(movie.get("poster_url") or "")
                             st.markdown(f'<div class="live-hit{" on" if selected else ""}">'
                                         + (f'<img src="{html.escape(_p, quote=True)}" alt="">' if _p.startswith("https://")
-                                           else '<div class="live-hit-blank">iCinema</div>') + '</div>', unsafe_allow_html=True)
+                                           else '<div class="live-hit-blank">iCinema</div>') + '</div>'
+                                        + f'<div class="hit-cap">{html.escape(title)}'
+                                        + (f'<span>{html.escape(str(movie["year"]))}</span>' if movie.get("year") else "") + '</div>',
+                                        unsafe_allow_html=True)
                             st.button(f"{title}{year_label}"[:42], key=f"search_result_{j}_{movie.get('tmdb_id') or title}",
                                       type="primary" if selected else "secondary", use_container_width=True,
                                       on_click=select_search_result, args=(movie,))
@@ -2073,6 +2081,8 @@ def _fork_answer(title, movie, value):
     rated = dict(st.session_state.get("seen_rating") or {})
     if value:
         rated[title] = value
+        record_event(st.session_state, "seen_loved" if value == 1 else "seen_disliked", title,
+                     _current_recommendation_context(title))
     st.session_state.seen_rating = rated
     if value == 1:
         if movie and (movie.get("external") or movie.get("tmdb_id")) and not get_movie(title, {}):
@@ -2260,9 +2270,9 @@ def _active_chips():
     out = []
     for lab, rest in chips(_mood_text()):
         if _sp.get("lookup") and _sp.get("like") and raw_mood and lab.casefold() == raw_mood.casefold():
-            out.append((_sp['like'], rest, _sp["like"]))
+            out.append((re.sub(r"\s*\(\d{4}\)$", "", _sp['like']), rest, _sp["like"]))
         elif lab.startswith("More like "):
-            out.append((lab[len('More like '):], rest, f"like {lab[len('More like '):]}"))
+            out.append((re.sub(r"\s*\(\d{4}\)$", "", lab[len('More like '):]), rest, f"like {lab[len('More like '):]}"))
         elif mood_now and lab == " ".join(mood_now) and set(mood_now) <= preset_words:
             continue
         elif lab.startswith("Under ") and _sp.get("max") == 120:
@@ -2299,7 +2309,7 @@ SEARCH_RULE = {
               "top_picks": "personal ranking, filtered and led by the mood", "shows": "personal, filtered", "explore": True},
     "movie": {"tokens": "X, editable", "tonight": None, "top_result": True,
               "top_picks": "fans' closest to X, two lines of four", "shows": None, "explore": False},
-    "like":  {"tokens": "Like X + mood, editable", "tonight": None, "top_result": False,
+    "like":  {"tokens": "X + mood, editable", "tonight": None, "top_result": True,
               "top_picks": "fans' closest to X", "shows": None, "explore": False},
 }
 
@@ -2598,7 +2608,9 @@ def _render_live_suggestions(typed):
     cols = st.columns(6, gap="small")
     for k, m in enumerate(hits):
         with cols[k]:
-            st.markdown(f'<div class="live-hit"><img src="{html.escape(str(m["poster_url"]), quote=True)}" alt=""></div>',
+            st.markdown(f'<div class="live-hit"><img src="{html.escape(str(m["poster_url"]), quote=True)}" alt=""></div>'
+                        f'<div class="hit-cap">{html.escape(str(m["title"]))}'
+                        + (f'<span>{html.escape(str(m["year"]))}</span>' if m.get("year") else "") + '</div>',
                         unsafe_allow_html=True)
             label = f'{m["title"]}' + (f' ({m["year"]})' if m.get("year") else "")
             exact = f'{m["title"]} ({m["year"]})' if m.get("year") else m["title"]
@@ -2792,7 +2804,8 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
         "What it’s like": rows.get("Tone") or "Close to the genres and fan tags you like",
         "Your choices": rows.get("Your choices") or "Learned from your saves and skips",
         "What you liked last": "Fans who loved your most recent likes went on to love it",
-        "Mood search": "Fans tag it close to the words you searched",
+        "Mood search": (f"Fans describe it as “{_mood_spec().get('mood')}” more than most movies"
+                        if _mood_spec().get("mood") else "Fans tag it close to the words you searched"),
     }
     mix = [(n, t, sh) for n, t, sh in score_mix(payload, CONTENT_WEIGHT) if sh > 0.005]
     if any(r.get("label") == "Fits your mood" for r in reasons or []):
@@ -2801,8 +2814,11 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
     mix.sort(key=lambda x: -x[2])
     # One sentence of evidence from the model that moved the score most; the rest as share bars.
     lead_line = evidence.get(mix[0][0], "") if mix else ""
+    plain = {"Fans like you": "People with your taste", "What you liked last": "Your recent likes",
+             "What it’s like": "Its story and style", "Mood search": "Your mood", "Your choices": "Your saves and skips",
+             "New releases": "Its filmmakers"}
     models = "".join(
-        f'<div class="why-model" title="{html.escape(t)}"><div class="why-model-top"><span class="why-model-name">{html.escape(n)}</span>'
+        f'<div class="why-model" title="{html.escape(n)} · {html.escape(t)}"><div class="why-model-top"><span class="why-model-name">{html.escape(plain.get(n, n))}</span>'
         f'<span class="why-model-pct">{round(sh * 100)}%</span></div>'
         f'<div class="why-model-bar"><span style="width:{max(4, round(sh * 100))}%"></span></div></div>'
         for n, t, sh in mix[:3])
@@ -2825,10 +2841,10 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
     return (f'<div class="why-pop-kicker">Why it’s here{html.escape(kind_tag)}</div>'
             f'<div class="why-pop-head">{html.escape(odds)}</div>'
             + (f'<div class="why-lead">{html.escape(lead_line)}</div>' if lead_line else "")
-            + (f'<div class="why-models-label">Models behind this pick</div><div class="why-models">{models}</div>' if models else "")
+            + (f'<div class="why-models-label">What decided this pick</div><div class="why-models">{models}</div>' if models else "")
             + (f'<div class="why-extra"><strong>{html.escape(extra[0])}</strong>'
                + (f' · {html.escape(extra[1])}' if extra[1] else "") + '</div>' if extra else "")
-            + '<div class="why-more">How each model works: Profile tab</div>')
+            + '<div class="why-more">Each bar is that model’s share of this pick. Point at one for the method; Profile explains them all.</div>')
 
 
 def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):
@@ -3670,7 +3686,7 @@ def _render_showroom(p):
         _src0 = _like_source()
         if _src0:
             _extra_idx = list(_like_sims(_src0).keys())[:60] + _extra_idx   # the 60 closest are plenty for 7 picks
-            if _search_state() == "movie" and str(_src0.get("title", "")).casefold() not in _have2:
+            if _search_state() in ("movie", "like") and str(_src0.get("title", "")).casefold() not in _have2:
                 # The searched movie is scored like any other, so its pill is a real calibrated chance.
                 candidate_pool.append(dict(_src0, candidate_source="search"))
                 _have2.add(str(_src0.get("title", "")).casefold())
@@ -3930,8 +3946,9 @@ def _render_showroom(p):
         # Tonight's Pick: the single best personalized match, preferring the viewer's
         # own streaming services and falling back to any service when none are chosen.
         top_all=_row_candidates("Top Matches for You",set())
-        if _mood is not None and top_all:
+        if _mood is not None and top_all and not _like_source():
             # A mood re-orders Top Matches: half how well each movie fits you, half how well it fits the words.
+            # (With a movie search on, the mood is applied inside that movie's matches instead; see below.)
             import numpy as _np
             _n=len(top_all)
             _ms=[float(_mood[i]) if (i:=_cf_idx(m)) is not None else 0.0 for _,m in top_all]
@@ -3982,6 +3999,20 @@ def _render_showroom(p):
                 top_all=[_scored[i][1] for i in np.argsort(-_bs)]
             else:
                 top_all=[x for _,x in sorted(_scored,key=lambda t:(-round(t[0],3),-float(t[1][0] or 0)))]
+            if _mood is not None and top_all:
+                # Movie + mood ("Inception" + "Funny"): stay inside Inception's closest matches and order them
+                # half by closeness, half by how strongly fans tag them with the mood. Never pull in movies
+                # that aren't like the searched one.
+                _cand=top_all[:60]
+                _mv=[float(_mood[i]) if (i:=_cf_idx(m)) is not None else 0.0 for _,m in _cand]
+                _fit=[j for j in range(len(_cand)) if _mv[j]>0]
+                st.session_state._mood_thin=len(_fit)<4
+                if len(_fit)>=4:
+                    _mr={j:r for r,j in enumerate(sorted(_fit,key=lambda j:-_mv[j]))}
+                    _cr={j:r for r,j in enumerate(_fit)}
+                    top_all=[_cand[j] for j in sorted(_fit,key=lambda j:0.5*_cr[j]+0.5*_mr[j])]
+            else:
+                st.session_state._mood_thin=False
             # Shorts (under 40 minutes) can sit close to a movie in fan data but aren't what "like X" means.
             _ids12=get_movie_identity_batch(tuple((m["title"],int(m.get("year") or 0),int(m.get("tmdb_id") or 0)) for _,m in top_all[:16]))
             top_all=[x for x in top_all[:16] if int((_ids12.get(x[1]["title"]) or {}).get("runtime") or 999)>=40]+top_all[16:]
@@ -4069,7 +4100,7 @@ def _render_showroom(p):
             # One movie per series across the Showroom, so rows don't fill up with sequels.
             picks=[]
             # Movie state: Top Picks also fills the three places beside the Top result (SEARCH_RULE).
-            _want=8 if (row_name=="Top Matches for You" and _state=="movie") else 4
+            _want=8 if (row_name=="Top Matches for You" and _state in ("movie","like")) else 4
             for item in ordered:
                 if len(picks)>=_want:
                     break
@@ -4298,7 +4329,8 @@ def _render_showroom(p):
             _n_found = len(row_choices.get("Top Matches for You", []))
             if _src_now:
                 # The large card and "More Like ..." already say what the page is; only a mood filter needs a line.
-                _say = f"Matches narrowed to {_w}." if _w else None
+                _say = ((f"Few movies like {_src_now['title']} fit {_w}, so these are the closest that do." if st.session_state.get("_mood_thin")
+                         else f"Matches narrowed to {_w}.") if _w else None)
             else:
                 _say = f"Your picks, narrowed to {_w}. Clear the search to get your usual picks back."
             st.session_state._search_status = _say

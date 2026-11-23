@@ -239,6 +239,8 @@ To rebuild every model and number with one command, download MovieLens 32M into 
 
 ## Waiting on a test
 
+- **Seen thumbs teaching the personal model.** `training/confirm_seen_thumbs.py` simulates it on held-out MovieLens viewers (there are no real users yet): thumbs join only if the personal model's held-out AUC stays within one point (lower end of the 95% interval above -0.01). Until then, thumbs teach the fans model only.
+
 - **"More Like X," tuned to your taste.** `training/confirm_like_blend.py` checks whether ordering by closeness *and* your fit beats closeness alone on 3,000 held-out viewers (2% bar, 95% interval above zero, and the top 10 must keep 90% of the closeness). The app reads its result; until it ships, the shelf stays closest first.
 
 ## Coming next
