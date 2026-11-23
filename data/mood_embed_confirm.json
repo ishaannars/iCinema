@@ -1,0 +1,27 @@
+{
+ "method": "    pip install model2vec     python training/confirm_mood_embed.py --data-dir ml-32m Same split and queries as training/confirm_mood.py: taggers split 80/20 at random, 2,000 movies, each queried with three words from held-out taggers, success = the movie lands in the top 50 (recall@50). A (shipped): TF-IDF over fan tags. B: half TF-IDF, half meaning: each movie's tag words and the query are turned into vectors by a small static embedding model (model2vec potion-base-8M), compared by cosine. Rules written before running, both must pass (each at 97.5% intervals, so the two together stay at 95%): 1. No worse overall: lower end of the interval of recall@50(B) - recall@50(A) above -0.02 (2 points). 2. Better on rare words: on queries where at least two of the three words are rare (used by fewer than    20 movies' taggers), the interval of the difference is above zero. If both pass, writes data/mood_embed.npz (movie vectors plus the model's word vectors, so the app needs no model at runtime). Writes data/mood_embed_confirm.json; the app reads its \"ship\" field. ",
+ "queries": 2000,
+ "recall_at_50": {
+  "tfidf": 0.6375,
+  "tfidf_plus_meaning": 0.598
+ },
+ "overall": {
+  "diff": -0.0395,
+  "ci97_5": [
+   -0.055,
+   -0.024
+  ],
+  "margin": -0.02
+ },
+ "rare_word_queries": 179,
+ "rare": {
+  "tfidf": 0.5307,
+  "tfidf_plus_meaning": 0.5251,
+  "diff": -0.0056,
+  "ci97_5": [
+   -0.0391,
+   0.0279
+  ]
+ },
+ "ship": false
+}

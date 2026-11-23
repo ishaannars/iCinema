@@ -1,18 +1,21 @@
 {
  "method": "Simulation on held-out MovieLens viewers; see the docstring of training/confirm_seen_thumbs.py.",
- "viewers": 2014,
+ "viewers": 2026,
  "auc": {
-  "saves_and_skips": 0.4863,
-  "plus_seen_thumbs": 0.5036
+  "saves_and_skips": 0.6565,
+  "plus_seen_thumbs": 0.6677
  },
  "difference": {
-  "point": 0.0173,
+  "point": 0.0112,
   "ci95": [
-   0.0118,
-   0.023
+   0.0067,
+   0.016
   ],
   "margin": -0.01
  },
+ "baseline_valid": true,
+ "validity_rule": "saves-and-skips AUC must be at least 0.55",
+ "version": 2,
  "simulation": true,
  "ship": true
 }
