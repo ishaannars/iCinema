@@ -1,0 +1,29 @@
+{
+ "method": "    python training/confirm_like_blend.py --data-dir ml-32m Same 1-in-5 MovieLens 32M sample, time split, and 3,000 validation / 3,000 test viewers as training/confirm_like.py. Source movie X = each viewer's most recent liked movie (\"I just watched X\"). Target = the movies they went on to love (held-out ratings of 4+). Only ratings before the target period are used, so nothing from the answer key leaks into the ranking. Rules written before running:",
+ "validation_ndcg@10_by_weight": {
+  "0.2": 0.1068,
+  "0.4": 0.1055,
+  "0.6": 0.1062
+ },
+ "weight": 0.2,
+ "test_viewers": 3000,
+ "ndcg@10": {
+  "closest_first": 0.0992,
+  "blend": 0.1019
+ },
+ "hit@1": {
+  "closest_first": 0.121,
+  "blend": 0.1107
+ },
+ "blend_vs_closest": {
+  "diff": 0.0027,
+  "relative": 0.0275,
+  "ci95": [
+   0.0002,
+   0.0053
+  ]
+ },
+ "closeness_kept": 0.9878,
+ "guard_passed": true,
+ "ship": true
+}

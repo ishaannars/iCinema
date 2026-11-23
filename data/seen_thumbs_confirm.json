@@ -1,0 +1,18 @@
+{
+ "method": "Simulation on held-out MovieLens viewers; see the docstring of training/confirm_seen_thumbs.py.",
+ "viewers": 2014,
+ "auc": {
+  "saves_and_skips": 0.4863,
+  "plus_seen_thumbs": 0.5036
+ },
+ "difference": {
+  "point": 0.0173,
+  "ci95": [
+   0.0118,
+   0.023
+  ],
+  "margin": -0.01
+ },
+ "simulation": true,
+ "ship": true
+}
