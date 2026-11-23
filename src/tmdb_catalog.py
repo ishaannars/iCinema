@@ -675,3 +675,35 @@ def get_landscape_batch(movies: Tuple[Tuple[str, int, int], ...]) -> Dict[str, O
             except Exception:
                 result[futures[future]] = None
     return result
+
+
+# Official content descriptors that rating boards attach to a film's certification (TMDB stores them for
+# the Netherlands' Kijkwijzer, Finland's KAVI, Germany's FSK and others). Words that mean violence or fear.
+_DESCRIPTOR_WORDS = {
+    "violent": ("violence", "geweld", "väkivalta", "gewalt", "violencia", "violência", "şiddet"),
+    "scary": ("fear", "angst", "ahdistus", "anxiety", "horror", "medo", "korku"),
+}
+
+
+@st.cache_data(ttl=60 * 60 * 24 * 7, show_spinner=False)
+def movie_descriptors(tmdb_id: int):
+    """Lower-cased rating descriptors for one movie across every country that lists them."""
+    out = []
+    for country in (_request(f"/movie/{int(tmdb_id)}/release_dates") or {}).get("results") or []:
+        for rel in country.get("release_dates") or []:
+            out += [str(d).lower() for d in (rel.get("descriptors") or [])]
+    return tuple(sorted(set(out)))
+
+
+def flagged_by_rating_boards(tmdb_ids, avoid):
+    """{tmdb_id: True} for movies a rating board describes with what the viewer asked to avoid."""
+    words = [w for a in avoid for w in _DESCRIPTOR_WORDS.get(a, ())]
+    ids = [int(i) for i in tmdb_ids if i]
+    if not words or not ids:
+        return {}
+    flagged = {}
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for tid, desc in zip(ids, pool.map(lambda t: movie_descriptors(t), ids)):
+            if any(w in d for d in desc for w in words):
+                flagged[tid] = True
+    return flagged

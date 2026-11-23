@@ -110,7 +110,7 @@ def test_new_styles_only_touch_what_they_name():
     css = (ROOT / "src" / "ui" / "styles.css").read_text()
     block = re.sub(r"/\*.*?\*/", "", css[css.index("/* ==== Batch 60"):], flags=re.S)
     own = (r'\.st-key-|\[class\*="st-key-|\.(q-|step2|ready|search-|selection|sel-|pcard|genre|hero|home|live-hit|'
-           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-)')
+           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-|showroom-)')
     allowed = {"body:has(.q-block) .block-container"}
     for group in re.findall(r"([^{}]+)\{", block):
         for sel in (x.strip() for x in group.split(",")):

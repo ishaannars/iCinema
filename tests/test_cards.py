@@ -34,3 +34,11 @@ def test_tv_only_when_its_test_passed():
     first = ROOT / "data" / "tv_confirm.json"
     shipped = shipped or (first.exists() and json.loads(first.read_text()).get("ship"))
     assert tv.available() == bool(shipped and (ROOT / "data" / "tv_knn.npz").exists())
+
+
+def test_score_mix_shows_the_order_model_when_it_contributed():
+    from src.ui.cards import score_mix
+    mix = score_mix({"content": 0.5, "cf": 0.8, "cf_source": "ranker", "seq_parts": (0.16, 0.64)}, 0.2)
+    names = [n for n, _t, _s in mix]
+    assert names == ["Fans like you", "What you liked last", "What it’s like"]
+    assert abs(sum(s for _n, _t, s in mix) - 1) < 1e-9

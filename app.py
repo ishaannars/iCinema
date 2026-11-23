@@ -1361,15 +1361,9 @@ def _render_profile_likes():
     """Your likes, editable from the Showroom: small posters with ×, and a way to add more."""
     ss = st.session_state
     liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
-    editing = bool(ss.get("profile_likes_edit"))
-    with st.container(key="plike_head"):
-        h, e = st.columns([6, 1], vertical_alignment="center")
-        with h:
-            st.markdown('<div class="profile-likes-head">Your Likes</div>'
-                        '<div class="profile-likes-copy">Every pick starts from these.</div>', unsafe_allow_html=True)
-        with e:
-            st.button("Done" if editing else "Edit", key="profile_likes_edit_btn",
-                      on_click=lambda: ss.__setitem__("profile_likes_edit", not editing))
+    st.markdown('<div class="profile-likes-head">Your Likes</div>'
+                '<div class="profile-likes-copy">Every pick starts from these. Tap × to remove one.</div>',
+                unsafe_allow_html=True)
     if liked:
         ms = [get_movie(t, ss.external_movies) or {"title": t} for t in liked]
         need = tuple((m["title"], int(m.get("year") or 0)) for m in ms if not m.get("poster_url"))
@@ -1385,14 +1379,9 @@ def _render_profile_likes():
                                        else f'<div class="live-hit-blank">{html.escape(t[:24])}</div>')
                                     + f'</div><div class="sel-cap"><span class="sel-state">{"Favorite" if t in ss.favorites else "Liked"}</span></div>',
                                     unsafe_allow_html=True)
-                        if editing:      # × only in Edit mode, like Apple Music's library
-                            st.button("×", key=f"remove_selection_p{i}", help=("Keep at least one like" if len(liked) == 1 else f"Remove {t}"),
-                                      disabled=len(liked) == 1, on_click=_remove_like_from_profile, args=(t,))
-            with cols[len(liked) % 12]:
-                with st.container(key="plike_add"):
-                    st.markdown('<div class="plike-plus">+</div><div class="sel-cap"><span class="sel-state">Add</span></div>',
-                                unsafe_allow_html=True)
-                    st.button("Add likes", key="profile_add_likes", on_click=go, args=("shelf",), help="Pick more movies you like.")
+                        if len(liked) > 1:   # × shows when you hover a poster (always on phones); the last like stays
+                            st.button("×", key=f"remove_selection_p{i}", help=f"Remove {t}",
+                                      on_click=_remove_like_from_profile, args=(t,))
 
 
 @st.fragment
@@ -1921,6 +1910,16 @@ def _mood_spec():
     return spec
 
 
+# Words fans use for the things a viewer can ask to avoid (MovieLens tags), used by the avoid filter
+# for movies and, with the show's own keywords and rating, for shows.
+AVOID_TERMS = {
+    "violent": ["violent", "violence", "brutal", "brutality", "gore", "gory", "bloody", "graphic violence"],
+    "scary": ["scary", "horror", "creepy", "disturbing", "terrifying", "gore"],
+    "sad": ["sad", "depressing", "tearjerker", "bleak"],
+    "gory": ["gore", "gory", "bloody", "violence"],
+}
+
+
 def _avoid_filter(items, spec):
     """"not too violent", "nothing scary": drop movies fans describe that way (the closest fifth to those
     words, by the same tested mood model). Everything else keeps the models' order."""
@@ -1930,14 +1929,25 @@ def _avoid_filter(items, spec):
     from src.mood import scores, correct
     from src.cf_model import _index as _ix
     import numpy as _np
-    sc = scores(correct(" ".join(words)))
-    if sc is None:
-        return items
-    pos = sc[sc > 0]
-    if not len(pos):
-        return items
-    cut = float(_np.quantile(pos, 0.8))
-    kept = [it for it in items if (i := _ix(it[1])) is None or sc[i] < cut]
+    # Fans rarely write "violent"; they write "violence", "brutal", "gore". Every word fans use for the
+    # thing you asked to avoid counts, and a movie leaves if any of them describes it strongly.
+    sc = None
+    for w in words:
+        for term in AVOID_TERMS.get(w, [w]):
+            s = scores(correct(term))
+            if s is not None and float(s.max()) > 0:
+                sc = s if sc is None else _np.maximum(sc, s)
+    cut = float(_np.quantile(sc[sc > 0], 0.5)) if sc is not None else None   # the more strongly described half
+    # Second, independent evidence: official rating-board descriptors (e.g. Kijkwijzer "violence") for the
+    # movies near the top, so new films with few fan tags are covered too.
+    try:
+        from src.tmdb_catalog import flagged_by_rating_boards
+        boards = flagged_by_rating_boards([it[1].get("tmdb_id") for it in items[:60]], words)
+    except Exception:
+        boards = {}
+    kept = [it for it in items
+            if not boards.get(int(it[1].get("tmdb_id") or 0))
+            and (cut is None or (i := _ix(it[1])) is None or sc[i] < cut)]
     return kept if len(kept) >= 4 else items
 
 
@@ -2381,6 +2391,11 @@ def _toggle_preset(text):
     mood, mx, mn, ep, lk = spec["mood"], spec["max"], spec["min"], spec["episodes"], spec.get("like")
     av = list(spec.get("avoid") or [])
     on = _preset_active(text, spec)
+    _sp = _mood_spec()
+    if _sp.get("lookup") and _sp.get("like") and not text.startswith(("not ", "under", "like ")):
+        # A movie search plus a mood: keep the movie as "like X" so the mood filters its matches,
+        # instead of gluing the title onto the mood words ("inception (2010) funny").
+        mood, lk = "", _sp["like"]
     if text.startswith("not "):
         w = text[4:]
         av = [x for x in av if x != w] if on else av + [w]
@@ -2776,8 +2791,13 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
         "New releases": rows.get("New release") or "Made by filmmakers close to your likes",
         "What it’s like": rows.get("Tone") or "Close to the genres and fan tags you like",
         "Your choices": rows.get("Your choices") or "Learned from your saves and skips",
+        "What you liked last": "Fans who loved your most recent likes went on to love it",
+        "Mood search": "Fans tag it close to the words you searched",
     }
     mix = [(n, t, sh) for n, t, sh in score_mix(payload, CONTENT_WEIGHT) if sh > 0.005]
+    if any(r.get("label") == "Fits your mood" for r in reasons or []):
+        # In a mood search, rows are ordered half by your fit and half by the mood model's match (tested blend).
+        mix = [(n, t, sh * 0.5) for n, t, sh in mix] + [("Mood search", "fan-tag TF-IDF", 0.5)]
     mix.sort(key=lambda x: -x[2])
     # One sentence of evidence from the model that moved the score most; the rest as share bars.
     lead_line = evidence.get(mix[0][0], "") if mix else ""
@@ -3724,6 +3744,7 @@ def _render_showroom(p):
         cf_by_title={}
         personal_by_title={}
         cf_source_by_title={}
+        seq_parts_by_title={}     # (fan ranking part, liked-next part) of each movie's fan score, for "Why it's here"
         model_match_by_title={}
 
         def _safe_num(value, default=0):
@@ -3846,6 +3867,7 @@ def _render_showroom(p):
                     if cf is not None and _seq_vec is not None:
                         _si=_ci if _ci is not None else _cfix(movie)
                         if _si is not None:
+                            seq_parts_by_title[movie["title"]]=((1-_seq_w)*cf,_seq_w*float(_seq_vec[_si]))
                             cf=(1-_seq_w)*cf+_seq_w*float(_seq_vec[_si])   # tested blend: shipped ranking + liked-next
                     ml_context["cf_affinity"]=cf if cf is not None else 0.5
                     if cf is not None:
@@ -4208,6 +4230,7 @@ def _render_showroom(p):
             _cm = content_memo.get(id(_pl.get("movie")))
             _pl["content"] = float(_cm[0]) if _cm else None
             _pl["cf_source"] = cf_source_by_title.get(_t)
+            _pl["seq_parts"] = seq_parts_by_title.get(_t)
             _pl["cf_name"] = _cf_name
             _pl["personal_n"] = int(learning_result.samples or 0) if getattr(learning_result, "ready", False) else 0
             _sv = _pl.get("semantic_similarity")
@@ -4357,7 +4380,8 @@ def _render_showroom(p):
             from src.ui.shows import render_shows
             render_shows({"movie_thumb": movie_thumb, "card_html": card_html, "watch_line_html": watch_line_html,
                           "record_event": record_event, "queue_profile_save": queue_profile_save, "signals": _cf_signals,
-                          "spec": _mood_spec(), "like_source": _src_now, "search_words": _words}, 4)
+                          "spec": _mood_spec(), "like_source": _src_now, "search_words": _words,
+                          "avoid_terms": [t for w in (_mood_spec().get("avoid") or []) for t in AVOID_TERMS.get(w, [w])]}, 4)
 
         cells = []
         if _rule["explore"]:
@@ -4400,11 +4424,15 @@ def _render_showroom(p):
             pass   # the profile above already shows what you like; no extra sentence here
         _render_profile_likes()
         # One row of three matching pills.
-        edit, reset, _ = st.columns([1.5, 1.3, 3.7], gap="small")
+        likes_btn, edit, reset, _ = st.columns([1.4, 1.5, 1.3, 2.3], gap="small")
+        with likes_btn:
+            # Step 1 with your likes filled in: add, favorite, or remove (search there too).
+            st.button("Edit My Likes", key="edit_likes", use_container_width=True, on_click=go, args=("shelf",),
+                      help="Add or remove the movies every pick starts from.")
         with edit:
-            # Revisit Steps 1-3 with every choice filled in; the models use the new answers on return.
-            st.button("Edit My Answers", key="edit_preferences", use_container_width=True, on_click=go, args=("shelf",),
-                      help="Change your likes, genres, and other setup answers.")
+            # Step 2 with every answer filled in; the models use the new answers on return.
+            st.button("Edit My Answers", key="edit_preferences", use_container_width=True, on_click=go, args=("taste",),
+                      help="Change your genres, reviews, adventure, services, and more-of answers.")
         with reset:
             if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True,
                          help="Start over: clears your likes, saves, and answers in this browser."):

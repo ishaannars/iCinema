@@ -329,7 +329,13 @@ def score_mix(payload, content_weight, personal_weight=0.22):
         "new": ("New releases", "ridge regression"),
     }.get(src, ("Fans like you", str(payload.get("cf_name") or "item-kNN")))
     parts = []
-    if isinstance(f, (int, float)):
+    seq = payload.get("seq_parts")
+    if isinstance(f, (int, float)) and seq and len(seq) == 2 and all(isinstance(x, (int, float)) for x in seq):
+        # The fan score is itself a tested blend of the fan ranking and the "liked next" order model: show both.
+        parts += [(fan_name, fan_tech, (1 - content_weight) * seq[0]),
+                  ("What you liked last", "Markov chain", (1 - content_weight) * seq[1]),
+                  ("What it’s like", "TF-IDF + SVD", content_weight * c)]
+    elif isinstance(f, (int, float)):
         parts += [(fan_name, fan_tech, (1 - content_weight) * f), ("What it’s like", "TF-IDF + SVD", content_weight * c)]
     else:
         parts += [("What it’s like", "TF-IDF + SVD", c)]

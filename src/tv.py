@@ -133,6 +133,34 @@ def matches_mood(show, words):
     return any(w in text for w in words.split())
 
 
+@st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
+def content_rating(tmdb_id, region="US"):
+    """The show's US TV rating and its official descriptors, e.g. ("TV-MA", ("L", "S", "V")); V = violence."""
+    from src.tmdb_catalog import _request
+    for r in (_request(f"/tv/{int(tmdb_id)}/content_ratings") or {}).get("results") or []:
+        if r.get("iso_3166_1") == region:
+            return str(r.get("rating") or ""), tuple(str(d).upper() for d in (r.get("descriptors") or []))
+    return "", ()
+
+
+def avoids(show, avoid_terms, avoid=()):
+    """True if a show should be hidden for what the viewer asked to avoid. Evidence, strongest first:
+    the official US TV descriptor V (violence); the show's own keywords and summary; and, only when no
+    descriptors are listed, a TV-MA rating as a fallback for "not violent"."""
+    if not avoid_terms:
+        return False
+    text = " ".join([" ".join(show.get("keywords") or []), show.get("overview") or ""]).lower()
+    if any(t in text for t in avoid_terms):
+        return True
+    if "violent" not in avoid and "gory" not in avoid:
+        return False
+    try:
+        rating, desc = content_rating(show["tmdb_id"]) if show.get("tmdb_id") else ("", ())
+    except Exception:
+        return False
+    return "V" in desc or "FV" in desc or (not desc and rating == "TV-MA")
+
+
 @st.cache_data(ttl=60 * 60 * 12, show_spinner=False)
 def show_watch(tmdb_id, region="US"):
     """Where to watch a show, in the same shape the movie cards use."""

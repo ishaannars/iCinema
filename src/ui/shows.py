@@ -128,6 +128,8 @@ def render_shows(ctx, count):
             continue
         if not fits(info.get("episode_runtime"), spec, show=True):
             continue
+        if tv.avoids(info, ctx.get("avoid_terms") or [], spec.get("avoid") or []):   # "Nothing too violent" for shows
+            continue
         chosen.append(entry)
     if not chosen:
         return

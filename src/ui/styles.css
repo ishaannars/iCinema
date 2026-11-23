@@ -5356,3 +5356,35 @@ div[data-testid="stPopoverBody"] .why-extra strong{color:var(--kinari);font-weig
 div[data-testid="stPopoverBody"] .why-lead{font-family:var(--ui-font);font-size:.82rem;color:var(--muted);line-height:1.45;margin:.35rem 0 0;}
 div[data-testid="stPopoverBody"] .why-models{gap:.5rem !important;}
 div[data-testid="stPopoverBody"] .why-more{font-family:var(--ui-font);font-size:.7rem;color:var(--muted2);margin-top:.7rem;}
+
+/* ==== Batch 71 ==== */
+/* Showroom: one even rhythm. Each row: title, one-line note, then cards; the same gap between every row,
+   tighter inside each card, so more of the page fits on screen. */
+.showroom-row-header{padding:0 0 .55rem !important;margin:1.55rem 0 0 !important;}
+.showroom-row-header .showroom-row-title{font-size:1.55rem !important;margin:0 0 .15rem !important;}
+.showroom-row-header .row-model-note{font-size:.8rem !important;}
+[class*="st-key-showroom_swipe_"] [data-testid="stColumn"] > div{gap:.45rem !important;}
+[class*="st-key-showroom_swipe_"] .poster-caption-year{margin:.1rem 0 0 !important;}
+[class*="st-key-showroom_swipe_"] .ratings{margin:0 !important;}
+[class*="st-key-showroom_swipe_"] .watch-availability{margin:0 0 .1rem !important;}
+.search-status{margin:.3rem 0 .3rem !important;}
+[class*="st-key-tonight_hero_"]{margin-bottom:.2rem !important;}
+/* Profile likes: the × appears when you point at a poster (always shown on touch screens). */
+.st-key-profile_likes [class*="st-key-remove_selection_p"]{opacity:0 !important;transition:opacity .15s ease;}
+.st-key-profile_likes [class*="st-key-selection_card_p"]:hover [class*="st-key-remove_selection_p"]{opacity:1 !important;}
+@media (hover:none){.st-key-profile_likes [class*="st-key-remove_selection_p"]{opacity:1 !important;}}
+/* Privacy: both controls end on the same right edge, rows the same height. */
+.st-key-privacy_row_share [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"],
+.st-key-privacy_row_move [data-testid="stColumn"]:last-child [data-testid="stVerticalBlock"]{align-items:flex-end !important;}
+.st-key-privacy_row_share [data-testid="stColumn"]:last-child [data-testid="stElementContainer"],
+.st-key-privacy_row_move [data-testid="stColumn"]:last-child [data-testid="stElementContainer"]{width:auto !important;margin-left:auto !important;}
+.st-key-privacy_row_share [data-testid="stCheckbox"],.st-key-privacy_row_share label{justify-content:flex-end !important;margin:0 !important;}
+.st-key-privacy_row_share,.st-key-privacy_row_move{min-height:3.2rem !important;justify-content:center !important;}
+.st-key-privacy_link div[data-testid="stPopover"]{width:auto !important;margin-left:auto !important;}
+/* Profile actions: Edit My Likes · Edit My Answers · Reset Profile, one row, one size. */
+.st-key-edit_likes button,.st-key-edit_preferences button,.st-key-reset_profile_tab button{height:2.9rem !important;min-height:2.9rem !important;}
+/* Profile likes: the × is always visible (soft), full strength when you point at or tab to a poster.
+   Controls that only appear on hover are hard to find and don't exist on touch screens. */
+.st-key-profile_likes [class*="st-key-remove_selection_p"]{opacity:.6 !important;}
+.st-key-profile_likes [class*="st-key-selection_card_p"]:hover [class*="st-key-remove_selection_p"],
+.st-key-profile_likes [class*="st-key-remove_selection_p"]:focus-within{opacity:1 !important;}
