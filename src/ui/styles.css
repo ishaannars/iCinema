@@ -5446,3 +5446,16 @@ div[data-testid="stPopoverBody"] .why-more{text-align:center;margin-top:.75rem !
 .profile-wrap.pf{padding-top:.6rem !important;}
 .profile-wrap.pf .pf-readout{margin-top:.7rem !important;}
 .profile-wrap.pf .pf-readout + .pf-section,.profile-wrap.pf .pf-section:first-of-type{margin-top:1.4rem !important;padding-top:1.2rem !important;}
+
+/* ==== Batch 78 ==== */
+/* Compact popup: odds, one line of evidence, the bars, one short footer. */
+div[data-testid="stPopoverBody"] .why-model{padding:.4rem .7rem .45rem !important;}
+div[data-testid="stPopoverBody"] .why-models{gap:.4rem !important;}
+div[data-testid="stPopoverBody"] .why-models-label{margin:.6rem 0 .35rem !important;}
+div[data-testid="stPopoverBody"] .why-lead{padding:.45rem .7rem !important;font-size:.78rem !important;}
+div[data-testid="stPopoverBody"] .why-more{margin-top:.55rem !important;font-size:.68rem !important;}
+/* Live search: tiles sized like Showroom cards, even gaps above and below. */
+.live-hits-label{margin:1rem 0 .5rem !important;}
+[class*="st-key-hit_tile_"]{max-width:100% !important;}
+.st-key-mood_under{margin-bottom:1.2rem !important;}
+.st-key-live_search_go{margin:.2rem 0 .2rem !important;}

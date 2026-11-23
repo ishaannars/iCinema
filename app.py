@@ -2538,6 +2538,10 @@ def _commit_exact(text, movie=None):
         st.session_state._exact_pick = memo
     exact = None if text.startswith("like ") else text
     _set_mood_live(_merged_search(text, exact_title=exact))
+    # Clear the half-typed text ("inters") so the live results close and the movie's page shows,
+    # exactly like pressing Search. Without this the typed text kept the suggestions open.
+    st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1
+    st.session_state._app_rerun = True
 
 
 def _set_mood_live(text):
@@ -2851,9 +2855,9 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
             f'<div class="why-pop-head">{html.escape(odds)}</div>'
             + (f'<div class="why-lead">{html.escape(lead_line)}</div>' if lead_line else "")
             + (f'<div class="why-models-label">What decided this pick</div><div class="why-models">{models}</div>' if models else "")
-            + (f'<div class="why-extra"><strong>{html.escape(extra[0])}</strong>'
+            + (f'<div class="why-extra" style="display:none"><strong>{html.escape(extra[0])}</strong>'
                + (f' · {html.escape(extra[1])}' if extra[1] else "") + '</div>' if extra else "")
-            + f'<div class="why-more">{html.escape(used_line)} Each bar is that model’s share; point at one for its method.</div>')
+            + f'<div class="why-more">{len(_ids)} of 11 models · point at a bar for its method</div>')
 
 
 def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):
