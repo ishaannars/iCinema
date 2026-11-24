@@ -1,0 +1,56 @@
+{
+ "method": "Until now show cards printed the shipped blend score (a rank percentile) as \"N% match\", right next to movie cards whose percent is a tested chance. Same look, different meaning. This test decides which one a show card is allowed to show. Same data, matching, item-kNN, and blend as training/confirm_tv_blend.py. A fresh random group of people (seed 41) with 3+ loved movies and 1+ rated show is held out; similarities come only from everyone else. Each held-out person's loved movies rank every show, exactly as the app does. Every show the person rated (any stars) is a data point: its top-% rank, and whether they gave it 4+ stars (\"if you watch it, how likely are you to love it?\"). Isotonic regression maps rank to chance, fit on half the people and checked once on the other half.",
+ "validation_points": 17924,
+ "test_points": 17999,
+ "test_people": 5000,
+ "average_love_rate": 0.901,
+ "test_auc": 0.498,
+ "test_auc_ci95_low": 0.4826,
+ "valid": false,
+ "test_ece": 0.0048,
+ "ece_max": 0.02,
+ "brier_diff_vs_average": 0.0001,
+ "brier_ci95": [
+  -0.0,
+  0.0002
+ ],
+ "table": [
+  {
+   "top_pct": 1,
+   "chance": 0.9033
+  },
+  {
+   "top_pct": 2,
+   "chance": 0.9033
+  },
+  {
+   "top_pct": 5,
+   "chance": 0.9033
+  },
+  {
+   "top_pct": 10,
+   "chance": 0.8979
+  },
+  {
+   "top_pct": 20,
+   "chance": 0.8979
+  },
+  {
+   "top_pct": 35,
+   "chance": 0.8979
+  },
+  {
+   "top_pct": 50,
+   "chance": 0.8979
+  },
+  {
+   "top_pct": 75,
+   "chance": 0.8979
+  },
+  {
+   "top_pct": 100,
+   "chance": 0.5
+  }
+ ],
+ "ships": false
+}
