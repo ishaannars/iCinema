@@ -5519,3 +5519,86 @@ div[data-testid="stPopoverBody"] .imp-pop-note{font-family:var(--ui-font);font-s
     .home-lift-num{font-size:2.2rem;}
     .home-tested-row span{display:block;min-width:0;}
 }
+
+/* ==== Batch 80 + 81 ==== */
+/* Popup: each bar opens on tap (no hover), the top-% line, and "N of 11" opens what sat out. */
+div[data-testid="stPopoverBody"] details.why-model > summary{list-style:none;cursor:pointer;}
+div[data-testid="stPopoverBody"] details.why-model > summary::-webkit-details-marker{display:none;}
+div[data-testid="stPopoverBody"] details.why-model[open]{border-color:rgba(139,125,58,.55) !important;}
+div[data-testid="stPopoverBody"] .why-model-method{font-family:var(--ui-font);font-size:.72rem;color:var(--muted);line-height:1.4;margin:.4rem 0 .05rem;}
+div[data-testid="stPopoverBody"] .why-rank{font-family:var(--ui-font);font-size:.72rem;color:var(--muted2);text-align:center;margin:.55rem 0 0;}
+div[data-testid="stPopoverBody"] .why-more-d{margin-top:.35rem;font-family:var(--ui-font);}
+div[data-testid="stPopoverBody"] .why-more-d > summary{list-style:none;cursor:pointer;text-align:center;font-size:.68rem;color:var(--muted2);
+    min-height:2rem;display:flex;align-items:center;justify-content:center;}
+div[data-testid="stPopoverBody"] .why-more-d > summary::-webkit-details-marker{display:none;}
+div[data-testid="stPopoverBody"] .why-more-d[open] > summary{color:var(--kinari);}
+div[data-testid="stPopoverBody"] .why-out{font-size:.72rem;color:var(--muted);line-height:1.4;padding:.35rem 0;border-top:1px solid rgba(169,173,183,.12);}
+div[data-testid="stPopoverBody"] .why-out span{display:block;color:var(--kinari);font-weight:680;}
+div[data-testid="stPopoverBody"] .why-more{display:none !important;}
+
+/* Profile: one heading, then Taste · Models · Stats · Privacy, one at a time. */
+.st-key-pf_seg{max-width:30rem !important;margin:.2rem 0 1.1rem !important;background:rgba(255,255,255,.035) !important;
+    border:1px solid var(--border) !important;border-radius:999px !important;padding:.2rem !important;}
+.st-key-pf_seg [data-testid="stHorizontalBlock"]{gap:.15rem !important;flex-wrap:nowrap !important;}
+.st-key-pf_seg button{height:2.35rem !important;min-height:2.35rem !important;border:0 !important;border-radius:999px !important;
+    background:transparent !important;box-shadow:none !important;}
+.st-key-pf_seg button p{font-size:.82rem !important;font-weight:600 !important;color:var(--muted) !important;white-space:nowrap !important;}
+.st-key-pf_seg button:hover p{color:var(--kinari) !important;}
+.st-key-pf_seg button[kind="primary"]{background:var(--kinari) !important;}
+.st-key-pf_seg button[kind="primary"] p{color:#111315 !important;}
+@media (max-width:640px){.st-key-pf_seg button{height:44px !important;min-height:44px !important;}}
+.profile-wrap.pf.pf-one{padding-top:0 !important;}
+.profile-wrap.pf.pf-one .pf-section:first-child,.profile-wrap.pf.pf-one .pf-readout:first-child{margin-top:0 !important;padding-top:0 !important;border-top:0 !important;}
+/* Your Likes: title under each poster; the × is a corner badge, always visible, with a large tap area. */
+.st-key-profile_likes .sel-cap .sel-title{display:block;font-family:var(--ui-font);font-size:.72rem;font-weight:650;color:var(--kinari);
+    line-height:1.25;margin-top:.35rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.st-key-profile_likes .sel-cap .sel-state{display:none !important;}
+.st-key-profile_likes [class*="st-key-remove_selection_p"]{opacity:1 !important;top:-.45rem !important;right:-.45rem !important;}
+.st-key-profile_likes [class*="st-key-remove_selection_p"] button{width:1.6rem !important;height:1.6rem !important;min-width:1.6rem !important;
+    min-height:1.6rem !important;border-radius:50% !important;background:var(--surface) !important;border:1px solid rgba(169,173,183,.45) !important;
+    box-shadow:0 0 0 .55rem transparent !important;}
+.st-key-profile_add_like button{aspect-ratio:2/3;height:auto !important;min-height:0 !important;border:1px dashed rgba(169,173,183,.45) !important;
+    border-radius:10px !important;background:transparent !important;}
+.st-key-profile_add_like button p{font-size:.8rem !important;font-weight:650 !important;color:var(--muted) !important;}
+.st-key-profile_add_like button:hover p{color:var(--kinari) !important;}
+.st-key-pf_taste_actions{margin:1rem 0 0 !important;}
+.st-key-pf_taste_actions button{height:2.6rem !important;min-height:2.6rem !important;padding:0 1.3rem !important;border-radius:999px !important;}
+.st-key-pf_taste_actions button p{font-size:.84rem !important;font-weight:650 !important;}
+/* Privacy: Reset lives here now, in crimson, and asks once more. */
+.st-key-privacy_card .pc-danger{color:#B5443B !important;}
+.st-key-privacy_row_reset{min-height:3.2rem !important;justify-content:center !important;}
+.st-key-privacy_row_reset [data-testid="stHorizontalBlock"]{align-items:center !important;gap:1rem !important;}
+.st-key-privacy_row_reset [data-testid="stColumn"]:last-child{display:flex !important;justify-content:flex-end !important;}
+.st-key-privacy_reset{width:auto !important;margin-left:auto !important;}
+.st-key-privacy_reset div[data-testid="stPopover"]{width:auto !important;margin-left:auto !important;}
+.st-key-privacy_reset div[data-testid="stPopover"] button{height:2.2rem !important;min-height:2.2rem !important;padding:0 1.1rem !important;border-radius:999px !important;}
+.st-key-privacy_reset div[data-testid="stPopover"] button p{font-size:.82rem !important;font-weight:650 !important;color:#B5443B !important;}
+.st-key-privacy_reset div[data-testid="stPopover"] button [data-testid="stIconMaterial"]{display:none !important;}
+.st-key-reset_profile_tab button{border-color:rgba(181,68,59,.6) !important;}
+.st-key-reset_profile_tab button p{color:#B5443B !important;font-weight:700 !important;}
+
+/* Ready page: answers read as settings rows, label left, value right, one size. */
+.ready-grid{align-items:start !important;}
+.ready-spec-row{display:flex !important;justify-content:space-between !important;align-items:baseline !important;gap:1rem !important;
+    padding:.6rem 0 !important;border-top:1px solid rgba(169,173,183,.12) !important;}
+.ready-spec-row:first-child{border-top:0 !important;padding-top:.1rem !important;}
+.ready-spec-row span{font-family:var(--ui-font) !important;font-size:.9rem !important;line-height:1.35 !important;}
+.ready-spec-row span:first-child{color:var(--muted) !important;font-weight:500 !important;}
+.ready-spec-row span:last-child{color:var(--kinari) !important;font-weight:650 !important;text-align:right !important;}
+
+/* Step 2: "Show Me More Of" is pick-any, so its marks are checkboxes, not radio circles. */
+[class*="st-key-pcard_"]::after{border-radius:6px !important;}
+/* Skip for Now reads as a quiet text link beside the two buttons. */
+.st-key-nav_row_taste .st-key-skip_taste button{background:transparent !important;border:0 !important;box-shadow:none !important;}
+.st-key-nav_row_taste .st-key-skip_taste button p{color:var(--muted) !important;font-size:.84rem !important;font-weight:600 !important;}
+.st-key-nav_row_taste .st-key-skip_taste button:hover p{color:var(--kinari) !important;}
+/* After a Skip: Undo, then Never Show beside it, the same small capsule on the art's corner. */
+[class*="st-key-card_never_"]{position:absolute !important;top:2.65rem !important;left:3.35rem !important;z-index:6 !important;
+    width:auto !important;margin:0 !important;}
+[class*="st-key-card_never_"] button{height:2rem !important;min-height:2rem !important;padding:0 .8rem !important;border-radius:999px !important;
+    background:rgba(17,19,21,.82) !important;border:1px solid rgba(243,240,234,.28) !important;backdrop-filter:blur(8px);}
+[class*="st-key-card_never_"] button p{font-family:var(--ui-font) !important;font-size:.72rem !important;font-weight:700 !important;
+    color:var(--kinari) !important;margin:0 !important;line-height:1 !important;white-space:nowrap !important;}
+[class*="st-key-card_never_"] button:hover{border-color:rgba(243,240,234,.55) !important;}
+@media (max-width:640px){[class*="st-key-card_never_"]{left:3.9rem !important;}
+    [class*="st-key-card_never_"] button{height:44px !important;min-height:44px !important;}}

@@ -34,7 +34,9 @@ def _card(ctx, slot, entry):
         return False
     title = show["title"]
     top = max(1, -(-100 * rank // max(total, 1)))
-    pct = max(1, min(99, int(round(float(score) * 100))))
+    # A percent only if the show odds passed their test; otherwise the honest number is the rank.
+    chance = tv.love_chance(rank, total)
+    pill_label = f"{chance}% chance" if chance is not None else f"#{rank:,} for you"
     # Real IMDb and RT scores (OMDb, via the show's IMDb id); TMDB's score only if IMDb has none.
     from src.live_ratings import get_live_ratings_batch
     from src.ui.cards import card_ratings, ratings_text
@@ -45,9 +47,7 @@ def _card(ctx, slot, entry):
     with st.container(key=f"showroom_controls_tv_{slot}"):
         pill, skip = st.columns([3.2, 1], gap="small")
         with pill:
-            # Same "% match" pill as movies. For shows it's the tested blend score itself (fans like you
-            # 80%, popularity 20%), not a love chance: the show model has no calibration table yet.
-            with st.popover(f"{pct}% match", use_container_width=True):
+            with st.popover(pill_label, use_container_width=True):
                 # Same layout as the movie popup: each model's share of THIS show's score, then what it saw.
                 mix = []
                 if isinstance(fan_part, float) and isinstance(pop_part, float) and fan_part + pop_part > 0:
@@ -65,11 +65,15 @@ def _card(ctx, slot, entry):
                     mix_html += f'<div class="mix-detail mix-extra">Ratings: {html.escape(ratings)}</div>'
                 st.markdown(
                     '<div class="why-pop-kicker">Why it’s here</div>'
-                    f'<div class="why-pop-head">#{rank:,} of {total:,} shows scored for you</div>'
-                    f'<div class="why-pop-odds">{pct}% match: fans like you count 80%, popularity 20%</div>'
+                    + (f'<div class="why-pop-head">About {chance}% chance you’ll love it</div>' if chance is not None else "")
+                    + f'<div class="why-pop-odds">#{rank:,} of {total:,} shows scored for you · fans like you count 80%, popularity 20%</div>'
                     f'<div class="mix">{mix_html}</div>'
-                    '<div class="why-pop-foot">Every number is from this show’s own scores. The show model was tested on '
-                    'viewers it never saw (Amazon Reviews 2023). Unlike movies, it isn’t a love chance yet.</div>',
+                    '<div class="why-pop-foot">'
+                    + ("The chance is calibrated on viewers the show model never saw (Amazon Reviews 2023)."
+                       if chance is not None else
+                       "Ranked by a model tested on viewers it never saw (Amazon Reviews 2023). Its odds haven’t passed "
+                       "their calibration test, so it shows a rank, not a percent.")
+                    + '</div>',
                     unsafe_allow_html=True)
         with skip:
             st.button("Skip", key=f"skip_tv_{slot}_{title}", use_container_width=True,

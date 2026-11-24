@@ -1050,7 +1050,7 @@ CONTENT_WEIGHT, WHATS_NEXT_SIM = _tested_blend_weights()
 _KNOBS = _tested_knobs()
 
 
-def render_cinema_profile(p, include_insights=False, show_heading=True, tab_heading=False):
+def render_cinema_profile(p, include_insights=False, show_heading=True, tab_heading=False, section=None):
     # Plain-language labels; "Your mix" drops lines that repeat "How you choose".
     matters_text = " ".join(p["matters"]).casefold()
     mix = [b for b in p["balance"] if not ("review" in b.casefold() and "review" in matters_text)]
@@ -1328,14 +1328,11 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         + '</div>'
     )
 
-    insights_section = (
-        ('<div class="pf-section"><div class="pf-title">Your stats</div>'
-         + (f'<div class="pf-stats">{insight_html}</div>' if insight_html else
-            '<div class="pf-sub">They appear after your first few saves.</div>')
-         + '</div>')
-        + methodology_html
-        if include_insights else ""
-    )
+    stats_html = ('<div class="pf-section"><div class="pf-title">Your stats</div>'
+                  + (f'<div class="pf-stats">{insight_html}</div>' if insight_html else
+                     '<div class="pf-sub">They appear after your first few saves.</div>')
+                  + '</div>')
+    insights_section = (stats_html + methodology_html) if include_insights else ""
 
     heading_class = "tab-primary-heading profile-heading-aligned" if tab_heading else "profile-heading"
     profile_heading_html = f'<div class="{heading_class}">Your Cinema Profile</div>' if show_heading else ""
@@ -1356,14 +1353,11 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         '<div class="pf-readout"><span class="pf-dot on"></span>'
         f'<span class="pf-readout-k">Computed from</span><span class="pf-readout-v">{html.escape(" · ".join(_parts))}</span></div>'
     ) if _parts else ""
-    _page = (
-        f'<div class="profile-wrap pf">'
-        f'{profile_heading_html}{_summary}'
-        f'{models_html}'
-        f'<div class="pf-section"><div class="pf-title">What you like</div><div class="pf-taste">{section_html}</div></div>'
-        f'{insights_section}'
-        f'</div>'
-    )
+    _taste_html = f'<div class="pf-section"><div class="pf-title">What you like</div><div class="pf-taste">{section_html}</div></div>'
+    # The Profile tab shows one section at a time (Taste · Models · Stats), so each fits one screen.
+    _body = {"taste": _summary + _taste_html, "models": models_html + methodology_html, "stats": stats_html}.get(
+        section, f'{_summary}{models_html}{_taste_html}{insights_section}')
+    _page = f'<div class="profile-wrap pf{" pf-one" if section else ""}">{profile_heading_html}{_body}</div>'
     st.markdown(re.sub(r"\s*\n\s*", " ", _page), unsafe_allow_html=True)
 
 
@@ -1383,6 +1377,10 @@ def _with_app_rerun(fn):
     return inner
 
 
+def _set_profile_section(name):
+    st.session_state.pf_section_v = name
+
+
 def _remove_like_from_profile(title):
     """× on a like in Profile: remove it and rebuild the whole Showroom so every row stops using it."""
     remove_step1_selection(title)
@@ -1393,8 +1391,8 @@ def _render_profile_likes():
     """Your likes, editable from the Showroom: small posters with ×, and a way to add more."""
     ss = st.session_state
     liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
-    st.markdown('<div class="profile-likes-head">Your Likes</div>'
-                '<div class="profile-likes-copy">Every pick starts from these. Tap × to remove one.</div>',
+    st.markdown(f'<div class="profile-likes-head">Your Likes</div>'
+                f'<div class="profile-likes-copy">{len(liked)} movie{"s" if len(liked) != 1 else ""}. Every pick starts from these.</div>',
                 unsafe_allow_html=True)
     if liked:
         ms = [get_movie(t, ss.external_movies) or {"title": t} for t in liked]
@@ -1409,16 +1407,20 @@ def _render_profile_likes():
                         st.markdown('<div class="sel-poster">'
                                     + (f'<img src="{html.escape(u, quote=True)}" alt="">' if u.startswith("https://")
                                        else f'<div class="live-hit-blank">{html.escape(t[:24])}</div>')
-                                    + f'</div><div class="sel-cap"><span class="sel-state">{"Favorite" if t in ss.favorites else "Liked"}</span></div>',
+                                    + f'</div><div class="sel-cap"><span class="sel-title">{html.escape(t)}</span></div>',
                                     unsafe_allow_html=True)
-                        if len(liked) > 1:   # × shows when you hover a poster (always on phones); the last like stays
-                            st.button("×", key=f"remove_selection_p{i}", help=f"Remove {t}",
+                        if len(liked) > 1:   # × is always visible; the last like stays so picks have a start
+                            st.button("×", key=f"remove_selection_p{i}",
                                       on_click=_remove_like_from_profile, args=(t,))
+            with cols[len(liked) % 12]:
+                # The last tile adds more: the same search as Step 1, with your likes filled in.
+                with st.container(key="profile_add_like"):
+                    st.button("+ Add", key="add_like_tile", use_container_width=True, on_click=go, args=("shelf",))
 
 
 @st.fragment
 @_with_app_rerun
-def render_live_profile():
+def render_live_profile(section=None):
     """Profile tab, refreshed every few seconds.
 
     Showroom cards rerun on their own (so Skip/Save stay fast), which used to leave this
@@ -1427,7 +1429,7 @@ def render_live_profile():
     """
     st.button("Refresh", key="refresh_profile")     # hidden; clicked when the Profile tab opens and is out of date
     _ver_mark(3)
-    render_cinema_profile(current_profile(), include_insights=True, show_heading=True, tab_heading=True)
+    render_cinema_profile(current_profile(), include_insights=True, show_heading=False, tab_heading=True, section=section)
 
 
 @st.fragment
@@ -1646,11 +1648,11 @@ def render_taste_fragment():
                               use_container_width=True, on_click=on_click, args=(value,))
 
     scale = [15, 32, 50, 68, 85]
-    _question("Great reviews or easy to enjoy?")
-    _segmented("review_scale", ["Reviews", "Lean reviews", "Balanced", "Lean easy", "Easy to enjoy"],
+    _question("Great Reviews or Easy to Enjoy?")
+    _segmented("review_scale", ["Reviews", "Lean Reviews", "Balanced", "Lean Easy", "Easy to Enjoy"],
                scale, st.session_state.review_priority, set_review_priority)
 
-    _question("Your genres", helper="Up to five.")
+    _question("Your Genres", helper="Up to five.")
     selected = set(st.session_state.genres)
     try:
         chips = st.container(key="genre_chips", horizontal=True, gap="small")
@@ -1661,15 +1663,15 @@ def render_taste_fragment():
             st.button(genre, key=f"genre_{i}", type="primary" if genre in selected else "secondary",
                       on_click=toggle_genre_choice, args=(genre,))
 
-    _question("How adventurous?")
-    _segmented("adventure_scale", ["Familiar", "Mostly familiar", "Balanced", "More new", "Surprise me"],
+    _question("How Adventurous?")
+    _segmented("adventure_scale", ["Familiar", "Mostly Familiar", "Balanced", "More New", "Surprise Me"],
                scale, st.session_state.adventure, set_adventure_level)
 
-    _question("Show me more of", helper="Optional. Your first pick gets its own row.")
+    _question("Show Me More Of", helper="Optional. Your first pick gets its own row.")
     _render_more_choices()
 
     # The promise is "tonight, on the services you pay for", so onboarding asks for them (optional).
-    _question("Your streaming services", helper="Optional. Tonight's pick comes from these first.")
+    _question("Your Streaming Services", helper="Optional. Tonight's pick comes from these first.")
     with st.container(key="onb_services"):
         _render_services_grid(list(st.session_state.get("streaming_services") or []))
 
@@ -1678,11 +1680,10 @@ def render_taste_fragment():
         with back:
             st.button("← Back", key="back_taste", use_container_width=True, on_click=go_from_fragment, args=("shelf",))
         with cont:
-            st.button("Build My Cinema Profile →", type="primary", key="build_profile", use_container_width=True,
+            st.button("Continue →", type="primary", key="build_profile", use_container_width=True,
                       on_click=go_from_fragment, args=("profile",))
         with _:
-            st.button("Skip, use my likes", key="skip_taste", on_click=go_from_fragment, args=("showroom",),
-                      help="Go straight to your Showroom. You can answer these later in Profile.")
+            st.button("Skip for Now", key="skip_taste", on_click=go_from_fragment, args=("showroom",))
     persist_from_fragment()
 
 
@@ -2823,10 +2824,12 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
     plain = {"Fans like you": "People with your taste", "What you liked last": "Your recent likes",
              "What it’s like": "Its story and style", "Mood search": "Your mood", "Your choices": "Your saves and skips",
              "New releases": "Its filmmakers"}
+    # Each bar is its own tap target (works on phones): tap it and its model and method open underneath.
     models = "".join(
-        f'<div class="why-model" title="{html.escape(n)} · {html.escape(t)}"><div class="why-model-top"><span class="why-model-name">{html.escape(plain.get(n, n))}</span>'
+        f'<details class="why-model"><summary><div class="why-model-top"><span class="why-model-name">{html.escape(plain.get(n, n))}</span>'
         f'<span class="why-model-pct">{round(sh * 100)}%</span></div>'
-        f'<div class="why-model-bar"><span style="width:{max(4, round(sh * 100))}%"></span></div></div>'
+        f'<div class="why-model-bar"><span style="width:{max(4, round(sh * 100))}%"></span></div></summary>'
+        f'<div class="why-model-method">{html.escape(n)} · {html.escape(t)}</div></details>'
         for n, t, sh in mix[:3])
     if len(mix) == 1 and mix[0][0] == "What it’s like":
         lead_line = "Too new or too rare for fan data yet, so it’s matched on genres and fan tags."
@@ -2859,7 +2862,34 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
             + (f'<div class="why-models-label">What decided this pick</div><div class="why-models">{models}</div>' if models else "")
             + (f'<div class="why-extra" style="display:none"><strong>{html.escape(extra[0])}</strong>'
                + (f' · {html.escape(extra[1])}' if extra[1] else "") + '</div>' if extra else "")
-            + f'<div class="why-more">{len(_ids)} of {MODELS_TOTAL} models · point at a bar for its method</div>')
+            + (f'<div class="why-rank">Top {max(1, int(_top))}% of everything scored for you</div>'
+               if isinstance((_top := payload.get("fit_top_pct")), (int, float)) else "")
+            + f'<details class="why-more-d"><summary>{len(_ids)} of {MODELS_TOTAL} models · tap a bar for its method</summary>'
+            + "".join(f'<div class="why-out"><span>{html.escape(k)}</span>{html.escape(v)}</div>' for k, v in _sat_out(_ids, payload))
+            + '</details>')
+
+
+def _sat_out(used, payload):
+    """The models that didn't touch this pick, each with the plain reason why."""
+    ranker = payload.get("cf_source") == "ranker"
+    reasons = [
+        ("ranker", "Learned ranker", "This pick used item-kNN alone." if "item-kNN" in used else "No fan data for this movie yet."),
+        ("item-kNN", "item-kNN", "No fan data for this movie yet."),
+        ("RP3beta", "RP3beta", "Only runs inside the learned ranker." if not ranker else "No fan data for this movie yet."),
+        ("EASE", "EASE", "Only runs inside the learned ranker." if not ranker else "No fan data for this movie yet."),
+        ("markov", "Markov chain", "Your recent likes didn’t point to this movie."),
+        ("content", "TF-IDF + SVD", "No genres or fan tags for this movie."),
+        ("ridge", "New-release model", "It has fan data, so it isn’t treated as new."),
+        ("mood", "Mood search", "No mood searched."),
+        ("tv", "TV model", "This is a movie."),
+        ("personal", "Your personal model", "Turns on after 50 saves and skips."),
+    ]
+    try:
+        if learning_model_for(st.session_state.get("analytics_events") or []).ready:
+            reasons[-1] = ("personal", "Your personal model", "Running, but it barely moved this pick.")
+    except Exception:
+        pass
+    return [(name, why) for key, name, why in reasons if key not in used]
 
 
 def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):
@@ -2969,7 +2999,11 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         # Undo sits on the art's corner, not in the pill row, so the pill row is always match + Skip
         # and nothing in the row moves when it appears.
         st.button(":material/undo:", key=f"card_undo_{row_index}_{slot_index}_{title}",
-                  help=f"Bring back {undo_title}", on_click=undo_showroom_slot, args=(row_name, slot_index))
+                  on_click=undo_showroom_slot, args=(row_name, slot_index))
+        if undo_title not in (st.session_state.get("disliked") or set()):
+            # A Skip means "not tonight". This turns it into "never": hidden for good, and a stronger signal.
+            st.button("Never Show", key=f"card_never_{row_index}_{slot_index}_{title}",
+                      on_click=never_show_skipped, args=(undo_title,))
     with st.container(key=f"showroom_controls_{row_index}_{slot_index}_{title}"):
         match_col, skip_col = st.columns([3.35,0.90], gap="small")
         reasons = with_cf_reason(recommendation_explanation(
@@ -2995,20 +3029,13 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
         _lv = love_line(_love_pct(payload))
         _lvm = re.search(r"(\d+)%", _lv or "")
         if _lvm:
-            pill_text = f"{_lvm.group(1)}% match"    # the calibrated chance you'll love it; the popup says so in full
+            pill_text = f"{_lvm.group(1)}% chance"   # same number and word as Tonight's "About N% chance you'll love it"
         pill_labels[slot_key] = pill_label
         st.session_state.showroom_pill_labels = pill_labels
         with match_col:
             with st.popover(pill_text, use_container_width=True):
                 st.markdown(why_popup_html(payload, movie, reasons, live_rating, availability, match, row_name,
                                            _kind_tag, _fr), unsafe_allow_html=True)
-                st.button(
-                    ":material/thumb_down:",
-                    key=f"dislike_{row_name}_{slot_index}_{title}",
-                    help="Not for me: hide it and show fewer like it. Undo brings it back.",
-                    on_click=dislike_showroom_slot,
-                    args=(row_name, slot_index),
-                )
         with skip_col:
             st.button(
                 "Skip",
@@ -3085,6 +3112,18 @@ def undo_skip(title):
         st.session_state.dismissed.discard(title)
         _drop_last_event(title, "skip")
     queue_profile_save()
+
+
+def never_show_skipped(title):
+    """Turn a Skip ("not tonight") into Not for Me ("never"): the skip is replaced, not added to, so the
+    models see one clear signal (Not for Me weighs -0.8 for the fan models vs -0.2 for a Skip)."""
+    if not title:
+        return
+    if title in st.session_state.dismissed:
+        st.session_state.dismissed.discard(title)
+        _drop_last_event(title, "skip")
+    payload = (st.session_state.get("showroom_payloads") or {}).get(title) or {}
+    dislike_movie(title, payload.get("movie"))
 
 
 def undo_showroom_slot(row_name, slot_index):
@@ -3384,8 +3423,8 @@ def render_tonight_pick_fragment():
             )
             last_skip = st.session_state.get("tonight_last_skip")
             with st.container(key=f"tonight_actions_{title}"):
-                # Save · Seen · Skip · thumbs-down, then Undo when there is something to undo.
-                cols = st.columns([1, 1, 1, 0.55, 1, 1.65], gap="small")
+                # Save · Seen · Skip, then Undo and Never Show right after a Skip.
+                cols = st.columns([1, 1, 1, 0.9, 1.15, 1.1], gap="small")
                 with cols[0]:
                     st.button("Save", key=f"tonight_save_{title}", use_container_width=True,
                               on_click=tonight_save, args=(title, movie))
@@ -3396,13 +3435,12 @@ def render_tonight_pick_fragment():
                     st.button("Skip", key=f"tonight_skip_{title}", use_container_width=True,
                               on_click=tonight_skip, args=(title, movie))
                 with cols[3]:
-                    st.button(":material/thumb_down:", key=f"tonight_dislike_{title}", use_container_width=True,
-                              help="Not for me: hide it and show fewer like it.",
-                              on_click=tonight_dislike, args=(title, movie))
-                with cols[4]:
                     if last_skip:
-                        st.button("Undo", key=f"tonight_undo_{title}", use_container_width=True,
-                                  help=f"Bring back {last_skip}", on_click=tonight_undo)
+                        st.button("Undo", key=f"tonight_undo_{title}", use_container_width=True, on_click=tonight_undo)
+                with cols[4]:
+                    if last_skip and last_skip not in (st.session_state.get("disliked") or set()):
+                        st.button("Never Show", key=f"tonight_never_{title}", use_container_width=True,
+                                  on_click=never_show_skipped, args=(last_skip,))
     persist_from_fragment()
     _ver_mark()
 
@@ -4461,61 +4499,72 @@ def _render_showroom(p):
         _seen_tab()
 
     with tabs[3]:
-        st.markdown('<div class="showroom-tab-start"></div>', unsafe_allow_html=True)
-        render_live_profile()
-        st.markdown('<div class="profile-tab-reset"></div>', unsafe_allow_html=True)
-        _lately = lately_genres()
-        if _lately:
-            _l = list(_lately)
-            _lst = _l[0] if len(_l) == 1 else (" and ".join(_l) if len(_l) == 2 else ", ".join(_l[:-1]) + ", and " + _l[-1])
-            pass   # the profile above already shows what you like; no extra sentence here
-        _render_profile_likes()
-        # One row of three matching pills.
-        likes_btn, edit, reset, _ = st.columns([1.4, 1.5, 1.3, 2.3], gap="small")
-        with likes_btn:
-            # Step 1 with your likes filled in: add, favorite, or remove (search there too).
-            st.button("Edit My Likes", key="edit_likes", use_container_width=True, on_click=go, args=("shelf",),
-                      help="Add or remove the movies every pick starts from.")
-        with edit:
-            # Step 2 with every answer filled in; the models use the new answers on return.
-            st.button("Edit My Answers", key="edit_preferences", use_container_width=True, on_click=go, args=("taste",),
-                      help="Change your genres, reviews, adventure, services, and more-of answers.")
-        with reset:
-            if st.button("Reset Profile", key="reset_profile_tab", use_container_width=True,
-                         help="Start over: clears your likes, saves, and answers in this browser."):
-                reset_profile_state()
-                st.rerun(scope="app")
-        # Privacy and moving devices: one quiet card, two rows, each a label, one line of why, and its control.
-        try:
-            _host = st.context.headers.get("host") or "icinema.streamlit.app"
-        except Exception:
-            _host = "icinema.streamlit.app"
-        # Your data: drawn fresh with its own names, so none of the older card styles can reach it.
-        # Hairlines are their own elements between rows, so they can never touch the text.
-        st.markdown('<div class="pc-section">Privacy</div>', unsafe_allow_html=True)
-        with st.container(key="privacy_card"):
-            with st.container(key="privacy_row_share"):
-                txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
-                with txt:
-                    st.markdown('<div class="pc-label">Share Anonymous Usage Counts</div>', unsafe_allow_html=True)
-                with ctl:
-                    st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
-                              key="_share_counts", on_change=_set_opt_out, label_visibility="collapsed")
-            st.markdown('<div class="pc-hr"></div>', unsafe_allow_html=True)
-            with st.container(key="privacy_row_move"):
-                txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
-                with txt:
-                    st.markdown('<div class="pc-label">Move to Another Device</div>', unsafe_allow_html=True)
-                with ctl:
-                    with st.container(key="privacy_link"):
-                        with st.popover("Get link", use_container_width=True):
-                            st.markdown('<div class="why-pop-head" style="font-size:1rem">Open this link on your other device</div>'
-                                        '<div class="why-pop-line">Anyone with the link can load this profile, so share it only with yourself.</div>',
-                                        unsafe_allow_html=True)
-                            st.code(f"https://{_host}/?p={_encode_profile_link(profile_snapshot())}", language=None)
-        st.markdown('<div class="pc-footer">Everything stays in this browser. No account, nothing personal. Usage counts are visits '
-                    'and saves with a random ID, never titles, names, email, or location. The link carries your likes, saves, '
-                    'and answers, so keep it to yourself.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="showroom-tab-start"></div>'
+                    '<div class="profile-wrap pf"><div class="tab-primary-heading profile-heading-aligned">Your Cinema Profile</div></div>',
+                    unsafe_allow_html=True)
+        # Same segmented control as Step 2's scales (one track, one selected segment), built from buttons.
+        _secs = ["Taste", "Models", "Stats", "Privacy"]
+        _sec = st.session_state.get("pf_section_v") if st.session_state.get("pf_section_v") in _secs else "Taste"
+        with st.container(key="pf_seg"):
+            _cols = st.columns(len(_secs), gap="small")
+            for _i, _name in enumerate(_secs):
+                with _cols[_i]:
+                    st.button(_name, key=f"pf_seg_{_i}", type="primary" if _name == _sec else "secondary",
+                              use_container_width=True, on_click=_set_profile_section, args=(_name,))
+        if _sec in ("Taste", "Models", "Stats"):
+            render_live_profile(_sec.lower())
+        if _sec == "Taste":
+            _render_profile_likes()
+            with st.container(key="pf_taste_actions"):
+                st.button("Edit My Answers", key="edit_preferences", on_click=go, args=("taste",))
+    if _sec == "Privacy":
+        with tabs[3]:
+            # Privacy and moving devices: one quiet card, two rows, each a label, one line of why, and its control.
+            try:
+                _host = st.context.headers.get("host") or "icinema.streamlit.app"
+            except Exception:
+                _host = "icinema.streamlit.app"
+            # Your data: drawn fresh with its own names, so none of the older card styles can reach it.
+            # Hairlines are their own elements between rows, so they can never touch the text.
+            st.markdown('<div class="pc-section">Privacy</div>', unsafe_allow_html=True)
+            with st.container(key="privacy_card"):
+                with st.container(key="privacy_row_share"):
+                    txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
+                    with txt:
+                        st.markdown('<div class="pc-label">Share Anonymous Usage Counts</div>', unsafe_allow_html=True)
+                    with ctl:
+                        st.toggle("Share anonymous usage counts", value=not st.session_state.get("analytics_opt_out", False),
+                                  key="_share_counts", on_change=_set_opt_out, label_visibility="collapsed")
+                st.markdown('<div class="pc-hr"></div>', unsafe_allow_html=True)
+                with st.container(key="privacy_row_move"):
+                    txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
+                    with txt:
+                        st.markdown('<div class="pc-label">Move to Another Device</div>', unsafe_allow_html=True)
+                    with ctl:
+                        with st.container(key="privacy_link"):
+                            with st.popover("Get Link", use_container_width=True):
+                                st.markdown('<div class="why-pop-head" style="font-size:1rem">Open this link on your other device</div>'
+                                            '<div class="why-pop-line">Anyone with the link can load this profile, so share it only with yourself.</div>',
+                                            unsafe_allow_html=True)
+                                st.code(f"https://{_host}/?p={_encode_profile_link(profile_snapshot())}", language=None)
+                st.markdown('<div class="pc-hr"></div>', unsafe_allow_html=True)
+                with st.container(key="privacy_row_reset"):
+                    txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
+                    with txt:
+                        st.markdown('<div class="pc-label pc-danger">Reset Profile</div>', unsafe_allow_html=True)
+                    with ctl:
+                        with st.container(key="privacy_reset"):
+                            # Destructive, so it asks once more before clearing anything.
+                            with st.popover("Reset", use_container_width=True):
+                                st.markdown('<div class="why-pop-head" style="font-size:1rem">Start over?</div>'
+                                            '<div class="why-pop-line">This clears your likes, saves, seen movies, and answers in this browser.</div>',
+                                            unsafe_allow_html=True)
+                                if st.button("Reset Everything", key="reset_profile_tab", use_container_width=True):
+                                    reset_profile_state()
+                                    st.rerun(scope="app")
+            st.markdown('<div class="pc-footer">Everything stays in this browser. No account, nothing personal. Usage counts are visits '
+                        'and saves with a random ID, never titles, names, email, or location. The link carries your likes, saves, '
+                        'and answers, so keep it to yourself.</div>', unsafe_allow_html=True)
 
 
     # tabs9: counts beside the fixed tab labels, found by tab id (labels never change, so

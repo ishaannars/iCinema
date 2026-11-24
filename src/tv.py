@@ -176,3 +176,28 @@ def show_watch(tmdb_id, region="US"):
     if buy:
         return {"status": "buy", "text": "Buy: " + " · ".join(buy), "url": region_data.get("link")}
     return {"status": "unavailable", "text": "Not currently available on major streaming services", "url": region_data.get("link")}
+
+
+@lru_cache(maxsize=1)
+def _chance_table():
+    """data/tv_calibration.json, only if it passed its test (training/confirm_tv_calibration.py)."""
+    import json
+    try:
+        d = json.loads((DATA / "tv_calibration.json").read_text())
+    except Exception:
+        return None
+    if not d.get("ships") or not d.get("table"):
+        return None
+    t = sorted((float(r["top_pct"]), float(r["chance"])) for r in d["table"])
+    return [x for x, _ in t], [y for _, y in t]
+
+
+def love_chance(rank, total):
+    """A show's tested chance you'll love it, as a whole percent rounded down to 5, or None.
+
+    None means the show odds didn't pass their test, so a card must show its rank, never a percent."""
+    t = _chance_table()
+    if t is None or not total:
+        return None
+    top_pct = max(1.0, 100.0 * float(rank) / float(total))
+    return int(5 * np.floor(float(np.interp(top_pct, t[0], t[1])) * 100 / 5 + 1e-9))

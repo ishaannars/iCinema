@@ -69,6 +69,10 @@ def main():
         found = [b for b in at.button if b.key == key]
         if found:
             found[0].click().run(); ok &= check(at, f"Tab refresh ({key})")
+    # Profile shows one section at a time: draw each one.
+    for sec in ("Models", "Stats", "Privacy", "Taste"):
+        at.session_state["pf_section_v"] = sec
+        at.run(); ok &= check(at, f"Profile: {sec}")
     saves = [b for b in at.button if (b.key or "").startswith("save_")]
     if saves:
         saves[0].click().run(); ok &= check(at, "Save a movie")

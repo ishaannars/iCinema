@@ -121,7 +121,7 @@ def watch_line_html(availability, title, services=None):
 
     def _label(name):
         key = _provider_key(name)
-        return f"{name} (free with a library card)" if key.startswith(("kanopy", "hoopla")) else name
+        return f"{name} (library)" if key.startswith(("kanopy", "hoopla")) else name
 
     def _links(opts):
         return " · ".join(

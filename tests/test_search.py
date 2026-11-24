@@ -242,3 +242,26 @@ def test_title_search_drops_near_unknown_matches():
              {"title": "Super Oldboy", "vote_count": 6}, {"title": "Oldboys", "vote_count": 40}]
     out = [(i["title"], i["vote_count"]) for i in rank_search_results(items, "oldboy")]
     assert out == [("Oldboy", 9000), ("Oldboy", 3000)]
+
+
+def test_show_cards_print_a_percent_only_when_calibrated():
+    """Show odds must pass training/confirm_tv_calibration.py; until then a card shows its rank."""
+    src = (ROOT / "src" / "ui" / "shows.py").read_text()
+    assert "tv.love_chance(rank, total)" in src and 'f"#{rank:,} for you"' in src
+    assert '% match"' not in src
+
+
+def test_profile_shows_one_section_at_a_time():
+    src = (ROOT / "app.py").read_text()
+    assert '["Taste", "Models", "Stats", "Privacy"]' in src and "Reset Everything" in src
+    assert '"Edit My Likes"' not in src
+
+
+def test_one_skip_then_never_show():
+    """Unwatched cards have one negative action, Skip. "Never Show" appears only after a Skip and replaces
+    the skip with Not for Me. Thumbs are kept for movies you've seen (the "Liked it?" prompt and Seen tab)."""
+    src = (ROOT / "app.py").read_text()
+    assert 'key=f"dislike_{row_name}' not in src and 'key=f"tonight_dislike_' not in src
+    assert "card_never_" in src and "tonight_never_" in src
+    body = _fn_src("app.py", "never_show_skipped")
+    assert '_drop_last_event(title, "skip")' in body and "dislike_movie(" in body

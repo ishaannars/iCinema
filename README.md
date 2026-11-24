@@ -255,7 +255,6 @@ Three questions every project has to pass before it's built: is the problem pain
 
 ## Waiting on a test
 
-- **SASRec (sequence model) as a ranker input.** After launch.
 
 ## Coming next
 
