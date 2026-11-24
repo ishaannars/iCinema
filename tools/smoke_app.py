@@ -37,6 +37,21 @@ def main():
     for scr in ("shelf", "taste", "more"):
         at.session_state["screen"] = scr
         at.run(); ok &= check(at, f"Onboarding ({scr})")
+    # Step 1 search: tap a poster and it must become a like (a real click, checked by its result).
+    at.session_state["screen"] = "shelf"
+    at.session_state["_smoke_typed"] = "Past Lives"
+    at.run(); ok &= check(at, "Step 1: search")
+    tiles = [b for b in at.button if (b.key or "").startswith("search_result_")]
+    if not tiles:
+        print(f"{'Step 1: tap a poster':<28} ERROR: no search tiles to tap"); ok = False
+    else:
+        before = len(at.session_state["likes"])
+        tiles[0].click().run()
+        liked = len(at.session_state["likes"]) == before + 1
+        print(f"{'Step 1: tap a poster':<28} {'OK' if liked and not at.exception else 'ERROR: the tap did not add a like'}")
+        ok &= liked and not at.exception
+    at.session_state["_smoke_typed"] = None
+    at.session_state["likes"] = {"Spirited Away"}
     at.session_state["screen"] = "taste"
     at.run()
     svc = [b for b in at.button if (b.key or "") == "svc_btn_0"]
@@ -98,29 +113,53 @@ def main():
     at.session_state["mood_active"] = ""
     at.session_state["mood_input"] = ""
     at.run(); ok &= check(at, "Search: cleared")
+    # Showroom search: type, tap a poster, and the search must become that exact movie.
+    at.session_state["_smoke_typed"] = "Inception"
+    at.run()
+    tiles = [b for b in at.button if (b.key or "").startswith("live_hit_")]
+    if not tiles:
+        # Poster suggestions come from TMDB; without a key there is nothing to tap. Reported, not counted as OK.
+        print(f"{'Search: tap a poster':<28} SKIP (no TMDB key, so no poster suggestions)")
+    else:
+        tiles[0].click().run()
+        picked = bool(at.session_state["_exact_pick"]) if "_exact_pick" in at.session_state else False
+        print(f"{'Search: tap a poster':<28} {'OK' if picked and not at.exception else 'ERROR: the tap did not open the movie'}")
+        ok &= picked and not at.exception
+    at.session_state["_smoke_typed"] = None
+    at.session_state["mood_active"] = ""
+    at.session_state["mood_input"] = ""
+    at.run()
     # Services: tap a logo tile, then Done redraws the Showroom with your services first.
     for key in ("svc_btn_0", "svc_done"):
         found = [b for b in at.button if b.key == key]
         if found:
             found[0].click().run(); ok &= check(at, f"Services ({key})")
+    # Each action is checked by what it changed, not only by "no error".
     seens = [b for b in at.button if (b.key or "").startswith("seen_Top Matches")]
     if seens:
-        seens[0].click().run(); ok &= check(at, "Seen a card")
+        n = len(at.session_state["seen"])
+        seens[0].click().run()
+        good = len(at.session_state["seen"]) == n + 1 and not at.exception
+        print(f"{'Seen a card':<28} {'OK' if good else 'ERROR: Seen did not record the movie'}")
+        ok &= good
         ups = [b for b in at.button if (b.key or "").startswith("rate_up_")]
         if ups:
             ups[0].click().run(); ok &= check(at, "Liked it? (thumbs up)")
         else:
-            print(f"{'Liked it? prompt':<28} OK (page rebuilt, no prompt to answer)")
+            # The prompt lives in the card's own rerun; this runner reruns the whole page. Not counted as OK.
+            print(f"{'Liked it? prompt':<28} SKIP (only appears in a card-only rerun)")
     skips = [b for b in at.button if (b.key or "").startswith("skip_Top Matches")]
     if skips:
-        skips[0].click().run(); ok &= check(at, "Skip a card")
+        n = len(at.session_state["dismissed"])
+        skips[0].click().run()
+        good = len(at.session_state["dismissed"]) == n + 1 and not at.exception
+        print(f"{'Skip a card':<28} {'OK' if good else 'ERROR: Skip did not record the movie'}")
+        ok &= good
         undos = [b for b in at.button if (b.key or "").startswith("card_undo_")]
         if undos:
             undos[0].click().run(); ok &= check(at, "Undo a skip")
         else:
-            # In the app, Skip reruns only its card, so Undo appears. A test runner that reruns the whole
-            # page rebuilds the rows instead, which clears Undo; that isn't an error.
-            print(f"{'Undo a skip':<28} OK (page rebuilt, nothing to undo)")
+            print(f"{'Undo a skip':<28} SKIP (only appears in a card-only rerun)")
     print("All screens OK" if ok else "Some screens failed")
     sys.exit(0 if ok else 1)
 

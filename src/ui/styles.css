@@ -5459,3 +5459,63 @@ div[data-testid="stPopoverBody"] .why-more{margin-top:.55rem !important;font-siz
 [class*="st-key-hit_tile_"]{max-width:100% !important;}
 .st-key-mood_under{margin-bottom:1.2rem !important;}
 .st-key-live_search_go{margin:.2rem 0 .2rem !important;}
+
+/* ==== Batch 79 ==== */
+/* Search tiles: the invisible button fills the whole tile. Every box between the keyed container and the
+   button is stretched too, so no wrapper can shrink the tap area back to the size of the hidden label. */
+[class*="st-key-hit_tile_"] [class*="st-key-live_hit_"] div,[class*="st-key-hit_tile_"] [class*="st-key-search_result_"] div,
+[class*="st-key-hit_tile_"] [class*="st-key-live_hit_"] button,[class*="st-key-hit_tile_"] [class*="st-key-search_result_"] button{
+    width:100% !important;height:100% !important;max-width:none !important;min-height:0 !important;}
+[class*="st-key-hit_tile_"] .hit-art,[class*="st-key-hit_tile_"] .hit-year{pointer-events:none;}
+[class*="st-key-hit_tile_"] div.stButton > button:focus-visible{opacity:1 !important;background:transparent !important;
+    outline:2px solid var(--kinari) !important;outline-offset:2px;border-radius:12px !important;}
+[class*="st-key-hit_tile_"] div.stButton > button:focus-visible p{opacity:0 !important;}
+.hit-year{font-family:var(--ui-font);font-size:.74rem;font-weight:650;letter-spacing:.04em;color:var(--muted);margin:.4rem 0 0 .1rem;line-height:1.2;}
+/* Service tiles: same stretch, so the whole logo tile is the tap target. */
+[class*="st-key-svc_btn_"] div{width:100% !important;height:100% !important;max-width:none !important;}
+
+/* Import: one settings-style row, the same shape as the Privacy rows. */
+.st-key-import_card{border:1px solid var(--border) !important;border-radius:16px !important;background:rgba(255,255,255,.02) !important;
+    padding:.85rem 1.1rem !important;margin:.9rem 0 .6rem !important;}
+.st-key-import_card [data-testid="stHorizontalBlock"]{align-items:center !important;gap:1rem !important;}
+.st-key-import_card .imp-label{font-family:var(--ui-font);font-size:.92rem;font-weight:700;color:var(--kinari);line-height:1.3;}
+.st-key-import_card .imp-note{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);line-height:1.4;margin-top:.15rem;}
+.st-key-import_card [data-testid="stColumn"]:last-child{display:flex !important;justify-content:flex-end !important;}
+.st-key-import_link{width:auto !important;margin-left:auto !important;}
+.st-key-import_link div[data-testid="stPopover"]{width:auto !important;margin-left:auto !important;}
+.st-key-import_link div[data-testid="stPopover"] button{height:2.2rem !important;min-height:2.2rem !important;padding:0 1.1rem !important;
+    border-radius:999px !important;}
+.st-key-import_link div[data-testid="stPopover"] button p{font-size:.82rem !important;font-weight:650 !important;color:var(--kinari) !important;white-space:nowrap !important;}
+.st-key-import_link div[data-testid="stPopover"] button [data-testid="stIconMaterial"]{display:none !important;}
+div[data-testid="stPopoverBody"] .imp-pop-title{font-family:var(--ui-font);font-size:.95rem;font-weight:720;color:var(--kinari);margin:0 0 .55rem;}
+div[data-testid="stPopoverBody"] .imp-pop-row{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);line-height:1.45;padding:.4rem 0;
+    border-top:1px solid rgba(169,173,183,.12);}
+div[data-testid="stPopoverBody"] .imp-pop-row span{display:block;color:var(--kinari);font-weight:680;margin-bottom:.05rem;}
+div[data-testid="stPopoverBody"] .imp-pop-note{font-family:var(--ui-font);font-size:.74rem;color:var(--muted2);line-height:1.4;margin:.45rem 0 .5rem;}
+@media (max-width:640px){.st-key-import_link div[data-testid="stPopover"] button{height:44px !important;min-height:44px !important;}}
+
+/* Home: one tested number, the models behind it, "How We Tested" on tap, then art and services. */
+.home-lift{display:flex;align-items:center;gap:1.1rem;max-width:46rem;margin:.1rem 0 .75rem;padding-top:1.1rem;border-top:1px solid var(--border);}
+.home-lift-num{font-family:var(--ui-font);font-size:2.7rem;font-weight:780;letter-spacing:-.035em;color:var(--ivory);line-height:1;}
+.home-lift-k{font-family:var(--ui-font);font-size:1rem;font-weight:720;color:var(--kinari);line-height:1.25;}
+.home-lift-v{font-family:var(--ui-font);font-size:.8rem;color:var(--muted);line-height:1.4;margin-top:.2rem;}
+.home-models{display:flex;align-items:center;gap:.55rem;font-family:var(--ui-font);font-size:.84rem;color:var(--muted);line-height:1.4;margin:0 0 .2rem;}
+.home-models strong{color:var(--kinari);font-weight:720;}
+.home-dot{flex:0 0 .5rem !important;width:.5rem !important;height:.5rem !important;}
+.home-tested{max-width:46rem;margin:0 0 1.2rem;font-family:var(--ui-font);}
+.home-tested summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;min-height:44px;font-size:.84rem;font-weight:680;color:var(--kinari);}
+.home-tested summary::-webkit-details-marker{display:none;}
+.home-tested summary::after{content:"\203A";margin-left:.45rem;font-size:1rem;color:var(--muted);transition:transform .15s ease;}
+.home-tested[open] summary::after{transform:rotate(90deg);}
+.home-tested-row{font-size:.82rem;color:var(--muted);line-height:1.45;padding:.5rem 0;border-top:1px solid rgba(169,173,183,.12);}
+.home-tested-row span{display:inline-block;min-width:5.5rem;color:var(--kinari);font-weight:680;}
+.home-strip{margin:0 0 .2rem !important;}
+.home-svcs{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;max-width:48rem;margin:1rem 0 1.4rem;}
+.home-svcs-k{font-family:var(--ui-font);font-size:.78rem;font-weight:650;color:var(--muted2);margin-right:.25rem;}
+.home-svcs img{width:1.8rem;height:1.8rem;border-radius:7px;object-fit:cover;filter:grayscale(1);opacity:.72;}
+.home-svcs-words{font-family:var(--ui-font);font-size:.78rem;color:var(--muted);}
+@media (max-width:640px){
+    .home-lift{gap:.85rem;}
+    .home-lift-num{font-size:2.2rem;}
+    .home-tested-row span{display:block;min-width:0;}
+}

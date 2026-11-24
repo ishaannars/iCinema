@@ -110,7 +110,7 @@ def test_new_styles_only_touch_what_they_name():
     css = (ROOT / "src" / "ui" / "styles.css").read_text()
     block = re.sub(r"/\*.*?\*/", "", css[css.index("/* ==== Batch 60"):], flags=re.S)
     own = (r'\.st-key-|\[class\*="st-key-|\.(q-|step2|ready|search-|selection|sel-|pcard|genre|hero|home|live-hit|'
-           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-|showroom-|hit-|pf-)')
+           r'why-|mix-|svc-|services-|data-|poster|watch-|ratings|profile-|shero-|pc-|plike-|showroom-|hit-|pf-|imp-)')
     allowed = {"body:has(.q-block) .block-container"}
     for group in re.findall(r"([^{}]+)\{", block):
         for sel in (x.strip() for x in group.split(",")):
@@ -200,3 +200,45 @@ def test_meaning_search_only_runs_after_its_test():
     if not (ROOT / "data" / "mood_embed_confirm.json").exists():
         assert mood._embed() is None
     assert "def _meaning(query):" in (ROOT / "src" / "mood.py").read_text()
+
+
+def _fn_src(path, name):
+    import ast
+    src = (ROOT / path).read_text()
+    node = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == name)
+    return ast.get_source_segment(src, node)
+
+
+def test_search_tiles_tap_across_the_whole_tile():
+    """A tooltip (help=) wraps a button in a box sized to its hidden label, which shrank the tap area to a
+    thin strip. Tile buttons stretch instead, and the stylesheet stretches every box around them."""
+    body = _fn_src("app.py", "_render_search_tiles")
+    assert "help=" not in body and "use_container_width=True" in body
+    grid = _fn_src("app.py", "_render_services_grid")
+    assert "help=" not in grid
+    css = (ROOT / "src" / "ui" / "styles.css").read_text()
+    assert '[class*="st-key-hit_tile_"] [class*="st-key-search_result_"] div' in css
+
+
+def test_step1_is_one_tap_to_like():
+    """Step 1 has one action, Like: no Favorite button, and tapping a search poster likes it."""
+    shelf = _fn_src("app.py", "render_shelf_fragment")
+    assert '"Favorite"' not in shelf and "Add as Favorite" not in shelf
+    assert "like_search_result" in shelf
+
+
+def test_every_page_counts_the_same_eleven_models():
+    from src.model_names import MODELS_TOTAL, PICKING
+    assert MODELS_TOTAL == 11 and len(PICKING) == 10
+    for path in ("app.py", "src/screens/home.py", "src/screens/ready.py"):
+        src = (ROOT / path).read_text()
+        assert "10 + 1" not in src and "models picking" not in src
+        assert " of 11 models" not in src.replace("MODELS_TOTAL", "")
+
+
+def test_title_search_drops_near_unknown_matches():
+    from src.tmdb_catalog import rank_search_results
+    items = [{"title": "Oldboy", "vote_count": 9000}, {"title": "Oldboy", "vote_count": 3000},
+             {"title": "Super Oldboy", "vote_count": 6}, {"title": "Oldboys", "vote_count": 40}]
+    out = [(i["title"], i["vote_count"]) for i in rank_search_results(items, "oldboy")]
+    assert out == [("Oldboy", 9000), ("Oldboy", 3000)]

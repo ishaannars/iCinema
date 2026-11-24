@@ -90,6 +90,7 @@ from src.ui.cards import (  # card and popup text, unit-tested in tests/test_car
     why_sentences,
     with_live_ratings,
 )
+from src.model_names import MODELS_TOTAL, odds_model_on
 from src.ui.watch import (STREAMING_SERVICES, PROVIDER_LINKS, _provider_key, _on_service, provider_watch_url,
                           watch_options, watch_line_html, concise_availability_text, movie_on_services)
 
@@ -431,6 +432,8 @@ def add_search_choice(kind):
 def live_search_box():
     """Results update as you type (debounced ~0.3s), like a search engine.
     Falls back to the standard text box if the keyup component is unavailable."""
+    if st.session_state.get("_smoke_typed") is not None:     # tools/smoke_app.py types here (it can't type into st_keyup)
+        return str(st.session_state._smoke_typed)
     try:
         from st_keyup import st_keyup
         return st_keyup("Search movies", placeholder="Search by title", debounce=300,
@@ -536,6 +539,23 @@ def go_from_fragment(screen):
 def select_search_result(movie):
     st.session_state.search_selected_movie = movie
     st.session_state.search_selected_title = movie.get("title")
+
+
+def like_search_result(movie):
+    """Step 1 search: tapping a poster likes it right away (the same as Like on the shelf)."""
+    movie = dict(movie or {})
+    title = movie.get("title")
+    if not title:
+        return
+    if movie.get("external") or movie.get("tmdb_id") or not get_movie(title):
+        st.session_state.external_movies[title] = movie
+    st.session_state.likes.add(title)
+    st.session_state.favorites.discard(title)
+    if title not in st.session_state.selection_order:
+        st.session_state.selection_order.append(title)
+    st.session_state.search_selected_movie = None
+    st.session_state.search_selected_title = None
+    queue_profile_save()
 
 def set_review_priority(value):
     st.session_state.review_priority = value
@@ -1121,6 +1141,9 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         first = (first[0], first[1], first[2], f"{_fans_left}%", first[4])
         _order_row = [(True, "What you liked last", "Order model · Markov chain", f"{_ord}%",
                        "What people like next after your three most recent picks; it beat the fan ranking on held-out viewers.")]
+    else:   # always listed, so the Profile shows all 11 models whether or not each is running
+        _order_row = [(False, "What you liked last", "Order model · Markov chain", "",
+                       "Off: its model file isn’t loaded right now.")]
     items = [
         first,
         *_inside,
@@ -1137,7 +1160,10 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         (_mood_on, "Mood search", "Fan-tag TF-IDF", "",
          (f"Using “{_mq[:30]}” right now." if _mq else "Off: your search is a title, not a mood.") if _mood_on
          else "Off until you type a mood in the Showroom."),
+        (odds_model_on(), "Your odds", "Calibration · isotonic regression", "",
+         "Turns each score into a chance you’ll love it, checked against what test viewers did."),
     ]
+    _running = sum(1 for it in items if it[0])      # each row is one model; the ranker's three fan models have their own rows
     _foot = "Weights were set in tests on movie fans the models never saw."
     if _ltr_on:
         _d = _ltr_mod.result() or {}
@@ -1146,7 +1172,8 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
                       f"(NDCG@10 {_d['ndcg_learned']:.3f} vs {_d['ndcg_current_blend']:.3f}).")
     models_html = (
         '<div class="pf-section"><div class="pf-title">What’s choosing your picks</div>'
-        '<div class="pf-sub">A filled dot means running for you now. The percent is each model’s weight in your picks.</div>'
+        f'<div class="pf-sub">{MODELS_TOTAL} models: {MODELS_TOTAL - 1} pick, 1 sets the odds. {_running} are running for you now (filled dot). '
+        'The percent is each model’s weight in your picks.</div>'
         '<div class="pf-models">'
         + "".join(f'<div class="pf-model"><span class="pf-dot{" on" if on else ""}"></span>'
                   f'<div class="pf-model-main"><div class="pf-model-name">{html.escape(name)}</div>'
@@ -1443,23 +1470,14 @@ def render_shelf_fragment():
                 movie_thumb(movie, shelf_landscape_map.get(title) or movie.get("poster_url") or shelf_poster_map.get(title))
                 # Own keyed box, so "stack Like over Favorite when the card is narrow" touches only these two.
                 with st.container(key=f"shelf_actions_{i}_{movie.get('tmdb_id') or title}"):
-                    b1,b2=st.columns(2, gap="small")
-                    with b1:
-                        st.button(
-                            "Like",
-                            key=f"like_{i}_{movie.get('tmdb_id') or title}",
-                            use_container_width=True,
-                            on_click=rate_shelf_movie,
-                            args=(movie, "like", i),
-                        )
-                    with b2:
-                        st.button(
-                            "Favorite",
-                            key=f"fav_{i}_{movie.get('tmdb_id') or title}",
-                            use_container_width=True,
-                            on_click=rate_shelf_movie,
-                            args=(movie, "favorite", i),
-                        )
+                    # One action per movie: Like. "Loved it" comes later, after you've marked a movie Seen.
+                    st.button(
+                        "Like",
+                        key=f"like_{i}_{movie.get('tmdb_id') or title}",
+                        use_container_width=True,
+                        on_click=rate_shelf_movie,
+                        args=(movie, "like", i),
+                    )
 
     with st.container(key="step1_search"):
         st.markdown(
@@ -1508,16 +1526,14 @@ def render_shelf_fragment():
                 st.markdown(f'<div class="search-results-label">{"Did you mean" if did_you_mean else "Matching titles"}</div>', unsafe_allow_html=True)
                 # Same tiles as the Showroom search and cards: wide key art with the title in it; tap to pick.
                 with st.container(key="step1_hits"):
-                    _sel = st.session_state.search_selected_movie
-                    _render_search_tiles(matches[:8], "search_result", lambda m: (m,), select_search_result,
-                                         selected_id=(_sel or {}).get("tmdb_id"))
+                    # Tap a poster to like it. It moves to Your selections, where × takes it back.
+                    _render_search_tiles(matches[:8], "search_result", lambda m: (m,), like_search_result)
 
             if already_selected_matches:
                 selected_name = already_selected_matches[0]["title"]
-                state = "Favorite" if selected_name in st.session_state.favorites else "Liked"
                 st.markdown(
                     f'<div class="search-already-selected">'
-                    f'<strong>{html.escape(selected_name)}</strong> is already in your selections as {state.lower()}'
+                    f'<strong>{html.escape(selected_name)}</strong> is already in your likes.'
                     f'</div>',
                     unsafe_allow_html=True
                 )
@@ -1528,44 +1544,24 @@ def render_shelf_fragment():
                 else:
                     st.caption("Search is offline for a moment, so these matches come from iCinema’s own catalog.")
 
-        choice_movie = st.session_state.search_selected_movie
-        if choice_movie:
-            choice = choice_movie["title"]
-            st.markdown(
-                f'<div class="search-selected-card">'
-                f'<div class="search-selected-kicker">Selected title</div>'
-                f'<div class="search-selected-title">{html.escape(choice)}{html.escape(" (" + str(choice_movie.get("year")) + ")") if choice_movie.get("year") else ""}</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-            preview_cols = st.columns([1, 3])
-            with preview_cols[0]:
-                movie_thumb(choice_movie)
-            with preview_cols[1]:
-                a,b=st.columns([1,1])
-                with a:
-                    st.button(
-                        "Add as Like",
-                        key="search_add_like",
-                        use_container_width=True,
-                        on_click=add_search_choice,
-                        args=("like",),
-                    )
-                with b:
-                    st.button(
-                        "Add as Favorite",
-                        key="search_add_favorite",
-                        use_container_width=True,
-                        on_click=add_search_choice,
-                        args=("favorite",),
-                    )
-
     with st.container(key="step1_letterboxd"):
-        # Optional, so it stays one quiet line under search (progressive disclosure): no new box or button.
-        with st.expander("Import your ratings from Letterboxd or IMDb"):
-            st.caption("Upload the ZIP from Letterboxd or the ratings file from IMDb. Your file stays in this browser.")
-            st.file_uploader("Letterboxd export (ZIP or ratings.csv) or IMDb ratings.csv", type=["zip", "csv"], key="lb_upload",
-                             label_visibility="collapsed", on_change=import_letterboxd)
+        # One settings-style row, the same shape as the Privacy rows: a title, one line of why, and its
+        # control on the right. The steps and the file picker open on tap, so the page stays calm.
+        with st.container(key="import_card"):
+            txt, ctl = st.columns([5, 1.3], vertical_alignment="center")
+            with txt:
+                st.markdown('<div class="imp-label">Import From Letterboxd or IMDb</div>'
+                            '<div class="imp-note">Add every movie you’ve rated in one step.</div>', unsafe_allow_html=True)
+            with ctl:
+                with st.container(key="import_link"):
+                    with st.popover("Import", use_container_width=True):
+                        st.markdown('<div class="imp-pop-title">Import your ratings</div>'
+                                    '<div class="imp-pop-row"><span>Letterboxd</span>Export your data from Settings, then upload the ZIP.</div>'
+                                    '<div class="imp-pop-row"><span>IMDb</span>Export Your Ratings, then upload the CSV.</div>'
+                                    '<div class="imp-pop-note">Movies you rated highly become likes. Your file stays in this browser.</div>',
+                                    unsafe_allow_html=True)
+                        st.file_uploader("Letterboxd export (ZIP or ratings.csv) or IMDb ratings.csv", type=["zip", "csv"],
+                                         key="lb_upload", label_visibility="collapsed", on_change=import_letterboxd)
         _imp = st.session_state.get("import_summary")
         _n_imp = len(st.session_state.get("imported_titles") or set())
         if _imp and _imp.get("error"):
@@ -1601,7 +1597,6 @@ def render_shelf_fragment():
             _pm = get_poster_batch(_need) if _need else {}
             selection_cols = st.columns(8, gap="small")
             for idx, title in enumerate(chosen_titles):
-                state = "Favorite" if title in st.session_state.favorites else "Liked"
                 _u = str(_ms[idx].get("poster_url") or _pm.get(title) or "")
                 with selection_cols[idx % 8]:
                     with st.container(key=f"selection_card_{idx}"):
@@ -1609,8 +1604,8 @@ def render_shelf_fragment():
                             '<div class="sel-poster">'
                             + (f'<img src="{html.escape(_u, quote=True)}" alt="">' if _u.startswith("https://")
                                else f'<div class="live-hit-blank">{html.escape(title[:24])}</div>')
-                            + f'</div><div class="sel-cap"><span class="sel-title">{html.escape(title)}</span>'
-                            f'<span class="sel-state">{html.escape(state)}</span></div>', unsafe_allow_html=True)
+                            + f'</div><div class="sel-cap"><span class="sel-title">{html.escape(title)}</span></div>',
+                            unsafe_allow_html=True)
                         st.button("×", key=f"remove_selection_{idx}", help=f"Remove {title}",
                                   on_click=remove_step1_selection, args=(title,))
 
@@ -2572,6 +2567,8 @@ def render_search_box():
                 st.session_state.mood_input = _mood_text()
             st.text_input("Search by mood, time, or a movie", key="mood_input", label_visibility="collapsed",
                           placeholder=("Add a Mood, Length, or Movie" if _mood_text() else "Movies, Moods, Lengths, and More"), on_change=_apply_mood)
+        if st.session_state.get("_smoke_typed") is not None:   # tools/smoke_app.py types here
+            live = str(st.session_state._smoke_typed)
         typed = " ".join(str(live or "").split())
         if live is not None and not typed:
             st.session_state.pop("_edit_rest", None)   # the field was cleared: no token edit is pending
@@ -2614,12 +2611,17 @@ def _render_search_tiles(movies, key, args_for, on_click, selected_id=None):
         with cols[k % 4]:
             with st.container(key=f"hit_tile_{key}_{k}"):
                 on = selected_id is not None and m.get("tmdb_id") == selected_id
+                # The year sits under the art, so two films with the same title (Oldboy 2003, Oldboy 2013) differ.
                 st.markdown(f'<div class="hit-art{" on" if on else ""}">'
                             + movie_thumb(dict(m, year=""), art.get(m["title"]) or m.get("poster_url"), landscape=True, return_html=True)
-                            + '</div>', unsafe_allow_html=True)
+                            + '</div>'
+                            + (f'<div class="hit-year">{html.escape(str(m["year"]))}</div>' if m.get("year") else ""),
+                            unsafe_allow_html=True)
                 label = m["title"] + (f' ({m["year"]})' if m.get("year") else "")
-                st.button(label[:60], key=f"{key}_{k}_{m.get('tmdb_id') or m['title']}", help=label,
-                          on_click=on_click, args=args_for(m))
+                # No tooltip on this button: a tooltip wraps it in a box sized to its (invisible) label, which shrank
+                # the tap area to a thin strip at the top of the tile. That is why poster taps did nothing.
+                st.button(label[:60], key=f"{key}_{k}_{m.get('tmdb_id') or m['title']}",
+                          use_container_width=True, on_click=on_click, args=args_for(m))
 
 
 def _showroom_slot_key(row_name, slot_index):
@@ -2834,7 +2836,7 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
         _ids |= {"Fans like you": ({"ranker", "item-kNN", "RP3beta", "EASE"} if payload.get("cf_source") == "ranker" else {"item-kNN"}),
                  "What you liked last": {"markov"}, "What it’s like": {"content"}, "Your choices": {"personal"},
                  "New releases": {"ridge"}, "Mood search": {"mood"}}.get(n, set())
-    used_line = (f"{len(_ids)} of 11 models shaped this pick"
+    used_line = (f"{len(_ids)} of {MODELS_TOTAL} models shaped this pick"
                  + (" (the fan ranker blends item-kNN, RP3beta and EASE)" if payload.get("cf_source") == "ranker" else "")
                  + ", and a calibration model turns the score into your odds.")
     extra = None
@@ -2857,7 +2859,7 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
             + (f'<div class="why-models-label">What decided this pick</div><div class="why-models">{models}</div>' if models else "")
             + (f'<div class="why-extra" style="display:none"><strong>{html.escape(extra[0])}</strong>'
                + (f' · {html.escape(extra[1])}' if extra[1] else "") + '</div>' if extra else "")
-            + f'<div class="why-more">{len(_ids)} of 11 models · point at a bar for its method</div>')
+            + f'<div class="why-more">{len(_ids)} of {MODELS_TOTAL} models · point at a bar for its method</div>')
 
 
 def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):
@@ -3179,7 +3181,7 @@ def _render_services_grid(services):
             with st.container(key=f"svc_tile_{'on_' if on else ''}{i}"):
                 st.markdown(f'<div class="svc-art{" multi" if len(imgs) > 1 else ""}">{art}</div>'
                             f'<div class="svc-name">{html.escape(short)}</div>', unsafe_allow_html=True)
-                st.button(short, key=f"svc_btn_{i}", help=("Turn off " if on else "Turn on ") + short,
+                st.button(short, key=f"svc_btn_{i}", use_container_width=True,
                           on_click=toggle_streaming_service, args=(name,))
 
 
@@ -3209,7 +3211,7 @@ def _render_services_picker(services):
                 with st.container(key=f"svc_tile_{'on_' if on else ''}{i}"):
                     st.markdown(f'<div class="svc-art{" multi" if len(imgs) > 1 else ""}">{art}</div>'
                                 f'<div class="svc-name">{html.escape(short)}</div>', unsafe_allow_html=True)
-                    st.button(short, key=f"svc_btn_{i}", help=("Turn off " if on else "Turn on ") + short,
+                    st.button(short, key=f"svc_btn_{i}", use_container_width=True,
                               on_click=toggle_streaming_service, args=(name,))
         st.button("Done", key="svc_done", type="primary", on_click=_services_done)
         st.markdown('<div class="services-credit">Availability and logos by JustWatch, via TMDB.</div>', unsafe_allow_html=True)

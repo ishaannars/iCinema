@@ -229,6 +229,12 @@ def rank_search_results(items, query):
             return 0
     if sum(1 for i in items if votes(i) >= 100) >= 3:
         items = [i for i in items if votes(i) >= 20]
+    # When one match is well known, near-unknown ones drop out even if few others are: under 0.5% of the
+    # best-known match's votes (and under 20 at least). "oldboy" keeps Oldboy 2003 and 2013, not "Super Oldboy".
+    top = max((votes(i) for i in items), default=0)
+    if top >= 1000:
+        floor = max(20, int(top * 0.005))
+        items = [i for i in items if votes(i) >= floor]
     return sorted(items, key=lambda i: (str(i.get("title", "")).casefold() != q, -votes(i)))
 
 

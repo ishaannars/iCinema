@@ -6,6 +6,7 @@ import html
 
 import streamlit as st
 
+from src.model_names import MODELS_TOTAL
 from src.recommender import get_movie
 from src.tmdb_catalog import get_poster_batch
 
@@ -33,7 +34,9 @@ def _ready_models(ctx):
     out = []
     if _ltr_mod.available():
         out.append(("Best-of-all ranker", "gradient boosting", "Weighs every model for you"))
-    out.append(("Fans like you", fans_tech, "People who loved your picks"))
+        out.append(("Fans like you", "item-kNN · RP3beta · EASE", "Three models find similar fans"))
+    else:
+        out.append(("Fans like you", fans_tech, "People who loved your picks"))
     if _seqm.main_available() and sig:
         out.append(("What you liked last", "Markov chain", "What fans watched right after"))
     out.append(("What each movie is like", "TF-IDF + SVD", "Matches genres and fan tags"))
@@ -44,7 +47,15 @@ def _ready_models(ctx):
     learned = ctx["learning_model_for"](st.session_state.get("analytics_events") or [])
     if getattr(learned, "ready", False):
         out.append(("Your own choices", str(learned.model_name).lower(), "Learns from your saves, skips"))
+    from src.model_names import odds_model_on
+    if odds_model_on():
+        out.append(("Your odds", "isotonic calibration", "Turns each score into odds"))
     return out
+
+
+def _models_running(models):
+    """How many of the 11 models are on: the fan row holds three when the ranker runs."""
+    return sum(3 if tech == "item-kNN · RP3beta · EASE" else 1 for _nm, tech, _job in models)
 
 
 def render_ready_summary(ctx):
@@ -88,7 +99,7 @@ def render_ready_summary(ctx):
         + f'<div class="ready-value">{html.escape(count_note)}</div></div>'
         '<div class="ready-card"><div class="ready-kicker">Your answers</div>'
         f'<div class="ready-spec">{spec_html}</div></div>'
-        f'<div class="ready-card"><div class="ready-kicker">{len(models)} models picking</div>'
+        f'<div class="ready-card"><div class="ready-kicker">{_models_running(models)} of {MODELS_TOTAL} models running</div>'
         f'<div class="ready-models">{models_html}</div>'
         '</div>'
         '</div>', unsafe_allow_html=True)
