@@ -33,7 +33,7 @@ def main():
     # The front page says what iCinema does first, and service pills are names (never outdated logo images).
     page = " ".join(str(m.value) for m in at.markdown)
     svcs = page[page.find('class="home-svcs"'):] if 'class="home-svcs"' in page else ""
-    good = "Know what to watch" in page and svcs != "" and "<img" not in svcs[:1500]
+    good = "Every service." in page and "Sharper Every Time" in page and svcs != "" and "<img" not in svcs[:1500]
     print(f"{'Home: value prop + pills':<28} {'OK' if good else 'ERROR: headline or service pills wrong'}")
     ok &= good
     at.session_state["likes"] = {"Spirited Away"}
@@ -173,6 +173,23 @@ def main():
     ok &= not bad and not at.exception
     at.session_state["mood_active"] = ""
     at.session_state["mood_input"] = ""
+    at.run()
+    # "Only show movies on my services": every movie shown must stream on the chosen service.
+    from src.ui.watch import movie_on_services
+    at.session_state["streaming_services"] = ["Netflix"]
+    at.session_state["only_mine"] = True
+    at.run()
+    slots = at.session_state["showroom_slots"] if "showroom_slots" in at.session_state else {}
+    cache = at.session_state["showroom_watch_cache"] if "showroom_watch_cache" in at.session_state else {}
+    shown = [t for k, t in slots.items() if t and "Shows" not in k]
+    off = [t for t in shown if not movie_on_services(cache.get(t), ["Netflix"])]
+    if not shown:
+        print(f"{'Only my services':<28} SKIP (no availability data here, so no movies to check)")
+    else:
+        print(f"{'Only my services':<28} {'OK' if not off and not at.exception else 'ERROR: off-service ' + ', '.join(off[:3])}")
+        ok &= not off and not at.exception
+    at.session_state["only_mine"] = False
+    at.session_state["streaming_services"] = []
     at.run()
     # Showroom search: type, tap a poster, and the search must become that exact movie.
     at.session_state["_smoke_typed"] = "Inception"

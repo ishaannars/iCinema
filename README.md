@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml/badge.svg)](https://github.com/ishaannars/iCinema/actions/workflows/tests.yml)
 
-**Your next great watch, across every service.** Ten tested recommendation models, plus a calibrated model for the odds, turn two quick steps and tonight's mood into a ranked pick, where to stream it, and the odds you'll love it. First pick loved 48% more often than the most popular movie, on 3,000 movie fans the models never saw. No account needed.
+**Every service. Ranked for you.** iCinema brings together what's on the services you pay for, ranks it around what you like, and gets sharper with every save and skip. Ten tested recommendation models, plus a calibrated model for the odds. First pick loved 48% more often than the most popular movie, and 39% more loved movies in each row, on 3,000 movie fans the models never saw. No account needed.
 
 I built iCinema because I had this recurring problem of spending too much time deciding what to watch. Every model in it was tested on viewers it had never seen before it shipped, and the ones that didn't beat a simple baseline are reported below too.
 
@@ -134,6 +134,8 @@ Every idea had to beat what was already shipping, on viewers the models never sa
 | Idea | Result on held-out viewers | Decision |
 |---|---|---|
 | "More like X": re-rank fans' picks with genres and fan tags, minus a popularity discount | NDCG@10 0.085 vs 0.099 for fans alone (95% CI −0.017 to −0.011); it lost in every popularity band, niche fans included | Kept fans alone |
+| Content model (TF-IDF + SVD) at a fixed 20% of each pick | Adding content did not beat fans alone on validation viewers (`tools/claims_audit.py` reads `data/blend_results.json`) | Kept at 20% on purpose, so your genre and "more of" answers shape picks. A product choice, not an accuracy gain |
+| Content with your Step 2 genre answers (20% of each pick) | On 3,000 fresh viewers, picks matched the stated genres far more (94% of the top 10 vs 65%), but NDCG@10 fell 15% (0.070 vs 0.082, 95% CI −0.018 to −0.007). The answers carried real signal (72% of future loves were in those genres vs 63% by chance), so the test counted | Did not earn its 20% as accuracy. Kept for control: your answers visibly steer the picks. A lower weight is a new question for a future test, rule written first |
 | Show odds: a calibrated "chance you'll love it" for shows, like movies have | Failed its validity check before odds could count. On 5,000 held-out Amazon reviewers, the show ranking could not tell loved shows from the rest of the shows they rated (AUC 0.498, 95% CI low 0.483). 90% of show ratings were 4+ stars, so there was almost nothing to separate | Show cards show their rank ("#1 for you"), never a percent |
 | Hidden Gems row: 28% weight on how little-known a movie is | 1.1% of the row's top 10 were loved, vs 12.5% when your fit decides the order | Fit decides the order |
 | Critically Acclaimed row: 30% weight on critics' score | 49.5% vs 52.0% loved in the top 10 with fit deciding the order | Fit decides the order |
@@ -242,13 +244,15 @@ To rebuild every model and number with one command, download MovieLens 32M into 
 
 ## Why this problem
 
-Three questions every project has to pass before it's built: is the problem painful, does it recur, and do many people share it?
+Three questions every project has to pass before it's built. Each one maps to one part of iCinema.
 
-| Question | Evidence |
-|---|---|
-| **Painful?** | 46% of streaming viewers say the number of services makes it harder to find something to watch, and 49% say they'd cancel a service if they can't (Gracenote 2025, 3,000 viewers in six countries). |
-| **Recurring?** | It happens every session: about 12 minutes of browsing each time in the US, 16 minutes for 18–34s (Gracenote 2025). |
-| **Shared?** | US streamers pay for about 4 services on average (Deloitte 2025), and 66% want one guide that tells them where something is, whatever service it's on (Gracenote 2025). |
+| Question | Evidence | What iCinema does about it |
+|---|---|---|
+| **Painful?** | US viewers spend 12 minutes deciding what to watch, up from 10.5 in 2023, and the longer it takes, the less they enjoy it. 49% would cancel a service if they can't find something (Gracenote State of Play 2025, 3,000 viewers in six countries). | **Ranked for you:** your best match first, then a Showroom of strong backups, each with the models' odds and why. First pick loved 48% more often; 39% more loved movies per row. |
+| **Shared?** | 90% of US households pay for at least one streaming service, about four on average (Deloitte Digital Media Trends 2025). 46% (51% in the US) say the number of services makes it harder; 66% want one guide for all of them (Gracenote 2025). | **All your services:** where every pick is streaming, your apps marked on each card, and a switch to show only what's on them. |
+| **Recurring?** | The decision comes back every movie night, and catalogs don't learn. | **Sharper every time:** saves, skips, Seen, and moods train your own model, tested to improve picks as choices add up. |
+
+The people who pay for discovery problems are the streaming services: hard discovery drives cancellations. iCinema stays a free portfolio project; any business would start there.
 
 ## Recent test results
 
@@ -263,7 +267,7 @@ Three questions every project has to pass before it's built: is the problem pain
 
 ## Coming next
 
-- A For Critics tab, an "Only my services" mode, and adding likes from the Showroom anytime.
+- A For Critics tab, adding likes from the Showroom anytime, and one-tap links that open a movie straight in its streaming app.
 - Run the decision-time test with 20+ people, and keep splitting `app.py`.
 
 ## Stack

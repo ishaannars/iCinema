@@ -44,37 +44,56 @@ def _services_row():
     return f'<div class="home-svcs"><span class="home-svcs-k">Works with</span>{"".join(pills)}</div>'
 
 
+def _learning_curve_passed():
+    """True only if training/confirm_learning_curve.py found picks improve with more choices (CI above zero)."""
+    try:
+        return bool(json.loads((ROOT / "data" / "learning_curve_confirm.json").read_text()).get("claim_allowed"))
+    except Exception:
+        return False
+
+
 def render_home(ctx):
     """One screen, read top to bottom by someone who has never heard of iCinema:
     what it does for you, how (three steps), the button, why to believe it, then the services it covers."""
     ctx["logo"]()
-    st.markdown('<div class="hero-title">Know what to watch<br>tonight.</div>'
-                '<div class="hero-subtitle">Like a few movies you love. iCinema picks the one you’re most likely to love tonight, '
-                'shows which of your services has it, and tells you how likely you are to love it.</div>'
-                '<div class="home-steps">'
-                '<div class="home-step"><span class="home-step-n">1</span><span>Like a few movies</span></div>'
-                '<div class="home-step"><span class="home-step-n">2</span><span>Get tonight’s pick</span></div>'
-                '<div class="home-step"><span class="home-step-n">3</span><span>See where to stream it</span></div>'
-                '</div>', unsafe_allow_html=True)
-    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=ctx["go"], args=("shelf",))
-    st.markdown('<div class="home-free">Free · No account · Nothing personal stored</div>', unsafe_allow_html=True)
-
     off = load_offline_results() or {}
-    lift = (off.get("lifts_three_likes_vs_popularity") or {}).get("hit@1")
+    lifts = off.get("lifts_three_likes_vs_popularity") or {}
+    lift, rows_lift = lifts.get("hit@1"), lifts.get("recall@10")
     tested = off.get("held_out_users")
     cfh = ((off.get("three_likes") or {}).get("cf") or {}).get("hit@1")
     poph = ((off.get("full") or {}).get("popularity") or {}).get("hit@1")
     ece = _ece()
     both = isinstance(cfh, (int, float)) and isinstance(poph, (int, float))
+    sharper = _learning_curve_passed()
+
+    # The value proposition: one headline, one sentence, then three pillars, one per founder question
+    # (painful: ranked for you; shared: all your services; recurring: sharper every time). Each pillar
+    # carries its own proof, read from the result files, and says nothing the tests didn't show.
+    st.markdown('<div class="hero-title">Every service.<br>Ranked for you.</div>'
+                '<div class="hero-subtitle">iCinema brings together what’s on the services you pay for, ranks it around '
+                'what you like, and gets sharper with every save and skip.</div>', unsafe_allow_html=True)
+    st.button("Start Personalizing →", type="primary", key="start_personalizing", on_click=ctx["go"], args=("shelf",))
+    st.markdown('<div class="home-free">Free · No account · Nothing personal stored</div>', unsafe_allow_html=True)
+
+    rank_proof = (f"First pick loved {lift:.0f}% more often, and {rows_lift:.0f}% more loved movies in each row."
+                  if isinstance(lift, (int, float)) and isinstance(rows_lift, (int, float)) else
+                  f"First pick loved {lift:.0f}% more often than the most popular movie." if isinstance(lift, (int, float)) else "")
+    pillars = [
+        ("Ranked for You", "Your best match first, then a Showroom of strong backups, each with your odds and why.", rank_proof),
+        ("All Your Services", "See where every pick is streaming, or switch to only what\u2019s on the services you pay for.",
+         "Netflix, HBO Max, Hulu, Prime Video, Disney+, Apple TV, Peacock, Paramount+, and free apps."),
+        ("Sharper Every Time", "Saves, skips, moods, and what you’ve seen teach it what you love.",
+         "Tested: picks improved as viewers made more choices." if sharper else "Your own model joins after 50 choices."),
+    ]
+    st.markdown('<div class="home-pillars">' + "".join(
+        f'<div class="home-pillar"><div class="home-pillar-t">{html.escape(t)}</div>'
+        f'<div class="home-pillar-d">{html.escape(d)}</div>'
+        + (f'<div class="home-pillar-p"><span class="pf-dot on home-dot"></span>{html.escape(pr)}</div>' if pr else "")
+        + '</div>' for t, d, pr in pillars) + '</div>'
+        '<div class="home-why">US viewers spend 12 minutes deciding what to watch (Gracenote, 2025).</div>',
+        unsafe_allow_html=True)
 
     parts = []
-    if isinstance(lift, (int, float)):
-        who = f"{tested:,} movie fans" if isinstance(tested, int) else "movie fans"
-        # One plain sentence a first-time visitor can read: who was tested, what happened, against what.
-        detail = (f" ({cfh * 1000:.0f} in 1,000, vs {poph * 1000:.0f} in 1,000 for the most popular movie)" if both else "")
-        parts.append('<div class="home-proof-line"><span class="pf-dot on home-dot"></span><span>'
-                     f'<strong>Tested on {html.escape(who)}.</strong> They loved iCinema’s first pick {lift:.0f}% more often '
-                     f'than the most popular movie{html.escape(detail)}.</span></div>')
     # Counted from the result files (src/claims.py), so this line can never claim more than the tests showed.
     from src.claims import models_passed
     _np = models_passed()
@@ -84,11 +103,12 @@ def render_home(ctx):
     if isinstance(tested, int):
         rows.append(("Who", f"{tested:,} movie fans the models never saw, each starting from just 3 likes."))
     if both:
-        rows.append(("First pick", f"Rated 4+ stars by {cfh:.1%} of test viewers, vs {poph:.1%} for the most popular movie."))
+        rows.append(("First pick", f"{cfh * 1000:.0f} in 1,000 test fans loved iCinema’s first pick, vs {poph * 1000:.0f} "
+                                   "in 1,000 for the most popular movie."))
     if isinstance(ece, float):
         rows.append(("Odds", f"Each “chance you’ll love it” is off by {max(ece * 100, 0.1):.1f} points on average "
                              "from what test viewers did."))
-    rows.append(("Rule", "A model ships only if it beats the simpler option. What lost is listed in the README."))
+    rows.append(("Rule", "Every model is tested against a simpler option, and every result is in the README, including the content model, which stays at 20% so your answers count."))
     parts.append('<details class="home-tested"><summary><span class="pf-dot on home-dot"></span>How We Tested</summary>'
                  + "".join(f'<div class="home-tested-row"><span>{html.escape(k)}</span>{html.escape(v)}</div>' for k, v in rows)
                  + '</details>')

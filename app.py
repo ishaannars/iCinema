@@ -53,6 +53,9 @@ def _log_time(label, start):
 
 
 _log_time("imports", _BOOT)
+from src.actions import (ADAPTIVE_NOTES, AVOID_TERMS, FATIGUE_CAP, FATIGUE_STEP, PROFILE_STORAGE_KEY, RECOGNIZABLE_SHELF_TITLES, SEARCH_RULE, VARIETY_SPREAD, _ADAPTIVE_FROM_STEP3, _BUILD_KEYS, _MOOD_PRESETS, _MORE_DESCRIPTIONS, _SERVICE_SHORT, _answer_seen, _build_current_profile, _build_key, _cached_insights, _cf_signals, _current_recommendation_context, _edit_token, _fork_seen, _lib_bump, _library_counts, _load_tmdb_shelf_pool, _love_pct, _mark_showroom_fast, _mood_text, _newest_first, _personal_need, _preset_active, _quality_strict, _refresh_if_requested, _remove_like_from_profile, _request_showroom_refresh, _saved_to_seen, _seed_local_shelf_pool, _services_done, _set_mood, _set_mood_live, _set_opt_out, _set_profile_section, _shelf_key, _showroom_cached_metadata, _showroom_slot_key, _sync_services_from_picker, _tag_overlap, _title_of, add_search_choice, cached_semantic_scores, current_profile, defaults, fourth_row_name, go, go_from_fragment, impression_fatigue, learning_model_for, mark_movie_seen, rate_seen, remove_from_seen, remove_saved_movie, remove_step1_selection, reset_profile_from_fragment, reset_profile_state, resolve_history_movie, save_movie, select_search_result, service_availability_utility, set_adventure_level, set_review_priority, skip_movie, taste_undo, toggle_genre_choice, toggle_priority_choice, toggle_streaming_service, tonight_save, tonight_seen, tonight_skip, tonight_undo, undo_letterboxd_import, undo_showroom_slot, undo_skip, whats_next_another)
+from src.ui.parts import (_render_more_choices, _render_profile_likes, _sat_out, _whats_next_popover, movie_thumb)
+
 st.set_page_config(page_title="iCinema", page_icon=str(Path(__file__).parent / "assets" / "favicon.png"), layout="wide", initial_sidebar_state="collapsed")
 
 from src.ui import app_css, css_chunks
@@ -99,18 +102,6 @@ from src.ui.watch import (STREAMING_SERVICES, PROVIDER_LINKS, _provider_key, _on
 for _css_part in css_chunks(app_css()):
     st.markdown("<style>" + _css_part + "</style>", unsafe_allow_html=True)
 
-defaults={
-    "screen":"welcome","onboarding_complete":False,"likes":set(),"favorites":set(),"review_priority":50,
-    "genres":[],"adventure":50,"more_of":[],"saved":set(),"seen":set(),"dismissed":set(),"disliked":set(),"seen_from_saved":set(),"seen_rating":{},"selection_order":[],"imported_titles":set(),"imported_seen":set(),"imported_disliked":set(),"import_summary":None,
-    "custom_like":None,"search_selected_title":None,"search_selected_movie":None,"external_movies":{},
-    "shelf_movies":[],"shelf_replacement_pool":[],"shelf_seen_titles":set(),
-    "shelf_pool_initialized":False,"shelf_tmdb_loaded":False,
-    "analytics_events":[],"showroom_session_id":None,"showroom_session_start":None,
-    "showroom_impression_keys":set(),"recommendation_context":{},
-    "showroom_slots":{},"showroom_payloads":{},"showroom_row_queues":{},
-    "showroom_identity_cache":{},"showroom_watch_cache":{},"showroom_rating_cache":{},
-    "streaming_services":[],"mood_active":""
-}
 # Always mounted at the same spot so its iframe (and listeners) persist across reruns.
 scroll_keeper()
 
@@ -119,9 +110,6 @@ st.session_state._in_full_run = True
 for k,v in defaults.items():
     if k not in st.session_state:
         st.session_state[k]=v.copy() if isinstance(v,(set,dict)) else (list(v) if isinstance(v,list) else v)
-
-PROFILE_STORAGE_KEY = "icinema_profile_v1"
-
 
 def profile_snapshot():
     return {
@@ -241,26 +229,6 @@ def persist_from_fragment():
         persist_profile_if_needed()
 
 
-def _lib_bump():
-    """A choice made on Saved or Seen (thumbs, Mark Seen, Remove): the Showroom re-ranks when you go back to it."""
-    st.session_state._lib_ver = int(st.session_state.get("_lib_ver") or 0) + 1
-
-
-def _saved_to_seen(title, movie):
-    mark_movie_seen(title, movie)
-    _lib_bump()
-
-
-RECOGNIZABLE_SHELF_TITLES = [
-    "Dune: Part Two", "Blade Runner 2049", "The Prestige", "Prisoners",
-    "Nightcrawler", "The Truman Show", "The Grand Budapest Hotel",
-    "No Country for Old Men", "Before Sunrise", "Train to Busan",
-    "Your Name", "Princess Mononoke", "Akira", "Ex Machina",
-    "Past Lives", "The Holdovers", "The Wailing", "The Handmaiden",
-    "Memories of Murder", "The Worst Person in the World",
-]
-
-
 def _current_hits(k, skip):
     """The k most popular recent movies on TMDB right now (released in the last 3 years)."""
     if not tmdb_catalog_configured():
@@ -281,51 +249,6 @@ def _current_hits(k, skip):
             break
     return out
 
-
-def _shelf_key(movie):
-    return (str(movie.get("title", "")).casefold(), int(movie.get("year") or 0))
-
-def _seed_local_shelf_pool():
-    if st.session_state.shelf_pool_initialized:
-        return
-    selected = st.session_state.likes | st.session_state.favorites
-    visible = {_shelf_key(m) for m in st.session_state.shelf_movies}
-    pool = [m for m in _tested_shelf() if m.get("title") not in selected and _shelf_key(m) not in visible]
-    for title in RECOGNIZABLE_SHELF_TITLES:
-        movie = get_movie(title)
-        if not movie or movie.get("title") in selected:
-            continue
-        pool.append(dict(movie))
-    st.session_state.shelf_replacement_pool = pool
-    st.session_state.shelf_pool_initialized = True
-
-def _load_tmdb_shelf_pool():
-    if st.session_state.shelf_tmdb_loaded or not tmdb_catalog_configured():
-        return
-    try:
-        candidates = discover_movies(300)
-    except Exception:
-        candidates = []
-    # Keep the shelf broadly recognizable: prioritize popularity and substantial voting.
-    candidates = [
-        dict(m) for m in candidates
-        if m.get("poster_url")
-        and (float(m.get("popularity") or 0) >= 25 or int(m.get("tmdb_vote_count") or 0) >= 750)
-    ]
-    candidates.sort(
-        key=lambda m: (float(m.get("popularity") or 0), int(m.get("tmdb_vote_count") or 0)),
-        reverse=True,
-    )
-    existing = {_shelf_key(m) for m in st.session_state.shelf_replacement_pool}
-    existing |= {_shelf_key(m) for m in st.session_state.shelf_movies}
-    existing |= {(str(t).casefold(), 0) for t in (st.session_state.likes | st.session_state.favorites)}
-    for movie in candidates:
-        key = _shelf_key(movie)
-        if key in existing or movie.get("title") in st.session_state.likes or movie.get("title") in st.session_state.favorites:
-            continue
-        st.session_state.shelf_replacement_pool.append(movie)
-        existing.add(key)
-    st.session_state.shelf_tmdb_loaded = True
 
 def _next_shelf_movie():
     _seed_local_shelf_pool()
@@ -411,24 +334,6 @@ def rate_shelf_movie(movie, kind, slot_index):
             st.session_state.shelf_movies.pop(slot_index)
     queue_profile_save()
 
-def add_search_choice(kind):
-    movie = st.session_state.get("search_selected_movie")
-    if not movie:
-        return
-    title = movie["title"]
-    if movie.get("external"):
-        st.session_state.external_movies[title] = movie
-    st.session_state.likes.add(title)
-    if title not in st.session_state.selection_order:
-        st.session_state.selection_order.append(title)
-    if kind == "favorite":
-        st.session_state.favorites.add(title)
-    else:
-        st.session_state.favorites.discard(title)
-    st.session_state.search_selected_movie = None
-    st.session_state.search_selected_title = None
-    queue_profile_save()
-
 def live_search_box():
     """Results update as you type (debounced ~0.3s), like a search engine.
     Falls back to the standard text box if the keyup component is unavailable."""
@@ -490,57 +395,6 @@ def import_letterboxd():
     queue_profile_save()
 
 
-def undo_letterboxd_import():
-    for title in st.session_state.get("imported_titles") or set():
-        st.session_state.likes.discard(title)
-        st.session_state.favorites.discard(title)
-    st.session_state.imported_titles = set()
-    st.session_state.imported_seen = set()
-    st.session_state.imported_disliked = set()
-    st.session_state.import_summary = None
-    queue_profile_save()
-
-
-def remove_step1_selection(title):
-    """Remove a Like/Favorite signal from Step 1 and persist the updated profile."""
-    st.session_state.likes.discard(title)
-    st.session_state.favorites.discard(title)
-    st.session_state.selection_order = [
-        item for item in st.session_state.get("selection_order", [])
-        if item != title
-    ]
-    queue_profile_save()
-
-def go(screen):
-    """Navigate using the widget's normal single rerun.
-
-    Ordinary onboarding page navigation does not change the learned profile, so
-    it should not invoke the localStorage bridge. Only entering the Showroom
-    changes the persisted onboarding-complete state. Avoiding that unnecessary
-    write also prevents a transient dark component strip during Start
-    Personalizing -> Step 1.
-    """
-    st.session_state.screen = screen
-    if screen == "showroom":
-        st.session_state.onboarding_complete = True
-        start_new_session(st.session_state)
-        queue_profile_save()
-
-def go_from_fragment(screen):
-    """Leave a fragment with one intentional page-level transition.
-
-    Do not synchronously write browser storage before navigating. The next page
-    render persists the queued snapshot, which avoids making Step 1 → 2 → 3 →
-    Profile → Showroom transitions wait on the browser component first.
-    """
-    go(screen)
-    st.session_state._app_rerun = True
-
-def select_search_result(movie):
-    st.session_state.search_selected_movie = movie
-    st.session_state.search_selected_title = movie.get("title")
-
-
 def like_search_result(movie):
     """Step 1 search: tapping a poster likes it right away (the same as Like on the shelf)."""
     movie = dict(movie or {})
@@ -556,24 +410,6 @@ def like_search_result(movie):
     st.session_state.search_selected_movie = None
     st.session_state.search_selected_title = None
     queue_profile_save()
-
-def set_review_priority(value):
-    st.session_state.review_priority = value
-    queue_profile_save()
-
-def toggle_genre_choice(genre):
-    selected = set(st.session_state.genres)
-    if genre in selected:
-        selected.discard(genre)
-    elif len(selected) < 5:
-        selected.add(genre)
-    st.session_state.genres = list(selected)
-    queue_profile_save()
-
-def set_adventure_level(value):
-    st.session_state.adventure = value
-    queue_profile_save()
-
 
 _NON_TONE_TAGS = {g.casefold() for g in GENRES} | {
     "animation", "anime", "international", "critically acclaimed", "hidden gem", "hidden gems",
@@ -612,30 +448,6 @@ def with_tone_detail(reasons, movie, avoid=None):
     return out
 
 
-FATIGUE_STEP = 0.04     # objective penalty per earlier visit a title was shown and ignored
-FATIGUE_CAP = 5         # stop penalizing after five ignored visits
-VARIETY_SPREAD = 0.03   # per-visit shuffle among near-ties (stable within a visit)
-
-
-def impression_fatigue():
-    """Earlier visits in which each title was shown but got no Save, Seen, or Skip.
-
-    Impression discounting: returning viewers see fresh options instead of the
-    same ignored cards, which shortens the path to something worth watching.
-    """
-    events = st.session_state.get("analytics_events") or []
-    current = st.session_state.get("showroom_session_id")
-    acted = {e.get("title") for e in events if e.get("event") in ("save", "seen", "skip", "dislike")}
-    visits = {}
-    for e in events:
-        if e.get("event") != "impression":
-            continue
-        sid, title = e.get("session_id"), e.get("title")
-        if sid and title and sid != current and title not in acted:
-            visits.setdefault(title, set()).add(sid)
-    return {title: len(sids) for title, sids in visits.items()}
-
-
 def visit_variety(title):
     """Deterministic value in [-0.5, 0.5] for this visit and title."""
     import hashlib
@@ -671,12 +483,6 @@ def with_cf_reason(reasons, payload, limit=3):
         reasons = [reason] + reasons
     return reasons[:limit]
 
-def _tag_overlap(a, b):
-    ta = {str(t).casefold() for t in (a or {}).get("tags") or []}
-    tb = {str(t).casefold() for t in (b or {}).get("tags") or []}
-    return len(ta & tb) / len(ta | tb) if ta and tb else 0.0
-
-
 def whats_next_ranking(source, payloads, blocked):
     """Candidates ranked by how well they follow `source`, the movie just watched.
 
@@ -705,243 +511,16 @@ def whats_next_ranking(source, payloads, blocked):
     return [(t, cf) for _, t, cf in scored]
 
 
-def whats_next_another(source_title):
-    offsets = dict(st.session_state.get("whats_next_offset") or {})
-    offsets[source_title] = int(offsets.get(source_title, 0)) + 1
-    st.session_state.whats_next_offset = offsets
-
-
-def service_availability_utility(availability):
-    """Availability value that respects the viewer's chosen services.
-
-    A title streaming only on a service the viewer doesn't have is treated like a
-    paid rental: still watchable, but less convenient tonight.
-    """
-    availability = availability or {}
-    status = availability.get("status")
-    services = list(st.session_state.get("streaming_services") or [])
-    if services and status == "streaming" and not movie_on_services(availability, services):
-        return availability_utility("rent")
-    return availability_utility(status)
-
-
 # Pill-sized forms of long reason labels; the full wording stays in the popover.
 
 
-def toggle_streaming_service(name):
-    services = list(st.session_state.get("streaming_services") or [])
-    if name in services:
-        services.remove(name)
-    else:
-        services.append(name)
-    st.session_state.streaming_services = services
-    queue_profile_save()
-
-def toggle_priority_choice(option):
-    selected = set(st.session_state.more_of)
-    if option in selected:
-        selected.discard(option)
-    else:
-        selected.add(option)
-    st.session_state.more_of = list(selected)
-    queue_profile_save()
-
-
-def _current_recommendation_context(title):
-    return dict((st.session_state.get("recommendation_context") or {}).get(title) or {})
-
-def skip_movie(title, movie=None):
-    _remember_movie(movie)
-    record_event(st.session_state, "skip", title, _current_recommendation_context(title))
-    st.session_state.dismissed.add(title)
-    st.session_state.saved.discard(title)
-    queue_profile_save()
-
-def save_movie(title, movie=None):
-    _remember_movie(movie)
-    record_event(st.session_state, "save", title, _current_recommendation_context(title))
-    st.session_state.saved.add(title)
-    st.session_state.seen.discard(title)
-    st.session_state.dismissed.discard(title)
-    queue_profile_save()
-
-def remove_saved_movie(title):
-    _lib_bump()
-    st.session_state.saved.discard(title)
-    queue_profile_save()
-
-def mark_movie_seen(title, movie=None):
-    _remember_movie(movie)
-    record_event(st.session_state, "seen", title, _current_recommendation_context(title))
-    if title in st.session_state.saved:
-        from_saved = set(st.session_state.get("seen_from_saved") or set())
-        from_saved.add(title)
-        st.session_state.seen_from_saved = from_saved
-    st.session_state.seen.add(title)
-    st.session_state.saved.discard(title)
-    st.session_state.dismissed.discard(title)
-    queue_profile_save()
-
-def remove_from_seen(title):
-    """Undo an accidental Seen: drop it and its model signal; restore it to Saved if it came from there."""
-    _lib_bump()
-    st.session_state.seen.discard(title)
-    st.session_state.seen_rating = {k: v for k, v in (st.session_state.get("seen_rating") or {}).items() if k != title}
-    from_saved = set(st.session_state.get("seen_from_saved") or set())
-    if title in from_saved:
-        from_saved.discard(title)
-        st.session_state.seen_from_saved = from_saved
-        st.session_state.saved.add(title)
-    _drop_last_event(title, "seen")
-    queue_profile_save()
-
-
-def resolve_history_movie(title):
-    movie = get_movie(title, st.session_state.external_movies)
-    if movie:
-        return movie
-    if tmdb_catalog_configured():
-        try:
-            matches = search_movies(title, 1)
-            movie = matches[0] if matches else None
-        except Exception:
-            movie = None
-        if movie:
-            st.session_state.external_movies[title] = movie
-            queue_profile_save()
-            return movie
-    return None
-
-def reset_profile_state():
-    for k, v in defaults.items():
-        st.session_state[k] = v.copy() if isinstance(v, (set, dict)) else (list(v) if isinstance(v, list) else v)
-    st.session_state._last_persisted_profile = None
-    for key in ("tonight_services_picker", "tonight_last_skip", "tonight_pool", "showroom_undo", "showroom_pill_labels", "mood_input"):
-        st.session_state.pop(key, None)
-    queue_profile_save()
-
-def reset_profile_from_fragment():
-    reset_profile_state()
-    st.session_state._app_rerun = True
-
 def logo():
     st.markdown('<div class="icinema-logo">iCinema</div>',unsafe_allow_html=True)
-
-def movie_thumb(movie, poster_url=None, compact=False, library_mode=None, landscape=False, toggle_id=None, return_html=False):
-    title = html.escape(str(movie.get("title", "")))
-    year = html.escape(str(movie.get("year", "")))
-    poster_url = poster_url or movie.get("poster_url")
-    if poster_url and not str(poster_url).lower().startswith(("https://", "http://")):
-        poster_url = None   # only web image links reach the page
-    logo_url = None
-    if poster_url and "#logo=" in str(poster_url):
-        poster_url, logo_url = str(poster_url).split("#logo=", 1)
-    if poster_url:
-        safe_url = html.escape(str(poster_url), quote=True)
-        portrait = landscape and "/w780" not in str(poster_url)       # no 16:9 art: fit the poster inside the frame
-        logo_html = (f'<img class="art-logo" src="{html.escape(logo_url, quote=True)}" alt="">' if logo_url else
-                     (f'<div class="art-title-text">{title}</div>' if landscape and not str(poster_url).endswith("#titled") else ""))
-        titled = landscape and str(poster_url).endswith("#titled")     # the title is painted into the art
-        poster_html = (f'<div class="poster has-image{" landscape" if landscape else ""}{" fallback" if portrait else ""}{" titled" if titled else ""}">'
-                       f'<img src="{safe_url}" alt="Poster for {title}">{logo_html}</div>')
-    elif landscape:
-        poster_html = f'<div class="poster landscape"><div class="art-title-text">{title}</div></div>'
-    else:
-        poster_html = '<div class="poster"><div class="poster-placeholder-mark">iCINEMA</div></div>'
-
-    year_html = f'<div class="poster-caption-year">{year}</div>' if year else ''
-    # Key art that already shows the title gets no text title (like streaming apps); others keep it.
-    art_has_title = bool(logo_url) or landscape or (bool(poster_url) and str(poster_url).endswith("#titled"))
-    title_html = "" if art_has_title else f'<div class="poster-caption-title" title="{title}">{title}</div>'
-    
-    if library_mode == "saved":
-        caption_class = "poster-caption library-poster-caption saved-poster-caption"
-    elif library_mode == "seen":
-        caption_class = "poster-caption library-poster-caption seen-poster-caption"
-    else:
-        caption_class = 'poster-caption library-poster-caption' if compact else 'poster-caption'
-    if return_html:      # the caller puts the art in the same block as the card's text (one block, even spacing)
-        return poster_html
-    if toggle_id:
-        poster_html = f'<label class="art-toggle" for="{toggle_id}" aria-label="Show the story">{poster_html}</label>'
-    st.markdown(
-        poster_html
-        + f'<div class="{caption_class}{" art-titled" if art_has_title else ""}">{title_html}{year_html}</div>',
-        unsafe_allow_html=True
-    )
-
-def current_profile():
-    """The viewer's profile, rebuilt only when something it depends on changed (not once per card)."""
-    ss = st.session_state
-    sig = (tuple(sorted(ss.likes)), tuple(sorted(ss.favorites)), tuple(ss.genres), ss.review_priority,
-           tuple(ss.more_of), len(ss.saved), len(ss.dismissed), ss.adventure, len(ss.seen),
-           len(ss.get("disliked") or ()), len(ss.external_movies), len(ss.get("analytics_events") or ()))
-    memo = ss.get("_profile_memo")
-    if memo and memo[0] == sig:
-        return memo[1]
-    prof = _build_current_profile()
-    ss._profile_memo = (sig, prof)
-    return prof
-
-
-def _build_current_profile():
-    return build_profile(
-        st.session_state.likes, st.session_state.favorites, st.session_state.genres,
-        st.session_state.review_priority, st.session_state.more_of,
-        st.session_state.saved, st.session_state.dismissed, st.session_state.adventure,
-        st.session_state.external_movies, st.session_state.seen,
-        disliked_titles=st.session_state.get("disliked") or set(),
-    )
-
-def _cf_signals():
-    """Collect browser-local actions for the MovieLens-pretrained CF layer."""
-    ext = st.session_state.external_movies
-    out = []
-    for t in st.session_state.likes:
-        m = get_movie(t, ext)
-        if m: out.append((m, "favorite" if t in st.session_state.favorites else "like"))
-    rated = st.session_state.get("seen_rating") or {}
-    cutoff = st.session_state.get("taste_reset_at")
-    last_act = {}
-    if cutoff:
-        for e in st.session_state.get("analytics_events") or []:
-            last_act[e.get("title")] = max(last_act.get(e.get("title"), 0), float(e.get("timestamp") or 0))
-    for key, action in (("saved", "save"), ("seen", "seen"), ("dismissed", "skip"), ("disliked", "dislike")):
-        for t in st.session_state.get(key) or set():
-            m = get_movie(t, ext)
-            if not m:
-                continue
-            if cutoff and key != "disliked" and last_act.get(t, 0) < float(cutoff):
-                continue   # "My taste changed": older saves, Seen and skips stop shaping picks
-            if key == "seen" and rated.get(t) in (1, -1):
-                action = "like" if rated[t] == 1 else "dislike"   # a rated Seen is a real signal
-            elif key == "seen" and t in (st.session_state.get("seen_from_saved") or set()):
-                action = "save"    # saved, then watched: it keeps the positive signal it had in Saved
-            out.append((m, action))
-    for key, action in (("imported_seen", "seen"), ("imported_disliked", "dislike")):
-        for t in st.session_state.get(key) or set():   # only filled if that signal passed its test
-            if t in st.session_state.likes:
-                continue
-            m = get_movie(t, ext)
-            if m:
-                out.append((m, action))
-    return out
-
-
-def _set_opt_out():
-    st.session_state.analytics_opt_out = not st.session_state.get("_share_counts", True)
-    queue_profile_save()
-
 
 def taste_changed():
     """Keep your likes, favorites and "Not for me"s; older saves, Seen and skips stop counting."""
     import time as _t
     st.session_state.taste_reset_at = _t.time()
-    queue_profile_save()
-
-
-def taste_undo():
-    st.session_state.taste_reset_at = None
     queue_profile_save()
 
 
@@ -956,77 +535,7 @@ def lately_genres(limit=3):
     return [g for g, _ in c.most_common(limit)]
 
 
-def rate_seen(title, value):
-    """Thumbs on a Seen movie: tap again to clear."""
-    rated = dict(st.session_state.get("seen_rating") or {})
-    rated[title] = 0 if rated.get(title) == value else value
-    rated = {k: v for k, v in rated.items() if v}
-    st.session_state.seen_rating = rated
-    if rated.get(title) in (1, -1):
-        # Logged like a Save or Skip, so the personal model can learn from it if its test passed
-        # (training/confirm_seen_thumbs.py); otherwise the event is kept but not used for training.
-        record_event(st.session_state, "seen_loved" if rated[title] == 1 else "seen_disliked", title,
-                     _current_recommendation_context(title))
-    _lib_bump()
-    queue_profile_save()
-
-
 from src.descriptions import card_description, expanded_card_description, quick_card_description, tonight_description  # card text rules (unit-tested)
-
-
-def cached_semantic_scores(movies, profile):
-    """Content-model theme similarity, recomputed only when inputs change."""
-    signals = tuple((s.get("title"), s.get("weight")) for s in (profile.get("semantic_signals") or []))
-    titles = tuple(m.get("title") for m in movies)
-    key = (signals, titles)
-    cache = st.session_state.get("_semantic_cache")
-    if cache and cache[0] == key:
-        by_title = cache[1]
-    else:
-        scores = semantic_similarity_scores(movies, profile)
-        by_title = {m.get("title"): scores.get(id(m), 0.5) for m in movies}
-        st.session_state._semantic_cache = (key, by_title)
-    return {id(m): by_title.get(m.get("title"), 0.5) for m in movies}
-
-
-def _cached_insights(events):
-    """Profile stats, recomputed only when a new event arrives (not on every rerun)."""
-    labels = [e for e in events if e.get("event") != "impression"]
-    key = (len(labels), float((labels[-1] if labels else {}).get("timestamp") or 0))
-    memo = st.session_state.get("_insights_memo")
-    if memo and memo[0] == key:
-        return memo[1]
-    out = analytics_insights(events)
-    st.session_state._insights_memo = (key, out)
-    return out
-
-
-def learning_model_for(events):
-    """Train the Save/Skip model only when feedback changed since the last run."""
-    events = list(events or [])
-    # Only choices change the model. Impressions arrive on every page view, so keying on all
-    # events used to retrain it (gradient boosting included) on nearly every click.
-    labels = [e for e in events if e.get("event") not in ("impression",)]
-    signature = (len(labels), labels[-1].get("timestamp") if labels else None)
-    cache = st.session_state.get("_learning_model_cache")
-    if cache and cache[0] == signature:
-        return cache[1]
-    result = train_learning_model(events)
-    st.session_state._learning_model_cache = (signature, result)
-    return result
-
-
-def _personal_need(learned, decisions):
-    """What the personal model still needs: 50 decisions and at least 12 saves and 12 skips."""
-    saves, skips = int(getattr(learned, "positives", 0) or 0), int(getattr(learned, "negatives", 0) or 0)
-    n = int(getattr(learned, "samples", 0) or decisions)
-    if n < 50:
-        return f"{n} of 50 saves and skips"
-    if saves < 12:
-        return f"Needs 12 saves to start ({saves} so far). Skips alone can’t show what you like."
-    if skips < 12:
-        return f"Needs 12 skips to start ({skips} so far)."
-    return "Starting with your next visit"
 
 
 def training_scale():
@@ -1316,7 +825,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
          "item-kNN · RP3beta · EASE · TF-IDF + SVD · gradient boosting · logistic regression"),
         ("Testing", "How it was checked",
          "Before launch, every model was scored on movie fans it had never seen, starting from just 3 likes each. "
-         "A model only ships if it beats the simpler option.",
+         "Each model is tested against a simpler option. One, the content model, kept a fixed 20% share so your answers count, even though it didn’t beat fans alone; the README says so.",
          "held-out viewers · NDCG@10 · Recall@10 · bootstrap significance"),
         ("Showroom", "What you see",
          "Each row has one job, there’s one movie per series, and “chance you’ll love it” is calibrated on test "
@@ -1386,47 +895,6 @@ def _with_app_rerun(fn):
         except Exception as exc:
             _friendly_error(exc)
     return inner
-
-
-def _set_profile_section(name):
-    st.session_state.pf_section_v = name
-
-
-def _remove_like_from_profile(title):
-    """× on a like in Profile: remove it and rebuild the whole Showroom so every row stops using it."""
-    remove_step1_selection(title)
-    st.session_state._app_rerun = True
-
-
-def _render_profile_likes():
-    """Your likes, editable from the Showroom: small posters with ×, and a way to add more."""
-    ss = st.session_state
-    liked = [t for t in (ss.get("selection_order") or []) if t in ss.likes] + sorted(set(ss.likes) - set(ss.get("selection_order") or []))
-    st.markdown(f'<div class="profile-likes-head">Your Likes</div>'
-                f'<div class="profile-likes-copy">{len(liked)} movie{"s" if len(liked) != 1 else ""}. Every pick starts from these.</div>',
-                unsafe_allow_html=True)
-    if liked:
-        ms = [get_movie(t, ss.external_movies) or {"title": t} for t in liked]
-        need = tuple((m["title"], int(m.get("year") or 0)) for m in ms if not m.get("poster_url"))
-        pm = get_poster_batch(need) if need else {}
-        with st.container(key="profile_likes"):
-            cols = st.columns(12, gap="small")
-            for i, t in enumerate(liked):
-                u = str(ms[i].get("poster_url") or pm.get(t) or "")
-                with cols[i % 12]:
-                    with st.container(key=f"selection_card_p{i}"):
-                        st.markdown('<div class="sel-poster">'
-                                    + (f'<img src="{html.escape(u, quote=True)}" alt="">' if u.startswith("https://")
-                                       else f'<div class="live-hit-blank">{html.escape(t[:24])}</div>')
-                                    + f'</div><div class="sel-cap"><span class="sel-title">{html.escape(t)}</span></div>',
-                                    unsafe_allow_html=True)
-                        if len(liked) > 1:   # × is always visible; the last like stays so picks have a start
-                            st.button("×", key=f"remove_selection_p{i}",
-                                      on_click=_remove_like_from_profile, args=(t,))
-            with cols[len(liked) % 12]:
-                # The last tile adds more: the same search as Step 1, with your likes filled in.
-                with st.container(key="profile_add_like"):
-                    st.button("+ Add", key="add_like_tile", use_container_width=True, on_click=go, args=("shelf",))
 
 
 @st.fragment
@@ -1700,33 +1168,6 @@ def render_taste_fragment():
     persist_from_fragment()
 
 
-_MORE_DESCRIPTIONS = {
-    "Hidden Gems": "Less known, still your taste",
-    "Critically Acclaimed": "RT 75%+ and IMDb 7.5+",
-    "Recent Releases": "Released 2023 or later",
-    "International Films": "From around the world",
-    "Classics": "Favorites from earlier eras",
-    "Documentaries": "True stories, your interests",
-}
-
-
-def _render_more_choices():
-    """The six "show me more of" cards (formerly Step 3). Each card is drawn in HTML, so the title and line
-    always start at the same left edge, with an invisible button over the whole card as the tap target."""
-    selected = set(st.session_state.more_of)
-    with st.container(key="step3_grid"):
-        cols = st.columns(3, gap="small")
-        for i, option in enumerate(MORE_OF_OPTIONS):
-            with cols[i % 3]:
-                active = option in selected
-                with st.container(key=f"pcard_{'on_' if active else ''}{i}"):
-                    st.markdown(f'<div class="pcard-title">{html.escape(option)}</div>'
-                                f'<div class="pcard-desc">{html.escape(_MORE_DESCRIPTIONS[option])}</div>', unsafe_allow_html=True)
-                    st.button(option, key=f"priority_card_{'active_' if active else ''}{i}", use_container_width=True,
-                              type="secondary", help=("Remove " if active else "Add ") + option,
-                              on_click=toggle_priority_choice, args=(option,))
-
-
 # The fourth Showroom row follows your Step 3 picks that have no row of their own;
 # with none picked it stays Something Different. Always four rows at most.
 _THIS_YEAR = __import__("datetime").date.today().year
@@ -1736,23 +1177,6 @@ ADAPTIVE_ROWS = {
     "Documentaries for You": lambda m: m.get("genre") == "Documentary" or "Documentary" in (m.get("tags") or []),
     "International Films for You": lambda m: str(m.get("original_language") or "en").lower() not in ("", "en"),
 }
-ADAPTIVE_NOTES = {
-    "Recent Releases for You": "From the last two years, ranked for you",
-    "Classics for You": "Older favorites that match what you like",
-    "Documentaries for You": "Nonfiction picked for you",
-    "International Films for You": "Films from around the world that match what you like",
-}
-_ADAPTIVE_FROM_STEP3 = {"Recent Releases": "Recent Releases for You", "Classics": "Classics for You",
-                        "Documentaries": "Documentaries for You", "International Films": "International Films for You"}
-
-
-def _title_of(item):
-    """Row entries are (match, movie) pairs on a full build; after a Save they can be placeholders."""
-    if isinstance(item, (tuple, list)) and len(item) == 2 and isinstance(item[1], dict):
-        return item[1].get("title")
-    if isinstance(item, dict):
-        return item.get("title")
-    return None
 
 
 def _new_picks_note(choices):
@@ -1773,13 +1197,6 @@ def _remember_shown(row_choices):
     if shown:
         st.session_state.last_shown = shown[:40]
     st.session_state.last_visit = _t.time()
-
-
-def fourth_row_name():
-    for pick in st.session_state.get("more_of") or []:
-        if pick in _ADAPTIVE_FROM_STEP3:
-            return _ADAPTIVE_FROM_STEP3[pick]
-    return "Something Different"
 
 
 def _interleave_session():
@@ -1850,11 +1267,6 @@ def _clean_ranked(ranked, excluded):
     return out
 
 
-def _mood_text():
-    """The mood search the viewer applied. It stays until they clear it, across pages and visits."""
-    return " ".join(str(st.session_state.get("mood_active") or "").split())
-
-
 def _apply_mood():
     """Enter in the search field: the typed words become the active search, tidied the way a person
     would read it back: typos in mood words fixed ("dakr" -> "dark"), chat words dropped ("I want a"),
@@ -1875,14 +1287,6 @@ def _apply_mood():
     tidy = compose(mood, spec["max"], spec["min"], spec["episodes"], like, spec.get("avoid") or []) if raw else ""
     st.session_state.mood_active = tidy
     st.session_state.mood_input = tidy
-    queue_profile_save()
-
-
-def _set_mood(text):
-    """Chip ×, Clear, or an edit: rewrite the active mood and the field together."""
-    text = " ".join(str(text or "").split())[:120]
-    st.session_state.mood_active = text
-    st.session_state.mood_input = text
     queue_profile_save()
 
 
@@ -1911,17 +1315,6 @@ def _mood_spec():
         if hit:
             spec.update(like=hit["title"], mood="", lookup=True)
     return spec
-
-
-# Words fans use for the things a viewer can ask to avoid (MovieLens tags), used by the avoid filter
-# for movies and, with the show's own keywords and rating, for shows.
-AVOID_TERMS = {
-    "violent": ["violent", "violence", "brutal", "brutality", "gore", "gory", "bloody", "graphic violence",
-                "zombies", "zombie", "slasher", "war", "torture", "serial killer"],
-    "scary": ["scary", "horror", "creepy", "disturbing", "terrifying", "gore"],
-    "sad": ["sad", "depressing", "tearjerker", "bleak"],
-    "gory": ["gore", "gory", "bloody", "violence"],
-}
 
 
 def _avoid_filter(items, spec):
@@ -2060,13 +1453,6 @@ def _like_source():
     return found
 
 
-def _love_pct(payload):
-    """The rank the love-chance table reads: on its test's footing when known, else the overall rank."""
-    payload = payload or {}
-    v = payload.get("love_top_pct")
-    return v if isinstance(v, (int, float)) else payload.get("fit_top_pct")
-
-
 def _strong_title(q):
     """The movie a short query clearly names, or None. Only near-exact names count, so a mood never
     turns into a random title."""
@@ -2109,13 +1495,6 @@ def _strong_title(q):
             if difflib.SequenceMatcher(None, t.casefold(), q.casefold()).ratio() >= 0.85:
                 return r
     return None
-
-
-def _fork_seen(title):
-    """'I've Seen It' on the searched movie: ask how it was, right where the buttons were."""
-    fork = dict(st.session_state.get("search_fork") or {})
-    fork[title] = "rate"
-    st.session_state.search_fork = fork
 
 
 def _fork_answer(title, movie, value):
@@ -2338,37 +1717,6 @@ def render_mood_chips():
     render_mood_suggestions()
 
 
-_MOOD_PRESETS = [("Feel-good", "feel-good"), ("Funny", "funny"), ("Mind-bending", "mind-bending"),
-                 ("Dark and tense", "dark tense"), ("Under 2 hours", "under 2 hours"), ("Nothing too violent", "not violent")]
-
-
-# The search is one designed system. Four states, and one written rule for what every part of the
-# Showroom shows in each. The page reads this table instead of deciding part by part.
-#   none:  nothing typed or tapped.
-#   mood:  a mood, a length, or something to avoid ("mind-bending", "under 2 hours", "not violent").
-#   movie: a movie typed on its own ("Inception"): the movie first, then the closest matches.
-#   like:  "like Inception" (or a movie plus a mood): the closest matches, without the movie itself.
-# A mood or length added to a movie filters inside that movie's matches; it never changes the state.
-# A movie search is one focused answer: the movie and its closest matches. Tonight's Show and Shows step aside
-# (None below) because four rows all about the same movie repeated each other.
-SEARCH_RULE = {
-    "none":  {"tokens": "presets", "tonight": "Your single best match right now", "top_result": False,
-              "top_picks": "personal ranking", "shows": "personal", "explore": True},
-    "mood":  {"tokens": "editable, filled presets", "tonight": "Your best match for {search}", "top_result": False,
-              "top_picks": "personal ranking, filtered and led by the mood", "shows": "personal, filtered", "explore": True},
-    "movie": {"tokens": "X, editable", "tonight": None, "top_result": True,
-              "top_picks": "fans' closest to X, two lines of four", "shows": None, "explore": False},
-    "like":  {"tokens": "X + mood, editable", "tonight": None, "top_result": True,
-              "top_picks": "fans' closest to X", "shows": None, "explore": False},
-}
-
-
-def _quality_strict():
-    """The higher quality bar applies when you chose strong reviews in Step 2 or Critically Acclaimed in Step 3."""
-    ss = st.session_state
-    return int(ss.get("review_priority") or 50) < 41 or "Critically Acclaimed" in (ss.get("more_of") or [])
-
-
 def _quality_ok(movie, strict=False):
     """A rule, not a model: is this movie good enough to lead a mood search? Uses every score known for it
     (IMDb, Rotten Tomatoes, TMDB with enough votes, then how many MovieLens fans loved it)."""
@@ -2429,18 +1777,6 @@ def _fans_reason(movie=None):
             rank = sorted(sims, key=lambda j: -sims[j]).index(i) + 1
     text = f"#{rank} of the 100 movies they love most alongside it" if rank else ""
     return {"label": f"Loved by fans of “{src['title']}”", "text": text, "rank": rank}
-
-
-def _preset_active(text, spec):
-    """Is this starting point already part of the search?"""
-    if text.startswith("not "):
-        return text[4:] in (spec.get("avoid") or [])
-    if text.startswith("under"):
-        return spec.get("max") == 120
-    if text.startswith("like "):
-        return (spec.get("like") or "").casefold() == text[5:].casefold()
-    words = set((spec.get("mood") or "").split())
-    return bool(words) and set(text.split()) <= words
 
 
 def _toggle_preset(text):
@@ -2535,20 +1871,6 @@ def render_mood_suggestions():
                         'Try a movie title, or words like feel-good, mind-bending, or slow burn.</div>', unsafe_allow_html=True)
 
 
-_BUILD_KEYS = ("showroom_slots", "showroom_payloads", "showroom_row_queues", "recommendation_context",
-               "tonight_pool", "tonight_deep_pool", "interleave_teams")
-
-
-def _build_key():
-    """Everything a Showroom build depends on. Any choice changes it, so a reused build is never stale."""
-    ss = st.session_state
-    return (_mood_text(), tuple(sorted(ss.likes)), tuple(sorted(ss.favorites)), tuple(ss.genres),
-            ss.review_priority, ss.adventure, tuple(ss.more_of), len(ss.saved), len(ss.seen), len(ss.dismissed),
-            len(ss.get("disliked") or ()), tuple(sorted(ss.get("streaming_services") or ())),
-            tuple(sorted((ss.get("seen_rating") or {}).items())),      # a thumbs on Seen re-ranks the Showroom
-            len([e for e in (ss.get("analytics_events") or []) if e.get("event") != "impression"]))
-
-
 def _merged_search(typed, exact_title=None):
     """What's typed, added to the search already on (or to the rest of a token being edited):
     moods and avoids add up, a new length or movie replaces the old one (src/ui/mood_time.merge)."""
@@ -2567,15 +1889,6 @@ def _merged_search(typed, exact_title=None):
     if typed_title is None and tp["mood"] and not tp["like"]:
         typed_title = (_lookup_title(tp["mood"]) or {}).get("title")
     return merge(base, typed, current_title=cur_title, typed_title=typed_title)[:120]
-
-
-def _edit_token(rest, text):
-    """Tap a token's words: they open in the field to edit, and Search puts the edit back in place of it.
-    Only the search box reruns; the Showroom stays as it is until Search."""
-    ver = int(st.session_state.get("_mood_ver") or 0) + 1
-    st.session_state._mood_ver = ver
-    st.session_state._edit_rest = rest
-    st.session_state._mood_prefill = (ver, " ".join(str(text or "").split())[:120])
 
 
 def _commit_search(text):
@@ -2597,14 +1910,6 @@ def _commit_exact(text, movie=None):
     _set_mood_live(_merged_search(text, exact_title=exact))
     # Clear the half-typed text ("inters") so the live results close and the movie's page shows,
     # exactly like pressing Search. Without this the typed text kept the suggestions open.
-    st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1
-    st.session_state._app_rerun = True
-
-
-def _set_mood_live(text):
-    """A chip, Clear, or a starting point tapped inside the search box: change the search, rebuild the Showroom."""
-    st.session_state.pop("_edit_rest", None)      # any token edit in progress is replaced by this change
-    _set_mood(text)
     st.session_state._mood_ver = int(st.session_state.get("_mood_ver") or 0) + 1
     st.session_state._app_rerun = True
 
@@ -2695,9 +2000,6 @@ def _render_search_tiles(movies, key, args_for, on_click, selected_id=None):
                           use_container_width=True, on_click=on_click, args=args_for(m))
 
 
-def _showroom_slot_key(row_name, slot_index):
-    return f"{row_name}::{int(slot_index)}"
-
 def _advance_showroom_slot(row_name, slot_index):
     """Replace only one visible showroom slot from its already-ranked queue."""
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -2729,6 +2031,10 @@ def _advance_showroom_slot(row_name, slot_index):
             continue
         if not _avoid_ok((payloads.get(title) or {}).get("movie")):
             continue          # a movie you asked to avoid never slides in after a Skip
+        _sv = list(st.session_state.get("streaming_services") or [])
+        if _sv and st.session_state.get("only_mine") and not movie_on_services(
+                (st.session_state.get("showroom_watch_cache") or {}).get(title), _sv):
+            continue          # with Only my services on, a replacement must stream on your apps too
         replacement = title
         break
 
@@ -2779,10 +2085,6 @@ def skip_showroom_slot(row_name, slot_index):
     if not _advance_showroom_slot(row_name, slot_index):
         st.session_state._app_rerun = True
 
-def _mark_showroom_fast():
-    st.session_state._showroom_fast = True
-
-
 def save_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
     if _too_soon(slot_key):
@@ -2798,15 +2100,6 @@ def save_showroom_slot(row_name, slot_index):
     _advance_showroom_slot(row_name, slot_index)
     _mark_showroom_fast()                 # reuse the ranking, but refresh Saved / Seen and their counts now
     st.session_state._app_rerun = True
-
-def _answer_seen(slot_key, title, value):
-    """Thumbs on the "liked it?" prompt after Seen: same effect as the thumbs on the Seen tab."""
-    ask = dict(st.session_state.get("showroom_rate_ask") or {})
-    ask.pop(slot_key, None)
-    st.session_state.showroom_rate_ask = ask
-    if value:
-        rate_seen(title, value)
-
 
 def seen_showroom_slot(row_name, slot_index):
     slot_key = _showroom_slot_key(row_name, slot_index)
@@ -2828,40 +2121,6 @@ def seen_showroom_slot(row_name, slot_index):
     _advance_showroom_slot(row_name, slot_index)
     _mark_showroom_fast()                 # reuse the ranking, but refresh Saved / Seen and their counts now
     st.session_state._app_rerun = True
-
-def _showroom_cached_metadata(movie):
-    """Use initial batch metadata; fetch only the replacement card on cache miss."""
-    title = movie["title"]
-    year = int(movie.get("year") or 0)
-    tmdb_id = int(movie.get("tmdb_id") or 0)
-
-    identity_cache = dict(st.session_state.get("showroom_identity_cache") or {})
-    identity = identity_cache.get(title)
-    if identity is None:
-        identity = (get_movie_identity_batch(((title, year, tmdb_id),)).get(title) or {})
-        identity_cache[title] = identity
-        st.session_state.showroom_identity_cache = identity_cache
-
-    watch_cache = dict(st.session_state.get("showroom_watch_cache") or {})
-    availability = watch_cache.get(title)
-    if availability is None:
-        availability = (get_watch_availability_batch(((title, year),), "US").get(title) or {
-            "status":"unknown",
-            "text":"Where to watch: availability unavailable",
-            "url":None,
-        })
-        watch_cache[title] = availability
-        st.session_state.showroom_watch_cache = watch_cache
-
-    rating_cache = dict(st.session_state.get("showroom_rating_cache") or {})
-    live_rating = rating_cache.get(title)
-    if live_rating is None:
-        imdb_id = (identity or {}).get("imdb_id") or ""
-        live_rating = (get_live_ratings_batch(((title, year, imdb_id),)).get(title) or {})
-        rating_cache[title] = live_rating
-        st.session_state.showroom_rating_cache = rating_cache
-
-    return identity or {}, availability or {}, live_rating or {}
 
 def why_popup_html(payload, movie, reasons, live_rating, availability, match, row_name, kind_tag="", fans_reason=None):
     """The "Why it's here" popup, shared by every card and Tonight's Show.
@@ -2939,29 +2198,6 @@ def why_popup_html(payload, movie, reasons, live_rating, availability, match, ro
             + f'<details class="why-more-d"><summary>{len(_ids)} of {MODELS_TOTAL} models · tap a bar for its method</summary>'
             + "".join(f'<div class="why-out"><span>{html.escape(k)}</span>{html.escape(v)}</div>' for k, v in _sat_out(_ids, payload))
             + '</details>')
-
-
-def _sat_out(used, payload):
-    """The models that didn't touch this pick, each with the plain reason why."""
-    ranker = payload.get("cf_source") == "ranker"
-    reasons = [
-        ("ranker", "Learned ranker", "This pick used item-kNN alone." if "item-kNN" in used else "No fan data for this movie yet."),
-        ("item-kNN", "item-kNN", "No fan data for this movie yet."),
-        ("RP3beta", "RP3beta", "Only runs inside the learned ranker." if not ranker else "No fan data for this movie yet."),
-        ("EASE", "EASE", "Only runs inside the learned ranker." if not ranker else "No fan data for this movie yet."),
-        ("markov", "Markov chain", "Your recent likes didn’t point to this movie."),
-        ("content", "TF-IDF + SVD", "No genres or fan tags for this movie."),
-        ("ridge", "New-release model", "It has fan data, so it isn’t treated as new."),
-        ("mood", "Mood search", "No mood searched."),
-        ("tv", "TV model", "This is a movie."),
-        ("personal", "Your personal model", "Turns on after 50 saves and skips."),
-    ]
-    try:
-        if learning_model_for(st.session_state.get("analytics_events") or []).ready:
-            reasons[-1] = ("personal", "Your personal model", "Running, but it barely moved this pick.")
-    except Exception:
-        pass
-    return [(name, why) for key, name, why in reasons if key not in used]
 
 
 def why_this_movie(reasons, rows, payload, movie, availability, fans_reason=None, limit=3):
@@ -3171,21 +2407,6 @@ def render_card_actions(row_name, row_index, slot_index):
                       on_click=seen_showroom_slot, args=(row_name, slot_index))
 
 
-def undo_skip(title):
-    """Reverse an accidental Skip or "Not for me" so it neither hides the movie nor trains the model."""
-    if not title:
-        return
-    disliked = set(st.session_state.get("disliked") or set())
-    if title in disliked:
-        disliked.discard(title)
-        st.session_state.disliked = disliked
-        _drop_last_event(title, "dislike")
-    else:
-        st.session_state.dismissed.discard(title)
-        _drop_last_event(title, "skip")
-    queue_profile_save()
-
-
 def never_show_skipped(title):
     """Turn a Skip ("not tonight") into Not for Me ("never"): the skip is replaced, not added to, so the
     models see one clear signal (Not for Me weighs -0.8 for the fan models vs -0.2 for a Skip)."""
@@ -3198,76 +2419,11 @@ def never_show_skipped(title):
     dislike_movie(title, payload.get("movie"))
 
 
-def undo_showroom_slot(row_name, slot_index):
-    slot_key = _showroom_slot_key(row_name, slot_index)
-    undo = dict(st.session_state.get("showroom_undo") or {})
-    title = undo.pop(slot_key, None)
-    st.session_state.showroom_undo = undo
-    if not title:
-        return
-    undo_skip(title)
-    slots = dict(st.session_state.get("showroom_slots") or {})
-    slots[slot_key] = title
-    st.session_state.showroom_slots = slots
-
-
-def _sync_services_from_picker():
-    st.session_state.streaming_services = list(st.session_state.get("tonight_services_picker") or [])
-    queue_profile_save()
-
-
-def tonight_skip(title, movie):
-    if _too_soon(f"tonight_skip:{title}"):
-        return
-    skip_movie(title, movie)
-    st.session_state.tonight_last_skip = title
-
-
 def tonight_dislike(title, movie):
     if _too_soon(f"tonight_dislike:{title}"):
         return
     dislike_movie(title, movie)
     st.session_state.tonight_last_skip = title
-
-
-def tonight_undo():
-    undo_skip(st.session_state.get("tonight_last_skip"))
-    st.session_state.tonight_last_skip = None
-
-
-def _request_showroom_refresh():
-    """Save/Seen change the Saved/Seen tabs and counts, which live outside the card."""
-    st.session_state._showroom_refresh = True
-
-def _refresh_if_requested():
-    if st.session_state.pop("_showroom_refresh", False):
-        st.rerun(scope="app")
-
-def tonight_save(title, movie):
-    if _too_soon(f"tonight_save:{title}"):
-        return
-    save_movie(title, movie)
-    st.session_state.tonight_last_skip = None
-    _mark_showroom_fast()
-    _request_showroom_refresh()
-
-
-def tonight_seen(title, movie):
-    if _too_soon(f"tonight_seen:{title}"):
-        return
-    mark_movie_seen(title, movie)
-    st.session_state.tonight_last_skip = None
-    _mark_showroom_fast()
-    _request_showroom_refresh()
-
-
-_SERVICE_SHORT = {"Free (Tubi, Pluto & more)": "Free with ads", "Max": "HBO Max", "Apple TV+": "Apple TV"}   # 2026 names
-
-
-def _services_done():
-    """Done: the whole Showroom redraws once, so every card's streaming line puts your services first.
-    Tapping tiles reruns only Tonight's Show, which re-picks instantly; the rows reuse the current build."""
-    st.session_state._app_rerun = True
 
 
 def _render_services_grid(services):
@@ -3324,6 +2480,10 @@ def _render_services_picker(services):
                                 f'<div class="svc-name">{html.escape(short)}</div>', unsafe_allow_html=True)
                     st.button(short, key=f"svc_btn_{i}", use_container_width=True,
                               on_click=toggle_streaming_service, args=(name,))
+        if services:
+            # "All your services", fully: every Showroom row can show only what streams on these apps.
+            with st.container(key="only_mine_wrap"):
+                st.toggle("Only show movies on my services", key="only_mine")
         st.button("Done", key="svc_done", type="primary", on_click=_services_done)
         st.markdown('<div class="services-credit">Availability and logos by JustWatch, via TMDB.</div>', unsafe_allow_html=True)
 
@@ -3361,6 +2521,8 @@ def render_tonight_pick_fragment():
         # Prefer a match not already shown in a row; a row duplicate beats a wrong pick.
         fits = [t for t in on_services if t not in in_rows] + [t for t in on_services if t in in_rows]
     ordered = fits + [t for t in pool if t not in fits]
+    if services and st.session_state.get("only_mine"):
+        ordered = fits          # "Only show movies on my services": Tonight's Show never falls back off-service
 
     # The note follows SEARCH_RULE: what the search is, then where it streams.
     _state = _search_state()
@@ -3392,7 +2554,9 @@ def render_tonight_pick_fragment():
         _render_services_picker(services)
 
     if not ordered:
-        st.caption("No pick available right now. Try adding more services or refreshing.")
+        st.caption("Nothing on your services fits right now. Add a service, or turn off “Only show movies on my services.”"
+                   if (services and st.session_state.get("only_mine")) else
+                   "No pick available right now. Try adding more services or refreshing.")
         return
 
     title = ordered[0]
@@ -3517,17 +2681,6 @@ def render_tonight_pick_fragment():
     _ver_mark()
 
 
-def _library_counts(which):
-    """The count beside one library tab, written by that tab's own fragment so neither can go stale over the other."""
-    n = len(st.session_state.saved) if which == "saved" else len(st.session_state.seen)
-    k = 1 if which == "saved" else 2
-    st.markdown(
-        f'<style>[data-testid="stTabs"] [role="tab"][id$="-tab-{k}"] p::after,'
-        f'[data-testid="stTabs"] [role="tablist"] > [role="tab"]:nth-of-type({k + 1}) p::after{{content:" ({n})" !important}}</style>',
-        unsafe_allow_html=True,
-    )
-
-
 @st.fragment
 def _saved_tab():
     """Saved tab. A fragment, so its buttons rerun only this tab: the open tab never changes."""
@@ -3580,51 +2733,6 @@ def _saved_tab():
                                   on_click=remove_saved_movie, args=(m["title"],))
     _library_counts("saved")
     persist_from_fragment()
-
-
-def _whats_next_popover(i, m, pick, wn_payloads, wn_identity):
-    """The What's next pick for one Seen movie, in a popover."""
-    nt, used_cf = pick
-    npay = wn_payloads.get(nt) or {}
-    nmovie = npay.get("movie") or {}
-    nid = wn_identity.get(nt) or {}
-    nposter = nid.get("poster_url") or nmovie.get("poster_url")
-    ntitle = preferred_title(nmovie, nid.get("display_title") or nmovie.get("title") or nt)
-    nyear = nid.get("year") or nmovie.get("year") or ""
-    why = (f"Viewers who loved “{m['title']}” tend to love this too."
-           if used_cf else f"Shares the genre and tone of “{m['title']}”.")
-    with st.container(key=f"whatsnext_{i}"):
-        with st.popover("What’s Next", use_container_width=True):
-            img = (f'<img src="{html.escape(str(nposter), quote=True)}" alt="">'
-                   if nposter else '<div class="whatsnext-noimg">iCINEMA</div>')
-            st.markdown(
-                f'<div class="whatsnext-kicker">Watch next after “{html.escape(m["title"])}”</div>'
-                f'<div class="whatsnext-pick"><div class="whatsnext-poster">{img}</div>'
-                f'<div class="whatsnext-info">'
-                f'<div class="whatsnext-title">{html.escape(str(ntitle))}</div>'
-                f'<div class="whatsnext-meta">{html.escape(" · ".join(str(x) for x in [nyear, genre_pair(nmovie) or nmovie.get("genre")] if x))}'
-                f' · {fit_head(npay, npay.get("match"))}</div>'
-                f'<div class="whatsnext-why">{html.escape(why)}</div>'
-                f'</div></div>',
-                unsafe_allow_html=True,
-            )
-            # Compact pills, about the poster's width, aligned under the poster.
-            a, b, _ = st.columns([1, 1.7, 3.3], gap="small")
-            with a:
-                st.button("Save", key=f"whatsnext_save_{i}_{nt}", use_container_width=True,
-                          on_click=save_movie, args=(nt, nmovie))
-            with b:
-                st.button("Another Pick", key=f"whatsnext_more_{i}_{nt}", use_container_width=True,
-                          on_click=whats_next_another, args=(m["title"],))
-
-
-def _newest_first(titles, kinds):
-    """Saved and Seen in the order you did it, newest first (imported titles without a date go last)."""
-    when = {}
-    for e in st.session_state.get("analytics_events") or []:
-        if e.get("event") in kinds and e.get("title") in titles:
-            when[e["title"]] = max(when.get(e["title"], 0.0), float(e.get("timestamp") or 0))
-    return sorted(titles, key=lambda t: (-when.get(t, 0.0), str(t).casefold()))
 
 
 @st.fragment
@@ -3749,7 +2857,12 @@ def _render_showroom(p):
         for _k, _v in _hit.items():
             st.session_state[_k] = _v
         st.session_state._showroom_fast = True
-    fast = st.session_state.pop("_showroom_fast", False) and bool(st.session_state.get("showroom_slots"))
+    # A quick reuse (after Save / Seen) is only allowed while the things that decide which movies may appear are
+    # unchanged: your services, the "Only show movies on my services" switch, and the search. Changing any of
+    # them always rebuilds, so a switch flipped right after a Save can't keep showing off-service movies.
+    _hard = (tuple(sorted(st.session_state.get("streaming_services") or ())), bool(st.session_state.get("only_mine")), _mood_text())
+    fast = (st.session_state.pop("_showroom_fast", False) and bool(st.session_state.get("showroom_slots"))
+            and st.session_state.get("_slots_hard_key") == _hard)
     st.session_state._timing_fast = fast
     if fast:
         row_choices = {}
@@ -4203,6 +3316,20 @@ def _render_showroom(p):
                 track(st.session_state,"interleave_shown",il_session=_il)
                 st.session_state._il_shown=_il
 
+        # "Only show movies on my services": look up the top-ranked movies in one cached batch and keep the
+        # ones on your apps. Rows then fill from those only; a row can come out shorter rather than off-service.
+        _svcs=list(st.session_state.get("streaming_services") or [])
+        _only=bool(st.session_state.get("only_mine")) and bool(_svcs)
+        _mine_ok=set()
+        if _only:
+            _top=[m for _,m in ranked[:200]]
+            try:
+                _w=get_watch_availability_batch(tuple((m["title"], int(m.get("year") or 0)) for m in _top),"US") or {}
+            except Exception:
+                _w={}
+            st.session_state.showroom_watch_cache={**(st.session_state.get("showroom_watch_cache") or {}), **_w}
+            _mine_ok={m["title"] for m in _top if movie_on_services(_w.get(m["title"]), _svcs)}
+
         # Pass 1: category-specific ordering with strict cross-row de-duplication.
         # Keep the remaining ranked candidates as a replacement queue so one card can
         # advance without rebuilding the entire Showroom.
@@ -4212,6 +3339,8 @@ def _render_showroom(p):
             else:
                 ordered=_row_candidates(row_name,reserved)
             ordered=_time_filter(ordered,_tspec)    # "under 2 hours": a filter; order stays the models'
+            if _only:
+                ordered=[it for it in ordered if it[1]["title"] in _mine_ok]
             if row_name!="Top Matches for You":
                 ordered=_mood_first(ordered)        # a mood reaches every row, not only Top Picks
                 if _src:
@@ -4244,12 +3373,18 @@ def _render_showroom(p):
             if need<=0 or row_name in ADAPTIVE_ROWS:
                 continue
             fallback=_time_filter([item for item in ranked if item[1]["title"] not in reserved
-                                   and _franchise(item[1]["title"]) not in reserved_series],_tspec)
+                                   and _franchise(item[1]["title"]) not in reserved_series
+                                   and (not _only or item[1]["title"] in _mine_ok)],_tspec)
             extra=fallback[:need]
             reserved_series.update(_franchise(m["title"]) for _,m in extra)
             row_choices[row_name].extend(extra)
             reserved.update(movie["title"] for _,movie in extra)
 
+        if _only:
+            # Last gate for every row, adaptive ones and search rows included: nothing off your services.
+            for _rn in row_order:
+                row_choices[_rn]=[it for it in row_choices.get(_rn,[]) if it[1]["title"] in _mine_ok]
+                row_candidate_queues[_rn]=[it for it in row_candidate_queues.get(_rn,[]) if it[1]["title"] in _mine_ok]
         visible_movies=[movie for row_name in row_order for _,movie in row_choices.get(row_name,[])]
         visible_titles={movie["title"] for movie in visible_movies}
         warm_backups=[]
@@ -4421,7 +3556,8 @@ def _render_showroom(p):
             _cards = [t for t in slots.values() if t] + [t for q in queues.values() for t in q[:8]]
             st.session_state._avoid_audit = sorted({t for t in _cards if not _avoid_ok((payloads.get(t) or {}).get("movie"))})
         _cache = dict(st.session_state.get("_build_cache") or {})
-        _cache[_bk] = {k: st.session_state.get(k) for k in _BUILD_KEYS}
+        _cache[_bk] = {**{k: st.session_state.get(k) for k in _BUILD_KEYS}, "_slots_hard_key": _hard}
+        st.session_state._slots_hard_key = _hard   # a restored build brings its own key back with it
         st.session_state._build_cache = dict(list(_cache.items())[-4:])     # the last 4 builds
         identity_cache=dict(st.session_state.get("showroom_identity_cache") or {})
         identity_cache.update(identity_by_title)
@@ -4698,6 +3834,21 @@ try:
             '</div>',
             unsafe_allow_html=True
           )
+          # "Sharper every time", made visible: how many choices it has learned from, and when your own model joins.
+          _ch = sum(1 for e in (st.session_state.get("analytics_events") or [])
+                    if e.get("event") in ("save", "skip", "seen", "dislike", "seen_up", "seen_down"))
+          try:
+              _own = bool(learning_model_for(st.session_state.get("analytics_events") or []).ready)
+          except Exception:
+              _own = False
+          _learn = (f"Your own model is on · learned from {_ch} choice{'s' if _ch != 1 else ''}" if _own else
+                    f"Learning from {_ch} choice{'s' if _ch != 1 else ''} · your own model joins at 50" if _ch else
+                    "Every save, skip, and Seen teaches it what you love")
+          if st.session_state.get("only_mine") and st.session_state.get("streaming_services"):
+              _n = len(st.session_state.get("streaming_services") or [])
+              _learn = f"Only your {_n} service{'s' if _n != 1 else ''} · " + _learn[0].lower() + _learn[1:]
+          st.markdown(f'<div class="showroom-learning"><span class="pf-dot on"></span>{html.escape(_learn)}</div>',
+                      unsafe_allow_html=True)
 
         with st.container(key="showroom_body"):
             render_showroom_fragment(p)

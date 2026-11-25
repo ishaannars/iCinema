@@ -32,7 +32,7 @@ def test_a_movie_typed_alone_keeps_the_filters():
 
 def test_every_part_of_the_search_has_one_rule():
     """The written rule in app.py names every part for every state, so nothing is decided ad hoc."""
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     for part in ("tokens", "tonight", "top_result", "top_picks", "shows", "explore"):
         assert f'"{part}"' in src
     for state in ("none", "mood", "movie", "like"):
@@ -40,7 +40,7 @@ def test_every_part_of_the_search_has_one_rule():
 
 
 def test_undo_is_not_in_the_pill_row():
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert "st.columns([2.75,0.62,0.90]" not in src      # the old three-column pill row with Undo inside it
     assert "card_undo_" in src
 
@@ -76,7 +76,7 @@ def test_screens_live_in_their_own_files():
     import importlib
     for name in ("src.screens.home", "src.screens.ready"):
         assert (ROOT / (name.replace(".", "/") + ".py")).exists()
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert "from src.screens.home import render_home" in src and "from src.screens.ready import render_ready_summary" in src
 
 
@@ -90,14 +90,14 @@ def test_stylesheet_ships_in_whole_rules_under_the_size_limit():
 
 
 def test_a_movie_search_is_one_focused_answer():
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert '"movie": {"tokens": "X, editable", "tonight": None' in src
     assert "like Inception”\"" not in src
 
 
 def test_only_new_releases_are_credited_to_the_new_release_model():
     """The order-model blend used to label every blended movie "new", so a 2014 film said "New, from filmmakers…"."""
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     i = src.index("cf=_nr_affinity(movie,nr_view)")
     block = src[i:i + 300]
     assert 'cf_source_by_title[movie["title"]]="new"' in block.split("if cf is not None and _seq_vec")[0]
@@ -130,20 +130,20 @@ def test_title_search_puts_the_known_movie_first():
 
 def test_a_reload_opens_the_normal_showroom():
     """A search is for this visit only: it isn't saved, and a restored profile starts with no search."""
-    app = (ROOT / "app.py").read_text()
+    app = _app_src()
     snap = app[app.index("def profile_snapshot"):app.index("def _snapshot_signature")]
     assert "mood_active" not in snap
     assert 'st.session_state.mood_active = ""' in (ROOT / "src" / "app_state.py").read_text()
 
 
 def test_one_why_popup_for_cards_and_tonight():
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert src.count("why_popup_html(") >= 3          # the definition, every card, and Tonight's Show
     assert "What decided this pick" in src
 
 
 def test_movie_search_asks_the_one_question_that_tells_two_people_apart():
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert "Save to Watch" in src and "I’ve Seen It" in src and "How was it?" in src
     assert "def _fork_answer(title, movie, value):" in src
 
@@ -161,7 +161,7 @@ def test_like_blend_test_orders_by_both_ranks():
     close, fit = np.array([0.9, 0.5, 0.1]), np.array([0.1, 0.2, 0.9])
     assert list(ns["blend_order"](near, close, fit, 0.0)) == [10, 11, 12]
     assert list(ns["blend_order"](near, close, fit, 1.0)) == [12, 11, 10]
-    src_app = (ROOT / "app.py").read_text()
+    src_app = _app_src()
     assert "_like_blend_weight()" in src_app and "like_blend_confirm.json" in src_app
 
 
@@ -188,7 +188,7 @@ def test_seen_thumbs_train_the_personal_model_only_after_their_test():
 
 def test_movie_plus_mood_stays_inside_the_movie_matches():
     """'Inception' + 'Funny' must order Inception's closest matches by mood, never pull in unrelated funny films."""
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert "if _mood is not None and top_all and not _like_source():" in src
     assert "Movie + mood (\"Inception\" + \"Funny\")" in src
     assert '"like":  {"tokens": "X + mood, editable", "tonight": None, "top_result": True' in src
@@ -202,11 +202,21 @@ def test_meaning_search_only_runs_after_its_test():
     assert "def _meaning(query):" in (ROOT / "src" / "mood.py").read_text()
 
 
+APP_FILES = ("app.py", "src/actions.py", "src/ui/parts.py")   # app.py, split into modules (restructure)
+
+
+def _app_src():
+    return "\n".join((ROOT / f).read_text() for f in APP_FILES)
+
+
 def _fn_src(path, name):
     import ast
-    src = (ROOT / path).read_text()
-    node = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == name)
-    return ast.get_source_segment(src, node)
+    for f in (APP_FILES if path == "app.py" else (path,)):
+        src = (ROOT / f).read_text()
+        node = next((n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == name), None)
+        if node is not None:
+            return ast.get_source_segment(src, node)
+    raise AssertionError(f"{name} not found")
 
 
 def test_search_tiles_tap_across_the_whole_tile():
@@ -252,7 +262,7 @@ def test_show_cards_print_a_percent_only_when_calibrated():
 
 
 def test_profile_shows_one_section_at_a_time():
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert '["Your Likes", "How It Works", "Activity", "Privacy"]' in src and "Reset Everything" in src
     assert '"Edit My Likes"' not in src
 
@@ -260,7 +270,7 @@ def test_profile_shows_one_section_at_a_time():
 def test_one_skip_then_never_show():
     """Unwatched cards have one negative action, Skip. "Never Show" appears only after a Skip and replaces
     the skip with Not for Me. Thumbs are kept for movies you've seen (the "Liked it?" prompt and Seen tab)."""
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert 'key=f"dislike_{row_name}' not in src and 'key=f"tonight_dislike_' not in src
     assert "card_never_" in src and "tonight_never_" in src
     body = _fn_src("app.py", "never_show_skipped")
@@ -281,7 +291,9 @@ def test_avoiding_violence_is_never_quietly_undone():
 
 def test_home_says_what_it_does_first():
     src = (ROOT / "src" / "screens" / "home.py").read_text()
-    assert "Know what to watch" in src and "home-steps" in src and "Free · No account" in src
+    assert "Every service." in src and "home-pillars" in src and "Free · No account" in src
+    assert "Ranked for You" in src and "All Your Services" in src and "Sharper Every Time" in src
+    assert "taste" not in src.lower().replace("taste_", "")          # the word stays out of iCinema copy
     assert '"Max": "HBO Max"' in src and '"Apple TV+": "Apple TV"' in src
 
 
@@ -299,7 +311,7 @@ def test_search_tiles_use_each_results_own_backdrop():
 
 
 def test_a_looked_up_movie_keeps_its_own_picture_everywhere():
-    src = (ROOT / "app.py").read_text()
+    src = _app_src()
     assert src.count("_art_for(m, ") >= 2                      # Saved and Seen
     assert 'poster = str(src.get("poster_url") or ident.get("poster_url")' in src   # the search's large card
     assert '_art_for' in _fn_src("app.py", "_art_for") and "tmdb:" in _fn_src("app.py", "_art_for")
@@ -324,3 +336,33 @@ def test_horror_and_war_always_leave_under_nothing_too_violent():
     never tagged them "violence". Horror and War now leave on genre alone."""
     body = _fn_src("app.py", "_avoid_filter")
     assert "always_out" in body and '"violent": {"Horror", "War"}' in body and "_genres(m) & out_genres" in body
+
+
+def test_value_proposition_is_on_every_surface():
+    """Every service. Ranked for you.: front page pillars, README opening and founder table, and the Showroom
+    showing it learns (one line per founder question: painful, shared, recurring)."""
+    home = (ROOT / "src" / "screens" / "home.py").read_text()
+    assert "Every service." in home and all(p in home for p in ("Ranked for You", "All Your Services", "Sharper Every Time"))
+    readme = (ROOT / "README.md").read_text()
+    assert "**Every service. Ranked for you.**" in readme and "**Recurring?**" in readme and "Sharper every time" in readme
+    assert "showroom-learning" in _app_src()
+
+
+def test_only_my_services_filters_every_row():
+    """All your services, fully: with the switch on, rows fill only from movies streaming on your apps."""
+    src = _app_src()
+    assert 'st.toggle("Only show movies on my services", key="only_mine")' in src
+    assert 'ordered=[it for it in ordered if it[1]["title"] in _mine_ok]' in src
+    assert '(not _only or item[1]["title"] in _mine_ok)' in src
+
+
+def test_only_my_services_switch_rebuilds_the_showroom():
+    """Caught by the smoke test: the switch was missing from the build key, so rows were reused unchanged."""
+    assert 'bool(ss.get("only_mine"))' in _fn_src("app.py", "_build_key")
+
+
+def test_quick_reuse_never_keeps_off_service_rows():
+    """Caught by the smoke test: a Save marks the next run as a quick reuse, which kept the old rows even after
+    "Only show movies on my services" was turned on. Reuse now requires the same services, switch, and search."""
+    src = _app_src()
+    assert 'st.session_state.get("_slots_hard_key") == _hard' in src and '"_slots_hard_key": _hard' in src

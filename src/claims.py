@@ -15,7 +15,8 @@ EVIDENCE = (
     ("RP3beta", "long_tail_confirm.json", "beat item-kNN for viewers with less mainstream likes (replaces_item_knn)"),
     ("EASE", "history_routing_confirm.json", "beat the routed fans model for long histories"),
     ("Markov chain", "seq_main_confirm.json", "beat the fan ranking on what people liked next"),
-    ("TF-IDF + SVD", "blend_results.json", "adding content beat fans alone on validation viewers (content weight 0)"),
+    ("TF-IDF + SVD", "content_answers_confirm.json",
+     "with your genre answers, 20% content beat fans alone (falls back to blend_results.json until run)"),
     ("Ridge regression", "new_release_confirm.json", "placed new releases better than genre and popularity"),
     ("Fan-tag TF-IDF", "mood_confirm.json", "found movies fans describe with the words, vs chance"),
     ("TV model", "tv_blend_confirm.json", "beat the most popular shows on held-out people"),
@@ -51,6 +52,8 @@ def audit():
     out = []
     for name, fname, test in EVIDENCE:
         try:
+            if fname == "content_answers_confirm.json" and not (DATA / fname).exists():
+                fname = "blend_results.json"          # the older test, until the answers test has run
             r = _passed(json.loads((DATA / fname).read_text()), fname)
             status = "PASS" if r is True else "FAIL" if r is False else "NO FLAG"
         except Exception:
