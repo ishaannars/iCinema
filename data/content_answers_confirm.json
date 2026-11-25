@@ -1,0 +1,29 @@
+{
+ "method": "    python training/confirm_content_answers.py --data-dir ml-32m Why this test exists: training/evaluate_blends.py showed content did not beat fans alone when it only saw 3 liked movies. But in the app, content is also the only model that reads your Step 2 answers (the genres you pick). MovieLens has no Step 2 answers, so that job was never tested. This test simulates it. The earlier result stays reported in the README either way. Setup (same MovieLens 32M 1-in-5 sample and time split as evaluate_blends.py, fresh viewers): - 3,000 viewers drawn with a new seed (53) and none of the viewers evaluate_blends.py used. - The app sees 3 random liked movies, exactly as before. - Simulated Step 2 answer: the viewer's 2 most-liked genres across their whole TRAINING history (what a   person knows about their own taste). Their held-out future loves are never used to build the answer. - Content score = similarity to the 3 likes plus similarity to the stated genres, through the same   TF-IDF + SVD model the app uses. Fans = the app's shipped \"viewers like you\" ranking. - A = fans alone. B = 80% fans + 20% content (the app's real mix).",
+ "viewers": 3000,
+ "content_weight": 0.2,
+ "validity_answer_signal": {
+  "loves_in_stated_genres": 0.7188,
+  "stated_genres_share_of_movies": 0.6265,
+  "ci95_low": 0.0828,
+  "valid": true
+ },
+ "fans_alone": {
+  "ndcg@10": 0.0823,
+  "hit@1": 0.0913,
+  "top10_in_stated_genres": 0.6455
+ },
+ "fans_plus_content_20": {
+  "ndcg@10": 0.07,
+  "hit@1": 0.08,
+  "top10_in_stated_genres": 0.9351
+ },
+ "ndcg_diff": -0.01231,
+ "ndcg_ci95": [
+  -0.01752,
+  -0.00716
+ ],
+ "relative_gain": -0.1495,
+ "min_relative_gain": 0.02,
+ "ships": false
+}
