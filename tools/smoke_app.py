@@ -30,6 +30,12 @@ def main():
     at.session_state["_storage_hydrated"] = True
     ok = True
     at.run(); ok &= check(at, "Home")
+    # The front page says what iCinema does first, and service pills are names (never outdated logo images).
+    page = " ".join(str(m.value) for m in at.markdown)
+    svcs = page[page.find('class="home-svcs"'):] if 'class="home-svcs"' in page else ""
+    good = "Know what to watch" in page and svcs != "" and "<img" not in svcs[:1500]
+    print(f"{'Home: value prop + pills':<28} {'OK' if good else 'ERROR: headline or service pills wrong'}")
+    ok &= good
     at.session_state["likes"] = {"Spirited Away"}
     at.session_state["genres"] = ["Anime", "Action"]
     at.session_state["more_of"] = ["Hidden Gems"]
@@ -70,9 +76,15 @@ def main():
         if found:
             found[0].click().run(); ok &= check(at, f"Tab refresh ({key})")
     # Profile shows one section at a time: draw each one.
-    for sec in ("Models", "Stats", "Privacy", "Taste"):
+    for sec in ("How It Works", "Activity", "Privacy", "Your Likes"):
         at.session_state["pf_section_v"] = sec
         at.run(); ok &= check(at, f"Profile: {sec}")
+        if sec == "How It Works":
+            # Checked by what's on screen: the answer ("Does It Work?") comes before the model list.
+            page = " ".join(str(m.value) for m in at.markdown)
+            good = "Does It Work?" in page and page.find("Does It Work?") < page.find("See all 11 models")
+            print(f"{'How It Works: answer first':<28} {'OK' if good else 'ERROR: model list shows before the answer'}")
+            ok &= good
     saves = [b for b in at.button if (b.key or "").startswith("save_")]
     if saves:
         saves[0].click().run(); ok &= check(at, "Save a movie")
@@ -97,6 +109,18 @@ def main():
             at.run(); ok &= check(at, label)
         except Exception as e:
             print(f"{label:<28} ERROR: {e}"); ok = False
+    # "Nothing too violent" must hold for every visible card and every backup a Skip could bring in.
+    at.session_state["_audit_avoid"] = True
+    at.session_state["mood_active"] = "not violent"
+    at.session_state["mood_input"] = "not violent"
+    at.run()
+    bad = at.session_state["_avoid_audit"] if "_avoid_audit" in at.session_state else None
+    if bad is None:
+        print(f"{'Avoid: nothing violent':<28} ERROR: the audit did not run"); ok = False
+    else:
+        print(f"{'Avoid: nothing violent':<28} {'OK' if not bad else 'ERROR: still showing ' + ', '.join(bad[:5])}")
+        ok &= not bad
+    at.session_state["_audit_avoid"] = False
     # Movie search fork: I've Seen It -> How was it? -> Loved it.
     try:
         at.session_state["mood_active"] = "Inception"
@@ -117,6 +141,39 @@ def main():
     at.session_state["mood_active"] = ""
     at.session_state["mood_input"] = ""
     at.run(); ok &= check(at, "Search: cleared")
+    # "Nothing too violent" must hold for what's shown AND for what slides in after a Skip (GoodFellas did).
+    rough = {"Crime", "War", "Horror"}
+
+    def _rough(m):
+        g = set()
+        for v in (m.get("genres"), m.get("genre")):
+            if isinstance(v, str):
+                g |= {x.strip() for x in v.replace("|", ",").split(",")}
+            elif v:
+                g |= {str(x) for x in v}
+        g |= {{80: "Crime", 10752: "War", 27: "Horror"}.get(int(i), "") for i in (m.get("genre_ids") or [])}
+        return g & rough
+
+    def _shown_rough():
+        slots = at.session_state["showroom_slots"] if "showroom_slots" in at.session_state else {}
+        pays = at.session_state["showroom_payloads"] if "showroom_payloads" in at.session_state else {}
+        return [t for k, t in slots.items() if t and "Shows" not in k and _rough((pays.get(t) or {}).get("movie") or {})]
+
+    at.session_state["mood_active"] = "not violent"
+    at.session_state["mood_input"] = "not violent"
+    at.run()
+    bad = _shown_rough()
+    for _ in range(3):
+        sk = [b for b in at.button if (b.key or "").startswith("skip_Top Matches")]
+        if not sk:
+            break
+        sk[0].click().run()
+        bad += _shown_rough()
+    print(f"{'Avoid violence holds':<28} {'OK' if not bad and not at.exception else 'ERROR: shown ' + ', '.join(sorted(set(bad)))}")
+    ok &= not bad and not at.exception
+    at.session_state["mood_active"] = ""
+    at.session_state["mood_input"] = ""
+    at.run()
     # Showroom search: type, tap a poster, and the search must become that exact movie.
     at.session_state["_smoke_typed"] = "Inception"
     at.run()

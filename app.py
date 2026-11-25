@@ -1171,7 +1171,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             _foot += (f" The ranker beat a fixed mix on those viewers "
                       f"(NDCG@10 {_d['ndcg_learned']:.3f} vs {_d['ndcg_current_blend']:.3f}).")
     models_html = (
-        '<div class="pf-section"><div class="pf-title">What’s choosing your picks</div>'
+        '<div class="pf-section"><div class="pf-title">How Your Picks Are Made</div>'
         f'<div class="pf-sub">{MODELS_TOTAL} models: {MODELS_TOTAL - 1} pick, 1 sets the odds. {_running} are running for you now (filled dot). '
         'The percent is each model’s weight in your picks.</div>'
         '<div class="pf-models">'
@@ -1240,7 +1240,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         # Only claim significance the bootstrap actually found (read from the results file).
         sig = {b.get("metric"): bool(b.get("significant")) for b in offline.get("bootstrap_three_likes_vs_popularity") or []}
         if sig.get("Hit@1") and sig.get("Recall@10"):
-            significance_note = "Both results are statistically significant (bootstrap test)."
+            significance_note = "Both gains held up in a bootstrap test, so they aren’t luck."
         elif any(sig.values()):
             significance_note = "Some results are statistically significant; see the model card for details."
         else:
@@ -1271,15 +1271,23 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
             rows_part = (f", and its rows put {recall_lift}% more movies you’d love in the top 10"
                          if recall_lift is not None else "")
             hits_part = (f" ({cf_hit:.1%} vs {pop_hit:.1%})" if isinstance(cf_hit, (int, float)) and isinstance(pop_hit, (int, float)) else "")
-            cards_p = [(f"+{pick_lift}%", "Better first pick",
-                        f"Tonight’s Show vs. the most popular movie{hits_part}: share of test viewers who rated it 4+ stars.")]
+            _cf, _pp = cf3.get("hit@1"), pop.get("hit@1")
+            cards_p = [(f"{_cf:.1%} vs {_pp:.1%}" if isinstance(_cf, (int, float)) and isinstance(_pp, (int, float)) else f"+{pick_lift}%",
+                        f"First pick loved {pick_lift}% more often",
+                        "How often iCinema’s one pick was a movie the person rated 4+ stars, vs. just picking the most popular movie.")]
             if recall_lift is not None:
-                cards_p.append((f"+{recall_lift}%", "Better rows", "More 4+ star movies in each row’s top 10 than a most-popular list."))
-            cards_p.append((f"{users:,}", "Test viewers", "Never seen by the models. Each started from just 3 likes."))
+                cards_p.append((f"+{recall_lift}%", "More loved movies in each row",
+                                "Movies they rated 4+ stars in a row’s top 10, vs. a most-popular list."))
+            _wins = next((b.get("cf_win_share") for b in offline.get("bootstrap_three_likes_vs_popularity") or []
+                          if b.get("metric") == "Hit@1"), None)
+            if isinstance(_wins, (int, float)):
+                cards_p.append((f"{int(round(_wins * 2000)):,} of 2,000", "Not luck",
+                                "Reshuffles of the test people in which iCinema still beat the most popular movie."))
             proof_html = (
-                '<div class="pf-subtitle">Tested before launch</div>'
+                '<div class="pf-subtitle">Does It Work?</div>'
+                f'<div class="pf-sub">We hid what {users:,} real movie fans went on to love, gave iCinema just 3 of their likes, '
+                'and checked its picks against what they actually loved.</div>'
                 '<div class="pf-stats pf-proof">' + "".join(_stat(v, t, n) for v, t, n in cards_p) + '</div>'
-                f'<div class="pf-pill-row"><span class="pf-pill">{html.escape(significance_note)}</span></div>'
             )
 
     live_html = ""
@@ -1316,7 +1324,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
          "calibration error under 1% · mood and time filters"),
     ]
     methodology_html = (
-        '<div class="pf-section"><div class="pf-title">How iCinema works</div>'
+        '<div class="pf-section"><div class="pf-title">How iCinema Works</div>'
         '<div class="pf-sub">From raw data to the four movies in each row.</div>'
         '<div class="pf-steps">'
         + "".join(f'<div class="pf-step"><div class="pf-step-n">{i}</div><div class="pf-step-body">'
@@ -1328,7 +1336,7 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
         + '</div>'
     )
 
-    stats_html = ('<div class="pf-section"><div class="pf-title">Your stats</div>'
+    stats_html = ('<div class="pf-section"><div class="pf-title">Your Activity</div>'
                   + (f'<div class="pf-stats">{insight_html}</div>' if insight_html else
                      '<div class="pf-sub">They appear after your first few saves.</div>')
                   + '</div>')
@@ -1351,11 +1359,14 @@ def render_cinema_profile(p, include_insights=False, show_heading=True, tab_head
     _parts = [f"{n} {one if n == 1 else many}" for n, one, many in _inputs if n]
     _summary = (
         '<div class="pf-readout"><span class="pf-dot on"></span>'
-        f'<span class="pf-readout-k">Computed from</span><span class="pf-readout-v">{html.escape(" · ".join(_parts))}</span></div>'
+        f'<span class="pf-readout-k">Based on</span><span class="pf-readout-v">{html.escape(" · ".join(_parts))}</span></div>'
     ) if _parts else ""
-    _taste_html = f'<div class="pf-section"><div class="pf-title">What you like</div><div class="pf-taste">{section_html}</div></div>'
+    _taste_html = f'<div class="pf-section"><div class="pf-title">What You Like</div><div class="pf-taste">{section_html}</div></div>'
     # The Profile tab shows one section at a time (Taste · Models · Stats), so each fits one screen.
-    _body = {"taste": _summary + _taste_html, "models": models_html + methodology_html, "stats": stats_html}.get(
+    # How It Works, in the order a person asks: does it work, how was that checked, then (on tap) all 11 models.
+    _models_tap = ('<details class="pf-collapse pf-models-tap"><summary>See all 11 models and what each one does</summary>'
+                   + models_html + '</details>')
+    _body = {"taste": _summary + _taste_html, "models": methodology_html + _models_tap, "stats": stats_html}.get(
         section, f'{_summary}{models_html}{_taste_html}{insights_section}')
     _page = f'<div class="profile-wrap pf{" pf-one" if section else ""}">{profile_heading_html}{_body}</div>'
     st.markdown(re.sub(r"\s*\n\s*", " ", _page), unsafe_allow_html=True)
@@ -1611,11 +1622,13 @@ def render_shelf_fragment():
                         st.button("×", key=f"remove_selection_{idx}", help=f"Remove {title}",
                                   on_click=remove_step1_selection, args=(title,))
 
-        st.caption(f"{chosen_count} title{'s' if chosen_count!=1 else ''} selected")
     with st.container(key="nav_row_rate"):
-        cont, _ = st.columns([1.25, 6], gap="small")
+        cont, note = st.columns([1.25, 6], gap="medium", vertical_alignment="center")
         with cont:
             st.button("Continue →", type="primary", disabled=chosen_count==0, key="continue_rate", use_container_width=True, on_click=go_from_fragment, args=("taste",))
+        with note:
+            st.markdown(f'<div class="step1-count">{"Like at least one movie to continue." if chosen_count == 0 else f"{chosen_count} movie" + ("s" if chosen_count != 1 else "") + " liked"}</div>',
+                        unsafe_allow_html=True)
 
 
     persist_from_fragment()
@@ -1663,20 +1676,20 @@ def render_taste_fragment():
             st.button(genre, key=f"genre_{i}", type="primary" if genre in selected else "secondary",
                       on_click=toggle_genre_choice, args=(genre,))
 
-    _question("How Adventurous?")
+    _question("Familiar or Something New?")
     _segmented("adventure_scale", ["Familiar", "Mostly Familiar", "Balanced", "More New", "Surprise Me"],
                scale, st.session_state.adventure, set_adventure_level)
 
-    _question("Show Me More Of", helper="Optional. Your first pick gets its own row.")
+    _question("Extra Rows", helper="Optional. Each one you pick adds its own row to your Showroom.")
     _render_more_choices()
 
     # The promise is "tonight, on the services you pay for", so onboarding asks for them (optional).
-    _question("Your Streaming Services", helper="Optional. Tonight's pick comes from these first.")
+    _question("Your Streaming Services", helper="Optional. Tonight’s pick comes from these first.")
     with st.container(key="onb_services"):
         _render_services_grid(list(st.session_state.get("streaming_services") or []))
 
     with st.container(key="nav_row_taste"):
-        back, cont, _ = st.columns([1, 2.2, 4], gap="small")
+        back, cont, _, _pad = st.columns([1, 2.2, 1.5, 2.6], gap="small")
         with back:
             st.button("← Back", key="back_taste", use_container_width=True, on_click=go_from_fragment, args=("shelf",))
         with cont:
@@ -1903,7 +1916,8 @@ def _mood_spec():
 # Words fans use for the things a viewer can ask to avoid (MovieLens tags), used by the avoid filter
 # for movies and, with the show's own keywords and rating, for shows.
 AVOID_TERMS = {
-    "violent": ["violent", "violence", "brutal", "brutality", "gore", "gory", "bloody", "graphic violence"],
+    "violent": ["violent", "violence", "brutal", "brutality", "gore", "gory", "bloody", "graphic violence",
+                "zombies", "zombie", "slasher", "war", "torture", "serial killer"],
     "scary": ["scary", "horror", "creepy", "disturbing", "terrifying", "gore"],
     "sad": ["sad", "depressing", "tearjerker", "bleak"],
     "gory": ["gore", "gory", "bloody", "violence"],
@@ -1927,18 +1941,65 @@ def _avoid_filter(items, spec):
             s = scores(correct(term))
             if s is not None and float(s.max()) > 0:
                 sc = s if sc is None else _np.maximum(sc, s)
-    cut = float(_np.quantile(sc[sc > 0], 0.5)) if sc is not None else None   # the more strongly described half
+    # Any real fan description counts (the top 75% of movies tagged that way at all). The old cut, the top
+    # half only, let heavily tagged films like Goodfellas through: their many other tags diluted "violence".
+    cut = float(_np.quantile(sc[sc > 0], 0.25)) if sc is not None else None
     # Second, independent evidence: official rating-board descriptors (e.g. Kijkwijzer "violence") for the
     # movies near the top, so new films with few fan tags are covered too.
     try:
         from src.tmdb_catalog import flagged_by_rating_boards
-        boards = flagged_by_rating_boards([it[1].get("tmdb_id") for it in items[:60]], words)
+        boards = flagged_by_rating_boards([it[1].get("tmdb_id") for it in items[:120]], words)
     except Exception:
         boards = {}
-    kept = [it for it in items
-            if not boards.get(int(it[1].get("tmdb_id") or 0))
-            and (cut is None or (i := _ix(it[1])) is None or sc[i] < cut)]
-    return kept if len(kept) >= 4 else items
+    # Third: genres that are violent by nature (war, crime, horror) leave if fans mention violence at all.
+    rough = {"violent": {"War", "Crime", "Horror"}, "gory": {"Horror", "War"}, "scary": {"Horror"}}
+    rough_genres = set().union(*(rough.get(w, set()) for w in words))
+
+    _tmdb_genre = {80: "Crime", 10752: "War", 27: "Horror", 53: "Thriller", 28: "Action"}
+
+    def _genres(m):
+        out = set()
+        for g in (m.get("genres"), m.get("genre")):
+            if isinstance(g, str):
+                out |= {x.strip() for x in re.split(r"[|,/]", g) if x.strip()}
+            elif g:
+                out |= {str(x) for x in g}
+        out |= {_tmdb_genre[int(i)] for i in (m.get("genre_ids") or []) if int(i) in _tmdb_genre}
+        return out
+
+    # Some genres are violent by definition: asked for "nothing too violent", Horror and War always leave, even
+    # when fans never wrote the word (Train to Busan, The Wailing slipped through on zero violence tags).
+    always_out = {"violent": {"Horror", "War"}, "gory": {"Horror", "War"}, "scary": {"Horror"}}
+    out_genres = set().union(*(always_out.get(w, set()) for w in words))
+
+    def _keep(m):
+        if boards.get(int(m.get("tmdb_id") or 0)):
+            return False
+        if _genres(m) & out_genres:
+            return False
+        i = _ix(m)
+        if i is None or sc is None:
+            return not (_genres(m) & rough_genres)
+        if cut is not None and sc[i] >= cut:
+            return False
+        return not (sc[i] > 0 and _genres(m) & rough_genres)
+    # What you asked to avoid is never quietly put back: if few movies are left, the rows are short, and
+    # the search line says so (the old rule returned everything when fewer than 4 survived).
+    kept = [it for it in items if _keep(it[1])]
+    st.session_state._avoid_thin = len(kept) < 4
+    return kept
+
+
+def _avoid_ok(movie):
+    """True unless the current search avoids something and this one movie is described that way."""
+    spec = _mood_spec()
+    if not movie or not spec.get("avoid"):
+        return True
+    thin = st.session_state.get("_avoid_thin")
+    try:
+        return bool(_avoid_filter([(0, movie)], spec))
+    finally:
+        st.session_state._avoid_thin = thin
 
 
 def _time_filter(items, spec, cap=80):
@@ -2101,7 +2162,8 @@ def render_top_result(row_name=None, row_index=None, beside=None):
     meta = [str(ident.get("year") or year or ""), genre_pair(movie) or movie.get("genre") or ", ".join(ident.get("genres") or []),
             f"{runtime} min" if runtime else ""]
     ratings = " · ".join(ratings_text(card_ratings(movie, live)))
-    poster = str(ident.get("poster_url") or src.get("poster_url") or "")
+    # The tapped movie's own poster first (same TMDB record as its title and year), so a remake never borrows it.
+    poster = str(src.get("poster_url") or ident.get("poster_url") or "")
     pay = (ss.get("showroom_payloads") or {}).get(title) or {}
     rating = (ss.get("seen_rating") or {}).get(title)
     seen, liked, saved = title in ss.seen, title in ss.likes, title in ss.saved
@@ -2115,8 +2177,8 @@ def render_top_result(row_name=None, row_index=None, beside=None):
         with st.container(key="shero_done_row"):
             st.markdown(f'<div class="shero-done">{thumb}<span class="shero-done-title">{name}</span>'
                         f'<span class="shero-done-state">{html.escape(state)}</span></div>', unsafe_allow_html=True)
-            # Change your answer: the "How was it?" question comes back in place.
-            st.button("Change", key="fork_change", help="Change your answer", on_click=_fork_seen, args=(title,))
+            # Change your answer: the "How was it?" question comes back in place (no hover tooltip).
+            st.button("Change", key="fork_change", on_click=_fork_seen, args=(title,))
         return
 
     with st.container(key="search_hero"):
@@ -2348,7 +2410,7 @@ def _search_words():
             ("under 2 hours" if sx.get("max") == 120 else (f"under {sx['max']} min" if sx.get("max") else "")),
             (f"over {sx['min']} min" if sx.get("min") else ""),
             ("short episodes" if sx.get("episodes") else ""),
-            ("nothing " + ", ".join(sx.get("avoid") or []) if sx.get("avoid") else "")]
+            ("nothing too " + ", ".join(sx.get("avoid") or []) if sx.get("avoid") else "")]
     return " · ".join(b for b in bits if b)
 
 
@@ -2435,7 +2497,7 @@ def render_mood_suggestions():
         row = st.container(key="mood_suggest_row")
     with row:
         if _mood_text():
-            st.button("Clear all", key="mood_reset", on_click=_set_mood_live, args=("",))
+            st.button("Clear All", key="mood_reset", on_click=_set_mood_live, args=("",))
         for i, (label, rest, edit) in enumerate(chips_now):
             # One capsule, two taps: the words open the token in the field to edit; × removes it.
             try:
@@ -2443,12 +2505,11 @@ def render_mood_suggestions():
             except TypeError:
                 tok = st.container(key=f"mood_tok_{i}")
             with tok:
-                st.button(label, key=f"mood_edit_{i}", help=f"Edit {label}", on_click=_edit_token, args=(rest, edit))
-                st.button("×", key=f"mood_chip_{i}", help=f"Remove {label}", on_click=_set_mood_live, args=(rest,))
+                st.button(label, key=f"mood_edit_{i}", on_click=_edit_token, args=(rest, edit))
+                st.button("×", key=f"mood_chip_{i}", on_click=_set_mood_live, args=(rest,))
         for i, (label, text) in enumerate(opts):
             on = _preset_active(text, spec)
-            st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}",
-                      help=f"Remove {label}" if on else f"Add {label}", on_click=_toggle_preset, args=(text,))
+            st.button(label, key=f"mood_suggest_{'on_' if on else ''}{i}" if on else f"Add {label}", on_click=_toggle_preset, args=(text,))
     _spx = _mood_spec()
     mood = _spx["mood"]
     if mood and scores(mood) is None and not _spx.get("lookup"):
@@ -2602,6 +2663,13 @@ def _render_live_suggestions(typed):
                          + (f'{m["title"]} ({m["year"]})' if m.get("year") else m["title"]), m), _commit_exact)
 
 
+def _art_for(m, art):
+    """One movie's own wide art: its own search backdrop, then by TMDB id, then title and year. Title alone is used
+    only as a last resort, because two films can share a title (Oldboy 2003 and 2013)."""
+    return (m.get("backdrop_url") or art.get(f"tmdb:{int(m.get('tmdb_id') or 0)}")
+            or art.get(f"{m.get('title')} ({int(m.get('year') or 0)})") or art.get(m.get("title")))
+
+
 def _render_search_tiles(movies, key, args_for, on_click, selected_id=None):
     """Search results drawn exactly like Showroom cards: the same wide key art with the title in it,
     four across. The whole tile is the button (each tile is its own keyed box, so the tap area is exact)."""
@@ -2614,7 +2682,9 @@ def _render_search_tiles(movies, key, args_for, on_click, selected_id=None):
                 on = selected_id is not None and m.get("tmdb_id") == selected_id
                 # The year sits under the art, so two films with the same title (Oldboy 2003, Oldboy 2013) differ.
                 st.markdown(f'<div class="hit-art{" on" if on else ""}">'
-                            + movie_thumb(dict(m, year=""), art.get(m["title"]) or m.get("poster_url"), landscape=True, return_html=True)
+                            + movie_thumb(dict(m, year=""), (m.get("backdrop_url") or art.get(f"tmdb:{int(m.get('tmdb_id') or 0)}") or art.get(f"{m['title']} ({int(m.get('year') or 0)})")
+                                           or (None if any(o is not m and o.get("title") == m["title"] for o in movies) else art.get(m["title"]))
+                                           or m.get("poster_url")), landscape=True, return_html=True)
                             + '</div>'
                             + (f'<div class="hit-year">{html.escape(str(m["year"]))}</div>' if m.get("year") else ""),
                             unsafe_allow_html=True)
@@ -2657,6 +2727,8 @@ def _advance_showroom_slot(row_name, slot_index):
             continue          # past the fit floor: less likely to be loved than an average movie
         if ((st.session_state.get("showroom_watch_cache") or {}).get(title) or {}).get("status") == "unavailable":
             continue
+        if not _avoid_ok((payloads.get(title) or {}).get("movie")):
+            continue          # a movie you asked to avoid never slides in after a Skip
         replacement = title
         break
 
@@ -3062,7 +3134,7 @@ def render_showroom_card_fragment(row_name, row_index, slot_index):
     _label = {"Critically Acclaimed": "Critics’ pick", "Hidden Gems": "Hidden gem", "Recent Releases for You": "New release",
               "Classics for You": "Classic", "International Films for You": "International",
               "Documentaries for You": "Documentary", "Something Different": "Something new"}.get(row_name, "")
-    meta = [str(x) for x in ("", _year, genre_pair(movie) or ", ".join(identity.get("genres") or []),
+    meta = [str(x) for x in ("", _year, (genre_pair(movie) or ", ".join(identity.get("genres") or [])).split(", ")[0],   # one genre: the line never clips
                                _fmt_rt(identity.get("runtime"))) if x]
     availability_class = "watch-availability muted" if availability.get("status") in {"unknown", "not_configured", "unavailable"} else "watch-availability"
     watch_html = watch_line_html(availability, movie.get("title", ""), st.session_state.get("streaming_services"))
@@ -3189,7 +3261,7 @@ def tonight_seen(title, movie):
     _request_showroom_refresh()
 
 
-_SERVICE_SHORT = {"Free (Tubi, Pluto & more)": "Free with ads"}
+_SERVICE_SHORT = {"Free (Tubi, Pluto & more)": "Free with ads", "Max": "HBO Max", "Apple TV+": "Apple TV"}   # 2026 names
 
 
 def _services_done():
@@ -3301,7 +3373,7 @@ def render_tonight_pick_fragment():
     else:
         base = SEARCH_RULE["none"]["tonight"]
     if services:
-        shown = ", ".join(services[:2]) + (f" +{len(services) - 2}" if len(services) > 2 else "")
+        shown = ", ".join(_SERVICE_SHORT.get(x, x) for x in services[:2]) + (f" +{len(services) - 2}" if len(services) > 2 else "")
         note = (f"{base} on {shown}" if fits else
                 f"Nothing {'like ' + _src['title'] if _src else 'in your top matches'} streams on {shown} right now, "
                 "so here’s the best overall")
@@ -3490,7 +3562,7 @@ def _saved_tab():
                     display_movie["title"] = preferred_title(m, identity.get("display_title") or display_movie.get("title", ""))
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
-                    _art = m.get("backdrop_url") if m.get("media") == "tv" else saved_art_map.get(m["title"])
+                    _art = m.get("backdrop_url") if m.get("media") == "tv" else _art_for(m, saved_art_map)
                     _sid = f"saved-premise-{i}"
                     _art_html = movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url")
                                             or saved_poster_map.get(m["title"]), landscape=True, return_html=True)
@@ -3613,7 +3685,7 @@ def _seen_tab():
                     display_movie["title"] = preferred_title(m, identity.get("display_title") or display_movie.get("title", ""))
                     if identity.get("year"):
                         display_movie["year"] = identity["year"]
-                    _art = m.get("backdrop_url") if m.get("media") == "tv" else seen_art_map.get(m["title"])
+                    _art = m.get("backdrop_url") if m.get("media") == "tv" else _art_for(m, seen_art_map)
                     _sid = f"seen-premise-{i}"
                     _art_html = movie_thumb(dict(display_movie, year=""), _art or identity.get("poster_url") or m.get("poster_url")
                                             or seen_poster_map.get(m["title"]), landscape=True, return_html=True)
@@ -4345,6 +4417,9 @@ def _render_showroom(p):
         st.session_state.showroom_payloads=payloads
         st.session_state.showroom_row_queues=queues
         st.session_state.showroom_slots=slots
+        if st.session_state.get("_audit_avoid"):    # tools/smoke_app.py: every visible card and backup must pass
+            _cards = [t for t in slots.values() if t] + [t for q in queues.values() for t in q[:8]]
+            st.session_state._avoid_audit = sorted({t for t in _cards if not _avoid_ok((payloads.get(t) or {}).get("movie"))})
         _cache = dict(st.session_state.get("_build_cache") or {})
         _cache[_bk] = {k: st.session_state.get(k) for k in _BUILD_KEYS}
         st.session_state._build_cache = dict(list(_cache.items())[-4:])     # the last 4 builds
@@ -4503,17 +4578,18 @@ def _render_showroom(p):
                     '<div class="profile-wrap pf"><div class="tab-primary-heading profile-heading-aligned">Your Cinema Profile</div></div>',
                     unsafe_allow_html=True)
         # Same segmented control as Step 2's scales (one track, one selected segment), built from buttons.
-        _secs = ["Taste", "Models", "Stats", "Privacy"]
-        _sec = st.session_state.get("pf_section_v") if st.session_state.get("pf_section_v") in _secs else "Taste"
+        # Named for what each holds: what iCinema knows you like, how picks are made, what you've done, your data.
+        _secs = ["Your Likes", "How It Works", "Activity", "Privacy"]
+        _sec = st.session_state.get("pf_section_v") if st.session_state.get("pf_section_v") in _secs else "Your Likes"
         with st.container(key="pf_seg"):
             _cols = st.columns(len(_secs), gap="small")
             for _i, _name in enumerate(_secs):
                 with _cols[_i]:
                     st.button(_name, key=f"pf_seg_{_i}", type="primary" if _name == _sec else "secondary",
                               use_container_width=True, on_click=_set_profile_section, args=(_name,))
-        if _sec in ("Taste", "Models", "Stats"):
-            render_live_profile(_sec.lower())
-        if _sec == "Taste":
+        if _sec != "Privacy":
+            render_live_profile({"Your Likes": "taste", "How It Works": "models", "Activity": "stats"}[_sec])
+        if _sec == "Your Likes":
             _render_profile_likes()
             with st.container(key="pf_taste_actions"):
                 st.button("Edit My Answers", key="edit_preferences", on_click=go, args=("taste",))

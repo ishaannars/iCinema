@@ -22,10 +22,10 @@ STREAMING_SERVICES = {
     "Max": ("max", "hbomax"),
     "Hulu": ("hulu",),
     "Prime Video": ("amazonprime", "primevideo"),
-    "Disney+": ("disney",),
+    "Disney+": ("disneyplus", "disney"),
     "Apple TV+": ("appletvplus", "appletv"),      # Apple renamed it "Apple TV" in 2025; streaming lists only
     "Peacock": ("peacock",),
-    "Paramount+": ("paramount",),
+    "Paramount+": ("paramountplus", "paramount"),
     "Free (Tubi, Pluto & more)": ("tubi", "pluto", "roku", "therokuchannel", "plex", "freevee",
                                   "amazonfreevee", "crackle", "kanopy", "hoopla"),
 }
@@ -121,7 +121,9 @@ def watch_line_html(availability, title, services=None):
 
     def _label(name):
         key = _provider_key(name)
-        return f"{name} (library)" if key.startswith(("kanopy", "hoopla")) else name
+        if key.startswith(("kanopy", "hoopla")):
+            return f"{name} (library)"
+        return {"amazonprimevideo": "Prime Video", "max": "HBO Max", "appletvplus": "Apple TV"}.get(key, name)
 
     def _links(opts):
         return " · ".join(

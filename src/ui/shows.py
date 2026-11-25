@@ -36,7 +36,7 @@ def _card(ctx, slot, entry):
     top = max(1, -(-100 * rank // max(total, 1)))
     # A percent only if the show odds passed their test; otherwise the honest number is the rank.
     chance = tv.love_chance(rank, total)
-    pill_label = f"{chance}% chance" if chance is not None else f"#{rank:,} for you"
+    pill_label = f"{chance}% chance" if chance is not None else f"#{int(slot) + 1} for you"
     # Real IMDb and RT scores (OMDb, via the show's IMDb id); TMDB's score only if IMDb has none.
     from src.live_ratings import get_live_ratings_batch
     from src.ui.cards import card_ratings, ratings_text
@@ -71,8 +71,9 @@ def _card(ctx, slot, entry):
                     '<div class="why-pop-foot">'
                     + ("The chance is calibrated on viewers the show model never saw (Amazon Reviews 2023)."
                        if chance is not None else
-                       "Ranked by a model tested on viewers it never saw (Amazon Reviews 2023). Its odds haven’t passed "
-                       "their calibration test, so it shows a rank, not a percent.")
+                       "Ranked by a model that beat “most popular shows” on viewers it never saw (Amazon Reviews 2023). "
+                       "A percent was tested too and failed: reviewers loved 90% of the shows they rated, so nothing "
+                       "told a show they’d love from one they wouldn’t. A rank is the honest number.")
                     + '</div>',
                     unsafe_allow_html=True)
         with skip:
@@ -80,7 +81,7 @@ def _card(ctx, slot, entry):
                       on_click=_act, args=(ctx, "skip", title, show))
     art = ctx["movie_thumb"](dict(show, year=""), show.get("backdrop_url") or show.get("poster_url"),
                              landscape=True, return_html=True)
-    meta = [str(x) for x in (show.get("year") or "", ", ".join(show.get("tags", [])[:2])) if x]
+    meta = [str(x) for x in (show.get("year") or "", ", ".join(show.get("tags", [])[:1])) if x]
     if show.get("episode_runtime"):
         meta.append(f"{fmt(show['episode_runtime'])} episodes")
     watch = tv.show_watch(show["tmdb_id"])

@@ -134,10 +134,12 @@ Every idea had to beat what was already shipping, on viewers the models never sa
 | Idea | Result on held-out viewers | Decision |
 |---|---|---|
 | "More like X": re-rank fans' picks with genres and fan tags, minus a popularity discount | NDCG@10 0.085 vs 0.099 for fans alone (95% CI −0.017 to −0.011); it lost in every popularity band, niche fans included | Kept fans alone |
+| Show odds: a calibrated "chance you'll love it" for shows, like movies have | Failed its validity check before odds could count. On 5,000 held-out Amazon reviewers, the show ranking could not tell loved shows from the rest of the shows they rated (AUC 0.498, 95% CI low 0.483). 90% of show ratings were 4+ stars, so there was almost nothing to separate | Show cards show their rank ("#1 for you"), never a percent |
 | Hidden Gems row: 28% weight on how little-known a movie is | 1.1% of the row's top 10 were loved, vs 12.5% when your fit decides the order | Fit decides the order |
 | Critically Acclaimed row: 30% weight on critics' score | 49.5% vs 52.0% loved in the top 10 with fit deciding the order | Fit decides the order |
 | Variety step that spreads out similar movies | Every setting cost 2.6 to 4.1 points of loved-in-top-10 (all significant) | Turned off; a live test can revisit it, since users often prefer variety |
 | Content model alone | NDCG@10 0.031, a third of fans alone | Used only inside the blend |
+| "Chance you'll love it" on shows | Ranking couldn't tell loved shows from the rest: AUC 0.498 (95% lower bound 0.483) on 5,000 held-out Amazon reviewers. They rated 90% of their shows 4+ stars, so a flat "about 90%" scored a low calibration error (0.5 points) while saying nothing. The validity rule, written before the run, caught it | Show cards show their rank, never a percent |
 
 **Testing many things at once.** With this many tests, one could pass by luck. `tools/multiple_testing.py` applies a Holm-Bonferroni correction across every stored result: 21 of 22 results (wins and the losses above) were significant on their own, and all 21 still are after the correction. The TV model alone (+0.001, p 0.64) was never significant, which is why shows use the tested fans-plus-popularity blend.
 
@@ -156,6 +158,7 @@ Offline wins don't always hold up with real people, so routing is also being tes
 The rule was written before launch, in `src/interleave.py`: the first 200 decided visits, a two-sided binomial test at 0.05, skips and "Not for me" as guardrails, and no peeking. The report shows progress only until all 200 are in.
 
 <!-- LIVE_TEST:START -->
+
 <!-- LIVE_TEST:END -->
 
 ## Beyond accuracy
@@ -252,6 +255,8 @@ Three questions every project has to pass before it's built: is the problem pain
 - **"More Like X," tuned to your taste: shipped.** On 3,000 held-out viewers, ordering by closeness (80%) plus your fit (20%) beat closeness alone: NDCG@10 0.1019 vs 0.0992 (+2.75%, 95% interval +0.0002 to +0.0053), keeping 98.8% of the closeness. Reported because it matters: the first pick was loved slightly less often (11.1% vs 12.1%); the gain is across the top 10, not the first slot. Weight chosen on separate validation viewers (0.2 vs 0.4 and 0.6).
 - **Seen thumbs teaching the personal model: shipped (simulation).** Version 1 "passed" but both arms scored about 0.5 AUC (chance), so it couldn't have detected harm, and I didn't count it. Version 2 gave the simulated personal model real signals and a validity rule set before running (the saves-and-skips model must reach 0.55 AUC). It did: 0.657. Adding Seen thumbs raised AUC to 0.668 (+0.011, 95% interval +0.007 to +0.016) on 2,026 held-out MovieLens viewers, clearing the no-worse rule and landing above zero. It's a simulation until real users exist; thumbs now also teach the personal model.
 - **Mood search with meaning: didn't ship.** Adding a word-embedding model (model2vec potion-base-8M) to fan-tag search lowered recall@50 from 63.8% to 59.8% (−3.95 points, 97.5% interval −5.5 to −2.4) and didn't help rare words (53.1% vs 52.5%, interval −3.9 to +2.8). Fans' own tag words beat general word meaning for finding movies, so mood search stays on fan tags.
+
+- **Odds on show cards: didn't ship.** The same calibration that works for movies was tried on shows, with the rule written first. On 5,000 held-out Amazon reviewers the ranking couldn't tell loved shows from the rest (AUC 0.498). Reviewers rated 90% of their shows 4+ stars, because people mostly review what they already chose to watch. A flat "about 90%" would have passed on calibration error alone (0.5 points), which is why a validity check comes first. Show cards keep their rank: the show model does pick which shows fans watch better than popularity, it just can't promise you'll love them.
 
 ## Waiting on a test
 

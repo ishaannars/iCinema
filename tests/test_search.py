@@ -59,7 +59,7 @@ def test_love_chance_reads_the_rank_it_was_tested_on():
 
 def test_home_shows_the_baseline_next_to_the_lift():
     src = (ROOT / "src" / "screens" / "home.py").read_text()
-    assert "in 1,000 test viewers" in src and "current_hits" in src      # tested numbers, then what is trending
+    assert "in 1,000" in src and "for the most popular movie" in src and "current_hits" in src   # the baseline sits next to the lift
 
 
 def test_ready_page_lists_only_running_models_with_five_word_jobs():
@@ -247,13 +247,13 @@ def test_title_search_drops_near_unknown_matches():
 def test_show_cards_print_a_percent_only_when_calibrated():
     """Show odds must pass training/confirm_tv_calibration.py; until then a card shows its rank."""
     src = (ROOT / "src" / "ui" / "shows.py").read_text()
-    assert "tv.love_chance(rank, total)" in src and 'f"#{rank:,} for you"' in src
+    assert "tv.love_chance(rank, total)" in src and 'for you"' in src
     assert '% match"' not in src
 
 
 def test_profile_shows_one_section_at_a_time():
     src = (ROOT / "app.py").read_text()
-    assert '["Taste", "Models", "Stats", "Privacy"]' in src and "Reset Everything" in src
+    assert '["Your Likes", "How It Works", "Activity", "Privacy"]' in src and "Reset Everything" in src
     assert '"Edit My Likes"' not in src
 
 
@@ -265,3 +265,62 @@ def test_one_skip_then_never_show():
     assert "card_never_" in src and "tonight_never_" in src
     body = _fn_src("app.py", "never_show_skipped")
     assert '_drop_last_event(title, "skip")' in body and "dislike_movie(" in body
+
+
+def test_search_art_is_keyed_by_year_so_remakes_differ():
+    src = (ROOT / "src" / "tmdb_catalog.py").read_text()
+    assert 'result[f"{title} ({year})"] = url' in src and 'result[f"tmdb:{tmdb_id}"] = url' in src
+    assert 'art.get(f"tmdb:' in _fn_src("app.py", "_render_search_tiles")
+
+
+def test_avoiding_violence_is_never_quietly_undone():
+    body = _fn_src("app.py", "_avoid_filter")
+    assert "kept if len(kept) >= 4 else items" not in body
+    assert '"Crime"' in body and "quantile(sc[sc > 0], 0.25)" in body
+
+
+def test_home_says_what_it_does_first():
+    src = (ROOT / "src" / "screens" / "home.py").read_text()
+    assert "Know what to watch" in src and "home-steps" in src and "Free · No account" in src
+    assert '"Max": "HBO Max"' in src and '"Apple TV+": "Apple TV"' in src
+
+
+def test_a_replacement_after_skip_respects_what_you_avoid():
+    """Goodfellas slid in after a Skip under "Nothing too violent": replacements now pass the same filter,
+    and TMDB's own genre ids (80 Crime, 10752 War, 27 Horror) count as genres."""
+    assert "_avoid_ok(" in _fn_src("app.py", "_advance_showroom_slot")
+    assert "genre_ids" in _fn_src("app.py", "_avoid_filter")
+    assert '"genre_ids"' in (ROOT / "src" / "tmdb_catalog.py").read_text()
+
+
+def test_search_tiles_use_each_results_own_backdrop():
+    assert 'm.get("backdrop_url")' in _fn_src("app.py", "_render_search_tiles")
+    assert '"backdrop_url"' in (ROOT / "src" / "tmdb_catalog.py").read_text()
+
+
+def test_a_looked_up_movie_keeps_its_own_picture_everywhere():
+    src = (ROOT / "app.py").read_text()
+    assert src.count("_art_for(m, ") >= 2                      # Saved and Seen
+    assert 'poster = str(src.get("poster_url") or ident.get("poster_url")' in src   # the search's large card
+    assert '_art_for' in _fn_src("app.py", "_art_for") and "tmdb:" in _fn_src("app.py", "_art_for")
+
+
+def test_front_page_service_pills_are_names_only():
+    body = _fn_src("src/screens/home.py", "_services_row")
+    assert "<img" not in body
+
+
+def test_front_page_model_claim_is_counted_from_result_files():
+    """FTC-style substantiation: the "each passed a test" line is only shown if every model's file says PASS."""
+    from src.claims import EVIDENCE, audit
+    from src.model_names import MODELS_TOTAL
+    assert len(EVIDENCE) == MODELS_TOTAL and len(audit()) == MODELS_TOTAL
+    body = _fn_src("src/screens/home.py", "render_home")
+    assert "models_passed()" in body and "_np == MODELS_TOTAL" in body
+
+
+def test_horror_and_war_always_leave_under_nothing_too_violent():
+    """Caught by the smoke test: Train to Busan and The Wailing showed under "Nothing too violent" because fans
+    never tagged them "violence". Horror and War now leave on genre alone."""
+    body = _fn_src("app.py", "_avoid_filter")
+    assert "always_out" in body and '"violent": {"Horror", "War"}' in body and "_genres(m) & out_genres" in body

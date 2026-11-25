@@ -64,6 +64,7 @@ Final ranking blends collaborative filtering and content scoring with weights te
 - **Recent feedback is weighted more** (120-day half-life), since what people like drifts.
 - **Undo removes the skip from training data**, so an accidental tap does not teach the model a false dislike.
 - **The shown Match %** reflects the same blended score used for ranking.
+- **Shows show a rank, not odds.** The show odds test (training/confirm_tv_calibration.py) failed its validity rule: AUC 0.498 on 5,000 held-out Amazon reviewers, 95% CI low 0.483, against a bar of above 0.5. Show cards say "#N for you".
 
 ## Limitations
 

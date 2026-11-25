@@ -183,6 +183,10 @@ def _to_icinema_movie(item, candidate_source=None):
         "tags": _movie_tags(item),
         "why": overview or "A movie selected from the full TMDB catalog.",
         "poster_url": _poster_url(item.get("poster_path")),
+        # This result's own backdrop and genres, straight from the same TMDB record: search tiles use them,
+        # so two films with one title (Oldboy 2003 and 2013) can never borrow each other's art.
+        "backdrop_url": (f"{TMDB_BACKDROP_BASE}{item['backdrop_path']}" if item.get("backdrop_path") else None),
+        "genre_ids": [int(g) for g in (item.get("genre_ids") or []) if str(g).isdigit()],
         "tmdb_id": item.get("id"),
         "original_language": item.get("original_language"),
         "tmdb_vote": item.get("vote_average"),
@@ -672,14 +676,21 @@ def get_landscape_batch(movies: Tuple[Tuple[str, int, int], ...]) -> Dict[str, O
     result: Dict[str, Optional[str]] = {}
     with ThreadPoolExecutor(max_workers=min(8, len(movies))) as pool:
         futures = {
-            pool.submit(get_landscape_art, title, int(year or 0), int(tmdb_id or 0)): title
+            pool.submit(get_landscape_art, title, int(year or 0), int(tmdb_id or 0)): (title, int(year or 0), int(tmdb_id or 0))
             for title, year, tmdb_id in movies
         }
         for future in as_completed(futures):
+            title, year, tmdb_id = futures[future]
             try:
-                result[futures[future]] = future.result()
+                url = future.result()
             except Exception:
-                result[futures[future]] = None
+                url = None
+            # Also keyed by "Title (year)" and the TMDB id: Oldboy 2003 and Oldboy 2013 share a title, so a
+            # title-only key gave both tiles whichever art arrived last.
+            result.setdefault(title, url)
+            result[f"{title} ({year})"] = url
+            if tmdb_id:
+                result[f"tmdb:{tmdb_id}"] = url
     return result
 
 

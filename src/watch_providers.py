@@ -199,7 +199,15 @@ def service_logos(region: str = "US") -> dict:
         tail = key[len(max(hits, key=len)):]
         return (key not in aliases, any(w in tail for w in resold), len(key))
     out = {}
+    ids = {"Netflix": 8, "Max": 1899, "Hulu": 15, "Prime Video": 9, "Disney+": 337, "Apple TV+": 350,
+           "Peacock": 386, "Paramount+": 531}
+    by_id = {int(it.get("provider_id") or 0): it for it in items if it.get("logo_path")}
+    for name, pid in ids.items():
+        if pid in by_id:
+            out[name] = [f"https://image.tmdb.org/t/p/w154{by_id[pid]['logo_path']}"]
     for name, aliases in STREAMING_SERVICES.items():
+        if name in out:
+            continue
         if name.startswith("Free"):
             groups = [(a,) for a in aliases]          # one logo each: Tubi, Pluto, then the next free service
         else:

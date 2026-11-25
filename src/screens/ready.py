@@ -53,6 +53,20 @@ def _ready_models(ctx):
     return out
 
 
+def _off_note(models):
+    """The models not running yet, each with when it starts, so "9 of 11" never looks like a mistake."""
+    names = {nm for nm, _t, _j in models}
+    off = []
+    if "Your own choices" not in names:
+        off.append("your personal model (after 50 saves and skips)")
+    off.append("mood search (when you search a mood)")
+    if "New releases" not in names:
+        off.append("the new-release model")
+    if "Shows" not in names:
+        off.append("the TV model")
+    return ("Starts later: " + "; ".join(off) + ".") if off else ""
+
+
 def _models_running(models):
     """How many of the 11 models are on: the fan row holds three when the ranker runs."""
     return sum(3 if tech == "item-kNN · RP3beta · EASE" else 1 for _nm, tech, _job in models)
@@ -91,7 +105,7 @@ def render_ready_summary(ctx):
         f'<span class="ready-model-name">{html.escape(nm)}</span>'
         f'<span class="ready-model-job">{html.escape(job)}</span></div>' for nm, tech, job in models)
     st.markdown(
-        '<div class="page-top-heading">Your Showroom is ready</div>'
+        '<div class="page-top-heading">Your Showroom Is Ready</div>'
         '<div class="page-top-subtitle">What iCinema starts from. Change anything later in Profile.</div>'
         '<div class="ready-grid">'
         '<div class="ready-card"><div class="ready-kicker">Starting from</div>'
@@ -101,5 +115,6 @@ def render_ready_summary(ctx):
         f'<div class="ready-spec">{spec_html}</div></div>'
         f'<div class="ready-card"><div class="ready-kicker">{_models_running(models)} of {MODELS_TOTAL} models running</div>'
         f'<div class="ready-models">{models_html}</div>'
-        '</div>'
+        + (f'<div class="ready-off">{html.escape(_off_note(models))}</div>' if _off_note(models) else "")
+        + '</div>'
         '</div>', unsafe_allow_html=True)
