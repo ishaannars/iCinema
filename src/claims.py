@@ -12,10 +12,10 @@ DATA = Path(__file__).resolve().parents[1] / "data"
 EVIDENCE = (
     ("Learned ranker", "ltr_confirm.json", "beat a fixed mix of models on held-out viewers"),
     ("item-kNN", "cf_results.json", "beat the most popular movies on 3,000 held-out viewers"),
-    ("RP3beta", "long_tail_confirm.json", "beat item-kNN for viewers with less mainstream likes"),
+    ("RP3beta", "long_tail_confirm.json", "beat item-kNN for viewers with less mainstream likes (replaces_item_knn)"),
     ("EASE", "history_routing_confirm.json", "beat the routed fans model for long histories"),
     ("Markov chain", "seq_main_confirm.json", "beat the fan ranking on what people liked next"),
-    ("TF-IDF + SVD", "content_ml.json", "content model test"),
+    ("TF-IDF + SVD", "blend_results.json", "adding content beat fans alone on validation viewers (content weight 0)"),
     ("Ridge regression", "new_release_confirm.json", "placed new releases better than genre and popularity"),
     ("Fan-tag TF-IDF", "mood_confirm.json", "found movies fans describe with the words, vs chance"),
     ("TV model", "tv_blend_confirm.json", "beat the most popular shows on held-out people"),
@@ -24,9 +24,18 @@ EVIDENCE = (
 )
 
 
-def _passed(d):
+def _passed(d, fname=""):
     if not isinstance(d, dict):
         return None
+    if fname == "long_tail_confirm.json":          # its decision flag has its own name
+        v = d.get("replaces_item_knn")
+        return v if isinstance(v, bool) else None
+    if fname == "blend_results.json":              # content counts only if it beat 0% content on validation
+        by_w = {float(k): float(v) for k, v in ((d.get("content_blend") or {}).get("validation_ndcg_by_weight") or {}).items()}
+        best = (d.get("content_blend") or {}).get("best_weight")
+        if 0.0 not in by_w or best is None or float(best) not in by_w:
+            return None
+        return by_w[float(best)] > by_w[0.0]
     for k in ("ship", "ships", "use"):
         if isinstance(d.get(k), bool):
             return d[k]
@@ -42,7 +51,7 @@ def audit():
     out = []
     for name, fname, test in EVIDENCE:
         try:
-            r = _passed(json.loads((DATA / fname).read_text()))
+            r = _passed(json.loads((DATA / fname).read_text()), fname)
             status = "PASS" if r is True else "FAIL" if r is False else "NO FLAG"
         except Exception:
             status = "MISSING"
